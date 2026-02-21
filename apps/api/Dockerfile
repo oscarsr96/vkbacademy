@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 RUN npm install -g pnpm@9.14.4
 
 # ── Build stage ───────────────────────────────────────────────────────────────
