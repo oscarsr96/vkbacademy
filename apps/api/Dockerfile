@@ -38,6 +38,10 @@ COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 RUN pnpm install --frozen-lockfile --prod
 
 WORKDIR /app/apps/api
+# Regenerar el cliente Prisma en el runner (produce los enums y tipos en node_modules)
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+RUN pnpm exec prisma generate
+
 ENV NODE_ENV=production
 
 # 'migrate deploy' es idempotente; DATABASE_URL solo está disponible en runtime
