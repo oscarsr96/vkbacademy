@@ -1,0 +1,465 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────
+// NIVEL EDUCATIVO
+// ─────────────────────────────────────────────────────────
+
+model SchoolYear {
+  id    String @id @default(cuid())
+  name  String @unique // "1eso", "2eso", "3eso", "4eso", "1bach", "2bach"
+  label String          // "1º ESO", "2º ESO", ...
+
+  users   User[]
+  courses Course[]
+}
+
+// ─────────────────────────────────────────────────────────
+// USUARIOS
+// ─────────────────────────────────────────────────────────
+
+enum Role {
+  STUDENT
+  TUTOR
+  TEACHER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STUDENT)
+  name         String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Nivel educativo (solo relevante para STUDENTs)
+  schoolYearId String?
+  schoolYear   SchoolYear? @relation(fields: [schoolYearId], references: [id])
+
+  // Relación tutor-alumno (solo relevante para STUDENTs y TUTORs)
+  tutorId  String?
+  tutor    User?   @relation("TutorStudents", fields: [tutorId], references: [id])
+  students User[]  @relation("TutorStudents")
+
+  // Gamificación — racha y puntos
+  currentStreak  Int     @default(0)   // semanas consecutivas con actividad
+  longestStreak  Int     @default(0)
+  lastActiveWeek String?               // "2026-W07" (ISO week)
+  totalPoints    Int     @default(0)   // puntos acumulados (denormalizado para performance)
+
+  // Relaciones
+  progress         UserProgress[]
+  quizAttempts     QuizAttempt[]
+  bookingsAsStudent Booking[]      @relation("StudentBookings")
+  teacherProfile   TeacherProfile?
+  refreshTokens    RefreshToken[]
+  enrollments      Enrollment[]
+  userChallenges   UserChallenge[]
+  redemptions      Redemption[]
+  examAttempts     ExamAttempt[]
+  certificates     Certificate[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)
+}
+
+// ─────────────────────────────────────────────────────────
+// CURSOS
+// ─────────────────────────────────────────────────────────
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  coverUrl    String?
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Nivel educativo al que pertenece el curso
+  schoolYearId String?
+  schoolYear   SchoolYear? @relation(fields: [schoolYearId], references: [id])
+
+  // Asignatura / categoría temática del curso
+  subject String?
+
+  modules       Module[]
+  bookings      Booking[]
+  enrollments   Enrollment[]
+  examQuestions ExamQuestion[] @relation("CourseExamQuestions")
+  examAttempts  ExamAttempt[]  @relation("CourseExamAttempts")
+  certificates  Certificate[]  @relation("CourseCertificates")
+}
+
+// ─────────────────────────────────────────────────────────
+// MATRÍCULAS
+// ─────────────────────────────────────────────────────────
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+}
+
+model Module {
+  id       String @id @default(cuid())
+  title    String
+  order    Int
+  courseId String
+
+  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons       Lesson[]
+  examQuestions ExamQuestion[] @relation("ModuleExamQuestions")
+  examAttempts  ExamAttempt[]  @relation("ModuleExamAttempts")
+  certificates  Certificate[]  @relation("ModuleCertificates")
+
+  @@index([courseId, order])
+}
+
+enum LessonType {
+  VIDEO
+  QUIZ
+  EXERCISE
+  MATCH
+  SORT
+  FILL_BLANK
+}
+
+model Lesson {
+  id        String     @id @default(cuid())
+  title     String
+  type      LessonType
+  order     Int
+  moduleId  String
+  youtubeId String?
+  content   Json?
+
+  module   Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  quiz     Quiz?
+  progress UserProgress[]
+
+  @@index([moduleId, order])
+}
+
+// ─────────────────────────────────────────────────────────
+// TESTS / QUIZZES
+// ─────────────────────────────────────────────────────────
+
+model Quiz {
+  id       String @id @default(cuid())
+  lessonId String @unique
+
+  lesson    Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts  QuizAttempt[]
+}
+
+enum QuestionType {
+  SINGLE
+  MULTIPLE
+  TRUE_FALSE
+}
+
+model Question {
+  id     String       @id @default(cuid())
+  text   String
+  type   QuestionType
+  quizId String
+  order  Int          @default(0)
+
+  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@index([quizId, order])
+}
+
+model Answer {
+  id         String  @id @default(cuid())
+  text       String
+  /// NUNCA exponer en endpoints públicos de /quizzes/:id
+  isCorrect  Boolean @default(false)
+  questionId String
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  quizId      String
+  score       Float    // 0.0 - 100.0
+  /// [{questionId, answerId}]
+  answers     Json
+  completedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([userId, quizId])
+}
+
+// ─────────────────────────────────────────────────────────
+// PROGRESO
+// ─────────────────────────────────────────────────────────
+
+model UserProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonId    String
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+}
+
+// ─────────────────────────────────────────────────────────
+// RESERVAS
+// ─────────────────────────────────────────────────────────
+
+model TeacherProfile {
+  id     String  @id @default(cuid())
+  userId String  @unique
+  bio    String?
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  availability AvailabilitySlot[]
+  bookings     Booking[]
+}
+
+model AvailabilitySlot {
+  id          String @id @default(cuid())
+  teacherId   String
+  dayOfWeek   Int    // 0=Dom, 1=Lun, ..., 6=Sáb
+  startTime   String // "09:00"
+  endTime     String // "10:00"
+  isRecurring Boolean @default(true)
+
+  teacher TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, dayOfWeek])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum BookingMode {
+  IN_PERSON
+  ONLINE
+}
+
+model Booking {
+  id        String        @id @default(cuid())
+  studentId String
+  teacherId String
+  startAt   DateTime
+  endAt     DateTime
+  status    BookingStatus @default(PENDING)
+  mode      BookingMode   @default(IN_PERSON)
+  notes      String?
+  courseId   String?
+  /// URL de sala Daily.co — solo presente cuando mode=ONLINE y status=CONFIRMED
+  meetingUrl String?
+  createdAt  DateTime     @default(now())
+  updatedAt DateTime      @updatedAt
+
+  student User           @relation("StudentBookings", fields: [studentId], references: [id])
+  teacher TeacherProfile @relation(fields: [teacherId], references: [id])
+  course  Course?        @relation(fields: [courseId], references: [id])
+
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([startAt])
+}
+
+// ─────────────────────────────────────────────────────────
+// GAMIFICACIÓN — CANJES
+// ─────────────────────────────────────────────────────────
+
+model Redemption {
+  id          String    @id @default(cuid())
+  userId      String
+  itemName    String
+  cost        Int
+  redeemedAt  DateTime  @default(now())
+  delivered   Boolean   @default(false)
+  deliveredAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([redeemedAt])
+}
+
+// ─────────────────────────────────────────────────────────
+// GAMIFICACIÓN — RETOS
+// ─────────────────────────────────────────────────────────
+
+enum ChallengeType {
+  LESSON_COMPLETED   // completa N lecciones en total
+  MODULE_COMPLETED   // completa N módulos enteros
+  COURSE_COMPLETED   // completa N cursos completos
+  QUIZ_SCORE         // consigue ≥ N% en cualquier quiz
+  BOOKING_ATTENDED   // asiste a N clases confirmadas (endAt < now)
+  STREAK_WEEKLY      // racha activa de N semanas consecutivas
+  TOTAL_HOURS        // acumula N horas (bookings + lecciones VIDEO × 20min)
+}
+
+model Challenge {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  type        ChallengeType
+  target      Int           // umbral numérico (ej: 5, 80, 3)
+  points      Int           // puntos al completarse
+  badgeIcon   String        @default("🏅")
+  badgeColor  String        @default("#6366f1")
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  userChallenges UserChallenge[]
+}
+
+model UserChallenge {
+  id            String    @id @default(cuid())
+  userId        String
+  challengeId   String
+  progress      Int       @default(0)
+  completed     Boolean   @default(false)
+  completedAt   DateTime?
+  awardedPoints Int       @default(0)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────
+// FACTURACIÓN
+// ─────────────────────────────────────────────────────────
+
+model BillingConfig {
+  id                       String   @id @default("default")
+  studentMonthlyPrice      Float    @default(15.00)
+  classOnlineRatePerHour   Float    @default(15.00)
+  classInPersonRatePerHour Float    @default(18.00)
+  clubCommissionRate       Float    @default(0.10)
+  infrastructureMonthlyCost Float   @default(25.00)
+  s3MonthlyCost            Float    @default(2.00)
+  anthropicMonthlyCost     Float    @default(5.00)
+  updatedAt                DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────
+// CERTIFICADOS
+// ─────────────────────────────────────────────────────────
+
+enum CertificateType {
+  MODULE_COMPLETION   // completó todas las lecciones del módulo
+  COURSE_COMPLETION   // completó todas las lecciones del curso
+  MODULE_EXAM         // aprobó el examen del módulo (≥ 50%)
+  COURSE_EXAM         // aprobó el examen del curso (≥ 50%)
+}
+
+model Certificate {
+  id         String          @id @default(cuid())
+  userId     String
+  courseId   String?         // null si es certificado de módulo
+  moduleId   String?         // null si es certificado de curso
+  type       CertificateType
+  verifyCode String          @unique @default(cuid())
+  examScore  Float?          // solo para MODULE_EXAM / COURSE_EXAM
+  issuedAt   DateTime        @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course? @relation("CourseCertificates", fields: [courseId], references: [id])
+  module Module? @relation("ModuleCertificates", fields: [moduleId], references: [id])
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([moduleId])
+}
+
+// ─────────────────────────────────────────────────────────
+// EXÁMENES
+// ─────────────────────────────────────────────────────────
+
+model ExamQuestion {
+  id       String       @id @default(cuid())
+  text     String
+  type     QuestionType // reutiliza el enum existente (SINGLE, MULTIPLE, TRUE_FALSE)
+  order    Int          @default(0)
+  courseId String?      // null si es de módulo
+  moduleId String?      // null si es de curso
+
+  course  Course?      @relation("CourseExamQuestions", fields: [courseId], references: [id], onDelete: Cascade)
+  module  Module?      @relation("ModuleExamQuestions", fields: [moduleId], references: [id], onDelete: Cascade)
+  answers ExamAnswer[]
+
+  @@index([courseId])
+  @@index([moduleId])
+}
+
+model ExamAnswer {
+  id         String      @id @default(cuid())
+  text       String
+  /// NUNCA exponer isCorrect en respuestas del endpoint de inicio de examen
+  isCorrect  Boolean     @default(false)
+  questionId String
+
+  question ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model ExamAttempt {
+  id                String    @id @default(cuid())
+  userId            String
+  courseId          String?
+  moduleId          String?
+  numQuestions      Int
+  timeLimit         Int?      // segundos; null = sin límite
+  onlyOnce          Boolean   @default(false)
+  score             Float?    // null hasta submit
+  questionsSnapshot Json      // snapshot con isCorrect para corrección server-side
+  answers           Json      @default("[]") // [{questionId, answerId}]
+  startedAt         DateTime  @default(now())
+  submittedAt       DateTime?
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course? @relation("CourseExamAttempts", fields: [courseId], references: [id])
+  module Module? @relation("ModuleExamAttempts", fields: [moduleId], references: [id])
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([moduleId])
+}
