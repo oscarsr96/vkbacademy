@@ -17,6 +17,8 @@ COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 
 WORKDIR /app/apps/api
+# URL ficticia solo para que prisma generate pueda parsear el schema (no hace conexión real)
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN pnpm exec prisma generate
 RUN pnpm exec nest build
 
