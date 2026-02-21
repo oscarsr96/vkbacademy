@@ -1,7 +1,7 @@
 {
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm --filter @vkbacademy/web build",
-  "outputDirectory": "apps/web/dist",
+  "buildCommand": "pnpm --filter @vkbacademy/web build && cp -r apps/web/dist dist",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
