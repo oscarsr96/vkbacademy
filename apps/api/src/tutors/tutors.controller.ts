@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -25,5 +25,21 @@ export class TutorsController {
     @CurrentUser() user: User,
   ) {
     return this.tutorsService.getStudentCourses(user.id, studentId);
+  }
+
+  @Get('my-students/:studentId/stats')
+  @Roles(Role.TUTOR, Role.ADMIN)
+  getStudentStats(
+    @Param('studentId') studentId: string,
+    @CurrentUser() user: User,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.tutorsService.getStudentStats(
+      user.id,
+      studentId,
+      from ? new Date(from) : undefined,
+      to ? new Date(to) : undefined,
+    );
   }
 }
