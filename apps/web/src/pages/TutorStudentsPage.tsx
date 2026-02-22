@@ -296,12 +296,20 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
     : undefined;
   const to = periodDays > 0 ? now.toISOString() : undefined;
 
-  const { data: stats, isLoading } = useStudentStats(student.id, from, to);
+  const { data: stats, isLoading, isError } = useStudentStats(student.id, from, to);
 
   if (isLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#94a3b8' }}>
         Cargando métricas...
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#dc2626', fontSize: '0.9rem' }}>
+        Error al cargar las métricas. Inténtalo de nuevo.
       </div>
     );
   }

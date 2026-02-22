@@ -49,7 +49,7 @@ export class TutorsService {
 
   /**
    * Métricas detalladas de un alumno para el tutor.
-   * `from` y `to` filtran el período de las métricas de actividad (lecciones, quizzes, exámenes…).
+   * `from` y `to` filtran el período de las métricas de actividad.
    * Los datos de gamificación (puntos, racha) son siempre all-time.
    */
   async getStudentStats(
@@ -78,11 +78,11 @@ export class TutorsService {
       throw new ForbiddenException('No tienes acceso a este alumno');
     }
 
-    // 2. Construir filtros de fecha para cada tabla
-    const periodFilter = (field: string) =>
-      from || to
-        ? { [field]: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
-        : {};
+    // 2. Rango de fechas (evitar spread con claves duplicadas)
+    const hasPeriod = !!(from || to);
+    const dateRange = hasPeriod
+      ? { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) }
+      : null;
 
     // 3. Todas las queries en paralelo
     const [completedInPeriod, quizAttempts, examAttempts, certificates, bookings, enrollments] =
@@ -92,20 +92,17 @@ export class TutorsService {
           where: {
             userId: studentId,
             completed: true,
-            completedAt: { not: null },
-            ...periodFilter('completedAt'),
+            completedAt: dateRange ? dateRange : { not: null },
           },
-          select: {
-            completedAt: true,
-            lesson: {
-              select: { id: true, type: true, module: { select: { id: true, courseId: true } } },
-            },
-          },
+          select: { completedAt: true },
         }),
 
         // Intentos de quiz en el período
         this.prisma.quizAttempt.findMany({
-          where: { userId: studentId, ...periodFilter('completedAt') },
+          where: {
+            userId: studentId,
+            ...(dateRange ? { completedAt: dateRange } : {}),
+          },
           select: { score: true, completedAt: true },
         }),
 
@@ -113,25 +110,31 @@ export class TutorsService {
         this.prisma.examAttempt.findMany({
           where: {
             userId: studentId,
-            submittedAt: { not: null },
-            ...periodFilter('submittedAt'),
+            submittedAt: dateRange ? dateRange : { not: null },
           },
           select: { score: true, submittedAt: true },
         }),
 
-        // Certificados en el período
+        // Certificados emitidos en el período
         this.prisma.certificate.findMany({
-          where: { userId: studentId, ...periodFilter('issuedAt') },
+          where: {
+            userId: studentId,
+            ...(dateRange ? { issuedAt: dateRange } : {}),
+          },
           select: { type: true, issuedAt: true },
         }),
 
         // Reservas confirmadas en el período
         this.prisma.booking.findMany({
-          where: { studentId, status: 'CONFIRMED', ...periodFilter('startAt') },
+          where: {
+            studentId,
+            status: 'CONFIRMED',
+            ...(dateRange ? { startAt: dateRange } : {}),
+          },
           select: { startAt: true, endAt: true },
         }),
 
-        // Matrículas + árbol de módulos/lecciones (para calcular % de avance all-time)
+        // Matrículas + árbol de módulos/lecciones para calcular % de avance all-time
         this.prisma.enrollment.findMany({
           where: { userId: studentId },
           select: {
@@ -155,7 +158,12 @@ export class TutorsService {
         }),
       ]);
 
-    // 4. Progreso all-time por curso (una sola query para evitar N+1)
+    // 4. Progreso all-time (conteo directo, no limitado a matrículas explícitas)
+    const completedAllTime = await this.prisma.userProgress.count({
+      where: { userId: studentId, completed: true },
+    });
+
+    // 5. Progreso por curso (una sola query para evitar N+1)
     const allLessonIds = enrollments.flatMap((e) =>
       e.course.modules.flatMap((m) => m.lessons.map((l) => l.id)),
     );
@@ -194,7 +202,7 @@ export class TutorsService {
       };
     });
 
-    // 5. Métricas de quizzes
+    // 6. Métricas de quizzes
     const quizScores = quizAttempts.map((a) => a.score);
     const avgQuizScore =
       quizScores.length > 0
@@ -203,7 +211,7 @@ export class TutorsService {
     const bestQuizScore =
       quizScores.length > 0 ? Math.round(Math.max(...quizScores) * 10) / 10 : null;
 
-    // 6. Métricas de exámenes
+    // 7. Métricas de exámenes
     const examScores = examAttempts.map((a) => a.score ?? 0);
     const avgExamScore =
       examScores.length > 0
@@ -213,18 +221,18 @@ export class TutorsService {
       examScores.length > 0 ? Math.round(Math.max(...examScores) * 10) / 10 : null;
     const passedExams = examAttempts.filter((a) => (a.score ?? 0) >= 50).length;
 
-    // 7. Certificados por tipo
+    // 8. Certificados por tipo
     const certByType: Record<string, number> = {};
     for (const cert of certificates) {
       certByType[cert.type] = (certByType[cert.type] ?? 0) + 1;
     }
 
-    // 8. Horas de clase (reservas confirmadas)
+    // 9. Horas de clase (reservas confirmadas)
     const totalBookingMinutes = bookings.reduce((acc, b) => {
       return acc + (new Date(b.endAt).getTime() - new Date(b.startAt).getTime()) / 60000;
     }, 0);
 
-    // 9. Actividad diaria — agrupar lecciones completadas y quizzes por día
+    // 10. Actividad diaria — lecciones completadas y quizzes agrupados por día
     const activityMap = new Map<string, { lessons: number; quizzes: number }>();
 
     for (const p of completedInPeriod) {
@@ -251,7 +259,6 @@ export class TutorsService {
         .map((p) => p.completedAt!.toISOString().split('T')[0]),
     ).size;
 
-    // 10. Retornar todo
     return {
       student: {
         id: student.id,
@@ -267,7 +274,7 @@ export class TutorsService {
       period: { from: from ?? null, to: to ?? null },
       lessons: {
         completedInPeriod: completedInPeriod.length,
-        completedAllTime: completedSet.size,
+        completedAllTime,
         activeDays,
       },
       quizzes: {
