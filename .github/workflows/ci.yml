@@ -26,6 +26,9 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Generar cliente Prisma
+        run: pnpm --filter @vkbacademy/api exec prisma generate
+
       - name: Tests unitarios (API)
         run: pnpm --filter @vkbacademy/api test -- --passWithNoTests
 
