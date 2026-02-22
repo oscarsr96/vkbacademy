@@ -139,7 +139,7 @@ export class AdminService {
         orderBy: { createdAt: 'desc' },
         include: {
           schoolYear: true,
-          _count: { select: { modules: true } },
+          _count: { select: { modules: true, enrollments: true } },
         },
       }),
       this.prisma.course.count({ where }),

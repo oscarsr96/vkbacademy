@@ -222,6 +222,7 @@ export default function AdminCoursesPage() {
               <th style={s.th}>Nivel</th>
               <th style={s.th}>Asignatura</th>
               <th style={s.th}>Módulos</th>
+              <th style={s.th}>Alumnos</th>
               <th style={s.th}>Estado</th>
               <th style={s.th}>Acciones</th>
             </tr>
@@ -229,11 +230,11 @@ export default function AdminCoursesPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} style={s.tdCenter}>Cargando...</td>
+                <td colSpan={7} style={s.tdCenter}>Cargando...</td>
               </tr>
             ) : !data?.data.length ? (
               <tr>
-                <td colSpan={6} style={s.tdCenter}>No hay cursos.</td>
+                <td colSpan={7} style={s.tdCenter}>No hay cursos.</td>
               </tr>
             ) : (
               data.data.map((course) => (
@@ -243,6 +244,9 @@ export default function AdminCoursesPage() {
                   <td style={s.td}>{course.subject ?? '—'}</td>
                   <td style={s.td}>
                     {(course as unknown as { _count?: { modules?: number } })._count?.modules ?? 0}
+                  </td>
+                  <td style={s.td}>
+                    {(course as unknown as { _count?: { enrollments?: number } })._count?.enrollments ?? 0}
                   </td>
                   <td style={s.td}>
                     <span style={course.published ? s.badgeOk : s.badgeDraft}>
