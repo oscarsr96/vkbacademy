@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { useLogout } from '../hooks/useAuth';
@@ -50,13 +51,48 @@ function buildNavLinks(role: Role | undefined): NavLink[] {
 export default function AppLayout() {
   const user = useAuthStore((s) => s.user);
   const { mutate: logout, isPending } = useLogout();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const links = buildNavLinks(user?.role);
 
   return (
-    <div style={styles.shell}>
+    <div className="app-shell">
+      {/* Barra superior móvil */}
+      <div className="app-topbar">
+        <button
+          className="app-hamburger"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Abrir menú"
+        >
+          ☰
+        </button>
+        <span className="app-topbar-brand">VKB Academy</span>
+        <button
+          className="app-topbar-logout"
+          onClick={() => logout()}
+          disabled={isPending}
+          title="Cerrar sesión"
+        >
+          ↩
+        </button>
+      </div>
+
+      {/* Overlay oscuro al abrir el sidebar en móvil */}
+      {menuOpen && (
+        <div className="app-overlay" onClick={() => setMenuOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside style={styles.sidebar}>
+      <aside className={`app-sidebar${menuOpen ? ' open' : ''}`} style={styles.sidebar}>
+        {/* Botón cerrar (solo visible en móvil) */}
+        <button
+          className="app-sidebar-close"
+          onClick={() => setMenuOpen(false)}
+          aria-label="Cerrar menú"
+        >
+          ✕
+        </button>
+
         <div style={styles.brand}>
           <img
             src="https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png"
@@ -71,6 +107,7 @@ export default function AppLayout() {
               key={to}
               to={to}
               end={end}
+              onClick={() => setMenuOpen(false)}
               style={({ isActive }) => ({
                 ...styles.navItem,
                 ...(isActive ? styles.navItemActive : {}),
@@ -102,7 +139,7 @@ export default function AppLayout() {
       </aside>
 
       {/* Contenido */}
-      <main style={styles.main}>
+      <main className="app-main">
         <Outlet />
       </main>
     </div>
@@ -110,7 +147,6 @@ export default function AppLayout() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  shell: { display: 'flex', minHeight: '100vh' },
   sidebar: {
     width: 240,
     flexShrink: 0,
@@ -194,5 +230,4 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     transition: 'color 0.15s',
   },
-  main: { flex: 1, padding: 32, overflowY: 'auto' },
 };

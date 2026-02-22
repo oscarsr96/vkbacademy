@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 
 // Navbar fija superior para las páginas públicas de marketing
 export default function PublicLayout() {
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div style={styles.shell}>
@@ -15,27 +17,59 @@ export default function PublicLayout() {
             <span style={styles.brandText}>VKB Academy</span>
           </Link>
 
-          {/* Links centro */}
-          <nav style={styles.navLinks}>
+          {/* Links centro — solo visibles en desktop (CSS los oculta en móvil) */}
+          <nav className="pub-nav-links-desktop">
             <NavItem to="/" label="Inicio" />
             <NavItem to="/nosotros" label="Sobre nosotros" />
             <NavItem to="/precios" label="Precios" />
           </nav>
 
-          {/* CTA derecha */}
+          {/* CTA derecha — solo visible en desktop */}
+          <span className="pub-cta-desktop">
+            <button
+              onClick={() => navigate('/login')}
+              style={styles.ctaButton}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = '#c94e00';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = '#ea580c';
+              }}
+            >
+              Acceder
+            </button>
+          </span>
+
+          {/* Hamburger — solo visible en móvil */}
           <button
-            onClick={() => navigate('/login')}
-            style={styles.ctaButton}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = '#c94e00';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = '#ea580c';
-            }}
+            className="pub-hamburger"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
           >
-            Acceder
+            {menuOpen ? '✕' : '☰'}
           </button>
         </div>
+
+        {/* Menú móvil desplegable */}
+        {menuOpen && (
+          <div className="pub-mobile-menu">
+            <Link to="/" className="pub-mobile-link" onClick={() => setMenuOpen(false)}>
+              Inicio
+            </Link>
+            <Link to="/nosotros" className="pub-mobile-link" onClick={() => setMenuOpen(false)}>
+              Sobre nosotros
+            </Link>
+            <Link to="/precios" className="pub-mobile-link" onClick={() => setMenuOpen(false)}>
+              Precios
+            </Link>
+            <button
+              className="pub-mobile-cta"
+              onClick={() => { setMenuOpen(false); navigate('/login'); }}
+            >
+              Acceder
+            </button>
+          </div>
+        )}
       </header>
 
       {/* ── Contenido de la página ── */}
@@ -83,17 +117,15 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'sticky',
     top: 0,
     zIndex: 100,
-    height: 64,
     background: '#0d1b2a',
     borderBottom: '1px solid rgba(255,255,255,0.06)',
-    display: 'flex',
-    alignItems: 'center',
   },
   navInner: {
     width: '100%',
     maxWidth: 1200,
     margin: '0 auto',
     padding: '0 2rem',
+    height: 64,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -119,14 +151,7 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: '-0.01em',
   },
 
-  // Nav links
-  navLinks: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '2rem',
-    flex: 1,
-    justifyContent: 'center',
-  },
+  // Nav link (individual)
   navLink: {
     color: '#ffffff',
     textDecoration: 'none',
