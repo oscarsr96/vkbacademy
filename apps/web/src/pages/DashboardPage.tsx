@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { Role } from '@vkbacademy/shared';
 import { useRecentLessons } from '../hooks/useCourses';
+import { useChallengeSummary } from '../hooks/useChallenges';
 import { LessonType } from '@vkbacademy/shared';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const isStudent = user?.role === Role.STUDENT;
   const { data: recentLessons = [] } = useRecentLessons();
+  const { data: summary } = useChallengeSummary();
 
   if (!user) return null;
 
@@ -43,6 +45,36 @@ export default function DashboardPage() {
 
   const mainContent = (
     <>
+      {/* Banner de cuenta pendiente — solo STUDENT sin nivel asignado */}
+      {isStudent && !user.schoolYearId && (
+        <div style={styles.pendingBanner}>
+          ⚠️ Tu cuenta está pendiente de configuración. Un administrador asignará tu nivel en breve.
+        </div>
+      )}
+
+      {/* Stats de gamificación — solo para STUDENT */}
+      {isStudent && summary && (
+        <section>
+          <div style={styles.statsGrid}>
+            <div style={styles.statCard}>
+              <span style={styles.statEmoji}>🏆</span>
+              <p style={styles.statValue}>{summary.totalPoints}</p>
+              <p style={styles.statLabel}>Puntos</p>
+            </div>
+            <div style={styles.statCard}>
+              <span style={styles.statEmoji}>🔥</span>
+              <p style={styles.statValue}>{summary.currentStreak}</p>
+              <p style={styles.statLabel}>Racha (semanas)</p>
+            </div>
+            <div style={styles.statCard}>
+              <span style={styles.statEmoji}>✅</span>
+              <p style={styles.statValue}>{summary.completedCount}</p>
+              <p style={styles.statLabel}>Lecciones completadas</p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Bienvenida */}
       <div style={styles.welcome}>
         <div style={styles.welcomeAvatar}>
@@ -237,6 +269,34 @@ const styles: Record<string, React.CSSProperties> = {
   cardEmoji: { fontSize: 32 },
   cardLabel: { fontWeight: 600, fontSize: '0.9375rem' },
   cardDesc: { fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginTop: 2 },
+  pendingBanner: {
+    background: '#fff7ed',
+    border: '1.5px solid #fb923c',
+    borderRadius: 'var(--radius-md)',
+    padding: '14px 20px',
+    fontSize: '0.875rem',
+    color: '#9a3412',
+    fontWeight: 500,
+  },
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: 16,
+  },
+  statCard: {
+    background: 'var(--color-surface)',
+    borderRadius: 'var(--radius-md)',
+    padding: '20px 16px',
+    boxShadow: 'var(--shadow-sm)',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    gap: 6,
+    textAlign: 'center' as const,
+  },
+  statEmoji: { fontSize: 28 },
+  statValue: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 },
+  statLabel: { fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0, fontWeight: 500 },
   accountSection: {},
   infoCard: {
     background: 'var(--color-surface)',

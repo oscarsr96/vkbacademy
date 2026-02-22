@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi, type AdminUser, type CreateUserPayload, type UpdateUserPayload } from '../../api/admin.api';
 import { Role } from '@vkbacademy/shared';
+import type { Course } from '@vkbacademy/shared';
 
 const ROLE_LABELS: Record<Role, string> = {
   [Role.STUDENT]: 'Alumno',
@@ -69,6 +70,7 @@ export default function AdminUsersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [enrollmentTarget, setEnrollmentTarget] = useState<AdminUser | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   function showToast(msg: string, ok: boolean) {
@@ -186,6 +188,7 @@ export default function AdminUsersPage() {
                   onDelete={() => setDeleteId(user.id)}
                   onDeleteConfirm={() => handleDelete(user.id)}
                   onDeleteCancel={() => setDeleteId(null)}
+                  onEnrollments={() => setEnrollmentTarget(user)}
                   isPending={updateRole.isPending || assignTutor.isPending || deleteUser.isPending}
                 />
               ))}
@@ -222,6 +225,14 @@ export default function AdminUsersPage() {
         />
       )}
 
+      {/* Modal matrículas */}
+      {enrollmentTarget && (
+        <EnrollmentModal
+          user={enrollmentTarget}
+          onClose={() => setEnrollmentTarget(null)}
+        />
+      )}
+
       {toast && (
         <div style={{ ...s.toast, background: toast.ok ? '#22c55e' : '#ef4444' }}>{toast.msg}</div>
       )}
@@ -236,7 +247,7 @@ export default function AdminUsersPage() {
 function UserRow({
   user, tutors, deleteId,
   onRoleChange, onTutorChange, onEdit,
-  onDelete, onDeleteConfirm, onDeleteCancel, isPending,
+  onDelete, onDeleteConfirm, onDeleteCancel, onEnrollments, isPending,
 }: {
   user: AdminUser;
   tutors: AdminUser[];
@@ -247,6 +258,7 @@ function UserRow({
   onDelete: () => void;
   onDeleteConfirm: () => void;
   onDeleteCancel: () => void;
+  onEnrollments: () => void;
   isPending: boolean;
 }) {
   const initials = user.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
@@ -304,6 +316,9 @@ function UserRow({
           </div>
         ) : (
           <div style={{ display: 'flex', gap: '0.4rem' }}>
+            {user.role === Role.STUDENT && (
+              <button style={s.iconBtn} title="Gestionar cursos" onClick={onEnrollments}>📚</button>
+            )}
             <button style={s.iconBtn} title="Editar" onClick={onEdit}>✏️</button>
             <button style={{ ...s.iconBtn, color: '#ef4444' }} title="Eliminar" onClick={onDelete}>🗑️</button>
           </div>
@@ -526,6 +541,102 @@ function UserModal({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Modal de matrículas
+// ---------------------------------------------------------------------------
+
+function EnrollmentModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
+  const qc = useQueryClient();
+
+  const { data: enrollments = [], isLoading: loadingEnrollments } = useQuery({
+    queryKey: ['admin', 'enrollments', user.id],
+    queryFn: () => adminApi.getEnrollments(user.id),
+  });
+
+  const { data: allCourses, isLoading: loadingCourses } = useQuery({
+    queryKey: ['admin', 'courses'],
+    queryFn: () => adminApi.listCourses({ limit: 200 }),
+  });
+
+  const enrollMut = useMutation({
+    mutationFn: (courseId: string) => adminApi.enroll(user.id, courseId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'enrollments', user.id] }),
+  });
+
+  const unenrollMut = useMutation({
+    mutationFn: (courseId: string) => adminApi.unenroll(user.id, courseId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'enrollments', user.id] }),
+  });
+
+  const enrolledIds = new Set(enrollments.map((e) => e.courseId));
+  const courses: Course[] = allCourses?.data ?? [];
+  const isLoading = loadingEnrollments || loadingCourses;
+
+  return (
+    <div style={s.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ ...s.modal, maxWidth: 560 }}>
+        <h2 style={s.modalTitle}>📚 Cursos de {user.name}</h2>
+        {isLoading ? (
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Cargando...</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '60vh', overflowY: 'auto' }}>
+            {courses.map((course) => {
+              const enrolled = enrolledIds.has(course.id);
+              const isPending = enrollMut.isPending || unenrollMut.isPending;
+              return (
+                <div
+                  key={course.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '10px 14px',
+                    borderRadius: 8,
+                    border: `1.5px solid ${enrolled ? '#6366f1' : 'var(--color-border)'}`,
+                    background: enrolled ? '#eef2ff' : 'var(--color-bg)',
+                  }}
+                >
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: '0.875rem', margin: 0 }}>{course.title}</p>
+                    {course.schoolYear && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0, marginTop: 2 }}>
+                        {course.schoolYear.label}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    disabled={isPending}
+                    onClick={() => enrolled ? unenrollMut.mutate(course.id) : enrollMut.mutate(course.id)}
+                    style={{
+                      padding: '5px 14px',
+                      borderRadius: 6,
+                      border: 'none',
+                      cursor: isPending ? 'not-allowed' : 'pointer',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      background: enrolled ? '#ef4444' : '#6366f1',
+                      color: '#fff',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {enrolled ? 'Quitar' : 'Matricular'}
+                  </button>
+                </div>
+              );
+            })}
+            {courses.length === 0 && (
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>No hay cursos disponibles.</p>
+            )}
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+          <button style={s.btnSecondary} onClick={onClose}>Cerrar</button>
+        </div>
       </div>
     </div>
   );

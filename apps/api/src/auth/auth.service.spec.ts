@@ -131,13 +131,15 @@ describe('AuthService', () => {
         name: 'Test',
       });
 
-      expect(mockPrisma.user.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          email: 'nuevo@vkbacademy.es',
-          passwordHash: '$2b$10$hashed',
-          name: 'Test',
+      expect(mockPrisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'nuevo@vkbacademy.es',
+            passwordHash: '$2b$10$hashed',
+            name: 'Test',
+          }),
         }),
-      });
+      );
       // Verificar que el campo password no se guarda directamente
       const createData = mockPrisma.user.create.mock.calls[0][0].data;
       expect(createData).not.toHaveProperty('password');

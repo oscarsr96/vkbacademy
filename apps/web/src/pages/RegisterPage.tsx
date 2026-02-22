@@ -1,13 +1,16 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useRegister } from '../hooks/useAuth';
+import { useSchoolYears } from '../hooks/useCourses';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [schoolYearId, setSchoolYearId] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const { mutate, isPending, error } = useRegister();
+  const { data: schoolYears = [] } = useSchoolYears();
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -18,7 +21,7 @@ export default function RegisterPage() {
       return;
     }
 
-    mutate({ name, email, password });
+    mutate({ name, email, password, ...(schoolYearId ? { schoolYearId } : {}) });
   }
 
   const apiError =
@@ -76,6 +79,26 @@ export default function RegisterPage() {
             />
             {passwordError && <span className="field-error">{passwordError}</span>}
           </div>
+
+          {schoolYears.length > 0 && (
+            <div className="field">
+              <label htmlFor="schoolYear">Nivel educativo (opcional)</label>
+              <select
+                id="schoolYear"
+                value={schoolYearId}
+                onChange={(e) => setSchoolYearId(e.target.value)}
+                style={{ width: '100%' }}
+              >
+                <option value="">Selecciona tu curso (opcional)</option>
+                {schoolYears.map((sy) => (
+                  <option key={sy.id} value={sy.id}>{sy.label}</option>
+                ))}
+              </select>
+              <span className="field-hint" style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: 4, display: 'block' }}>
+                Un administrador puede asignarte el nivel más adelante.
+              </span>
+            </div>
+          )}
 
           <button type="submit" className="btn btn-primary btn-full" disabled={isPending}>
             {isPending ? <span className="spinner" /> : 'Crear cuenta'}

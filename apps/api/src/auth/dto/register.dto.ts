@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email inválido' })
@@ -13,4 +13,8 @@ export class RegisterDto {
   @MinLength(2, { message: 'El nombre debe tener al menos 2 caracteres' })
   @MaxLength(100)
   name: string;
+
+  @IsOptional()
+  @IsString()
+  schoolYearId?: string;
 }

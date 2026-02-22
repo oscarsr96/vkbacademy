@@ -12,12 +12,14 @@ export class CoursesService {
     page,
     limit,
     role,
+    userId,
     schoolYearId,
     schoolYearIdFilter,
   }: {
     page: number;
     limit: number;
     role: Role;
+    userId: string;
     schoolYearId: string | null;
     schoolYearIdFilter?: string;
   }) {
@@ -26,12 +28,23 @@ export class CoursesService {
     const where: Record<string, unknown> = {};
 
     if (role === Role.STUDENT) {
-      // El STUDENT solo ve cursos publicados de su nivel
       where.published = true;
-      if (schoolYearId) {
+
+      // Cursos a los que el alumno está matriculado explícitamente
+      const enrolledIds = await this.prisma.enrollment
+        .findMany({ where: { userId }, select: { courseId: true } })
+        .then((r) => r.map((e) => e.courseId));
+
+      if (enrolledIds.length > 0) {
+        // Ver cursos de su nivel + los enrolados explícitamente (pueden ser de otro nivel)
+        where.OR = [
+          { schoolYearId: schoolYearId ?? '__none__' },
+          { id: { in: enrolledIds } },
+        ];
+      } else if (schoolYearId) {
         where.schoolYearId = schoolYearId;
       } else {
-        // Sin nivel asignado: no se muestran cursos
+        // Sin nivel y sin matrículas → vacío
         where.id = { in: [] };
       }
     } else {

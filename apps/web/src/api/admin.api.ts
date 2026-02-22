@@ -296,6 +296,18 @@ export interface AdminCertificate {
 
 // ─── Redemptions (Admin) ─────────────────────────────────────────────────────
 
+export interface AdminEnrollment {
+  id: string;
+  userId: string;
+  courseId: string;
+  createdAt: string;
+  course: {
+    id: string;
+    title: string;
+    schoolYear?: { id: string; name: string; label: string } | null;
+  };
+}
+
 export interface AdminRedemption {
   id: string;
   userId: string;
@@ -373,6 +385,17 @@ export const adminApi = {
 
   deleteUser: (userId: string) =>
     api.delete<{ message: string }>(`/admin/users/${userId}`).then((r) => r.data),
+
+  // ─── Matrículas manuales ────────────────────────────────────────────────────
+
+  getEnrollments: (userId: string) =>
+    api.get<AdminEnrollment[]>(`/admin/users/${userId}/enrollments`).then((r) => r.data),
+
+  enroll: (userId: string, courseId: string) =>
+    api.post<AdminEnrollment>(`/admin/users/${userId}/enrollments`, { courseId }).then((r) => r.data),
+
+  unenroll: (userId: string, courseId: string) =>
+    api.delete<{ message: string }>(`/admin/users/${userId}/enrollments/${courseId}`).then((r) => r.data),
 
   // ─── Métricas ──────────────────────────────────────────────────────────────
 

@@ -24,6 +24,7 @@ export class CoursesController {
       page: +page,
       limit: +limit,
       role: user.role,
+      userId: user.id,
       schoolYearId: user.schoolYearId ?? null,
       schoolYearIdFilter: schoolYearIdParam,
     });

@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCourses, useSchoolYears } from '../hooks/useCourses';
+import { useAuthStore } from '../store/auth.store';
+import { Role } from '@vkbacademy/shared';
 import type { Course } from '@vkbacademy/shared';
 
 // Asignaturas predefinidas para baloncesto (mismo orden que la imagen de referencia)
@@ -306,12 +308,15 @@ function CourseCard({ course, onClick }: { course: Course; onClick: () => void }
 
 export default function CoursesPage() {
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
   const [activeYear, setActiveYear] = useState<string | null>(null);
   const [activeSubject, setActiveSubject] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
   const { data, isLoading, isError } = useCourses(1, activeYear ?? undefined);
   const { data: schoolYears } = useSchoolYears();
+
+  const isStudentWithoutLevel = user?.role === Role.STUDENT && !user.schoolYearId;
 
   // Asignaturas presentes en los cursos cargados:
   // primero las predefinidas (en orden), luego las personalizadas (alfabético)
@@ -427,7 +432,11 @@ export default function CoursesPage() {
           <div style={S.empty}>
             <span style={{ fontSize: 48 }}>📚</span>
             <p style={{ fontWeight: 600, color: '#475569' }}>
-              {search ? 'No se encontraron cursos con esa búsqueda.' : 'No hay cursos disponibles todavía.'}
+              {search
+                ? 'No se encontraron cursos con esa búsqueda.'
+                : isStudentWithoutLevel
+                  ? 'Cuando un administrador asigne tu nivel educativo, aquí aparecerán tus cursos.'
+                  : 'No hay cursos disponibles todavía.'}
             </p>
           </div>
         ) : (

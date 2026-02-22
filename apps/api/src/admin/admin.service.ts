@@ -1006,6 +1006,30 @@ export class AdminService {
     });
   }
 
+  // ─── Matrículas manuales ──────────────────────────────────────────────────
+
+  async getEnrollments(userId: string) {
+    return this.prisma.enrollment.findMany({
+      where: { userId },
+      include: { course: { include: { schoolYear: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async enroll(userId: string, courseId: string) {
+    return this.prisma.enrollment.upsert({
+      where: { userId_courseId: { userId, courseId } },
+      update: {},
+      create: { userId, courseId },
+      include: { course: { include: { schoolYear: true } } },
+    });
+  }
+
+  async unenroll(userId: string, courseId: string) {
+    await this.prisma.enrollment.deleteMany({ where: { userId, courseId } });
+    return { message: 'Matrícula eliminada' };
+  }
+
   // ─── Métricas ─────────────────────────────────────────────────────────────
 
   async getMetrics() {

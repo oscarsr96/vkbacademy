@@ -37,6 +37,7 @@ import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { CreateExamQuestionDto, UpdateExamQuestionDto } from './dto/create-exam-question.dto';
 import { GenerateExamQuestionsDto } from './dto/generate-exam-questions.dto';
 import { IssueCertificateDto } from './dto/issue-certificate.dto';
+import { EnrollUserDto } from './dto/enroll-user.dto';
 import { CertificatesService } from '../certificates/certificates.service';
 
 @Controller('admin')
@@ -78,6 +79,23 @@ export class AdminController {
   @Delete('users/:id')
   deleteUser(@Param('id') id: string) {
     return this.adminService.deleteUser(id);
+  }
+
+  // ─── Matrículas manuales ──────────────────────────────────────────────────
+
+  @Get('users/:id/enrollments')
+  getEnrollments(@Param('id') id: string) {
+    return this.adminService.getEnrollments(id);
+  }
+
+  @Post('users/:id/enrollments')
+  enroll(@Param('id') id: string, @Body() dto: EnrollUserDto) {
+    return this.adminService.enroll(id, dto.courseId);
+  }
+
+  @Delete('users/:id/enrollments/:courseId')
+  unenroll(@Param('id') id: string, @Param('courseId') courseId: string) {
+    return this.adminService.unenroll(id, courseId);
   }
 
   @Get('metrics')
