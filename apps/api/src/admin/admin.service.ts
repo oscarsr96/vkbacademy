@@ -139,14 +139,56 @@ export class AdminService {
         orderBy: { createdAt: 'desc' },
         include: {
           schoolYear: true,
-          _count: { select: { modules: true, enrollments: true } },
+          _count: { select: { modules: true } },
         },
       }),
       this.prisma.course.count({ where }),
     ]);
 
+    // Alumnos accesibles por curso:
+    // (1) alumnos cuyo schoolYearId coincide con el del curso
+    // (2) + alumnos de OTRO nivel con matrícula explícita en el curso
+
+    const courseIds = items.map((c) => c.id);
+
+    const [studentsByLevel, crossEnrollments] = await Promise.all([
+      // (1) conteo de alumnos STUDENT agrupados por schoolYear
+      this.prisma.user.groupBy({
+        by: ['schoolYearId'],
+        where: { role: Role.STUDENT, schoolYearId: { not: null } },
+        _count: { _all: true },
+      }),
+      // (2) matrículas explícitas con el schoolYear del alumno
+      courseIds.length > 0
+        ? this.prisma.enrollment.findMany({
+            where: { courseId: { in: courseIds } },
+            select: { courseId: true, user: { select: { schoolYearId: true } } },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const syStudentCount = new Map(
+      studentsByLevel.map((r) => [r.schoolYearId!, r._count._all]),
+    );
+
+    // Alumnos de otro nivel matriculados explícitamente en cada curso
+    const courseSchoolYear = new Map(items.map((c) => [c.id, c.schoolYearId]));
+    const crossLevelCount = new Map<string, number>();
+    for (const e of crossEnrollments) {
+      if (e.user.schoolYearId !== courseSchoolYear.get(e.courseId)) {
+        crossLevelCount.set(e.courseId, (crossLevelCount.get(e.courseId) ?? 0) + 1);
+      }
+    }
+
+    const enrichedItems = items.map((course) => ({
+      ...course,
+      studentCount:
+        (syStudentCount.get(course.schoolYearId ?? '') ?? 0) +
+        (crossLevelCount.get(course.id) ?? 0),
+    }));
+
     return {
-      data: items,
+      data: enrichedItems,
       total,
       page,
       limit,

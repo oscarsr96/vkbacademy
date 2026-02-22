@@ -246,7 +246,7 @@ export default function AdminCoursesPage() {
                     {(course as unknown as { _count?: { modules?: number } })._count?.modules ?? 0}
                   </td>
                   <td style={s.td}>
-                    {(course as unknown as { _count?: { enrollments?: number } })._count?.enrollments ?? 0}
+                    {(course as unknown as { studentCount?: number }).studentCount ?? 0}
                   </td>
                   <td style={s.td}>
                     <span style={course.published ? s.badgeOk : s.badgeDraft}>
