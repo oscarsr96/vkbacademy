@@ -194,8 +194,6 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     maxWidth: 148,
     objectFit: 'contain' as const,
-    filter: 'brightness(0) invert(1)',
-    opacity: 0.9,
   },
   brandFallback: {
     display: 'none',

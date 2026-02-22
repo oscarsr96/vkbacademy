@@ -13,7 +13,11 @@ export default function PublicLayout() {
         <div style={styles.navInner}>
           {/* Logo izquierda */}
           <Link to="/" style={styles.brand}>
-            <span style={styles.brandEmoji}>🏀</span>
+            <img
+              src="https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png"
+              alt="Vallekas Basket"
+              style={styles.brandLogo}
+            />
             <span style={styles.brandText}>VKB Academy</span>
           </Link>
 
@@ -87,8 +91,11 @@ export default function PublicLayout() {
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
           <div style={styles.footerBrand}>
-            <span>🏀</span>
-            <span style={styles.footerBrandText}>VKB Academy</span>
+            <img
+              src="https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png"
+              alt="Vallekas Basket"
+              style={styles.footerLogo}
+            />
           </div>
           <p style={styles.footerText}>
             © 2026 Vallekas Basket · Formación deportiva y académica
@@ -160,13 +167,14 @@ const styles: Record<string, React.CSSProperties> = {
   brand: {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.5rem',
+    gap: '0.625rem',
     textDecoration: 'none',
     flexShrink: 0,
   },
-  brandEmoji: {
-    fontSize: '1.5rem',
-    lineHeight: 1,
+  brandLogo: {
+    height: 36,
+    width: 'auto',
+    objectFit: 'contain' as const,
   },
   brandText: {
     background: 'linear-gradient(135deg, #ea580c, #f97316)',
@@ -227,13 +235,14 @@ const styles: Record<string, React.CSSProperties> = {
   footerBrand: {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-    fontSize: '1.125rem',
   },
-  footerBrandText: {
-    color: '#f97316',
-    fontWeight: 700,
-    fontSize: '1rem',
+  footerLogo: {
+    height: 52,
+    width: 'auto',
+    objectFit: 'contain' as const,
+    opacity: 0.85,
   },
   footerText: {
     color: 'rgba(255,255,255,0.40)',
