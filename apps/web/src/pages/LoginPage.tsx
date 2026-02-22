@@ -64,6 +64,11 @@ export default function LoginPage() {
         </form>
 
         <p style={styles.footer}>
+          <Link to="/forgot-password" style={styles.link}>
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </p>
+        <p style={styles.footer}>
           ¿No tienes cuenta?{' '}
           <Link to="/register" style={styles.link}>
             Regístrate

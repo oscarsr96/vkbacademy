@@ -16,6 +16,7 @@ function buildNavLinks(role: Role | undefined): NavLink[] {
       { to: '/bookings', label: '📅 Reservas' },
       { to: '/challenges', label: '🏆 Retos' },
       { to: '/certificates', label: '📜 Certificados' },
+      { to: '/profile', label: '👤 Mi perfil' },
     ];
   }
 
@@ -28,21 +29,29 @@ function buildNavLinks(role: Role | undefined): NavLink[] {
       { to: '/admin/billing', label: '   💳 Facturación' },
       { to: '/admin/challenges', label: '   🎯 Retos' },
       { to: '/admin/redemptions', label: '   🎁 Canjes' },
+      { to: '/profile', label: '👤 Mi perfil' },
     ];
   }
 
+  // TEACHER: portal docente + cursos + reservas + perfil
+  if (role === Role.TEACHER) {
+    return [
+      ...base,
+      { to: '/teacher', label: '🏫 Portal Docente' },
+      { to: '/courses', label: '📚 Cursos' },
+      { to: '/profile', label: '👤 Mi perfil' },
+    ];
+  }
+
+  // STUDENT por defecto
   const links: NavLink[] = [
     ...base,
     { to: '/courses', label: '📚 Cursos' },
     { to: '/bookings', label: '📅 Reservas' },
-    // Solo visible para STUDENT
-    ...(role === Role.STUDENT
-      ? [
-          { to: '/my-exams', label: '🎓 Exámenes' },
-          { to: '/challenges', label: '🏆 Retos' },
-          { to: '/certificates', label: '📜 Certificados' },
-        ]
-      : []),
+    { to: '/my-exams', label: '🎓 Exámenes' },
+    { to: '/challenges', label: '🏆 Retos' },
+    { to: '/certificates', label: '📜 Certificados' },
+    { to: '/profile', label: '👤 Mi perfil' },
   ];
 
   return links;

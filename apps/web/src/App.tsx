@@ -4,6 +4,10 @@ import { Role } from '@vkbacademy/shared';
 
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ProfilePage from './pages/ProfilePage';
+import TeacherPortalPage from './pages/TeacherPortalPage';
 import DashboardPage from './pages/DashboardPage';
 import CoursesPage from './pages/CoursesPage';
 import CoursePage from './pages/CoursePage';
@@ -84,6 +88,8 @@ export default function App() {
           </PublicOnlyRoute>
         }
       />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* ── Rutas privadas con sidebar (AppLayout) ── */}
       <Route
@@ -116,6 +122,12 @@ export default function App() {
 
         {/* Fase 9 — Certificados */}
         <Route path="certificates" element={<CertificatesPage />} />
+
+        {/* Perfil de usuario */}
+        <Route path="profile" element={<ProfilePage />} />
+
+        {/* Portal docente */}
+        <Route path="teacher" element={<TeacherPortalPage />} />
 
         {/* Fase 6 — Panel de administración */}
         <Route path="admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />

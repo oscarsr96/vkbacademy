@@ -131,6 +131,22 @@ export class NotificationsService {
     );
   }
 
+  /** Envía el enlace de restablecimiento de contraseña al usuario */
+  async sendPasswordReset(params: { email: string; name: string; resetUrl: string }) {
+    await this.sendEmail(
+      params.email,
+      'Restablecer contraseña — VKB Academy',
+      `<h2>Restablecer contraseña</h2>
+       <p>Hola <strong>${params.name}</strong>, hemos recibido una solicitud para restablecer tu contraseña.</p>
+       <p style="margin:1.5rem 0">
+         <a href="${params.resetUrl}" style="background:#ea580c;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
+           Restablecer contraseña
+         </a>
+       </p>
+       <p style="color:#666;font-size:0.875rem">Este enlace expira en 1 hora. Si no solicitaste este cambio, ignora este email.</p>`,
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Helpers de formato de fecha
   // ---------------------------------------------------------------------------
