@@ -47,73 +47,81 @@ export default function DashboardPage() {
     <>
       {/* Banner de cuenta pendiente — solo STUDENT sin nivel asignado */}
       {isStudent && !user.schoolYearId && (
-        <div style={styles.pendingBanner}>
+        <div style={S.pendingBanner}>
           ⚠️ Tu cuenta está pendiente de configuración. Un administrador asignará tu nivel en breve.
         </div>
       )}
 
-      {/* Stats de gamificación — solo para STUDENT */}
-      {isStudent && summary && (
-        <section>
-          <div style={styles.statsGrid}>
-            <div style={styles.statCard}>
-              <span style={styles.statEmoji}>🏆</span>
-              <p style={styles.statValue}>{summary.totalPoints}</p>
-              <p style={styles.statLabel}>Puntos</p>
-            </div>
-            <div style={styles.statCard}>
-              <span style={styles.statEmoji}>🔥</span>
-              <p style={styles.statValue}>{summary.currentStreak}</p>
-              <p style={styles.statLabel}>Racha (semanas)</p>
-            </div>
-            <div style={styles.statCard}>
-              <span style={styles.statEmoji}>✅</span>
-              <p style={styles.statValue}>{summary.completedCount}</p>
-              <p style={styles.statLabel}>Lecciones completadas</p>
-            </div>
+      {/* Hero oscuro con saludo */}
+      <div className="page-hero animate-in">
+        <div style={S.heroInner}>
+          {/* Avatar */}
+          <div style={S.avatar}>
+            {user.name.charAt(0).toUpperCase()}
           </div>
-        </section>
-      )}
-
-      {/* Bienvenida */}
-      <div style={styles.welcome}>
-        <div style={styles.welcomeAvatar}>
-          {user.name.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <h1 style={styles.welcomeTitle}>Hola, {user.name.split(' ')[0]} 👋</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <span className={`role-badge ${user.role}`}>{ROLE_LABELS[user.role]}</span>
-            <span style={styles.welcomeDesc}>{ROLE_DESCRIPTION[user.role]}</span>
+          <div style={S.heroText}>
+            <h1 className="hero-title">
+              ¡Hola, {user.name.split(' ')[0]}! 👋
+            </h1>
+            <p className="hero-subtitle" style={{ marginTop: 6 }}>
+              <span className={`role-badge ${user.role}`} style={{ marginRight: 8, verticalAlign: 'middle' }}>
+                {ROLE_LABELS[user.role]}
+              </span>
+              {ROLE_DESCRIPTION[user.role]}
+            </p>
           </div>
         </div>
       </div>
 
+      {/* Stats de gamificación — solo para STUDENT */}
+      {isStudent && (
+        <div style={S.statsGrid}>
+          <div className="stat-card" style={S.statCardInner}>
+            <span style={S.statEmoji}>🏆</span>
+            <p style={S.statValue}>{summary?.totalPoints ?? '—'}</p>
+            <p style={S.statLabel}>Puntos totales</p>
+          </div>
+          <div className="stat-card" style={S.statCardInner}>
+            <span style={S.statEmoji}>🔥</span>
+            <p style={S.statValue}>{summary?.currentStreak ?? '—'}</p>
+            <p style={S.statLabel}>Racha (semanas)</p>
+          </div>
+          <div className="stat-card" style={S.statCardInner}>
+            <span style={S.statEmoji}>✅</span>
+            <p style={S.statValue}>{summary?.completedCount ?? '—'}</p>
+            <p style={S.statLabel}>Lecciones completadas</p>
+          </div>
+        </div>
+      )}
+
       {/* Accesos rápidos */}
       <section>
-        <h2 style={styles.sectionTitle}>Accesos rápidos</h2>
-        <div style={styles.grid}>
+        <h2 style={S.sectionTitle}>Accesos rápidos</h2>
+        <div style={S.grid}>
           {quickActions.map(({ emoji, label, desc, to }) => (
-            <div key={label} style={styles.card} onClick={() => navigate(to)}>
-              <span style={styles.cardEmoji}>{emoji}</span>
-              <div>
-                <p style={styles.cardLabel}>{label}</p>
-                <p style={styles.cardDesc}>{desc}</p>
-              </div>
+            <div
+              key={label}
+              className="vkb-card"
+              style={S.quickCard}
+              onClick={() => navigate(to)}
+            >
+              <span style={S.cardEmoji}>{emoji}</span>
+              <p style={S.cardLabel}>{label}</p>
+              <p style={S.cardDesc}>{desc}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Tu cuenta */}
-      <section style={styles.accountSection}>
-        <h2 style={styles.sectionTitle}>Tu cuenta</h2>
-        <div style={styles.infoCard}>
+      <section>
+        <h2 style={S.sectionTitle}>Tu cuenta</h2>
+        <div className="vkb-card" style={{ padding: '0 24px' }}>
           <Row label="Nombre" value={user.name} />
           <Row label="Email" value={user.email} />
           <Row label="Rol" value={ROLE_LABELS[user.role]} />
           {user.role === Role.STUDENT && (
-            <Row label="Curso" value={user.schoolYear?.label ?? '—'} />
+            <Row label="Nivel" value={user.schoolYear?.label ?? '—'} />
           )}
         </div>
       </section>
@@ -121,33 +129,34 @@ export default function DashboardPage() {
   );
 
   return (
-    <div style={isStudent ? styles.layout : styles.page}>
-      <div style={isStudent ? styles.main : undefined}>
+    <div style={isStudent ? S.layout : S.page}>
+      <div style={isStudent ? S.main : undefined}>
         {mainContent}
       </div>
 
       {/* Sidebar de lecciones recientes — solo para STUDENT */}
       {isStudent && (
-        <aside style={styles.sidebar}>
-          <h2 style={styles.sectionTitle}>Últimas lecciones</h2>
+        <aside style={S.sidebar}>
+          <h2 style={S.sectionTitle}>Últimas lecciones</h2>
           {recentLessons.length === 0 ? (
-            <p style={styles.emptyMsg}>Aún no has completado ninguna lección.</p>
+            <p style={S.emptyMsg}>Aún no has completado ninguna lección.</p>
           ) : (
-            <div style={styles.recentList}>
+            <div style={S.recentList}>
               {recentLessons.map((item) => (
                 <div
                   key={item.lessonId}
-                  style={styles.recentCard}
+                  className="vkb-card"
+                  style={S.recentCard}
                   onClick={() => navigate(`/courses/${item.courseId}`)}
                 >
-                  <span style={styles.recentTypeIcon}>
+                  <span style={S.recentTypeIcon}>
                     {item.lessonType === LessonType.VIDEO ? '🎬' : item.lessonType === LessonType.QUIZ ? '📝' : '💪'}
                   </span>
-                  <div style={styles.recentInfo}>
-                    <p style={styles.recentTitle}>{item.lessonTitle}</p>
-                    <p style={styles.recentMeta}>{item.courseTitle}</p>
+                  <div style={S.recentInfo}>
+                    <p style={S.recentTitle}>{item.lessonTitle}</p>
+                    <p style={S.recentMeta}>{item.courseTitle}</p>
                     {item.completedAt && (
-                      <p style={styles.recentDate}>
+                      <p style={S.recentDate}>
                         {new Date(item.completedAt).toLocaleDateString('es-ES', {
                           day: 'numeric', month: 'short',
                         })}
@@ -166,14 +175,19 @@ export default function DashboardPage() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--color-border)' }}>
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      padding: '14px 0',
+      borderBottom: '1px solid var(--color-border)',
+    }}>
       <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{label}</span>
-      <span style={{ fontWeight: 500, fontSize: '0.875rem' }}>{value}</span>
+      <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-text)' }}>{value}</span>
     </div>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const S: Record<string, React.CSSProperties> = {
   // Layout de dos columnas (student) vs columna única (otros roles)
   layout: {
     display: 'grid',
@@ -181,23 +195,109 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 32,
     alignItems: 'start',
   },
-  page: { display: 'flex', flexDirection: 'column', gap: 36, maxWidth: 800 },
-  main: { display: 'flex', flexDirection: 'column', gap: 36 },
+  page: { display: 'flex', flexDirection: 'column', gap: 32, maxWidth: 820 },
+  main: { display: 'flex', flexDirection: 'column', gap: 32 },
+
+  // Hero interior
+  heroInner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 20,
+  },
+  avatar: {
+    width: 68,
+    height: 68,
+    borderRadius: '50%',
+    background: 'var(--gradient-orange)',
+    boxShadow: 'var(--shadow-orange)',
+    color: '#fff',
+    fontWeight: 800,
+    fontSize: '1.6rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    letterSpacing: '-0.02em',
+  },
+  heroText: { flex: 1 },
+
+  // Pending banner
+  pendingBanner: {
+    background: 'rgba(234,88,12,0.08)',
+    border: '1.5px solid rgba(234,88,12,0.35)',
+    borderRadius: 'var(--radius-md)',
+    padding: '14px 20px',
+    fontSize: '0.875rem',
+    color: '#c94e00',
+    fontWeight: 500,
+  },
+
+  // Stats grid
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: 16,
+  },
+  statCardInner: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    gap: 4,
+    textAlign: 'center' as const,
+  },
+  statEmoji: { fontSize: 30, lineHeight: 1, marginBottom: 2 },
+  statValue: {
+    fontSize: '1.625rem',
+    fontWeight: 800,
+    color: 'var(--color-text)',
+    margin: 0,
+    letterSpacing: '-0.02em',
+  },
+  statLabel: {
+    fontSize: '0.75rem',
+    color: 'var(--color-text-muted)',
+    margin: 0,
+    fontWeight: 500,
+  },
+
+  // Section
+  sectionTitle: {
+    fontSize: '0.8125rem',
+    fontWeight: 700,
+    letterSpacing: '0.07em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--color-text-muted)',
+    marginBottom: 14,
+  },
+
+  // Quick action cards
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+    gap: 16,
+  },
+  quickCard: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    textAlign: 'center' as const,
+    gap: 8,
+    cursor: 'pointer',
+    padding: 28,
+  },
+  cardEmoji: { fontSize: '2.5rem', lineHeight: 1, marginBottom: 4 },
+  cardLabel: { fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text)', margin: 0 },
+  cardDesc: { fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 },
 
   // Sidebar
   sidebar: { display: 'flex', flexDirection: 'column', gap: 0 },
-  recentList: { display: 'flex', flexDirection: 'column', gap: 8 },
+  recentList: { display: 'flex', flexDirection: 'column', gap: 10 },
   recentCard: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 12,
-    padding: '12px 16px',
-    background: 'var(--color-surface)',
-    borderRadius: 'var(--radius-md)',
-    boxShadow: 'var(--shadow-sm)',
+    padding: '14px 16px',
     cursor: 'pointer',
-    border: '1.5px solid transparent',
-    transition: 'border-color 0.15s',
   },
   recentTypeIcon: { fontSize: 22, flexShrink: 0, marginTop: 1 },
   recentInfo: { flex: 1, minWidth: 0 },
@@ -208,6 +308,7 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+    margin: 0,
   },
   recentMeta: {
     fontSize: '0.78rem',
@@ -216,92 +317,19 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+    marginBottom: 0,
   },
   recentDate: {
     fontSize: '0.72rem',
     color: 'var(--color-primary)',
-    marginTop: 3,
-    fontWeight: 600,
+    marginTop: 4,
+    fontWeight: 700,
+    margin: 0,
   },
   emptyMsg: {
     fontSize: '0.875rem',
     color: 'var(--color-text-muted)',
     padding: '16px 0',
-  },
-  welcome: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 20,
-    background: 'var(--color-surface)',
-    borderRadius: 'var(--radius-md)',
-    padding: 28,
-    boxShadow: 'var(--shadow-sm)',
-  },
-  welcomeAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: '50%',
-    background: 'var(--color-primary)',
-    color: '#fff',
-    fontWeight: 700,
-    fontSize: '1.5rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  welcomeTitle: { fontSize: '1.5rem', fontWeight: 700 },
-  welcomeDesc: { fontSize: '0.875rem', color: 'var(--color-text-muted)' },
-  sectionTitle: { fontSize: '1rem', fontWeight: 700, marginBottom: 14, color: 'var(--color-text-muted)' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 },
-  card: {
-    background: 'var(--color-surface)',
-    borderRadius: 'var(--radius-md)',
-    padding: 24,
-    boxShadow: 'var(--shadow-sm)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 16,
-    cursor: 'pointer',
-    border: '1.5px solid transparent',
-    transition: 'border-color 0.15s',
-  },
-  cardEmoji: { fontSize: 32 },
-  cardLabel: { fontWeight: 600, fontSize: '0.9375rem' },
-  cardDesc: { fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginTop: 2 },
-  pendingBanner: {
-    background: '#fff7ed',
-    border: '1.5px solid #fb923c',
-    borderRadius: 'var(--radius-md)',
-    padding: '14px 20px',
-    fontSize: '0.875rem',
-    color: '#9a3412',
-    fontWeight: 500,
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 16,
-  },
-  statCard: {
-    background: 'var(--color-surface)',
-    borderRadius: 'var(--radius-md)',
-    padding: '20px 16px',
-    boxShadow: 'var(--shadow-sm)',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: 6,
-    textAlign: 'center' as const,
-  },
-  statEmoji: { fontSize: 28 },
-  statValue: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 },
-  statLabel: { fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0, fontWeight: 500 },
-  accountSection: {},
-  infoCard: {
-    background: 'var(--color-surface)',
-    borderRadius: 'var(--radius-md)',
-    padding: '0 24px',
-    boxShadow: 'var(--shadow-sm)',
+    margin: 0,
   },
 };

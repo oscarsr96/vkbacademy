@@ -19,10 +19,19 @@ const SUBJECTS = [
 
 // ─── Constantes de color ───────────────────────────────────────────────────────
 
-const ORANGE  = '#ea580c';
-const NAVY    = '#0d1b2a';   // azul marino del hero (igual que la referencia)
+const ORANGE = '#ea580c';
 
-// Gradiente por nivel educativo (para thumbnails sin coverUrl)
+// Franja de color por nivel educativo (acento superior de la card)
+const LEVEL_COLOR: Record<string, string> = {
+  '1eso':  '#2563eb',
+  '2eso':  '#7c3aed',
+  '3eso':  '#059669',
+  '4eso':  '#0891b2',
+  '1bach': '#d97706',
+  '2bach': '#e11d48',
+};
+
+// Gradiente para el thumbnail (fondo de la imagen)
 const LEVEL_GRADIENT: Record<string, string> = {
   '1eso':  'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
   '2eso':  'linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%)',
@@ -31,74 +40,20 @@ const LEVEL_GRADIENT: Record<string, string> = {
   '1bach': 'linear-gradient(135deg, #92400e 0%, #d97706 100%)',
   '2bach': 'linear-gradient(135deg, #881337 0%, #e11d48 100%)',
 };
-const DEFAULT_GRADIENT = 'linear-gradient(135deg, #1e293b 0%, #334155 100%)';
+const DEFAULT_GRADIENT = 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)';
 
 // ─── Estilos ───────────────────────────────────────────────────────────────────
 
 const S: Record<string, React.CSSProperties> = {
-  page: { display: 'flex', flexDirection: 'column', minHeight: '100%' },
-
-  // Hero
-  hero: {
-    padding: '2.75rem 2.5rem 2.25rem',
-    background: NAVY,
-    borderBottom: 'none',
-  },
-  heroTitle: {
-    fontSize: '2.5rem',
-    fontWeight: 900,
-    letterSpacing: '-0.03em',
-    color: '#ffffff',
-    textTransform: 'uppercase',
-    lineHeight: 1,
-    marginBottom: '0.5rem',
-  },
-  heroSub: {
-    fontSize: '0.9rem',
-    color: 'rgba(255,255,255,0.55)',
-    marginBottom: '1.75rem',
-    maxWidth: 560,
-  },
-  searchRow: {
-    display: 'flex',
-    gap: 10,
-    alignItems: 'center',
-    maxWidth: 680,
-  },
-  searchWrap: {
-    flex: 1,
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  searchIcon: {
-    position: 'absolute',
-    left: 14,
-    fontSize: '1rem',
-    color: 'rgba(255,255,255,0.5)',
-    pointerEvents: 'none',
-  },
-  searchInput: {
-    width: '100%',
-    height: 46,
-    padding: '0 1rem 0 2.5rem',
-    borderRadius: 10,
-    border: '1.5px solid rgba(255,255,255,0.15)',
-    fontSize: '0.9rem',
-    background: 'rgba(255,255,255,0.10)',
-    color: '#ffffff',
-    outline: 'none',
-    boxSizing: 'border-box',
-  },
+  page: { display: 'flex', flexDirection: 'column', gap: 0 },
 
   // Filtros
   filtersBar: {
-    padding: '0.875rem 2.5rem',
-    background: '#fff',
-    borderBottom: '1px solid #e2e8f0',
+    padding: '0.875rem 0',
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 10,
+    marginBottom: 24,
   },
   filtersRow: {
     display: 'flex',
@@ -111,12 +66,12 @@ const S: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     letterSpacing: '0.06em',
     textTransform: 'uppercase' as const,
-    color: '#94a3b8',
+    color: 'var(--color-text-muted)',
     width: 80,
     flexShrink: 0,
   },
   chip: {
-    padding: '6px 18px',
+    padding: '6px 16px',
     borderRadius: 999,
     fontSize: '0.8rem',
     fontWeight: 700,
@@ -127,11 +82,6 @@ const S: Record<string, React.CSSProperties> = {
   },
 
   // Grid
-  gridSection: {
-    padding: '2rem 2.5rem',
-    flex: 1,
-    background: '#f8fafc',
-  },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
@@ -141,11 +91,19 @@ const S: Record<string, React.CSSProperties> = {
   // Tarjeta
   card: {
     background: '#fff',
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     overflow: 'hidden',
     cursor: 'pointer',
-    border: '1px solid #e2e8f0',
-    transition: 'transform 0.15s, box-shadow 0.15s',
+    border: '1.5px solid var(--color-border)',
+    boxShadow: 'var(--shadow-card)',
+    transition: 'transform 0.22s, box-shadow 0.22s, border-color 0.22s',
+    display: 'flex',
+    flexDirection: 'column' as const,
+  },
+  levelStripe: {
+    height: 6,
+    width: '100%',
+    flexShrink: 0,
   },
   thumb: {
     aspectRatio: '16/9',
@@ -180,7 +138,11 @@ const S: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
   },
   cardBody: {
-    padding: '0.875rem 1rem 1rem',
+    padding: '1rem 1.125rem 1.125rem',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 6,
+    flex: 1,
   },
   cardSubject: {
     display: 'inline-block',
@@ -192,35 +154,31 @@ const S: Record<string, React.CSSProperties> = {
     background: 'rgba(234,88,12,0.09)',
     borderRadius: 6,
     padding: '2px 8px',
-    marginBottom: '0.4rem',
+    width: 'fit-content',
   },
   cardTitle: {
     fontSize: '0.95rem',
     fontWeight: 700,
     color: '#0f172a',
-    marginBottom: '0.35rem',
     lineHeight: 1.35,
     display: '-webkit-box',
     WebkitLineClamp: 2,
     WebkitBoxOrient: 'vertical',
     overflow: 'hidden',
+    margin: 0,
   } as React.CSSProperties,
-  cardDesc: {
-    fontSize: '0.8rem',
+  cardMeta: {
+    fontSize: '0.78rem',
     color: '#64748b',
-    lineHeight: 1.5,
-    display: '-webkit-box',
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: 'vertical',
-    overflow: 'hidden',
-  } as React.CSSProperties,
+    margin: 0,
+  },
 
   // Skeleton
   skeletonCard: {
     background: '#fff',
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     overflow: 'hidden',
-    border: '1px solid #e2e8f0',
+    border: '1.5px solid var(--color-border)',
   },
   skeletonThumb: {
     aspectRatio: '16/9',
@@ -240,7 +198,7 @@ const S: Record<string, React.CSSProperties> = {
     gap: 12,
     color: '#94a3b8',
   },
-  error: { color: '#dc2626', padding: '1rem 2.5rem' },
+  error: { color: '#dc2626', padding: '1rem 0' },
 };
 
 // ─── Skeleton card ─────────────────────────────────────────────────────────────
@@ -249,7 +207,7 @@ function SkeletonCard() {
   return (
     <div style={S.skeletonCard}>
       <div style={S.skeletonThumb} />
-      <div style={{ padding: '0.875rem 1rem 1rem' }}>
+      <div style={{ padding: '1rem 1.125rem' }}>
         <div style={{ ...S.skeletonLine, height: 16, width: '80%', marginBottom: 8 }} />
         <div style={{ ...S.skeletonLine, height: 12, width: '100%', marginBottom: 6 }} />
         <div style={{ ...S.skeletonLine, height: 12, width: '65%' }} />
@@ -262,6 +220,7 @@ function SkeletonCard() {
 
 function CourseCard({ course, onClick }: { course: Course; onClick: () => void }) {
   const gradient = LEVEL_GRADIENT[course.schoolYear?.name ?? ''] ?? DEFAULT_GRADIENT;
+  const stripeColor = LEVEL_COLOR[course.schoolYear?.name ?? ''] ?? ORANGE;
 
   return (
     <div
@@ -269,15 +228,20 @@ function CourseCard({ course, onClick }: { course: Course; onClick: () => void }
       onClick={onClick}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = 'translateY(-3px)';
-        el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)';
+        el.style.transform = 'translateY(-4px)';
+        el.style.boxShadow = 'var(--shadow-card-hover)';
+        el.style.borderColor = 'rgba(234,88,12,0.25)';
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.transform = 'none';
-        el.style.boxShadow = 'none';
+        el.style.boxShadow = 'var(--shadow-card)';
+        el.style.borderColor = 'var(--color-border)';
       }}
     >
+      {/* Franja de color por nivel */}
+      <div style={{ ...S.levelStripe, background: stripeColor }} />
+
       {/* Thumbnail */}
       <div style={{ ...S.thumb, background: gradient }}>
         {course.coverUrl ? (
@@ -296,8 +260,8 @@ function CourseCard({ course, onClick }: { course: Course; onClick: () => void }
           <div style={S.cardSubject}>{course.subject}</div>
         )}
         <div style={S.cardTitle}>{course.title}</div>
-        {course.description && (
-          <div style={S.cardDesc}>{course.description}</div>
+        {course.schoolYear && (
+          <p style={S.cardMeta}>{course.schoolYear.label}</p>
         )}
       </div>
     </div>
@@ -346,19 +310,25 @@ export default function CoursesPage() {
     return <div style={S.error}>Error al cargar los cursos.</div>;
   }
 
+  const totalCourses = filtered.length;
+
   return (
     <div style={S.page}>
-      {/* Hero */}
-      <div style={S.hero}>
-        <div style={S.heroTitle}>Catálogo de Cursos</div>
-        <div style={S.heroSub}>
-          Tu biblioteca de formación técnica y táctica de baloncesto
-        </div>
-        <div style={S.searchRow}>
-          <div style={S.searchWrap}>
-            <span style={S.searchIcon}>🔍</span>
+      {/* Hero oscuro */}
+      <div className="page-hero animate-in">
+        <h1 className="hero-title">📚 Mis Cursos</h1>
+        <p className="hero-subtitle">
+          {isLoading
+            ? 'Cargando tu biblioteca...'
+            : `${totalCourses} ${totalCourses === 1 ? 'curso disponible' : 'cursos disponibles'} · Tu biblioteca de formación técnica y táctica`}
+        </p>
+
+        {/* Buscador dark */}
+        <div style={searchStyles.row}>
+          <div style={searchStyles.wrap}>
+            <span style={searchStyles.icon}>🔍</span>
             <input
-              style={S.searchInput}
+              style={searchStyles.input}
               type="text"
               placeholder="Busca un curso, módulo o temática..."
               value={search}
@@ -368,15 +338,18 @@ export default function CoursesPage() {
         </div>
       </div>
 
-      {/* Barra de filtros: asignatura + nivel */}
+      {/* Barra de filtros */}
       <div style={S.filtersBar}>
-
         {/* Fila 1: Asignaturas */}
         {allSubjects.length > 0 && (
           <div style={S.filtersRow}>
             <span style={S.filterLabel}>Asignatura</span>
             <button
-              style={{ ...S.chip, background: activeSubject === null ? ORANGE : '#f1f5f9', color: activeSubject === null ? '#fff' : '#475569' }}
+              style={{
+                ...S.chip,
+                background: activeSubject === null ? ORANGE : '#f1f5f9',
+                color: activeSubject === null ? '#fff' : '#475569',
+              }}
               onClick={() => setActiveSubject(null)}
             >
               Todas
@@ -402,7 +375,11 @@ export default function CoursesPage() {
           <div style={S.filtersRow}>
             <span style={S.filterLabel}>Nivel</span>
             <button
-              style={{ ...S.chip, background: activeYear === null ? ORANGE : '#f1f5f9', color: activeYear === null ? '#fff' : '#475569' }}
+              style={{
+                ...S.chip,
+                background: activeYear === null ? ORANGE : '#f1f5f9',
+                color: activeYear === null ? '#fff' : '#475569',
+              }}
               onClick={() => setActiveYear(null)}
             >
               Todos
@@ -410,7 +387,11 @@ export default function CoursesPage() {
             {schoolYears.map((sy) => (
               <button
                 key={sy.id}
-                style={{ ...S.chip, background: activeYear === sy.id ? ORANGE : '#f1f5f9', color: activeYear === sy.id ? '#fff' : '#475569' }}
+                style={{
+                  ...S.chip,
+                  background: activeYear === sy.id ? ORANGE : '#f1f5f9',
+                  color: activeYear === sy.id ? '#fff' : '#475569',
+                }}
                 onClick={() => setActiveYear(activeYear === sy.id ? null : sy.id)}
               >
                 {sy.label}
@@ -421,36 +402,70 @@ export default function CoursesPage() {
       </div>
 
       {/* Grid */}
-      <div style={S.gridSection}>
-        {isLoading ? (
-          <div style={S.grid}>
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={S.empty}>
-            <span style={{ fontSize: 48 }}>📚</span>
-            <p style={{ fontWeight: 600, color: '#475569' }}>
-              {search
-                ? 'No se encontraron cursos con esa búsqueda.'
-                : isStudentWithoutLevel
-                  ? 'Cuando un administrador asigne tu nivel educativo, aquí aparecerán tus cursos.'
-                  : 'No hay cursos disponibles todavía.'}
-            </p>
-          </div>
-        ) : (
-          <div style={S.grid}>
-            {filtered.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                onClick={() => navigate(`/courses/${course.id}`)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {isLoading ? (
+        <div style={S.grid}>
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={S.empty}>
+          <span style={{ fontSize: 48 }}>📚</span>
+          <p style={{ fontWeight: 600, color: '#475569' }}>
+            {search
+              ? 'No se encontraron cursos con esa búsqueda.'
+              : isStudentWithoutLevel
+                ? 'Cuando un administrador asigne tu nivel educativo, aquí aparecerán tus cursos.'
+                : 'No hay cursos disponibles todavía.'}
+          </p>
+        </div>
+      ) : (
+        <div style={S.grid}>
+          {filtered.map((course) => (
+            <CourseCard
+              key={course.id}
+              course={course}
+              onClick={() => navigate(`/courses/${course.id}`)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+// Estilos del buscador dark (dentro del hero)
+const searchStyles: Record<string, React.CSSProperties> = {
+  row: {
+    display: 'flex',
+    gap: 10,
+    alignItems: 'center',
+    maxWidth: 620,
+    marginTop: 20,
+  },
+  wrap: {
+    flex: 1,
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  icon: {
+    position: 'absolute',
+    left: 14,
+    fontSize: '1rem',
+    color: 'rgba(255,255,255,0.5)',
+    pointerEvents: 'none',
+  },
+  input: {
+    width: '100%',
+    height: 46,
+    padding: '0 1rem 0 2.6rem',
+    borderRadius: 10,
+    border: '1.5px solid rgba(255,255,255,0.15)',
+    fontSize: '0.9rem',
+    background: 'rgba(255,255,255,0.07)',
+    color: '#ffffff',
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+};

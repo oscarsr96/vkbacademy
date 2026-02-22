@@ -5,7 +5,6 @@ import { tutorsApi, type StudentSummary, type StudentStats, type ActivityDay } f
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
 const ORANGE = '#ea580c';
-const NAVY = '#0d1b2a';
 
 const PERIODS = [
   { label: '7D', days: 7 },
@@ -25,51 +24,64 @@ const CERT_LABELS: Record<string, string> = {
 // ─── Estilos ───────────────────────────────────────────────────────────────────
 
 const S: Record<string, React.CSSProperties> = {
-  shell: { display: 'flex', height: '100%', minHeight: '100vh', background: '#f8fafc' },
+  shell: { display: 'flex', height: '100%', minHeight: '100vh', background: '#f0f2f5' },
 
   // Panel lateral de alumnos
   sidebar: {
-    width: 260,
+    width: 268,
     flexShrink: 0,
-    borderRight: '1px solid #e2e8f0',
-    background: '#fff',
+    background: 'linear-gradient(180deg, #0d1b2a 0%, #152233 100%)',
+    borderRight: '1px solid rgba(234,88,12,0.15)',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
   },
   sidebarHeader: {
-    padding: '1.25rem 1rem 0.75rem',
-    borderBottom: '1px solid #e2e8f0',
+    padding: '1.5rem 1.25rem 1rem',
+    borderBottom: '1px solid rgba(234,88,12,0.15)',
   },
-  sidebarTitle: { fontSize: '1rem', fontWeight: 800, color: NAVY, margin: 0 },
-  sidebarSubtitle: { fontSize: '0.75rem', color: '#94a3b8', marginTop: 2 },
+  sidebarTitle: {
+    fontSize: '1rem',
+    fontWeight: 800,
+    color: '#fff',
+    margin: 0,
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
+  sidebarSubtitle: { fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginTop: 4 },
   studentList: { flex: 1, overflowY: 'auto' as const },
   studentItem: {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    padding: '10px 12px',
+    padding: '12px 14px',
     cursor: 'pointer',
-    borderBottom: '1px solid #f1f5f9',
-    transition: 'background 0.1s',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    transition: 'background 0.15s',
   },
-  studentItemActive: { background: '#fff7ed', borderRight: `3px solid ${ORANGE}` },
+  studentItemActive: {
+    background: 'rgba(234,88,12,0.15)',
+    borderRight: `3px solid ${ORANGE}`,
+  },
   studentAvatar: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: '50%',
-    background: ORANGE,
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
     color: '#fff',
     fontWeight: 700,
-    fontSize: '0.9rem',
+    fontSize: '0.95rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    boxShadow: '0 2px 8px rgba(234,88,12,0.35)',
   },
-  studentName: { fontSize: '0.85rem', fontWeight: 600, color: '#0f172a', lineHeight: 1.2 },
-  studentLevel: { fontSize: '0.7rem', color: '#64748b', marginTop: 2 },
-  studentPts: { fontSize: '0.7rem', color: ORANGE, fontWeight: 700 },
+  studentName: { fontSize: '0.85rem', fontWeight: 600, color: '#fff', lineHeight: 1.2 },
+  studentLevel: { fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 },
+  studentPts: { fontSize: '0.7rem', color: '#fb923c', fontWeight: 700, marginTop: 1 },
 
   // Panel de detalle
   detail: { flex: 1, overflowY: 'auto' as const, padding: '1.5rem 2rem' },
@@ -79,45 +91,76 @@ const S: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#94a3b8',
-    gap: 12,
+    color: 'rgba(255,255,255,0.35)',
+    gap: 14,
     padding: '4rem',
+    background: 'linear-gradient(180deg, #0d1b2a 0%, #152233 100%)',
+  },
+  emptyText: {
+    fontWeight: 600,
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: '0.95rem',
   },
 
-  // Cabecera del alumno seleccionado
+  // Cabecera del alumno seleccionado (hero)
   studentHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 16,
-    background: NAVY,
-    borderRadius: 14,
-    padding: '1.25rem 1.5rem',
+    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+    borderRadius: 24,
+    padding: '1.5rem',
     marginBottom: '1.25rem',
     color: '#fff',
+    position: 'relative' as const,
+    overflow: 'hidden' as const,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 18,
   },
-  bigAvatar: {
-    width: 56,
-    height: 56,
+  studentHeaderGlow: {
+    position: 'absolute' as const,
+    top: -60,
+    right: -60,
+    width: 260,
+    height: 260,
+    background: 'radial-gradient(circle, rgba(234,88,12,0.18) 0%, transparent 70%)',
+    pointerEvents: 'none' as const,
     borderRadius: '50%',
-    background: ORANGE,
-    color: '#fff',
+  },
+  bigAvatarRing: {
+    padding: 3,
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    boxShadow: '0 0 20px rgba(234,88,12,0.45)',
+    flexShrink: 0,
+    position: 'relative' as const,
+    zIndex: 1,
+  },
+  bigAvatarInner: {
+    width: 58,
+    height: 58,
+    borderRadius: '50%',
+    background: '#0d1b2a',
+    color: '#f97316',
     fontWeight: 800,
     fontSize: '1.5rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
   },
-  studentHeaderInfo: { flex: 1 },
-  studentHeaderName: { fontSize: '1.2rem', fontWeight: 800, marginBottom: 2 },
-  studentHeaderMeta: { fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 },
+  studentHeaderInfo: { flex: 1, position: 'relative' as const, zIndex: 1 },
+  studentHeaderName: {
+    fontSize: '1.3rem',
+    fontWeight: 900,
+    marginBottom: 4,
+    letterSpacing: '-0.02em',
+  },
+  studentHeaderMeta: { fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 },
   streakBadge: {
-    background: 'rgba(234,88,12,0.25)',
+    background: 'rgba(234,88,12,0.22)',
     border: '1px solid rgba(234,88,12,0.4)',
     color: '#fdba74',
     padding: '4px 12px',
     borderRadius: 999,
-    fontSize: '0.8rem',
+    fontSize: '0.78rem',
     fontWeight: 700,
   },
 
@@ -136,7 +179,7 @@ const S: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontSize: '0.78rem',
     fontWeight: 700,
-    transition: 'background 0.15s, color 0.15s',
+    transition: 'background 0.15s, color 0.15s, box-shadow 0.15s',
   },
 
   // KPI grid
@@ -146,36 +189,16 @@ const S: Record<string, React.CSSProperties> = {
     gap: 10,
     marginBottom: '1.25rem',
   },
-  kpiCard: {
-    background: '#fff',
-    borderRadius: 12,
-    border: '1px solid #e2e8f0',
-    padding: '1rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-  },
-  kpiEmoji: { fontSize: '1.4rem', lineHeight: 1 },
-  kpiValue: { fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 },
-  kpiLabel: { fontSize: '0.72rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
-  kpiSub: { fontSize: '0.72rem', color: '#94a3b8', marginTop: 2 },
 
   // Secciones
   section: { marginBottom: '1.25rem' },
   sectionTitle: {
-    fontSize: '0.8rem',
+    fontSize: '0.75rem',
     fontWeight: 700,
     color: '#94a3b8',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.06em',
     marginBottom: '0.75rem',
-  },
-  card: {
-    background: '#fff',
-    borderRadius: 12,
-    border: '1px solid #e2e8f0',
-    padding: '1rem 1.25rem',
-    marginBottom: 8,
   },
 
   // Barras de progreso
@@ -185,26 +208,12 @@ const S: Record<string, React.CSSProperties> = {
     gap: 10,
     marginTop: 6,
   },
-  progressBar: {
-    flex: 1,
-    height: 6,
-    borderRadius: 999,
-    background: '#f1f5f9',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 999,
-    background: ORANGE,
-    transition: 'width 0.4s',
-  },
   progressPct: { fontSize: '0.75rem', fontWeight: 700, color: '#475569', minWidth: 32, textAlign: 'right' as const },
 };
 
 // ─── Mini gráfico de actividad (SVG) ──────────────────────────────────────────
 
 function ActivityChart({ activity, days }: { activity: ActivityDay[]; days: number }) {
-  // Generar todos los días del rango
   const today = new Date();
   const numDays = days > 0 ? days : Math.min(activity.length > 0 ? 30 : 30, 60);
   const start = new Date(today);
@@ -226,8 +235,8 @@ function ActivityChart({ activity, days }: { activity: ActivityDay[]; days: numb
   const gap = Math.floor((W - numDays * barW) / (numDays - 1));
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '1rem 1.25rem' }}>
-      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>
+    <div className="vkb-card">
+      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
         Actividad diaria (lecciones + quizzes)
       </div>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block' }}>
@@ -244,11 +253,9 @@ function ActivityChart({ activity, days }: { activity: ActivityDay[]; days: numb
 
           return (
             <g key={date}>
-              {/* Barra de quizzes (arriba, color más claro) */}
               {quizH > 0 && (
                 <rect x={x} y={H - barH} width={barW} height={quizH} rx={1} fill="#fbbf24" opacity={0.8} />
               )}
-              {/* Barra de lecciones (abajo, naranja) */}
               {lessonH > 0 && (
                 <rect x={x} y={H - lessonH} width={barW} height={lessonH} rx={1} fill={ORANGE} />
               )}
@@ -256,7 +263,7 @@ function ActivityChart({ activity, days }: { activity: ActivityDay[]; days: numb
           );
         })}
       </svg>
-      <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '0.72rem', color: '#64748b' }}>
+      <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: '0.72rem', color: '#64748b' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <span style={{ width: 10, height: 10, borderRadius: 2, background: ORANGE, display: 'inline-block' }} />
           Lecciones
@@ -323,9 +330,12 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
 
   return (
     <>
-      {/* Cabecera */}
+      {/* Cabecera hero del alumno */}
       <div style={S.studentHeader}>
-        <div style={S.bigAvatar}>{stats.student.name.charAt(0).toUpperCase()}</div>
+        <div style={S.studentHeaderGlow} />
+        <div style={S.bigAvatarRing}>
+          <div style={S.bigAvatarInner}>{stats.student.name.charAt(0).toUpperCase()}</div>
+        </div>
         <div style={S.studentHeaderInfo}>
           <div style={S.studentHeaderName}>{stats.student.name}</div>
           <div style={S.studentHeaderMeta}>
@@ -334,7 +344,7 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
             {` · Miembro desde ${memberSince}`}
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', position: 'relative', zIndex: 1 }}>
           <span style={S.streakBadge}>🔥 {stats.student.currentStreak} sem. racha</span>
           <span style={{ ...S.streakBadge, background: 'rgba(99,102,241,0.2)', borderColor: 'rgba(99,102,241,0.4)', color: '#a5b4fc' }}>
             🏆 {stats.student.totalPoints} pts
@@ -370,7 +380,7 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
           <ActivityChart activity={stats.activity} days={periodDays} />
         </div>
       ) : (
-        <div style={{ ...S.card, color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+        <div className="vkb-card" style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
           Sin actividad registrada en el período seleccionado.
         </div>
       )}
@@ -411,11 +421,11 @@ function KpiCard({
   emoji, value, label, sub,
 }: { emoji: string; value: string | number; label: string; sub?: string }) {
   return (
-    <div style={S.kpiCard}>
-      <div style={S.kpiEmoji}>{emoji}</div>
-      <div style={S.kpiValue}>{value}</div>
-      <div style={S.kpiLabel}>{label}</div>
-      {sub && <div style={S.kpiSub}>{sub}</div>}
+    <div className="stat-card" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ fontSize: '1.4rem', lineHeight: 1 }}>{emoji}</div>
+      <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+      {sub && <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
@@ -426,13 +436,13 @@ function CourseProgressCard({ course }: { course: StudentStats['courses'][0] }) 
   const fill = pct === 100 ? '#16a34a' : ORANGE;
 
   return (
-    <div style={S.card}>
+    <div className="vkb-card" style={{ marginBottom: 8 }}>
       <div
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: course.modules.length > 0 ? 'pointer' : 'default' }}
         onClick={() => course.modules.length > 0 && setExpanded((e) => !e)}
       >
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>
+          <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>
             {course.title}
             {course.schoolYear && (
               <span style={{ marginLeft: 8, fontSize: '0.7rem', color: '#64748b', fontWeight: 500 }}>
@@ -441,8 +451,8 @@ function CourseProgressCard({ course }: { course: StudentStats['courses'][0] }) 
             )}
           </div>
           <div style={S.progressBarWrap}>
-            <div style={S.progressBar}>
-              <div style={{ ...S.progressFill, width: `${pct}%`, background: fill }} />
+            <div className="progress-bar" style={{ flex: 1 }}>
+              <div className="progress-fill" style={{ width: `${pct}%`, background: fill === '#16a34a' ? fill : undefined }} />
             </div>
             <span style={S.progressPct}>{pct}%</span>
             <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
@@ -458,21 +468,21 @@ function CourseProgressCard({ course }: { course: StudentStats['courses'][0] }) 
       </div>
 
       {expanded && (
-        <div style={{ marginTop: 10, borderTop: '1px solid #f1f5f9', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ marginTop: 12, borderTop: '1px solid #f1f5f9', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {course.modules.map((mod) => {
             const mPct = mod.totalLessons > 0
               ? Math.round((mod.completedLessons / mod.totalLessons) * 100)
               : 0;
             return (
               <div key={mod.id}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 500 }}>{mod.title}</span>
                   <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
                     {mod.completedLessons}/{mod.totalLessons}
                   </span>
                 </div>
-                <div style={{ height: 4, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${mPct}%`, background: mPct === 100 ? '#16a34a' : ORANGE, borderRadius: 999 }} />
+                <div className="progress-bar" style={{ height: 5 }}>
+                  <div className="progress-fill" style={{ width: `${mPct}%`, background: mPct === 100 ? '#16a34a' : undefined }} />
                 </div>
               </div>
             );
@@ -503,7 +513,7 @@ export default function TutorStudentsPage() {
       {/* ── Sidebar de alumnos ── */}
       <aside style={S.sidebar}>
         <div style={S.sidebarHeader}>
-          <div style={S.sidebarTitle}>Mis alumnos</div>
+          <div style={S.sidebarTitle}>👥 Mis Alumnos</div>
           <div style={S.sidebarSubtitle}>
             {isLoading ? 'Cargando...' : `${students?.length ?? 0} alumnos asignados`}
           </div>
@@ -511,7 +521,7 @@ export default function TutorStudentsPage() {
 
         <div style={S.studentList}>
           {!isLoading && students?.length === 0 && (
-            <div style={{ padding: '1rem', fontSize: '0.8rem', color: '#94a3b8' }}>
+            <div style={{ padding: '1.25rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)' }}>
               Aún no tienes alumnos asignados.
             </div>
           )}
@@ -521,6 +531,16 @@ export default function TutorStudentsPage() {
               style={{
                 ...S.studentItem,
                 ...(selected?.id === st.id ? S.studentItemActive : {}),
+              }}
+              onMouseEnter={(e) => {
+                if (selected?.id !== st.id) {
+                  (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.05)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selected?.id !== st.id) {
+                  (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+                }
               }}
               onClick={() => setSelected(st)}
             >
@@ -541,7 +561,7 @@ export default function TutorStudentsPage() {
       {!selected ? (
         <div style={S.empty}>
           <span style={{ fontSize: '3rem' }}>👈</span>
-          <p style={{ fontWeight: 600, color: '#475569' }}>Selecciona un alumno para ver sus métricas</p>
+          <p style={S.emptyText}>Selecciona un alumno para ver sus métricas</p>
         </div>
       ) : (
         <div style={S.detail}>
@@ -553,8 +573,11 @@ export default function TutorStudentsPage() {
                 key={p.label}
                 style={{
                   ...S.periodBtn,
-                  background: i === periodIdx ? ORANGE : '#f1f5f9',
+                  background: i === periodIdx
+                    ? 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)'
+                    : '#f1f5f9',
                   color: i === periodIdx ? '#fff' : '#475569',
+                  boxShadow: i === periodIdx ? '0 4px 12px rgba(234,88,12,0.3)' : 'none',
                 }}
                 onClick={() => setPeriodIdx(i)}
               >

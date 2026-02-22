@@ -417,27 +417,29 @@ export default function AdminCourseDetailPage() {
         </div>
       )}
 
-      {/* Cabecera */}
-      <div style={s.header}>
-        <button style={s.btnBack} onClick={() => navigate('/admin/courses')}>
+      {/* Hero con breadcrumb */}
+      <div className="page-hero animate-in" style={{ marginBottom: 24 }}>
+        <button
+          style={s.btnBack}
+          onClick={() => navigate('/admin/courses')}
+        >
           ← Volver a cursos
         </button>
-        <div style={s.titleRow}>
-          <h1 style={s.title}>{course.title}</h1>
-          {course.schoolYear && <span style={s.badgeLevel}>{course.schoolYear.label}</span>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const, marginTop: 8 }}>
+          <h1 className="hero-title" style={{ fontSize: '1.6rem' }}>{course.title}</h1>
+          {course.schoolYear && (
+            <span style={s.badgeLevel}>{course.schoolYear.label}</span>
+          )}
           <span style={course.published ? s.badgeOk : s.badgeDraft}>
             {course.published ? 'Publicado' : 'Borrador'}
           </span>
           <button
-            style={{
-              ...s.btnIcon, fontSize: '0.8rem', padding: '3px 10px',
-              border: '1px solid var(--color-primary)', color: 'var(--color-primary)',
-              borderRadius: 6,
-            }}
+            className="btn btn-dark"
+            style={{ fontSize: '0.82rem', padding: '5px 12px', marginLeft: 'auto' }}
             title="Gestionar banco de preguntas del curso"
             onClick={() => navigate(`/admin/exam-banks?courseId=${courseId}`)}
           >
-            🎓 Banco examen
+            Banco examen
           </button>
         </div>
       </div>
@@ -450,15 +452,11 @@ export default function AdminCourseDetailPage() {
             <span style={s.moduleTitle}>{mod.title}</span>
             <div style={s.actions}>
               <button
-                style={{
-                  ...s.btnIcon, fontSize: '0.75rem', padding: '2px 8px',
-                  border: '1px solid var(--color-primary)', color: 'var(--color-primary)',
-                  borderRadius: 5,
-                }}
+                style={s.btnActionSm}
                 title="Banco de preguntas del módulo"
                 onClick={() => navigate(`/admin/exam-banks?moduleId=${mod.id}`)}
               >
-                🎓
+                Banco
               </button>
               <button
                 style={s.btnIcon}
@@ -480,10 +478,10 @@ export default function AdminCourseDetailPage() {
                   >
                     Sí
                   </button>{' '}
-                  <button style={s.btnSecondarySmall} onClick={() => setDeletingModuleId(null)}>No</button>
+                  <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.78rem' }} onClick={() => setDeletingModuleId(null)}>No</button>
                 </span>
               ) : (
-                <button style={s.btnIcon} title="Eliminar módulo" onClick={() => setDeletingModuleId(mod.id)}>🗑️</button>
+                <button style={{ ...s.btnIcon, color: '#ef4444' }} title="Eliminar módulo" onClick={() => setDeletingModuleId(mod.id)}>🗑️</button>
               )}
             </div>
           </div>
@@ -505,30 +503,30 @@ export default function AdminCourseDetailPage() {
                         />
                       )}
                       <button
-                        style={{ ...s.btnIcon, fontSize: '0.75rem', padding: '2px 6px', border: '1px solid var(--color-border)', borderRadius: 4 }}
+                        style={s.btnActionSm}
                         title={lesson.youtubeId ? 'Cambiar vídeo de YouTube' : 'Añadir vídeo de YouTube'}
                         onClick={() => setYoutubeModal({ lessonId: lesson.id, url: '' })}
                       >
-                        {lesson.youtubeId ? '🔄 Cambiar' : '📹 Añadir vídeo'}
+                        {lesson.youtubeId ? 'Cambiar' : 'Añadir vídeo'}
                       </button>
                     </>
                   )}
                   {lesson.type === LessonType.QUIZ && (
                     <button
-                      style={s.btnIcon}
+                      style={s.btnActionSm}
                       title="Gestionar preguntas"
                       onClick={() => void handleToggleQuiz(lesson)}
                     >
-                      📝
+                      Preguntas
                     </button>
                   )}
                   {(lesson.type === LessonType.MATCH || lesson.type === LessonType.SORT || lesson.type === LessonType.FILL_BLANK) && (
                     <button
-                      style={{ ...s.btnIcon, fontSize: '0.75rem', padding: '2px 6px', border: '1px solid var(--color-border)', borderRadius: 4 }}
+                      style={{ ...s.btnActionSm, background: 'rgba(234,88,12,0.1)', color: 'var(--color-primary)', borderColor: 'rgba(234,88,12,0.3)' }}
                       title="Editar contenido de la actividad"
                       onClick={() => openContentModal(lesson)}
                     >
-                      ⚡ Contenido
+                      Contenido
                     </button>
                   )}
                   <button
@@ -551,10 +549,10 @@ export default function AdminCourseDetailPage() {
                       >
                         Sí
                       </button>{' '}
-                      <button style={s.btnSecondarySmall} onClick={() => setDeletingLessonId(null)}>No</button>
+                      <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.78rem' }} onClick={() => setDeletingLessonId(null)}>No</button>
                     </span>
                   ) : (
-                    <button style={s.btnIcon} title="Eliminar lección" onClick={() => setDeletingLessonId(lesson.id)}>🗑️</button>
+                    <button style={{ ...s.btnIcon, color: '#ef4444' }} title="Eliminar lección" onClick={() => setDeletingLessonId(lesson.id)}>🗑️</button>
                   )}
                 </div>
               </div>
@@ -583,10 +581,10 @@ export default function AdminCourseDetailPage() {
                               >
                                 Sí
                               </button>{' '}
-                              <button style={s.btnSecondarySmall} onClick={() => setDeletingQuestionId(null)}>No</button>
+                              <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.78rem' }} onClick={() => setDeletingQuestionId(null)}>No</button>
                             </span>
                           ) : (
-                            <button style={s.btnIcon} title="Eliminar pregunta" onClick={() => setDeletingQuestionId(q.id)}>🗑️</button>
+                            <button style={{ ...s.btnIcon, color: '#ef4444' }} title="Eliminar pregunta" onClick={() => setDeletingQuestionId(q.id)}>🗑️</button>
                           )}
                         </div>
                       </div>
@@ -614,14 +612,18 @@ export default function AdminCourseDetailPage() {
           ))}
 
           {/* Botón añadir lección */}
-          <button style={s.btnAddSmall} onClick={() => setNewLessonModuleId(mod.id)}>
+          <button style={{ ...s.btnAddSmall, margin: '10px 14px' }} onClick={() => setNewLessonModuleId(mod.id)}>
             + Añadir lección
           </button>
         </div>
       ))}
 
       {/* Botón añadir módulo */}
-      <button style={{ ...s.btnAddSmall, marginTop: 16 }} onClick={() => setShowNewModule(true)}>
+      <button
+        className="btn btn-ghost"
+        style={{ marginTop: 16, width: '100%', borderStyle: 'dashed', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}
+        onClick={() => setShowNewModule(true)}
+      >
         + Añadir módulo
       </button>
 
@@ -652,31 +654,34 @@ export default function AdminCourseDetailPage() {
 
             {newLessonTab === 'manual' ? (
               <form onSubmit={(e) => void handleCreateLesson(e)} style={s.form}>
-                <label style={s.label}>Título</label>
-                <input
-                  required
-                  autoFocus
-                  style={s.input}
-                  placeholder="Ej: Introducción a las fracciones"
-                  value={newLessonTitle}
-                  onChange={(e) => setNewLessonTitle(e.target.value)}
-                />
-                <label style={s.label}>Tipo</label>
-                <select
-                  style={s.select}
-                  value={newLessonType}
-                  onChange={(e) => setNewLessonType(e.target.value as LessonType)}
-                >
-                  <option value={LessonType.VIDEO}>VIDEO</option>
-                  <option value={LessonType.QUIZ}>QUIZ</option>
-                  <option value={LessonType.EXERCISE}>EXERCISE</option>
-                  <option value={LessonType.MATCH}>🔗 Emparejar (MATCH)</option>
-                  <option value={LessonType.SORT}>↕️ Ordenar (SORT)</option>
-                  <option value={LessonType.FILL_BLANK}>✏️ Rellenar huecos (FILL_BLANK)</option>
-                </select>
+                <div className="field">
+                  <label>Título</label>
+                  <input
+                    required
+                    autoFocus
+                    placeholder="Ej: Introducción a las fracciones"
+                    value={newLessonTitle}
+                    onChange={(e) => setNewLessonTitle(e.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label>Tipo</label>
+                  <select
+                    value={newLessonType}
+                    onChange={(e) => setNewLessonType(e.target.value as LessonType)}
+                  >
+                    <option value={LessonType.VIDEO}>VIDEO</option>
+                    <option value={LessonType.QUIZ}>QUIZ</option>
+                    <option value={LessonType.EXERCISE}>EXERCISE</option>
+                    <option value={LessonType.MATCH}>Emparejar (MATCH)</option>
+                    <option value={LessonType.SORT}>Ordenar (SORT)</option>
+                    <option value={LessonType.FILL_BLANK}>Rellenar huecos (FILL_BLANK)</option>
+                  </select>
+                </div>
                 <button
                   type="submit"
-                  style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                  className="btn btn-primary btn-full"
+                  style={{ marginTop: 16 }}
                   disabled={createLessonMut.isPending}
                 >
                   {createLessonMut.isPending ? 'Creando...' : 'Crear lección'}
@@ -684,21 +689,23 @@ export default function AdminCourseDetailPage() {
               </form>
             ) : (
               <form onSubmit={(e) => void handleGenerateLesson(e)} style={s.form}>
-                <label style={s.label}>Tema de la lección</label>
-                <input
-                  required
-                  autoFocus
-                  style={s.input}
-                  placeholder="Ej: Las fracciones equivalentes, El sistema nervioso..."
-                  value={iaLessonTopic}
-                  onChange={(e) => setIaLessonTopic(e.target.value)}
-                />
-                <p style={{ ...s.hint, textAlign: 'left', marginTop: 4 }}>
+                <div className="field">
+                  <label>Tema de la lección</label>
+                  <input
+                    required
+                    autoFocus
+                    placeholder="Ej: Las fracciones equivalentes, El sistema nervioso..."
+                    value={iaLessonTopic}
+                    onChange={(e) => setIaLessonTopic(e.target.value)}
+                  />
+                </div>
+                <p style={{ ...s.hint, textAlign: 'left' }}>
                   El agente elegirá el tipo (VIDEO o QUIZ) según el tema y el contexto del módulo.
                 </p>
                 <button
                   type="submit"
-                  style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                  className="btn btn-primary btn-full"
+                  style={{ marginTop: 16 }}
                   disabled={generateLessonMut.isPending}
                 >
                   {generateLessonMut.isPending ? 'El agente está creando la lección...' : 'Generar con IA'}
@@ -739,18 +746,20 @@ export default function AdminCourseDetailPage() {
 
             {newModuleTab === 'manual' ? (
               <form onSubmit={(e) => void handleCreateModule(e)} style={s.form}>
-                <label style={s.label}>Título del módulo</label>
-                <input
-                  required
-                  autoFocus
-                  style={s.input}
-                  placeholder="Ej: Introducción al álgebra"
-                  value={newModuleTitle}
-                  onChange={(e) => setNewModuleTitle(e.target.value)}
-                />
+                <div className="field">
+                  <label>Título del módulo</label>
+                  <input
+                    required
+                    autoFocus
+                    placeholder="Ej: Introducción al álgebra"
+                    value={newModuleTitle}
+                    onChange={(e) => setNewModuleTitle(e.target.value)}
+                  />
+                </div>
                 <button
                   type="submit"
-                  style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                  className="btn btn-primary btn-full"
+                  style={{ marginTop: 16 }}
                   disabled={createModuleMut.isPending}
                 >
                   {createModuleMut.isPending ? 'Creando...' : 'Crear módulo'}
@@ -758,18 +767,20 @@ export default function AdminCourseDetailPage() {
               </form>
             ) : (
               <form onSubmit={(e) => void handleGenerateModule(e)} style={s.form}>
-                <label style={s.label}>Tema del módulo</label>
-                <input
-                  required
-                  autoFocus
-                  style={s.input}
-                  placeholder="Ej: Ecuaciones de primer grado, La célula, La Revolución Francesa..."
-                  value={iaModuleName}
-                  onChange={(e) => setIaModuleName(e.target.value)}
-                />
+                <div className="field">
+                  <label>Tema del módulo</label>
+                  <input
+                    required
+                    autoFocus
+                    placeholder="Ej: Ecuaciones de primer grado, La célula, La Revolución Francesa..."
+                    value={iaModuleName}
+                    onChange={(e) => setIaModuleName(e.target.value)}
+                  />
+                </div>
                 <button
                   type="submit"
-                  style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                  className="btn btn-primary btn-full"
+                  style={{ marginTop: 16 }}
                   disabled={generateModuleMut.isPending}
                 >
                   {generateModuleMut.isPending ? 'El agente está creando el módulo...' : 'Generar con IA'}
@@ -792,17 +803,19 @@ export default function AdminCourseDetailPage() {
               <button style={s.closeBtn} onClick={() => setEditingModule(null)}>✕</button>
             </div>
             <form onSubmit={(e) => void handleUpdateModule(e)} style={s.form}>
-              <label style={s.label}>Título</label>
-              <input
-                required
-                autoFocus
-                style={s.input}
-                value={editModuleTitle}
-                onChange={(e) => setEditModuleTitle(e.target.value)}
-              />
+              <div className="field">
+                <label>Título</label>
+                <input
+                  required
+                  autoFocus
+                  value={editModuleTitle}
+                  onChange={(e) => setEditModuleTitle(e.target.value)}
+                />
+              </div>
               <button
                 type="submit"
-                style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                className="btn btn-primary btn-full"
+                style={{ marginTop: 16 }}
                 disabled={updateModuleMut.isPending}
               >
                 {updateModuleMut.isPending ? 'Guardando...' : 'Guardar'}
@@ -821,17 +834,19 @@ export default function AdminCourseDetailPage() {
               <button style={s.closeBtn} onClick={() => setEditingLesson(null)}>✕</button>
             </div>
             <form onSubmit={(e) => void handleUpdateLesson(e)} style={s.form}>
-              <label style={s.label}>Título</label>
-              <input
-                required
-                autoFocus
-                style={s.input}
-                value={editLessonTitle}
-                onChange={(e) => setEditLessonTitle(e.target.value)}
-              />
+              <div className="field">
+                <label>Título</label>
+                <input
+                  required
+                  autoFocus
+                  value={editLessonTitle}
+                  onChange={(e) => setEditLessonTitle(e.target.value)}
+                />
+              </div>
               <button
                 type="submit"
-                style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                className="btn btn-primary btn-full"
+                style={{ marginTop: 16 }}
                 disabled={updateLessonMut.isPending}
               >
                 {updateLessonMut.isPending ? 'Guardando...' : 'Guardar'}
@@ -852,14 +867,15 @@ export default function AdminCourseDetailPage() {
                 <button style={s.closeBtn} onClick={() => setYoutubeModal(null)}>✕</button>
               </div>
               <div style={s.form}>
-                <label style={s.label}>URL o ID del vídeo</label>
-                <input
-                  autoFocus
-                  style={s.input}
-                  placeholder="https://www.youtube.com/watch?v=... o el ID directamente"
-                  value={youtubeModal.url}
-                  onChange={(e) => setYoutubeModal((m) => m ? { ...m, url: e.target.value } : m)}
-                />
+                <div className="field">
+                  <label>URL o ID del vídeo</label>
+                  <input
+                    autoFocus
+                    placeholder="https://www.youtube.com/watch?v=... o el ID directamente"
+                    value={youtubeModal.url}
+                    onChange={(e) => setYoutubeModal((m) => m ? { ...m, url: e.target.value } : m)}
+                  />
+                </div>
                 {/* Preview del iframe si la URL es válida */}
                 {previewId && (
                   <div style={{ aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', marginTop: 8 }}>
@@ -873,7 +889,8 @@ export default function AdminCourseDetailPage() {
                   </div>
                 )}
                 <button
-                  style={{ ...s.btnPrimary, marginTop: 12, width: '100%' }}
+                  className="btn btn-primary btn-full"
+                  style={{ marginTop: 12 }}
                   disabled={!previewId || updateLessonMut.isPending}
                   onClick={() => void handleConfirmYoutube()}
                 >
@@ -891,9 +908,9 @@ export default function AdminCourseDetailPage() {
           <div style={{ ...s.modal, maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h2 style={s.modalTitle}>
-                {contentModal.type === 'MATCH' && '🔗 Emparejar — editar pares'}
-                {contentModal.type === 'SORT' && '↕️ Ordenar — editar items'}
-                {contentModal.type === 'FILL_BLANK' && '✏️ Rellenar huecos — editar contenido'}
+                {contentModal.type === 'MATCH' && 'Emparejar — editar pares'}
+                {contentModal.type === 'SORT' && 'Ordenar — editar items'}
+                {contentModal.type === 'FILL_BLANK' && 'Rellenar huecos — editar contenido'}
               </h2>
               <button style={s.closeBtn} onClick={() => setContentModal(null)}>✕</button>
             </div>
@@ -905,8 +922,8 @@ export default function AdminCourseDetailPage() {
                 <div style={s.form}>
                   <p style={s.hint}>Añade entre 3 y 6 pares. Cada par tiene un elemento izquierdo y uno derecho.</p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '6px 8px', alignItems: 'center' }}>
-                    <span style={{ ...s.label, textAlign: 'center' }}>Izquierda</span>
-                    <span style={{ ...s.label, textAlign: 'center' }}>Derecha</span>
+                    <span style={s.label}>Izquierda</span>
+                    <span style={s.label}>Derecha</span>
                     <span />
                     {draft.pairs.map((pair, idx) => (
                       <>
@@ -951,7 +968,8 @@ export default function AdminCourseDetailPage() {
                     </button>
                   )}
                   <button
-                    style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                    className="btn btn-primary btn-full"
+                    style={{ marginTop: 16 }}
                     disabled={updateLessonMut.isPending}
                     onClick={() => void handleSaveContent()}
                   >
@@ -967,14 +985,15 @@ export default function AdminCourseDetailPage() {
               return (
                 <div style={s.form}>
                   <p style={s.hint}>El orden correcto es el orden en que aparecen los items en la lista (de arriba a abajo).</p>
-                  <label style={s.label}>Instrucción</label>
-                  <input
-                    style={s.input}
-                    placeholder="Ej: Ordena los planetas de menor a mayor distancia al Sol"
-                    value={draft.prompt}
-                    onChange={(e) => setContentModal((m) => m ? { ...m, draft: { ...draft, prompt: e.target.value } } : m)}
-                  />
-                  <label style={{ ...s.label, marginTop: 8 }}>Items (en orden correcto)</label>
+                  <div className="field">
+                    <label>Instrucción</label>
+                    <input
+                      placeholder="Ej: Ordena los planetas de menor a mayor distancia al Sol"
+                      value={draft.prompt}
+                      onChange={(e) => setContentModal((m) => m ? { ...m, draft: { ...draft, prompt: e.target.value } } : m)}
+                    />
+                  </div>
+                  <label style={s.label}>Items (en orden correcto)</label>
                   {draft.items.map((item, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <span style={{ ...s.label, minWidth: 20 }}>{idx + 1}.</span>
@@ -1008,7 +1027,8 @@ export default function AdminCourseDetailPage() {
                     </button>
                   )}
                   <button
-                    style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                    className="btn btn-primary btn-full"
+                    style={{ marginTop: 16 }}
                     disabled={updateLessonMut.isPending}
                     onClick={() => void handleSaveContent()}
                   >
@@ -1023,15 +1043,17 @@ export default function AdminCourseDetailPage() {
               const draft = contentModal.draft as FillBlankContent;
               return (
                 <div style={s.form}>
-                  <label style={s.label}>Plantilla de texto</label>
-                  <p style={s.hint}>Usa {'{{palabra}}'} para marcar los huecos. Ej: {'"El {{triple}} vale {{3}} puntos."'}</p>
-                  <textarea
-                    style={{ ...s.input, minHeight: 80, resize: 'vertical', fontFamily: 'inherit' }}
-                    placeholder="El {{triple}} vale {{3}} puntos."
-                    value={draft.template}
-                    onChange={(e) => setContentModal((m) => m ? { ...m, draft: { ...draft, template: e.target.value } } : m)}
-                  />
-                  <label style={{ ...s.label, marginTop: 8 }}>Distractores (palabras incorrectas para el banco)</label>
+                  <div className="field">
+                    <label>Plantilla de texto</label>
+                    <p style={s.hint}>Usa {'{{palabra}}'} para marcar los huecos. Ej: {'"El {{triple}} vale {{3}} puntos."'}</p>
+                    <textarea
+                      style={{ minHeight: 80, resize: 'vertical' as const, fontFamily: 'inherit' }}
+                      placeholder="El {{triple}} vale {{3}} puntos."
+                      value={draft.template}
+                      onChange={(e) => setContentModal((m) => m ? { ...m, draft: { ...draft, template: e.target.value } } : m)}
+                    />
+                  </div>
+                  <label style={s.label}>Distractores (palabras incorrectas para el banco)</label>
                   {draft.distractors.map((d, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <input
@@ -1059,7 +1081,8 @@ export default function AdminCourseDetailPage() {
                     + Añadir distractor
                   </button>
                   <button
-                    style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                    className="btn btn-primary btn-full"
+                    style={{ marginTop: 16 }}
                     disabled={updateLessonMut.isPending}
                     onClick={() => void handleSaveContent()}
                   >
@@ -1102,21 +1125,23 @@ export default function AdminCourseDetailPage() {
             {/* Tab IA */}
             {!editingQuestion && newQuestionTab === 'ia' ? (
               <form onSubmit={(e) => void handleGenerateQuestion(e)} style={s.form}>
-                <label style={s.label}>Tema de la pregunta</label>
-                <input
-                  required
-                  autoFocus
-                  style={s.input}
-                  placeholder="Ej: Las leyes de Newton, La fotosíntesis, El presente de indicativo..."
-                  value={iaQuestionTopic}
-                  onChange={(e) => setIaQuestionTopic(e.target.value)}
-                />
-                <p style={{ ...s.hint, textAlign: 'left', marginTop: 4 }}>
+                <div className="field">
+                  <label>Tema de la pregunta</label>
+                  <input
+                    required
+                    autoFocus
+                    placeholder="Ej: Las leyes de Newton, La fotosíntesis, El presente de indicativo..."
+                    value={iaQuestionTopic}
+                    onChange={(e) => setIaQuestionTopic(e.target.value)}
+                  />
+                </div>
+                <p style={{ ...s.hint, textAlign: 'left' }}>
                   El agente generará el enunciado, tipo (SINGLE o TRUE/FALSE) y las respuestas automáticamente.
                 </p>
                 <button
                   type="submit"
-                  style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                  className="btn btn-primary btn-full"
+                  style={{ marginTop: 16 }}
                   disabled={generateQuestionMut.isPending}
                 >
                   {generateQuestionMut.isPending ? 'El agente está creando la pregunta...' : 'Generar con IA'}
@@ -1128,25 +1153,27 @@ export default function AdminCourseDetailPage() {
             ) : (
               /* Tab Manual (también usado para edición) */
               <form onSubmit={(e) => void handleSaveQuestion(e)} style={s.form}>
-                <label style={s.label}>Enunciado</label>
-                <input
-                  required
-                  autoFocus
-                  style={s.input}
-                  value={questionForm.text}
-                  onChange={(e) => setQuestionForm((f) => ({ ...f, text: e.target.value }))}
-                />
+                <div className="field">
+                  <label>Enunciado</label>
+                  <input
+                    required
+                    autoFocus
+                    value={questionForm.text}
+                    onChange={(e) => setQuestionForm((f) => ({ ...f, text: e.target.value }))}
+                  />
+                </div>
 
-                <label style={s.label}>Tipo</label>
-                <select
-                  style={s.select}
-                  value={questionForm.type}
-                  onChange={(e) => setQuestionForm((f) => ({ ...f, type: e.target.value as QuestionType }))}
-                >
-                  <option value={QuestionType.SINGLE}>SINGLE (una respuesta)</option>
-                  <option value={QuestionType.MULTIPLE}>MULTIPLE (varias respuestas)</option>
-                  <option value={QuestionType.TRUE_FALSE}>TRUE/FALSE</option>
-                </select>
+                <div className="field">
+                  <label>Tipo</label>
+                  <select
+                    value={questionForm.type}
+                    onChange={(e) => setQuestionForm((f) => ({ ...f, type: e.target.value as QuestionType }))}
+                  >
+                    <option value={QuestionType.SINGLE}>SINGLE (una respuesta)</option>
+                    <option value={QuestionType.MULTIPLE}>MULTIPLE (varias respuestas)</option>
+                    <option value={QuestionType.TRUE_FALSE}>TRUE/FALSE</option>
+                  </select>
+                </div>
 
                 <label style={{ ...s.label, marginTop: 12 }}>Respuestas</label>
                 {questionForm.answers.map((ans, idx) => (
@@ -1177,7 +1204,8 @@ export default function AdminCourseDetailPage() {
 
                 <button
                   type="submit"
-                  style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                  className="btn btn-primary btn-full"
+                  style={{ marginTop: 16 }}
                   disabled={createQuestionMut.isPending || updateQuestionMut.isPending}
                 >
                   {(createQuestionMut.isPending || updateQuestionMut.isPending) ? 'Guardando...' : 'Guardar pregunta'}
@@ -1195,42 +1223,43 @@ export default function AdminCourseDetailPage() {
 
 const s: Record<string, React.CSSProperties> = {
   page: { padding: '2rem', position: 'relative', maxWidth: 860, margin: '0 auto' },
-  header: { marginBottom: '1.5rem' },
-  titleRow: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  title: { fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 },
 
   // Módulo
   moduleCard: {
-    border: '1px solid var(--color-border)',
-    borderRadius: 8,
+    border: '1.5px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
     marginBottom: 16,
     overflow: 'hidden',
+    background: 'var(--color-surface)',
+    boxShadow: 'var(--shadow-sm)',
   },
   moduleHeader: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    padding: '10px 14px',
-    background: 'var(--color-surface)',
+    padding: '12px 16px',
+    background: 'linear-gradient(90deg, rgba(234,88,12,0.06) 0%, transparent 100%)',
     borderBottom: '1px solid var(--color-border)',
+    borderLeft: '3px solid var(--color-primary)',
   },
   moduleTitle: { fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text)' },
 
   // Lección
   lessonRow: {
     display: 'flex', alignItems: 'center', gap: 10,
-    padding: '9px 14px 9px 28px',
+    padding: '9px 16px 9px 32px',
     borderBottom: '1px solid var(--color-border)',
   },
   lessonBadge: {
-    fontSize: '0.7rem', fontWeight: 700, padding: '2px 7px', borderRadius: 999,
-    background: 'var(--color-border)', color: 'var(--color-text-muted)',
+    fontSize: '0.68rem', fontWeight: 700, padding: '2px 7px', borderRadius: 999,
+    background: 'rgba(234,88,12,0.1)', color: 'var(--color-primary)',
+    border: '1px solid rgba(234,88,12,0.2)',
     flexShrink: 0,
   },
   lessonTitle: { flex: 1, fontSize: '0.9rem', color: 'var(--color-text)' },
 
   // Preguntas
   questionsSection: {
-    paddingLeft: 48, paddingRight: 14, paddingTop: 10, paddingBottom: 10,
-    background: 'var(--color-background)',
+    paddingLeft: 52, paddingRight: 16, paddingTop: 10, paddingBottom: 10,
+    background: 'var(--color-bg)',
     borderBottom: '1px solid var(--color-border)',
   },
   questionRow: { marginBottom: 12 },
@@ -1246,24 +1275,6 @@ const s: Record<string, React.CSSProperties> = {
   answerCorrect: { color: '#16a34a', fontWeight: 700, width: 14 },
   answerWrong: { color: 'var(--color-text-muted)', width: 14 },
 
-  // Inline forms
-  inlineForm: {
-    display: 'flex', gap: 8, padding: '8px 14px',
-    alignItems: 'center', borderTop: '1px solid var(--color-border)',
-  },
-  inlineInput: {
-    flex: 1, padding: '6px 10px', borderRadius: 6,
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-surface)', color: 'var(--color-text)',
-    fontSize: '0.875rem',
-  },
-  inlineSelect: {
-    padding: '6px 10px', borderRadius: 6,
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-surface)', color: 'var(--color-text)',
-    fontSize: '0.875rem', cursor: 'pointer',
-  },
-
   // Answer form row
   answerFormRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 },
   checkboxLabel: {
@@ -1271,7 +1282,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0,
   },
 
-  actions: { display: 'flex', alignItems: 'center', gap: 2 },
+  actions: { display: 'flex', alignItems: 'center', gap: 4 },
   confirmDelete: {
     fontSize: '0.8rem', color: 'var(--color-text-muted)',
     display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -1281,104 +1292,89 @@ const s: Record<string, React.CSSProperties> = {
   // Badges
   badgeLevel: {
     fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999,
-    background: '#dbeafe', color: '#1e40af',
+    background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)', border: '1px solid rgba(255,255,255,0.25)',
   },
   badgeOk: {
     display: 'inline-block', fontSize: '0.72rem', fontWeight: 600,
     padding: '2px 8px', borderRadius: 999,
-    background: '#d1fae5', color: '#065f46',
+    background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)',
   },
   badgeDraft: {
     display: 'inline-block', fontSize: '0.72rem', fontWeight: 600,
     padding: '2px 8px', borderRadius: 999,
-    background: 'var(--color-border)', color: 'var(--color-text-muted)',
+    background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.65)',
   },
 
   // Botones
-  btnPrimary: {
-    background: 'var(--color-primary)', color: '#fff',
-    border: 'none', borderRadius: 6, padding: '7px 14px',
-    fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', flexShrink: 0,
-  },
-  btnSecondary: {
-    background: 'var(--color-surface)', color: 'var(--color-text)',
-    border: '1px solid var(--color-border)', borderRadius: 6, padding: '7px 12px',
-    fontWeight: 500, fontSize: '0.875rem', cursor: 'pointer', flexShrink: 0,
-  },
-  btnSecondarySmall: {
-    background: 'var(--color-surface)', color: 'var(--color-text)',
-    border: '1px solid var(--color-border)', borderRadius: 4, padding: '2px 8px',
-    fontWeight: 500, fontSize: '0.78rem', cursor: 'pointer',
-  },
   btnDangerSm: {
-    background: 'var(--color-error)', color: '#fff',
-    border: 'none', borderRadius: 4, padding: '2px 8px',
+    background: '#fef2f2', color: '#ef4444',
+    border: '1px solid #fecaca', borderRadius: 4, padding: '2px 8px',
     fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
   },
   btnIcon: {
     background: 'transparent', border: 'none', cursor: 'pointer',
     fontSize: '1rem', padding: '2px 4px', borderRadius: 4,
   },
+  btnActionSm: {
+    background: 'transparent', cursor: 'pointer',
+    border: '1px solid var(--color-border)', borderRadius: 6,
+    padding: '3px 10px', fontSize: '0.78rem', fontWeight: 600,
+    color: 'var(--color-text-muted)', flexShrink: 0,
+  },
   btnBack: {
     background: 'transparent', border: 'none', cursor: 'pointer',
-    color: 'var(--color-primary)', fontWeight: 600, fontSize: '0.875rem',
-    padding: 0, marginBottom: 12,
+    color: 'rgba(255,255,255,0.7)', fontWeight: 600, fontSize: '0.875rem',
+    padding: 0, display: 'block',
   },
   btnAddSmall: {
     background: 'transparent', border: '1px dashed var(--color-border)',
     color: 'var(--color-text-muted)', borderRadius: 6,
     padding: '5px 12px', cursor: 'pointer', fontSize: '0.82rem',
-    display: 'block',
+    display: 'block', marginTop: 6,
   },
 
-  // Input / select
+  // Input / select en modales de contenido
   input: {
-    width: '100%', boxSizing: 'border-box',
-    padding: '8px 12px', borderRadius: 6,
+    width: '100%', boxSizing: 'border-box' as const,
+    padding: '8px 12px', borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--color-border)',
     background: 'var(--color-surface)', color: 'var(--color-text)',
     fontSize: '0.9rem',
   },
-  select: {
-    width: '100%', boxSizing: 'border-box',
-    padding: '8px 12px', borderRadius: 6,
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-surface)', color: 'var(--color-text)',
-    fontSize: '0.9rem', cursor: 'pointer',
-  },
+  label: { fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)' },
 
   // Modal
   overlay: {
     position: 'fixed', inset: 0,
-    background: 'rgba(0,0,0,0.45)',
+    background: 'rgba(0,0,0,0.55)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     zIndex: 100,
   },
   modal: {
     background: 'var(--color-surface)',
-    borderRadius: 12, padding: 28,
+    borderRadius: 'var(--radius-md)', padding: 28,
     width: '100%', maxWidth: 480,
-    boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+    boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+    border: '1.5px solid var(--color-border)',
     maxHeight: '90vh', overflowY: 'auto',
   },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text)' },
+  modalTitle: { fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 },
   closeBtn: { background: 'transparent', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--color-text-muted)' },
 
   // Tabs
-  tabs: { display: 'flex', gap: 4, marginBottom: 20, background: 'var(--color-border)', borderRadius: 6, padding: 3 },
+  tabs: { display: 'flex', gap: 4, marginBottom: 20, background: 'var(--color-border)', borderRadius: 8, padding: 3 },
   tab: {
-    flex: 1, padding: '6px 0', borderRadius: 5,
+    flex: 1, padding: '7px 0', borderRadius: 6,
     border: 'none', background: 'transparent',
     color: 'var(--color-text-muted)', fontWeight: 500,
     cursor: 'pointer', fontSize: '0.875rem',
   },
-  tabActive: { background: 'var(--color-surface)', color: 'var(--color-text)', fontWeight: 600 },
+  tabActive: { background: 'var(--color-surface)', color: 'var(--color-text)', fontWeight: 600, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
 
   // Formulario
-  form: { display: 'flex', flexDirection: 'column', gap: 8 },
-  label: { fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)' },
-  hint: { fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center', marginTop: 8 },
+  form: { display: 'flex', flexDirection: 'column', gap: 12 },
+  hint: { fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center' as const, marginTop: 4 },
 
   // Toast
   toast: {

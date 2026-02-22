@@ -30,66 +30,6 @@ function emptyForm(): QuestionForm {
   };
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  page: { padding: '2rem', maxWidth: 900, margin: '0 auto' },
-  back: {
-    background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--color-text-muted)', fontSize: '0.875rem', padding: 0, marginBottom: '1.25rem',
-  },
-  heading: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.25rem' },
-  subheading: { fontSize: '1rem', color: 'var(--color-text-muted)', marginBottom: '1.5rem' },
-  tabBar: { display: 'flex', gap: 4, marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border)' },
-  tab: {
-    padding: '0.5rem 1rem', background: 'none', border: 'none', cursor: 'pointer',
-    fontSize: '0.9rem', color: 'var(--color-text-muted)', borderBottom: '2px solid transparent',
-    marginBottom: -1,
-  },
-  tabActive: { color: 'var(--color-primary)', borderBottomColor: 'var(--color-primary)', fontWeight: 600 },
-  toolbar: { display: 'flex', gap: 8, marginBottom: '1.25rem', flexWrap: 'wrap' as const },
-  btn: {
-    padding: '0.5rem 1rem', borderRadius: 8, border: 'none', cursor: 'pointer',
-    fontWeight: 600, fontSize: '0.875rem',
-  },
-  btnPrimary: { background: 'var(--color-primary)', color: '#fff' },
-  btnSecondary: { background: 'var(--color-border)', color: 'var(--color-text)' },
-  btnDanger: { background: 'var(--color-error)', color: '#fff' },
-  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '0.875rem' },
-  th: {
-    textAlign: 'left' as const, padding: '0.5rem 0.75rem',
-    borderBottom: '2px solid var(--color-border)', color: 'var(--color-text-muted)',
-    fontWeight: 600,
-  },
-  td: { padding: '0.6rem 0.75rem', borderBottom: '1px solid var(--color-border)', verticalAlign: 'middle' as const },
-  badge: {
-    display: 'inline-block', padding: '2px 8px', borderRadius: 999,
-    background: 'var(--color-border)', fontSize: '0.75rem', fontWeight: 600,
-  },
-  overlay: {
-    position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,0.5)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-  },
-  modal: {
-    background: 'var(--color-surface)', borderRadius: 12, padding: '1.75rem',
-    width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto' as const,
-  },
-  modalTitle: { fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem' },
-  label: { display: 'block', fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '0.3rem', marginTop: '0.75rem' },
-  input: {
-    width: '100%', padding: '0.5rem 0.75rem', borderRadius: 8,
-    border: '1px solid var(--color-border)', background: 'var(--color-bg)',
-    color: 'var(--color-text)', fontSize: '0.9rem', boxSizing: 'border-box' as const,
-  },
-  select: {
-    padding: '0.45rem 0.75rem', borderRadius: 8,
-    border: '1px solid var(--color-border)', background: 'var(--color-bg)',
-    color: 'var(--color-text)', fontSize: '0.9rem',
-  },
-  answerRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.5rem' },
-  error: { color: 'var(--color-error)', fontSize: '0.875rem', marginTop: '0.5rem' },
-  muted: { color: 'var(--color-text-muted)', fontSize: '0.875rem' },
-  empty: { padding: '2rem', textAlign: 'center' as const, color: 'var(--color-text-muted)' },
-};
-
 // ─── Hook para el banco de examen ─────────────────────────────────────────────
 
 function useExamBank(courseId?: string, moduleId?: string) {
@@ -181,77 +121,132 @@ function QuestionModal({
   const removeAnswer = (i: number) =>
     setForm((prev) => ({ ...prev, answers: prev.answers.filter((_, idx) => idx !== i) }));
 
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.6)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '1rem',
+  };
+
+  const modalStyle: React.CSSProperties = {
+    background: 'var(--color-surface)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '2rem',
+    width: '100%',
+    maxWidth: 560,
+    maxHeight: '90vh',
+    overflowY: 'auto',
+    boxShadow: 'var(--shadow-card)',
+    border: '1px solid var(--color-border)',
+  };
+
+  const answerRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: '0.5rem',
+  };
+
   return (
-    <div style={styles.overlay}>
-      <div style={styles.modal}>
-        <div style={styles.modalTitle}>
+    <div style={overlayStyle}>
+      <div style={modalStyle}>
+        <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1.5rem', color: 'var(--color-text)' }}>
           {initial ? 'Editar pregunta' : 'Nueva pregunta de examen'}
+        </h2>
+
+        <div className="field">
+          <label>Enunciado *</label>
+          <textarea
+            rows={3}
+            value={form.text}
+            onChange={(e) => setForm((p) => ({ ...p, text: e.target.value }))}
+            placeholder="Escribe el enunciado de la pregunta..."
+          />
         </div>
 
-        <label style={styles.label}>Enunciado *</label>
-        <textarea
-          rows={3}
-          value={form.text}
-          onChange={(e) => setForm((p) => ({ ...p, text: e.target.value }))}
-          style={{ ...styles.input }}
-          placeholder="Escribe el enunciado de la pregunta..."
-        />
-
-        <label style={styles.label}>Tipo</label>
-        <select
-          value={form.type}
-          onChange={(e) =>
-            setForm((p) => ({ ...p, type: e.target.value as QuestionType }))
-          }
-          style={styles.select}
-        >
-          <option value={QuestionType.SINGLE}>Única respuesta</option>
-          <option value={QuestionType.MULTIPLE}>Múltiple</option>
-          <option value={QuestionType.TRUE_FALSE}>Verdadero / Falso</option>
-        </select>
-
-        <label style={styles.label}>Respuestas</label>
-        {form.answers.map((a, i) => (
-          <div key={i} style={styles.answerRow}>
-            <input
-              type="checkbox"
-              checked={a.isCorrect}
-              onChange={(e) => updateAnswer(i, 'isCorrect', e.target.checked)}
-              title="Correcta"
-            />
-            <input
-              style={{ ...styles.input, flex: 1 }}
-              value={a.text}
-              onChange={(e) => updateAnswer(i, 'text', e.target.value)}
-              placeholder={`Opción ${i + 1}`}
-            />
-            {form.answers.length > 2 && (
-              <button
-                style={{ ...styles.btn, padding: '0.3rem 0.6rem', background: 'var(--color-error)', color: '#fff' }}
-                onClick={() => removeAnswer(i)}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        ))}
-        {form.type !== QuestionType.TRUE_FALSE && (
-          <button
-            style={{ ...styles.btn, ...styles.btnSecondary, marginBottom: '1rem' }}
-            onClick={addAnswer}
+        <div className="field">
+          <label>Tipo</label>
+          <select
+            value={form.type}
+            onChange={(e) => setForm((p) => ({ ...p, type: e.target.value as QuestionType }))}
           >
-            + Añadir opción
-          </button>
+            <option value={QuestionType.SINGLE}>Única respuesta</option>
+            <option value={QuestionType.MULTIPLE}>Múltiple</option>
+            <option value={QuestionType.TRUE_FALSE}>Verdadero / Falso</option>
+          </select>
+        </div>
+
+        <div className="field">
+          <label>Respuestas</label>
+          {form.answers.map((a, i) => (
+            <div key={i} style={answerRowStyle}>
+              <input
+                type="checkbox"
+                checked={a.isCorrect}
+                onChange={(e) => updateAnswer(i, 'isCorrect', e.target.checked)}
+                title="Correcta"
+                style={{ accentColor: 'var(--color-primary)', width: 16, height: 16, flexShrink: 0 }}
+              />
+              <input
+                style={{
+                  flex: 1,
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--color-bg)',
+                  color: 'var(--color-text)',
+                  fontSize: '0.875rem',
+                }}
+                value={a.text}
+                onChange={(e) => updateAnswer(i, 'text', e.target.value)}
+                placeholder={`Opción ${i + 1}`}
+              />
+              {form.answers.length > 2 && (
+                <button
+                  className="btn"
+                  style={{
+                    padding: '0.3rem 0.6rem',
+                    background: 'var(--color-error)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => removeAnswer(i)}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          {form.type !== QuestionType.TRUE_FALSE && (
+            <button
+              className="btn btn-ghost"
+              style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}
+              onClick={addAnswer}
+            >
+              + Añadir opción
+            </button>
+          )}
+        </div>
+
+        {error && (
+          <p style={{ color: 'var(--color-error)', fontSize: '0.875rem', marginBottom: '0.75rem' }}>
+            {error}
+          </p>
         )}
 
-        {error && <div style={styles.error}>{error}</div>}
-
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: '1rem' }}>
-          <button style={{ ...styles.btn, ...styles.btnSecondary }} onClick={onClose}>
+          <button className="btn btn-ghost" onClick={onClose}>
             Cancelar
           </button>
           <button
-            style={{ ...styles.btn, ...styles.btnPrimary }}
+            className="btn btn-primary"
             disabled={isLoading}
             onClick={() => onSave(form)}
           >
@@ -281,33 +276,67 @@ function IaModal({
   const [topic, setTopic] = useState('');
   const [count, setCount] = useState(3);
 
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.6)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '1rem',
+  };
+
+  const modalStyle: React.CSSProperties = {
+    background: 'var(--color-surface)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '2rem',
+    width: '100%',
+    maxWidth: 440,
+    boxShadow: 'var(--shadow-card)',
+    border: '1px solid var(--color-border)',
+  };
+
   return (
-    <div style={styles.overlay}>
-      <div style={styles.modal}>
-        <div style={styles.modalTitle}>⚡ Generar preguntas con IA</div>
-        <label style={styles.label}>Tema *</label>
-        <input
-          style={styles.input}
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="Ej: Reglas de baloncesto, Defensa en zona..."
-        />
-        <label style={styles.label}>Número de preguntas (1-10)</label>
-        <input
-          type="number"
-          min={1}
-          max={10}
-          value={count}
-          onChange={(e) => setCount(Math.min(10, Math.max(1, Number(e.target.value))))}
-          style={{ ...styles.input, width: 100 }}
-        />
-        {error && <div style={styles.error}>{error}</div>}
+    <div style={overlayStyle}>
+      <div style={modalStyle}>
+        <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1.5rem', color: 'var(--color-text)' }}>
+          Generar preguntas con IA
+        </h2>
+
+        <div className="field">
+          <label>Tema *</label>
+          <input
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="Ej: Reglas de baloncesto, Defensa en zona..."
+          />
+        </div>
+
+        <div className="field">
+          <label>Número de preguntas (1–10)</label>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={count}
+            onChange={(e) => setCount(Math.min(10, Math.max(1, Number(e.target.value))))}
+            style={{ maxWidth: 120 }}
+          />
+        </div>
+
+        {error && (
+          <p style={{ color: 'var(--color-error)', fontSize: '0.875rem', marginBottom: '0.75rem' }}>
+            {error}
+          </p>
+        )}
+
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: '1rem' }}>
-          <button style={{ ...styles.btn, ...styles.btnSecondary }} onClick={onClose}>
+          <button className="btn btn-ghost" onClick={onClose}>
             Cancelar
           </button>
           <button
-            style={{ ...styles.btn, ...styles.btnPrimary }}
+            className="btn btn-primary"
             disabled={isLoading || !topic.trim()}
             onClick={() => onGenerate(topic, count)}
           >
@@ -394,149 +423,318 @@ export default function AdminExamBankPage() {
   const questionList = questions.data ?? [];
   const attemptList = attempts.data ?? [];
 
-  return (
-    <div style={styles.page}>
-      <button style={styles.back} onClick={() => navigate(-1)}>
-        ← Volver
-      </button>
-      <h1 style={styles.heading}>🎓 Banco de examen — {scopeLabel}</h1>
-      <p style={styles.subheading}>
-        {questionList.length} preguntas · {attemptList.length} intentos registrados
-      </p>
+  // Estilos de tabs con indicador naranja activo
+  const tabBarStyle: React.CSSProperties = {
+    display: 'flex',
+    gap: 0,
+    marginBottom: '1.75rem',
+    borderBottom: '1px solid var(--color-border)',
+  };
 
-      {/* Pestañas */}
-      <div style={styles.tabBar}>
+  const tabBase: React.CSSProperties = {
+    padding: '0.65rem 1.25rem',
+    background: 'none',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    marginBottom: -1,
+    cursor: 'pointer',
+    fontSize: '0.9rem',
+    fontWeight: 500,
+    color: 'var(--color-text-muted)',
+    transition: 'all 0.15s',
+  };
+
+  const tabActive: React.CSSProperties = {
+    ...tabBase,
+    color: 'var(--color-primary)',
+    borderBottomColor: 'var(--color-primary)',
+    fontWeight: 700,
+  };
+
+  const badgeStyle: React.CSSProperties = {
+    display: 'inline-block',
+    padding: '2px 10px',
+    borderRadius: 999,
+    background: 'rgba(234,88,12,0.1)',
+    color: 'var(--color-primary)',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    border: '1px solid rgba(234,88,12,0.2)',
+  };
+
+  const typeBadgeStyle: React.CSSProperties = {
+    display: 'inline-block',
+    padding: '2px 8px',
+    borderRadius: 6,
+    background: 'var(--color-bg)',
+    border: '1px solid var(--color-border)',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    color: 'var(--color-text-muted)',
+  };
+
+  const actionBtnStyle: React.CSSProperties = {
+    padding: '0.3rem 0.65rem',
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--color-border)',
+    background: 'transparent',
+    cursor: 'pointer',
+    fontSize: '0.8rem',
+    color: 'var(--color-text)',
+  };
+
+  const confirmOverlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.6)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '1rem',
+  };
+
+  const confirmModalStyle: React.CSSProperties = {
+    background: 'var(--color-surface)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '1.75rem',
+    width: '100%',
+    maxWidth: 380,
+    boxShadow: 'var(--shadow-card)',
+    border: '1px solid var(--color-border)',
+  };
+
+  return (
+    <div style={{ padding: '2rem', maxWidth: 960, margin: '0 auto' }}>
+
+      {/* Hero */}
+      <div className="page-hero animate-in" style={{ marginBottom: '1.75rem' }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: '0.82rem',
+            padding: 0,
+            marginBottom: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+          }}
+        >
+          ← Volver a cursos
+        </button>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 className="hero-title">Banco de Examen</h1>
+            <p className="hero-subtitle">
+              {scopeLabel} · {questionList.length} preguntas · {attemptList.length} intentos registrados
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.625rem' }}>
+            <button
+              className="btn btn-ghost"
+              style={{
+                border: '1px solid rgba(255,255,255,0.25)',
+                color: 'rgba(255,255,255,0.9)',
+              }}
+              onClick={() => { setFormError(''); setShowIaModal(true); }}
+            >
+              Generar con IA
+            </button>
+            <button
+              className="btn btn-dark"
+              onClick={() => { setFormError(''); setShowNewModal(true); }}
+            >
+              + Nueva pregunta
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={tabBarStyle}>
         {(['questions', 'history'] as const).map((tab) => (
           <button
             key={tab}
-            style={{
-              ...styles.tab,
-              ...(activeTab === tab ? styles.tabActive : {}),
-            }}
+            style={activeTab === tab ? tabActive : tabBase}
             onClick={() => setActiveTab(tab)}
           >
             {tab === 'questions' ? 'Preguntas' : 'Historial de intentos'}
+            {tab === 'questions' && questionList.length > 0 && (
+              <span style={{ ...badgeStyle, marginLeft: 8 }}>{questionList.length}</span>
+            )}
+            {tab === 'history' && attemptList.length > 0 && (
+              <span style={{ ...badgeStyle, marginLeft: 8 }}>{attemptList.length}</span>
+            )}
           </button>
         ))}
       </div>
 
+      {/* Tab: Preguntas */}
       {activeTab === 'questions' && (
         <>
-          <div style={styles.toolbar}>
-            <button
-              style={{ ...styles.btn, ...styles.btnPrimary }}
-              onClick={() => { setFormError(''); setShowNewModal(true); }}
-            >
-              ➕ Añadir pregunta
-            </button>
-            <button
-              style={{ ...styles.btn, ...styles.btnSecondary }}
-              onClick={() => { setFormError(''); setShowIaModal(true); }}
-            >
-              ⚡ Generar con IA
-            </button>
-          </div>
-
           {questions.isLoading ? (
-            <div style={styles.muted}>Cargando preguntas...</div>
+            <p style={{ color: 'var(--color-text-muted)', padding: '2rem 0', textAlign: 'center' }}>
+              Cargando preguntas...
+            </p>
           ) : questionList.length === 0 ? (
-            <div style={styles.empty}>
-              Todavía no hay preguntas en este banco. Añade algunas manualmente o genera con IA.
+            <div className="vkb-card" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📋</div>
+              <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.25rem' }}>
+                Todavía no hay preguntas en este banco.
+              </p>
+              <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'center' }}>
+                <button className="btn btn-ghost" onClick={() => { setFormError(''); setShowIaModal(true); }}>
+                  Generar con IA
+                </button>
+                <button className="btn btn-primary" onClick={() => { setFormError(''); setShowNewModal(true); }}>
+                  Añadir pregunta
+                </button>
+              </div>
             </div>
           ) : (
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>#</th>
-                  <th style={styles.th}>Pregunta</th>
-                  <th style={styles.th}>Tipo</th>
-                  <th style={styles.th}>Respuestas</th>
-                  <th style={styles.th}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {questionList.map((q, idx) => (
-                  <tr key={q.id}>
-                    <td style={styles.td}>{idx + 1}</td>
-                    <td style={{ ...styles.td, maxWidth: 360 }}>
-                      <span title={q.text}>
-                        {q.text.length > 80 ? q.text.slice(0, 80) + '…' : q.text}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <span style={styles.badge}>{q.type}</span>
-                    </td>
-                    <td style={styles.td}>{q.answers.length}</td>
-                    <td style={styles.td}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          style={{ ...styles.btn, padding: '0.3rem 0.6rem', ...styles.btnSecondary }}
-                          onClick={() => { setFormError(''); setEditingQuestion(q); }}
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          style={{ ...styles.btn, padding: '0.3rem 0.6rem', ...styles.btnDanger }}
-                          onClick={() => setDeletingId(q.id)}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
+            <div className="table-wrap">
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>#</th>
+                    <th style={{ textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>Pregunta</th>
+                    <th style={{ textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>Tipo</th>
+                    <th style={{ textAlign: 'center', padding: '0.75rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>Respuestas</th>
+                    <th style={{ textAlign: 'right', padding: '0.75rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {questionList.map((q, idx) => (
+                    <tr
+                      key={q.id}
+                      style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.12s' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <td style={{ padding: '0.875rem 1rem', fontSize: '0.82rem', color: 'var(--color-text-muted)', fontWeight: 600, verticalAlign: 'middle' }}>
+                        {idx + 1}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', fontSize: '0.875rem', color: 'var(--color-text)', maxWidth: 380, verticalAlign: 'middle' }}>
+                        <span title={q.text}>
+                          {q.text.length > 90 ? q.text.slice(0, 90) + '…' : q.text}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', verticalAlign: 'middle' }}>
+                        <span style={typeBadgeStyle}>{q.type}</span>
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.875rem', color: 'var(--color-text)', verticalAlign: 'middle' }}>
+                        {q.answers.length}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', textAlign: 'right', verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <button
+                            style={actionBtnStyle}
+                            onClick={() => { setFormError(''); setEditingQuestion(q); }}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            style={{ ...actionBtnStyle, color: 'var(--color-error)', borderColor: 'rgba(220,38,38,0.25)' }}
+                            onClick={() => setDeletingId(q.id)}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}
 
+      {/* Tab: Historial */}
       {activeTab === 'history' && (
         <>
           {attempts.isLoading ? (
-            <div style={styles.muted}>Cargando historial...</div>
+            <p style={{ color: 'var(--color-text-muted)', padding: '2rem 0', textAlign: 'center' }}>
+              Cargando historial...
+            </p>
           ) : attemptList.length === 0 ? (
-            <div style={styles.empty}>Aún no hay intentos de examen registrados.</div>
+            <div className="vkb-card" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📊</div>
+              <p style={{ color: 'var(--color-text-muted)' }}>
+                Aún no hay intentos de examen registrados.
+              </p>
+            </div>
           ) : (
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Alumno</th>
-                  <th style={styles.th}>Email</th>
-                  <th style={styles.th}>Fecha</th>
-                  <th style={styles.th}>Preguntas</th>
-                  <th style={styles.th}>Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attemptList.map((a) => (
-                  <tr key={a.id}>
-                    <td style={styles.td}>{a.user.name}</td>
-                    <td style={styles.td}>{a.user.email}</td>
-                    <td style={styles.td}>
-                      {a.submittedAt
-                        ? new Date(a.submittedAt).toLocaleDateString('es-ES')
-                        : <span style={{ color: 'var(--color-text-muted)' }}>En progreso</span>}
-                    </td>
-                    <td style={styles.td}>{a.numQuestions}</td>
-                    <td style={styles.td}>
-                      {a.score !== null ? (
-                        <span
-                          style={{
-                            fontWeight: 700,
-                            color: a.score >= 50 ? 'var(--color-primary)' : 'var(--color-error)',
-                          }}
-                        >
-                          {a.score.toFixed(1)}%
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--color-text-muted)' }}>—</span>
-                      )}
-                    </td>
+            <div className="table-wrap">
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Alumno', 'Email', 'Fecha', 'Preguntas', 'Score'].map((h, i) => (
+                      <th
+                        key={h}
+                        style={{
+                          textAlign: i >= 3 ? 'center' : 'left',
+                          padding: '0.75rem 1rem',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          color: 'var(--color-text-muted)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          borderBottom: '1px solid var(--color-border)',
+                          background: 'var(--color-bg)',
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {attemptList.map((a) => (
+                    <tr
+                      key={a.id}
+                      style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.12s' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <td style={{ padding: '0.875rem 1rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-text)', verticalAlign: 'middle' }}>
+                        {a.user.name}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', fontSize: '0.82rem', color: 'var(--color-text-muted)', verticalAlign: 'middle' }}>
+                        {a.user.email}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', fontSize: '0.82rem', color: 'var(--color-text-muted)', verticalAlign: 'middle' }}>
+                        {a.submittedAt
+                          ? new Date(a.submittedAt).toLocaleDateString('es-ES')
+                          : <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>En progreso</span>}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.875rem', verticalAlign: 'middle' }}>
+                        {a.numQuestions}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', textAlign: 'center', verticalAlign: 'middle' }}>
+                        {a.score !== null ? (
+                          <span
+                            style={{
+                              fontWeight: 800,
+                              fontSize: '0.9rem',
+                              color: a.score >= 50 ? 'var(--color-primary)' : 'var(--color-error)',
+                            }}
+                          >
+                            {a.score.toFixed(1)}%
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}
@@ -580,19 +778,21 @@ export default function AdminExamBankPage() {
 
       {/* Confirmación de borrado */}
       {deletingId && (
-        <div style={styles.overlay}>
-          <div style={{ ...styles.modal, maxWidth: 380 }}>
-            <div style={styles.modalTitle}>¿Eliminar esta pregunta?</div>
-            <p style={styles.muted}>Esta acción no se puede deshacer.</p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: '1rem' }}>
-              <button
-                style={{ ...styles.btn, ...styles.btnSecondary }}
-                onClick={() => setDeletingId(null)}
-              >
+        <div style={confirmOverlayStyle}>
+          <div style={confirmModalStyle}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--color-text)' }}>
+              Eliminar pregunta
+            </h2>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+              Esta acción no se puede deshacer.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setDeletingId(null)}>
                 Cancelar
               </button>
               <button
-                style={{ ...styles.btn, ...styles.btnDanger }}
+                className="btn"
+                style={{ background: 'var(--color-error)', color: '#fff', border: 'none' }}
                 disabled={deleteMut.isPending}
                 onClick={() => handleDelete(deletingId)}
               >

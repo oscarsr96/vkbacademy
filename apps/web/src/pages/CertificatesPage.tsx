@@ -2,141 +2,268 @@ import { useMyCertificates } from '../hooks/useCertificates';
 import { downloadCertificatePdf } from '../utils/certificatePdf';
 import type { Certificate, CertificateType } from '@vkbacademy/shared';
 
-const TYPE_LABELS: Record<CertificateType, { label: string; icon: string }> = {
-  MODULE_COMPLETION: { label: 'Módulo completado', icon: '📜' },
-  COURSE_COMPLETION: { label: 'Curso completado', icon: '🏆' },
-  MODULE_EXAM:       { label: 'Examen de módulo', icon: '📝' },
-  COURSE_EXAM:       { label: 'Examen de curso', icon: '🎓' },
+// ─── Metadatos por tipo ───────────────────────────────────────────────────────
+
+const TYPE_LABELS: Record<CertificateType, { label: string; icon: string; badgeBg: string; badgeColor: string }> = {
+  MODULE_COMPLETION: {
+    label: 'Módulo completado',
+    icon: '📜',
+    badgeBg: 'rgba(99,102,241,0.12)',
+    badgeColor: '#6366f1',
+  },
+  COURSE_COMPLETION: {
+    label: 'Curso completado',
+    icon: '🏆',
+    badgeBg: 'rgba(234,88,12,0.12)',
+    badgeColor: '#ea580c',
+  },
+  MODULE_EXAM: {
+    label: 'Examen de módulo',
+    icon: '📝',
+    badgeBg: 'rgba(59,130,246,0.12)',
+    badgeColor: '#3b82f6',
+  },
+  COURSE_EXAM: {
+    label: 'Examen de curso',
+    icon: '🎓',
+    badgeBg: 'rgba(16,185,129,0.12)',
+    badgeColor: '#10b981',
+  },
 };
 
-const styles: Record<string, React.CSSProperties> = {
-  page: { padding: '2rem', maxWidth: 800, margin: '0 auto' },
-  heading: { fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.5rem' },
-  sub: { color: 'var(--color-text-muted)', marginBottom: '2rem', fontSize: '0.9rem' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1rem' },
-  card: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 12,
-    padding: '1.25rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-  },
-  cardHeader: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 },
-  icon: { fontSize: '1.5rem' },
-  typeBadge: {
-    fontSize: '0.75rem',
-    fontWeight: 600,
-    padding: '2px 10px',
-    borderRadius: 999,
-    background: 'var(--color-primary)',
-    color: '#fff',
-  },
-  scopeTitle: { fontWeight: 700, fontSize: '1rem', color: 'var(--color-text)' },
-  courseTitle: { fontSize: '0.8rem', color: 'var(--color-text-muted)' },
-  score: { fontWeight: 700, color: 'var(--color-primary)', fontSize: '1rem' },
-  meta: { fontSize: '0.8rem', color: 'var(--color-text-muted)' },
-  verifyCode: {
-    fontFamily: 'monospace',
-    fontSize: '0.7rem',
-    color: 'var(--color-text-muted)',
-    background: 'var(--color-border)',
-    padding: '2px 6px',
-    borderRadius: 4,
-    wordBreak: 'break-all' as const,
-  },
-  downloadBtn: {
-    marginTop: 4,
-    padding: '0.5rem 1rem',
-    borderRadius: 8,
-    border: '1px solid var(--color-primary)',
-    background: 'none',
-    cursor: 'pointer',
-    color: 'var(--color-primary)',
-    fontWeight: 600,
-    fontSize: '0.875rem',
-    alignSelf: 'flex-start',
-  },
-  empty: {
-    textAlign: 'center' as const,
-    color: 'var(--color-text-muted)',
-    padding: '3rem',
-    background: 'var(--color-surface)',
-    borderRadius: 12,
-    border: '1px solid var(--color-border)',
-  },
-};
+// ─── Tarjeta de certificado ───────────────────────────────────────────────────
 
 function CertificateCard({ cert }: { cert: Certificate }) {
   const meta = TYPE_LABELS[cert.type];
+
   return (
-    <div style={styles.card}>
-      <div style={styles.cardHeader}>
-        <span style={styles.icon}>{meta.icon}</span>
-        <span style={styles.typeBadge}>{meta.label}</span>
+    <div
+      className="animate-in"
+      style={{
+        background: 'rgba(255,252,235,0.92)',
+        border: '1.5px solid rgba(245,158,11,0.35)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column' as const,
+        gap: 12,
+        boxShadow: '0 4px 20px rgba(245,158,11,0.12)',
+        transition: 'box-shadow 0.25s, transform 0.25s',
+        position: 'relative' as const,
+        overflow: 'hidden',
+      }}
+    >
+      {/* Franja decorativa superior dorada */}
+      <div
+        style={{
+          position: 'absolute' as const,
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 4,
+          background: 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 50%, #f59e0b 100%)',
+          borderRadius: '18px 18px 0 0',
+        }}
+      />
+
+      {/* Cabecera: icono + badge de tipo */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+        <span style={{ fontSize: '1.75rem', lineHeight: 1 }}>{meta.icon}</span>
+        <span
+          style={{
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            padding: '3px 10px',
+            borderRadius: 999,
+            background: meta.badgeBg,
+            color: meta.badgeColor,
+            border: `1px solid ${meta.badgeColor}33`,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase' as const,
+          }}
+        >
+          {meta.label}
+        </span>
       </div>
-      <div style={styles.scopeTitle}>{cert.scopeTitle}</div>
+
+      {/* Título del scope */}
+      <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1a1a2e', lineHeight: 1.3 }}>
+        {cert.scopeTitle}
+      </div>
+
+      {/* Curso padre (si es módulo) */}
       {cert.courseTitle && (
-        <div style={styles.courseTitle}>📚 {cert.courseTitle}</div>
+        <div style={{ fontSize: '0.82rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span>📚</span>
+          <span>{cert.courseTitle}</span>
+        </div>
       )}
+
+      {/* Puntuación del examen */}
       {cert.examScore !== null && cert.examScore !== undefined && (
-        <div style={styles.score}>Puntuación: {cert.examScore.toFixed(1)}%</div>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: 'rgba(16,163,74,0.10)',
+            border: '1px solid rgba(16,163,74,0.25)',
+            borderRadius: 8,
+            padding: '5px 12px',
+            width: 'fit-content',
+          }}
+        >
+          <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 500 }}>Puntuación</span>
+          <span style={{ fontWeight: 800, color: '#16a34a', fontSize: '1rem' }}>
+            {cert.examScore.toFixed(1)}%
+          </span>
+        </div>
       )}
-      <div style={styles.meta}>
-        Emitido el{' '}
-        {new Date(cert.issuedAt).toLocaleDateString('es-ES', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        })}
+
+      {/* Fecha de emisión */}
+      <div style={{ fontSize: '0.8rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span>📅</span>
+        <span>
+          Emitido el{' '}
+          {new Date(cert.issuedAt).toLocaleDateString('es-ES', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          })}
+        </span>
       </div>
-      <div style={styles.verifyCode}>🔑 {cert.verifyCode}</div>
-      <button style={styles.downloadBtn} onClick={() => downloadCertificatePdf(cert)}>
-        ⬇️ Descargar PDF
+
+      {/* Código de verificación */}
+      <div
+        style={{
+          background: 'rgba(245,158,11,0.06)',
+          border: '1px solid rgba(245,158,11,0.20)',
+          borderRadius: 6,
+          padding: '6px 10px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+        }}
+      >
+        <span style={{ fontSize: '0.7rem', color: '#92400e', fontWeight: 600 }}>Código:</span>
+        <code
+          style={{
+            fontFamily: 'monospace',
+            fontSize: '0.68rem',
+            color: '#78350f',
+            wordBreak: 'break-all' as const,
+            flex: 1,
+          }}
+        >
+          {cert.verifyCode}
+        </code>
+      </div>
+
+      {/* Botón de descarga */}
+      <button
+        className="btn btn-primary"
+        style={{ alignSelf: 'flex-start', padding: '9px 18px', fontSize: '0.85rem', marginTop: 4 }}
+        onClick={() => downloadCertificatePdf(cert)}
+      >
+        Descargar PDF
       </button>
     </div>
   );
 }
+
+// ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CertificatesPage() {
   const { data: certs, isLoading, isError } = useMyCertificates();
 
   if (isLoading) {
     return (
-      <div style={styles.page}>
-        <h1 style={styles.heading}>📜 Mis Certificados</h1>
-        <div style={{ color: 'var(--color-text-muted)' }}>Cargando certificados...</div>
+      <div style={{ maxWidth: 840, margin: '0 auto' }}>
+        <div className="page-hero animate-in">
+          <h1 className="hero-title">Mis Certificados</h1>
+          <p className="hero-subtitle">Cargando certificados...</p>
+        </div>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div style={styles.page}>
-        <h1 style={styles.heading}>📜 Mis Certificados</h1>
-        <div style={{ color: 'var(--color-error)' }}>Error al cargar los certificados.</div>
+      <div style={{ maxWidth: 840, margin: '0 auto' }}>
+        <div className="page-hero animate-in">
+          <h1 className="hero-title">Mis Certificados</h1>
+          <p style={{ color: 'rgba(252,165,165,0.9)', marginTop: 8 }}>Error al cargar los certificados.</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div style={styles.page}>
-      <h1 style={styles.heading}>📜 Mis Certificados</h1>
-      <p style={styles.sub}>
-        Aquí están todos tus certificados digitales. Puedes descargarlos como PDF o verificarlos con el código único.
-      </p>
+  const total = certs?.length ?? 0;
 
-      {!certs || certs.length === 0 ? (
-        <div style={styles.empty}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🏅</div>
-          <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Aún no tienes certificados</div>
-          <div style={{ fontSize: '0.875rem' }}>
-            Completa módulos o cursos y aprueba exámenes para obtener tus certificados.
+  return (
+    <div style={{ maxWidth: 840, margin: '0 auto' }}>
+
+      {/* Hero */}
+      <div className="page-hero animate-in">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+          <span style={{ fontSize: '2.5rem' }}>📜</span>
+          {total > 0 && (
+            <div className="stat-card" style={{ padding: '8px 18px', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+              <span
+                style={{
+                  fontSize: '1.4rem',
+                  fontWeight: 900,
+                  background: 'var(--gradient-orange)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                {total}
+              </span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                {total === 1 ? 'certificado' : 'certificados'}
+              </span>
+            </div>
+          )}
+        </div>
+        <h1 className="hero-title">Mis Certificados</h1>
+        <p className="hero-subtitle">
+          Descarga tus diplomas digitales o verifica su autenticidad con el código único.
+        </p>
+      </div>
+
+      {/* Estado vacío */}
+      {(!certs || certs.length === 0) && (
+        <div
+          style={{
+            textAlign: 'center' as const,
+            padding: '56px 24px',
+            background: 'var(--color-surface)',
+            borderRadius: 'var(--radius-xl)',
+            border: '1.5px solid rgba(245,158,11,0.20)',
+            boxShadow: '0 4px 20px rgba(245,158,11,0.06)',
+          }}
+        >
+          <div style={{ fontSize: '4rem', marginBottom: 16 }}>📜</div>
+          <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--color-text)', marginBottom: 8 }}>
+            Aun no tienes certificados
+          </div>
+          <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', maxWidth: 400, margin: '0 auto', lineHeight: 1.6 }}>
+            Completa modulos o cursos enteros y aprueba examenes para obtener tus primeros diplomas.
           </div>
         </div>
-      ) : (
-        <div style={styles.grid}>
+      )}
+
+      {/* Grid de certificados */}
+      {certs && certs.length > 0 && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gap: '18px',
+          }}
+        >
           {certs.map((cert) => (
             <CertificateCard key={cert.id} cert={cert} />
           ))}

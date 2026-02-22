@@ -134,26 +134,33 @@ export default function AdminDashboardPage() {
         .print-title { display: none; }
       `}</style>
 
-      {/* ── Cabecera ── */}
-      <div style={s.pageHeader}>
-        <h1 style={s.title}>Panel de administración</h1>
-        {isFetching && <span style={s.fetchBadge}>Actualizando…</span>}
-        <div style={{ flex: 1 }} />
-        <button
-          className="no-print"
-          style={s.exportBtn}
-          onClick={() => window.print()}
-        >
-          Exportar PDF
-        </button>
+      {/* ── Hero ── */}
+      <div className="page-hero animate-in no-print" style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' as const }}>
+          <div>
+            <h1 className="hero-title">Panel de administración</h1>
+            <p className="hero-subtitle">
+              Métricas y actividad del club · {from} → {to}
+              {isFetching && <span style={{ marginLeft: 10, fontSize: '0.78rem', opacity: 0.7 }}>Actualizando…</span>}
+            </p>
+          </div>
+          <button
+            className="btn btn-dark no-print"
+            onClick={() => window.print()}
+            style={{ flexShrink: 0, marginTop: 4 }}
+          >
+            Exportar PDF
+          </button>
+        </div>
       </div>
+
       {/* Título visible solo al imprimir */}
       <div className="print-title" style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
         Período: {from} → {to} · Exportado {new Date().toLocaleDateString('es-ES')}
       </div>
 
       {/* ── Filtros ── */}
-      <div className="no-print" style={s.filterCard}>
+      <div className="no-print vkb-card" style={{ marginBottom: 24, padding: '16px 20px' }}>
         {/* Presets */}
         <div style={s.filterRow}>
           <span style={s.filterLabel}>Período</span>
@@ -188,7 +195,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Granularidad + Filtros */}
-        <div style={s.filterRow}>
+        <div style={{ ...s.filterRow, marginTop: 10 }}>
           <span style={s.filterLabel}>Agrupación</span>
           <div style={s.granTabs}>
             {(['day', 'week', 'month'] as Granularity[]).map((g) => (
@@ -245,7 +252,7 @@ export default function AdminDashboardPage() {
           {/* ── Gráfico de actividad ── */}
           <section style={s.section}>
             <h2 style={s.sectionTitle}>Actividad en el tiempo</h2>
-            <div style={s.chartCard}>
+            <div className="vkb-card" style={{ padding: '20px 24px' }}>
               <MultiLineChart
                 data={data.timeSeries}
                 gran={gran}
@@ -263,7 +270,7 @@ export default function AdminDashboardPage() {
           <div style={s.twoCol}>
             <section style={s.section}>
               <h2 style={s.sectionTitle}>Cursos más activos</h2>
-              <div style={s.rankCard}>
+              <div className="vkb-card" style={{ padding: '20px 24px' }}>
                 {data.topCourses.length === 0 ? (
                   <p style={s.empty}>Sin datos para el período</p>
                 ) : (
@@ -276,7 +283,7 @@ export default function AdminDashboardPage() {
 
             <section style={s.section}>
               <h2 style={s.sectionTitle}>Alumnos más activos</h2>
-              <div style={s.rankCard}>
+              <div className="vkb-card" style={{ padding: '20px 24px' }}>
                 {data.topStudents.length === 0 ? (
                   <p style={s.empty}>Sin datos para el período</p>
                 ) : (
@@ -292,7 +299,7 @@ export default function AdminDashboardPage() {
           <section style={s.section}>
             <h2 style={s.sectionTitle}>Desglose de reservas</h2>
             <div style={s.twoCol}>
-              <div style={s.rankCard}>
+              <div className="vkb-card" style={{ padding: '20px 24px' }}>
                 <p style={s.cardSubtitle}>Por estado</p>
                 {data.bookings.byStatus.length === 0
                   ? <p style={s.empty}>Sin reservas</p>
@@ -318,7 +325,7 @@ export default function AdminDashboardPage() {
                   </p>
                 )}
               </div>
-              <div style={s.rankCard}>
+              <div className="vkb-card" style={{ padding: '20px 24px' }}>
                 <p style={s.cardSubtitle}>Por modalidad</p>
                 {data.bookings.byMode.length === 0
                   ? <p style={s.empty}>Sin reservas</p>
@@ -366,7 +373,7 @@ export default function AdminDashboardPage() {
 
             {/* Lista de profesores */}
             {data.teachers.top.length === 0 ? (
-              <div style={s.rankCard}>
+              <div className="vkb-card" style={{ padding: '20px 24px' }}>
                 <p style={s.empty}>Sin actividad de profesores en el período</p>
               </div>
             ) : (
@@ -382,7 +389,7 @@ export default function AdminDashboardPage() {
           <div style={s.twoCol}>
             <section style={s.section}>
               <h2 style={s.sectionTitle}>Distribución de scores de quiz</h2>
-              <div style={s.rankCard}>
+              <div className="vkb-card" style={{ padding: '20px 24px' }}>
                 {data.insights.scoreDistribution.every((b) => b.count === 0) ? (
                   <p style={s.empty}>Sin intentos en el período</p>
                 ) : (
@@ -412,7 +419,7 @@ export default function AdminDashboardPage() {
 
             <section style={s.section}>
               <h2 style={s.sectionTitle}>Lecciones con menos completados</h2>
-              <div style={s.rankCard}>
+              <div className="vkb-card" style={{ padding: '20px 24px' }}>
                 {data.insights.lowCompletionLessons.length === 0 ? (
                   <p style={s.empty}>Sin datos en el período</p>
                 ) : (
@@ -434,7 +441,7 @@ export default function AdminDashboardPage() {
                 </span>
               )}
             </h2>
-            <div style={s.chartCard}>
+            <div className="vkb-card" style={{ padding: '20px 24px' }}>
               {data.insights.bookingHeatmap.length === 0 ? (
                 <p style={s.empty}>Sin reservas en el período</p>
               ) : (
@@ -452,7 +459,7 @@ export default function AdminDashboardPage() {
                   Sin actividad en 14+ días
                 </span>
               </h2>
-              <div style={s.rankCard}>
+              <div className="vkb-card" style={{ padding: '20px 24px' }}>
                 {data.insights.atRiskStudents.map((st) => (
                   <AtRiskRow key={st.studentId} student={st} />
                 ))}
@@ -495,7 +502,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Tabla de últimos certificados */}
-        <div style={s.rankCard}>
+        <div className="vkb-card" style={{ padding: '20px 24px' }}>
           {certs.length === 0 ? (
             <p style={s.empty}>Aún no se han emitido certificados</p>
           ) : (
@@ -526,12 +533,12 @@ function KpiCard({ label, value, color, icon, subtitle }: {
   subtitle?: string;
 }) {
   return (
-    <div style={s.kpiCard}>
-      <div style={{ ...s.kpiAccent, background: color }} />
-      <div style={s.kpiBody}>
-        <span style={s.kpiIcon}>{icon}</span>
-        <div style={{ ...s.kpiValue, color }}>{value}</div>
-        <div style={s.kpiLabel}>{label}</div>
+    <div className="stat-card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' as const }}>
+      <div style={{ height: 4, background: color, borderRadius: '4px 4px 0 0', margin: '-20px -24px 16px' }} />
+      <div>
+        <span style={{ fontSize: '1.25rem', display: 'block', marginBottom: '0.4rem' }}>{icon}</span>
+        <div style={{ fontSize: '1.875rem', fontWeight: 800, lineHeight: 1, marginBottom: 3, color }}>{value}</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{label}</div>
         {subtitle && (
           <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: 2 }}>{subtitle}</div>
         )}
@@ -558,8 +565,8 @@ function HorizBar({ label, value, max, unit, color }: {
           {value} <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>{unit}</span>
         </span>
       </div>
-      <div style={{ height: 7, background: 'var(--color-border)', borderRadius: 4 }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 4, transition: 'width 0.4s ease' }} />
+      <div className="progress-bar">
+        <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
       </div>
     </div>
   );
@@ -585,8 +592,8 @@ function CourseBar({ rank, course, max }: { rank: number; course: CourseActivity
           {course.enrollments} <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>matrículas</span>
         </span>
       </div>
-      <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3 }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: '#06b6d4', borderRadius: 3, transition: 'width 0.4s ease' }} />
+      <div className="progress-bar">
+        <div className="progress-fill" style={{ width: `${pct}%`, background: '#06b6d4' }} />
       </div>
     </div>
   );
@@ -617,8 +624,8 @@ function StudentBar({ rank, student, max }: { rank: number; student: StudentActi
           )}
         </div>
       </div>
-      <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3 }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: '#10b981', borderRadius: 3, transition: 'width 0.4s ease' }} />
+      <div className="progress-bar">
+        <div className="progress-fill" style={{ width: `${pct}%`, background: '#10b981' }} />
       </div>
     </div>
   );
@@ -747,7 +754,7 @@ function TeacherRow({ rank, teacher }: { rank: number; teacher: TeacherActivity 
   const cancelledPct = total > 0 ? (teacher.cancelled / total) * 100 : 0;
 
   return (
-    <div style={s.teacherRow}>
+    <div className="vkb-card" style={{ padding: '14px 18px', marginBottom: 10 }}>
       {/* Cabecera: avatar + nombre + métricas rápidas */}
       <div style={s.teacherRowHeader}>
         <span style={s.rank}>{rank}</span>
@@ -770,8 +777,7 @@ function TeacherRow({ rank, teacher }: { rank: number; teacher: TeacherActivity 
       </div>
 
       {/* Barra de sesiones por estado */}
-      <div style={s.teacherRowBars}>
-        {/* Barra compuesta confirmadas / pendientes / canceladas */}
+      <div>
         <div style={{ marginBottom: '0.6rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', gap: '0.5rem', flexWrap: 'wrap' as const }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
@@ -922,15 +928,7 @@ function CertTypeKpi({ icon, label, count, color }: {
   color: string;
 }) {
   return (
-    <div style={{
-      background: 'var(--color-surface)',
-      border: '1px solid var(--color-border)',
-      borderRadius: 10,
-      padding: '0.875rem 1rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.75rem',
-    }}>
+    <div className="vkb-card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '16px 20px' }}>
       <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{icon}</span>
       <div>
         <div style={{ fontSize: '1.5rem', fontWeight: 800, color, lineHeight: 1 }}>{count}</div>
@@ -1002,12 +1000,8 @@ function CertRow({ cert }: { cert: AdminCertificate }) {
 
 const s: Record<string, React.CSSProperties> = {
   page: { padding: '2rem', maxWidth: 1100, margin: '0 auto' },
-  pageHeader: { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' },
-  title: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 },
-  fetchBadge: { fontSize: '0.75rem', color: 'var(--color-text-muted)', background: 'var(--color-border)', padding: '2px 8px', borderRadius: 12 },
 
   // ── Filter card
-  filterCard: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column' as const, gap: '0.75rem' },
   filterRow: { display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' as const },
   filterLabel: { fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', width: 76, flexShrink: 0 },
   presets: { display: 'flex', gap: '0.35rem' },
@@ -1023,18 +1017,10 @@ const s: Record<string, React.CSSProperties> = {
 
   // ── KPI grid
   kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '0.875rem', marginBottom: '1.75rem' },
-  kpiCard: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' as const },
-  kpiAccent: { height: 4 },
-  kpiBody: { padding: '1rem 1.1rem' },
-  kpiIcon: { fontSize: '1.1rem', display: 'block', marginBottom: '0.4rem' },
-  kpiValue: { fontSize: '1.875rem', fontWeight: 800, lineHeight: 1, marginBottom: 3 },
-  kpiLabel: { fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 500 },
 
   // ── Sections
   section: { marginBottom: '1.5rem' },
   sectionTitle: { fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: '0.6rem' },
-  chartCard: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, padding: '1.25rem' },
-  rankCard: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, padding: '1.25rem' },
   cardSubtitle: { fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '0.875rem', marginTop: 0 },
   twoCol: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' },
 
@@ -1044,9 +1030,6 @@ const s: Record<string, React.CSSProperties> = {
   loading: { textAlign: 'center' as const, color: 'var(--color-text-muted)', padding: '3rem' },
   empty: { color: 'var(--color-text-muted)', fontSize: '0.85rem', textAlign: 'center' as const, padding: '1rem 0' },
 
-  // ── Header
-  exportBtn: { padding: '0.45rem 1rem', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 },
-
   // ── Insights
   leadTimeBadge: { marginLeft: '0.6rem', fontSize: '0.7rem', fontWeight: 600, background: 'var(--color-border)', color: 'var(--color-text-muted)', padding: '2px 8px', borderRadius: 10, border: '1px solid var(--color-border)', verticalAlign: 'middle' as const },
 
@@ -1054,13 +1037,11 @@ const s: Record<string, React.CSSProperties> = {
   certTypeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '0.875rem' },
 
   // ── Teacher section
-  teacherSummary: { display: 'flex', alignItems: 'center', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, padding: '1rem 1.5rem', marginBottom: '0.875rem', gap: 0 },
+  teacherSummary: { display: 'flex', alignItems: 'center', background: 'var(--color-surface)', border: '1.5px solid rgba(234,88,12,0.15)', borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 24px rgba(234,88,12,0.08)', padding: '1rem 1.5rem', marginBottom: '0.875rem', gap: 0 },
   teacherKpi: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', flex: 1, gap: '0.2rem' },
   teacherKpiValue: { fontSize: '1.75rem', fontWeight: 800, color: '#f97316', lineHeight: 1 },
   teacherKpiLabel: { fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', fontWeight: 600 },
   teacherKpiDivider: { width: 1, height: 40, background: 'var(--color-border)', flexShrink: 0, margin: '0 1rem' },
-  teacherList: { display: 'flex', flexDirection: 'column' as const, gap: '0.625rem' },
-  teacherRow: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, padding: '0.875rem 1.1rem' },
+  teacherList: { display: 'flex', flexDirection: 'column' as const, gap: '0' },
   teacherRowHeader: { display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' },
-  teacherRowBars: {},
 };

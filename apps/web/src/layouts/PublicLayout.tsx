@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 
-// Navbar fija superior para las páginas públicas de marketing
+// Navbar fija con glassmorphism para las páginas públicas de marketing
 export default function PublicLayout() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -17,7 +17,7 @@ export default function PublicLayout() {
             <span style={styles.brandText}>VKB Academy</span>
           </Link>
 
-          {/* Links centro — solo visibles en desktop (CSS los oculta en móvil) */}
+          {/* Links centro — solo visibles en desktop */}
           <nav className="pub-nav-links-desktop">
             <NavItem to="/" label="Inicio" />
             <NavItem to="/nosotros" label="Sobre nosotros" />
@@ -30,13 +30,19 @@ export default function PublicLayout() {
               onClick={() => navigate('/login')}
               style={styles.ctaButton}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = '#c94e00';
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.boxShadow = '0 0 28px rgba(234,88,12,0.55)';
+                el.style.transform = 'translateY(-1px)';
+                el.style.filter = 'brightness(1.08)';
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = '#ea580c';
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.boxShadow = '0 4px 18px rgba(234,88,12,0.35)';
+                el.style.transform = 'translateY(0)';
+                el.style.filter = 'none';
               }}
             >
-              Acceder
+              Acceder →
             </button>
           </span>
 
@@ -66,7 +72,7 @@ export default function PublicLayout() {
               className="pub-mobile-cta"
               onClick={() => { setMenuOpen(false); navigate('/login'); }}
             >
-              Acceder
+              Acceder →
             </button>
           </div>
         )}
@@ -79,25 +85,41 @@ export default function PublicLayout() {
 
       {/* ── Footer ── */}
       <footer style={styles.footer}>
-        <p style={styles.footerText}>
-          © 2026 Vallekas Basket · VKB Academy
-        </p>
+        <div style={styles.footerInner}>
+          <div style={styles.footerBrand}>
+            <span>🏀</span>
+            <span style={styles.footerBrandText}>VKB Academy</span>
+          </div>
+          <p style={styles.footerText}>
+            © 2026 Vallekas Basket · Formación deportiva y académica
+          </p>
+          <div style={styles.footerLinks}>
+            <Link to="/" style={styles.footerLink}>Inicio</Link>
+            <span style={styles.footerSep}>·</span>
+            <Link to="/nosotros" style={styles.footerLink}>Sobre nosotros</Link>
+            <span style={styles.footerSep}>·</span>
+            <Link to="/precios" style={styles.footerLink}>Precios</Link>
+          </div>
+        </div>
       </footer>
     </div>
   );
 }
 
-// Componente auxiliar para los links de navegación con hover
 function NavItem({ to, label }: { to: string; label: string }) {
   return (
     <Link
       to={to}
       style={styles.navLink}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.opacity = '1';
+        const el = e.currentTarget as HTMLAnchorElement;
+        el.style.color = '#f97316';
+        el.style.opacity = '1';
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.opacity = '0.8';
+        const el = e.currentTarget as HTMLAnchorElement;
+        el.style.color = '#ffffff';
+        el.style.opacity = '0.80';
       }}
     >
       {label}
@@ -112,13 +134,15 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: '100vh',
   },
 
-  // Navbar
+  // Navbar con glassmorphism
   navbar: {
     position: 'sticky',
     top: 0,
     zIndex: 100,
-    background: '#0d1b2a',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    background: 'linear-gradient(180deg, rgba(8,14,26,0.97) 0%, rgba(13,27,42,0.95) 100%)',
+    borderBottom: '1px solid rgba(234,88,12,0.14)',
+    backdropFilter: 'blur(14px)',
+    WebkitBackdropFilter: 'blur(14px)',
   },
   navInner: {
     width: '100%',
@@ -145,35 +169,40 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1,
   },
   brandText: {
-    color: '#ffffff',
-    fontWeight: 700,
+    background: 'linear-gradient(135deg, #ea580c, #f97316)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    fontWeight: 800,
     fontSize: '1.125rem',
     letterSpacing: '-0.01em',
   },
 
-  // Nav link (individual)
+  // Nav link
   navLink: {
     color: '#ffffff',
     textDecoration: 'none',
     fontSize: '0.9375rem',
     fontWeight: 500,
-    opacity: 0.8,
-    transition: 'opacity 0.15s',
+    opacity: 0.80,
+    transition: 'color 0.18s, opacity 0.18s',
   },
 
   // CTA button
   ctaButton: {
-    background: '#ea580c',
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
     color: '#ffffff',
     border: 'none',
     borderRadius: 8,
-    padding: '8px 20px',
+    padding: '9px 22px',
     fontSize: '0.9375rem',
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: 'pointer',
-    transition: 'background 0.15s',
+    transition: 'box-shadow 0.18s, transform 0.18s, filter 0.18s',
     flexShrink: 0,
     whiteSpace: 'nowrap',
+    boxShadow: '0 4px 18px rgba(234,88,12,0.35)',
+    letterSpacing: '0.01em',
   },
 
   // Main content
@@ -181,16 +210,49 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
   },
 
-  // Footer
+  // Footer mejorado
   footer: {
-    background: '#0d1b2a',
-    padding: '2rem',
-    textAlign: 'center',
+    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 100%)',
+    padding: '2.5rem 2rem',
+    borderTop: '1px solid rgba(234,88,12,0.10)',
+  },
+  footerInner: {
+    maxWidth: 1200,
+    margin: '0 auto',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 12,
+  },
+  footerBrand: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: '1.125rem',
+  },
+  footerBrandText: {
+    color: '#f97316',
+    fontWeight: 700,
+    fontSize: '1rem',
   },
   footerText: {
-    color: '#ffffff',
-    opacity: 0.5,
-    fontSize: '0.8rem',
+    color: 'rgba(255,255,255,0.40)',
+    fontSize: '0.8125rem',
     margin: 0,
+  },
+  footerLinks: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+  },
+  footerLink: {
+    color: 'rgba(255,255,255,0.50)',
+    textDecoration: 'none',
+    fontSize: '0.8125rem',
+    transition: 'color 0.15s',
+  },
+  footerSep: {
+    color: 'rgba(255,255,255,0.20)',
+    fontSize: '0.75rem',
   },
 };

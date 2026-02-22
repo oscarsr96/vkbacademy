@@ -80,7 +80,6 @@ const STEPS = [
 export default function LandingPage() {
   const navigate = useNavigate();
 
-  // Scroll suave a la sección de características
   function handleScrollToFeatures(e: React.MouseEvent) {
     e.preventDefault();
     const el = document.getElementById('features');
@@ -93,13 +92,19 @@ export default function LandingPage() {
           SECCIÓN 1 — HERO
       ════════════════════════════════════════ */}
       <section style={styles.hero}>
+        {/* Glow central grande */}
+        <div style={styles.heroGlowCenter} />
+        {/* Glow lateral */}
+        <div style={styles.heroGlowSide} />
+
         <div style={styles.heroContent}>
           {/* Badge naranja */}
           <span style={styles.heroBadge}>🏀 Para familias de Vallekas Basket</span>
 
           {/* Titular principal */}
           <h1 style={styles.heroHeadline}>
-            El entrenamiento de tu hijo/a, también en casa
+            El entrenamiento de tu hijo/a,{' '}
+            <span style={styles.heroHeadlineAccent}>también en casa</span>
           </h1>
 
           {/* Subtítulo */}
@@ -115,14 +120,16 @@ export default function LandingPage() {
               onClick={() => navigate('/login')}
               style={styles.ctaPrimary}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = '#c94e00';
-                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 24px rgba(234,88,12,0.4)';
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.transform = 'translateY(-3px)';
+                el.style.boxShadow = '0 12px 40px rgba(234,88,12,0.55)';
+                el.style.filter = 'brightness(1.08)';
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = '#ea580c';
-                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(234,88,12,0.3)';
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.transform = 'translateY(0)';
+                el.style.boxShadow = '0 8px 32px rgba(234,88,12,0.4)';
+                el.style.filter = 'none';
               }}
             >
               Acceder a la plataforma
@@ -133,10 +140,12 @@ export default function LandingPage() {
               onClick={handleScrollToFeatures}
               style={styles.ctaSecondary}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,0.1)';
+                (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,0.12)';
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.55)';
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.35)';
               }}
             >
               Qué incluye ↓
@@ -148,9 +157,6 @@ export default function LandingPage() {
             Solo 15 € al mes por alumno · Disponible de 1º ESO a 2º Bachillerato
           </p>
         </div>
-
-        {/* Decoración de fondo */}
-        <div style={styles.heroGlow} />
       </section>
 
       {/* ════════════════════════════════════════
@@ -172,7 +178,6 @@ export default function LandingPage() {
       ════════════════════════════════════════ */}
       <section id="features" style={styles.features}>
         <div style={styles.sectionContainer}>
-          {/* Cabecera */}
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>
               Todo lo que tu hijo/a necesita para mejorar
@@ -182,7 +187,6 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Grid de tarjetas */}
           <div style={styles.featuresGrid}>
             {FEATURES.map((feat, idx) => (
               <FeatureCard key={idx} {...feat} />
@@ -204,11 +208,7 @@ export default function LandingPage() {
           </div>
           <div style={styles.merchGrid}>
             {MERCH.map((item) => (
-              <div key={item.name} style={styles.merchCard}>
-                <span style={styles.merchIcon}>{item.icon}</span>
-                <span style={styles.merchName}>{item.name}</span>
-                <span style={styles.merchPts}>{item.pts.toLocaleString('es-ES')} pts</span>
-              </div>
+              <MerchCard key={item.name} item={item} />
             ))}
           </div>
           <p style={styles.merchNote}>
@@ -229,15 +229,12 @@ export default function LandingPage() {
           <div style={styles.stepsRow}>
             {STEPS.map((step, idx) => (
               <div key={idx} style={styles.stepWrapper}>
-                {/* Círculo numerado */}
                 <div style={styles.stepCircle}>{step.number}</div>
 
-                {/* Línea de conexión (entre pasos, no en el último) */}
                 {idx < STEPS.length - 1 && (
                   <div style={styles.stepConnector} />
                 )}
 
-                {/* Texto del paso */}
                 <div style={styles.stepContent}>
                   <h3 style={styles.stepTitle}>{step.title}</h3>
                   <p style={styles.stepDescription}>{step.description}</p>
@@ -252,6 +249,7 @@ export default function LandingPage() {
           SECCIÓN 5 — CTA FINAL
       ════════════════════════════════════════ */}
       <section style={styles.ctaBottom}>
+        <div style={styles.ctaBottomGlow} />
         <div style={styles.ctaBottomContent}>
           <h2 style={styles.ctaBottomTitle}>
             ¿Tu hijo/a ya es de Vallekas Basket?
@@ -263,14 +261,16 @@ export default function LandingPage() {
             onClick={() => navigate('/login')}
             style={styles.ctaBottomButton}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = '#c94e00';
-              (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 32px rgba(234,88,12,0.5)';
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.transform = 'translateY(-3px)';
+              el.style.boxShadow = '0 16px 48px rgba(234,88,12,0.55)';
+              el.style.filter = 'brightness(1.08)';
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = '#ea580c';
-              (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(234,88,12,0.3)';
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.transform = 'translateY(0)';
+              el.style.boxShadow = '0 8px 32px rgba(234,88,12,0.4)';
+              el.style.filter = 'none';
             }}
           >
             Entrar a la plataforma
@@ -297,13 +297,13 @@ function FeatureCard({
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.transform = 'translateY(-6px)';
-        el.style.boxShadow = '0 16px 48px rgba(0,0,0,0.12)';
-        el.style.borderColor = '#ea580c';
+        el.style.boxShadow = '0 16px 48px rgba(234,88,12,0.18)';
+        el.style.borderColor = 'rgba(234,88,12,0.3)';
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.transform = 'translateY(0)';
-        el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
+        el.style.boxShadow = '0 4px 24px rgba(0,0,0,0.08)';
         el.style.borderColor = '#e2e8f0';
       }}
     >
@@ -314,18 +314,43 @@ function FeatureCard({
   );
 }
 
+// ── Componente de tarjeta de merch ──
+function MerchCard({ item }: { item: { icon: string; name: string; pts: number } }) {
+  return (
+    <div
+      style={merchCardStyle.card}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(-5px)';
+        el.style.boxShadow = '0 12px 32px rgba(234,88,12,0.18)';
+        el.style.borderColor = 'rgba(234,88,12,0.3)';
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(0)';
+        el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+        el.style.borderColor = '#e2e8f0';
+      }}
+    >
+      <span style={merchCardStyle.icon}>{item.icon}</span>
+      <span style={merchCardStyle.name}>{item.name}</span>
+      <span style={merchCardStyle.pts}>{item.pts.toLocaleString('es-ES')} pts</span>
+    </div>
+  );
+}
+
 const featureCardStyle: Record<string, React.CSSProperties> = {
   card: {
     background: '#ffffff',
     border: '1.5px solid #e2e8f0',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: '2rem',
     display: 'flex',
     flexDirection: 'column',
     gap: '0.75rem',
-    transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+    transition: 'transform 0.22s, box-shadow 0.22s, border-color 0.22s',
     cursor: 'default',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
   },
   icon: {
     fontSize: '2.5rem',
@@ -345,6 +370,42 @@ const featureCardStyle: Record<string, React.CSSProperties> = {
   },
 };
 
+const merchCardStyle: Record<string, React.CSSProperties> = {
+  card: {
+    background: '#fff',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: 16,
+    padding: '1.5rem 1.25rem',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '0.6rem',
+    minWidth: 148,
+    textAlign: 'center',
+    transition: 'transform 0.22s, box-shadow 0.22s, border-color 0.22s',
+    cursor: 'default',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+  },
+  icon: {
+    fontSize: '2.25rem',
+    lineHeight: 1,
+  },
+  name: {
+    fontSize: '0.825rem',
+    fontWeight: 600,
+    color: '#0d1b2a',
+    lineHeight: 1.3,
+  },
+  pts: {
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    color: '#ea580c',
+    background: 'rgba(234,88,12,0.10)',
+    padding: '3px 12px',
+    borderRadius: 999,
+  },
+};
+
 // ── Estilos principales ──
 const styles: Record<string, React.CSSProperties> = {
   page: {
@@ -355,7 +416,7 @@ const styles: Record<string, React.CSSProperties> = {
   // Hero
   hero: {
     minHeight: '100vh',
-    background: '#0d1b2a',
+    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -363,8 +424,29 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'relative',
     overflow: 'hidden',
   },
+  heroGlowCenter: {
+    position: 'absolute',
+    top: '15%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: 800,
+    height: 800,
+    background: 'radial-gradient(circle, rgba(234,88,12,0.14) 0%, transparent 65%)',
+    pointerEvents: 'none',
+    borderRadius: '50%',
+  },
+  heroGlowSide: {
+    position: 'absolute',
+    bottom: '-100px',
+    right: '-100px',
+    width: 500,
+    height: 500,
+    background: 'radial-gradient(circle, rgba(234,88,12,0.08) 0%, transparent 70%)',
+    pointerEvents: 'none',
+    borderRadius: '50%',
+  },
   heroContent: {
-    maxWidth: 780,
+    maxWidth: 800,
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
@@ -376,28 +458,34 @@ const styles: Record<string, React.CSSProperties> = {
   },
   heroBadge: {
     display: 'inline-block',
-    background: 'rgba(234,88,12,0.15)',
-    border: '1px solid rgba(234,88,12,0.4)',
+    background: 'rgba(234,88,12,0.16)',
+    border: '1px solid rgba(234,88,12,0.45)',
     color: '#fb923c',
     borderRadius: 999,
-    padding: '0.4rem 1.1rem',
-    fontSize: '0.85rem',
+    padding: '0.45rem 1.2rem',
+    fontSize: '0.875rem',
     fontWeight: 600,
-    letterSpacing: '0.01em',
+    letterSpacing: '0.02em',
   },
   heroHeadline: {
-    fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+    fontSize: 'clamp(2.5rem, 5vw, 4.25rem)',
     fontWeight: 900,
     color: '#ffffff',
-    letterSpacing: '-0.03em',
-    lineHeight: 1.1,
+    letterSpacing: '-0.035em',
+    lineHeight: 1.08,
     margin: 0,
   },
+  heroHeadlineAccent: {
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
   heroSubtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: '1.1rem',
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: '1.125rem',
     lineHeight: 1.7,
-    maxWidth: 560,
+    maxWidth: 580,
     margin: 0,
   },
   heroCtas: {
@@ -408,60 +496,50 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: '0.5rem',
   },
   ctaPrimary: {
-    background: '#ea580c',
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
     color: '#ffffff',
     border: 'none',
-    borderRadius: 10,
-    padding: '14px 28px',
-    fontSize: '1rem',
+    borderRadius: 12,
+    padding: '15px 32px',
+    fontSize: '1.0625rem',
     fontWeight: 700,
     cursor: 'pointer',
-    transition: 'background 0.2s, transform 0.2s, box-shadow 0.2s',
-    boxShadow: '0 4px 16px rgba(234,88,12,0.3)',
+    transition: 'transform 0.2s, box-shadow 0.2s, filter 0.2s',
+    boxShadow: '0 8px 32px rgba(234,88,12,0.4)',
     letterSpacing: '-0.01em',
   },
   ctaSecondary: {
     background: 'transparent',
     color: '#ffffff',
     border: '1.5px solid rgba(255,255,255,0.35)',
-    borderRadius: 10,
-    padding: '14px 28px',
-    fontSize: '1rem',
+    borderRadius: 12,
+    padding: '15px 32px',
+    fontSize: '1.0625rem',
     fontWeight: 600,
     cursor: 'pointer',
-    transition: 'background 0.2s',
+    transition: 'background 0.2s, border-color 0.2s',
     textDecoration: 'none',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroFootnote: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.32)',
     fontSize: '0.8rem',
     margin: 0,
     letterSpacing: '0.01em',
-  },
-  heroGlow: {
-    position: 'absolute',
-    top: '20%',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: 600,
-    height: 600,
-    background: 'radial-gradient(circle, rgba(234,88,12,0.08) 0%, transparent 70%)',
-    pointerEvents: 'none',
-    borderRadius: '50%',
   },
 
   // Stats bar
   statsBar: {
     background: '#ffffff',
     borderBottom: '1px solid #e2e8f0',
+    borderTop: '1px solid #e2e8f0',
   },
   statsInner: {
     maxWidth: 900,
     margin: '0 auto',
-    padding: '2rem',
+    padding: '2.5rem 2rem',
     display: 'flex',
     justifyContent: 'center',
     gap: '3rem',
@@ -471,12 +549,15 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '0.25rem',
+    gap: '0.3rem',
   },
   statValue: {
-    fontSize: '2rem',
+    fontSize: '2.25rem',
     fontWeight: 900,
-    color: '#ea580c',
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
     lineHeight: 1,
   },
   statLabel: {
@@ -490,7 +571,7 @@ const styles: Record<string, React.CSSProperties> = {
   // Features section
   features: {
     background: '#f8fafc',
-    padding: '5rem 2rem',
+    padding: '6rem 2rem',
   },
   sectionContainer: {
     maxWidth: 1100,
@@ -506,10 +587,10 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '0.75rem',
   },
   sectionTitle: {
-    fontSize: 'clamp(1.6rem, 3vw, 2.25rem)',
+    fontSize: 'clamp(1.65rem, 3vw, 2.4rem)',
     fontWeight: 800,
     color: '#0d1b2a',
-    letterSpacing: '-0.02em',
+    letterSpacing: '-0.025em',
     margin: 0,
   },
   sectionSubtitle: {
@@ -521,50 +602,20 @@ const styles: Record<string, React.CSSProperties> = {
   },
   featuresGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
     gap: '1.5rem',
   },
 
   // Merchandising section
   merchSection: {
     background: '#ffffff',
-    padding: '5rem 2rem',
+    padding: '6rem 2rem',
   },
   merchGrid: {
     display: 'flex',
     gap: '1rem',
     flexWrap: 'wrap' as const,
     justifyContent: 'center',
-  },
-  merchCard: {
-    background: '#f8fafc',
-    border: '1.5px solid #e2e8f0',
-    borderRadius: 14,
-    padding: '1.25rem 1.5rem',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: '0.5rem',
-    minWidth: 140,
-    textAlign: 'center' as const,
-  },
-  merchIcon: {
-    fontSize: '2rem',
-    lineHeight: 1,
-  },
-  merchName: {
-    fontSize: '0.825rem',
-    fontWeight: 600,
-    color: '#0d1b2a',
-    lineHeight: 1.3,
-  },
-  merchPts: {
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    color: '#ea580c',
-    background: 'rgba(234,88,12,0.09)',
-    padding: '2px 10px',
-    borderRadius: 999,
   },
   merchNote: {
     textAlign: 'center' as const,
@@ -577,8 +628,8 @@ const styles: Record<string, React.CSSProperties> = {
 
   // How it works section
   howItWorks: {
-    background: '#ffffff',
-    padding: '5rem 2rem',
+    background: '#f8fafc',
+    padding: '6rem 2rem',
   },
   stepsRow: {
     display: 'flex',
@@ -599,10 +650,10 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0 1.5rem',
   },
   stepCircle: {
-    width: 56,
-    height: 56,
+    width: 60,
+    height: 60,
     borderRadius: '50%',
-    background: '#ea580c',
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
     color: '#ffffff',
     fontSize: '1.5rem',
     fontWeight: 900,
@@ -611,18 +662,17 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     marginBottom: '1.25rem',
     flexShrink: 0,
-    boxShadow: '0 4px 16px rgba(234,88,12,0.3)',
+    boxShadow: '0 6px 20px rgba(234,88,12,0.38)',
     position: 'relative',
     zIndex: 1,
   },
   stepConnector: {
     position: 'absolute',
-    top: 28,
-    left: 'calc(50% + 28px)',
-    right: 'calc(-50% + 28px)',
+    top: 30,
+    left: 'calc(50% + 30px)',
+    right: 'calc(-50% + 30px)',
     height: 2,
-    background: 'transparent',
-    borderTop: '2px dashed #e2e8f0',
+    borderTop: '2px dashed rgba(234,88,12,0.25)',
     zIndex: 0,
   },
   stepContent: {
@@ -645,11 +695,24 @@ const styles: Record<string, React.CSSProperties> = {
 
   // CTA final
   ctaBottom: {
-    background: '#0d1b2a',
-    padding: '6rem 2rem',
+    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+    padding: '7rem 2rem',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  ctaBottomGlow: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 600,
+    height: 600,
+    background: 'radial-gradient(circle, rgba(234,88,12,0.14) 0%, transparent 65%)',
+    pointerEvents: 'none',
+    borderRadius: '50%',
   },
   ctaBottomContent: {
     maxWidth: 640,
@@ -657,34 +720,35 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     textAlign: 'center',
-    gap: '1.25rem',
+    gap: '1.5rem',
+    position: 'relative',
+    zIndex: 1,
   },
   ctaBottomTitle: {
-    fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
+    fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
     fontWeight: 900,
     color: '#ffffff',
-    letterSpacing: '-0.02em',
+    letterSpacing: '-0.025em',
     margin: 0,
-    lineHeight: 1.15,
+    lineHeight: 1.12,
   },
   ctaBottomSubtitle: {
     color: 'rgba(255,255,255,0.6)',
-    fontSize: '1rem',
+    fontSize: '1.0625rem',
     margin: 0,
     lineHeight: 1.6,
   },
   ctaBottomButton: {
-    background: '#ea580c',
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
     color: '#ffffff',
     border: 'none',
-    borderRadius: 10,
-    padding: '16px 36px',
+    borderRadius: 12,
+    padding: '17px 40px',
     fontSize: '1.0625rem',
     fontWeight: 700,
     cursor: 'pointer',
-    transition: 'background 0.2s, transform 0.2s, box-shadow 0.2s',
-    boxShadow: '0 4px 16px rgba(234,88,12,0.3)',
-    marginTop: '0.5rem',
+    transition: 'transform 0.2s, box-shadow 0.2s, filter 0.2s',
+    boxShadow: '0 8px 32px rgba(234,88,12,0.4)',
     letterSpacing: '-0.01em',
   },
 };

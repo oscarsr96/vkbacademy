@@ -69,10 +69,13 @@ export default function AboutPage() {
           SECCIÓN 1 — HERO
       ════════════════════════════════════════ */}
       <section style={styles.hero}>
+        <div style={styles.heroGlow} />
+        <div style={styles.heroGlowBottom} />
         <div style={styles.heroContent}>
           <span style={styles.heroBadge}>🏀 Sobre nosotros</span>
           <h1 style={styles.heroTitle}>
-            Vallekas Basket, un club para toda la familia
+            Vallekas Basket,{' '}
+            <span style={styles.heroTitleAccent}>un club para toda la familia</span>
           </h1>
           <p style={styles.heroSubtitle}>
             Más de 30 años formando jugadores y personas en Vallecas. VKB Academy es el paso digital para que el aprendizaje no se quede solo en la cancha.
@@ -156,6 +159,7 @@ export default function AboutPage() {
           {/* Columna derecha — cita destacada */}
           <div style={styles.whyRight}>
             <blockquote style={styles.quoteBox}>
+              <div style={styles.quoteGlow} />
               <div style={styles.quoteAccent} />
               <p style={styles.quoteText}>
                 "La tecnología al servicio del baloncesto de base."
@@ -198,11 +202,7 @@ export default function AboutPage() {
           </div>
           <div style={styles.merchGrid}>
             {MERCH.map((item) => (
-              <div key={item.name} style={styles.merchCard}>
-                <span style={styles.merchIcon}>{item.icon}</span>
-                <span style={styles.merchName}>{item.name}</span>
-                <span style={styles.merchPts}>{item.pts.toLocaleString('es-ES')} pts</span>
-              </div>
+              <MerchCard key={item.name} item={item} />
             ))}
           </div>
           <p style={styles.merchNote}>
@@ -215,6 +215,7 @@ export default function AboutPage() {
           SECCIÓN 7 — CTA FINAL
       ════════════════════════════════════════ */}
       <section style={styles.ctaSection}>
+        <div style={styles.ctaGlow} />
         <div style={styles.ctaContent}>
           <h2 style={styles.ctaTitle}>¿Formas parte del club?</h2>
           <p style={styles.ctaSubtitle}>
@@ -224,14 +225,16 @@ export default function AboutPage() {
             onClick={() => navigate('/login')}
             style={styles.ctaButton}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = '#c94e00';
-              (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 32px rgba(234,88,12,0.5)';
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.transform = 'translateY(-3px)';
+              el.style.boxShadow = '0 16px 48px rgba(234,88,12,0.55)';
+              el.style.filter = 'brightness(1.08)';
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = '#ea580c';
-              (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(234,88,12,0.3)';
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.transform = 'translateY(0)';
+              el.style.boxShadow = '0 8px 32px rgba(234,88,12,0.4)';
+              el.style.filter = 'none';
             }}
           >
             Acceder a la plataforma
@@ -261,18 +264,22 @@ function FounderCard({
       style={founderCardStyle.card}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = 'translateY(-4px)';
-        el.style.boxShadow = '0 16px 40px rgba(0,0,0,0.10)';
+        el.style.transform = 'translateY(-6px)';
+        el.style.boxShadow = '0 16px 48px rgba(234,88,12,0.18)';
+        el.style.borderColor = 'rgba(234,88,12,0.25)';
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.transform = 'translateY(0)';
-        el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
+        el.style.boxShadow = '0 4px 24px rgba(0,0,0,0.08)';
+        el.style.borderColor = '#e2e8f0';
       }}
     >
-      {/* Avatar con iniciales */}
-      <div style={{ ...founderCardStyle.avatar, background: color }}>
-        {initials}
+      {/* Avatar con anillo de gradiente */}
+      <div style={{ padding: 3, borderRadius: '50%', background: `linear-gradient(135deg, ${color} 0%, ${color}99 100%)`, boxShadow: `0 0 20px ${color}55`, marginBottom: '0.5rem' }}>
+        <div style={{ ...founderCardStyle.avatar, background: color }}>
+          {initials}
+        </div>
       </div>
 
       {/* Nombre y rol */}
@@ -310,8 +317,8 @@ const founderCardStyle: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     gap: '0.75rem',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    transition: 'transform 0.22s, box-shadow 0.22s, border-color 0.22s',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
     flex: '1 1 240px',
     textAlign: 'center',
   },
@@ -326,7 +333,6 @@ const founderCardStyle: Record<string, React.CSSProperties> = {
     fontWeight: 800,
     color: '#fff',
     letterSpacing: '-0.02em',
-    marginBottom: '0.5rem',
   },
   name: {
     fontSize: '1.0625rem',
@@ -371,18 +377,20 @@ function ValueCard({
       style={valueCardStyle.card}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = 'translateY(-4px)';
-        el.style.boxShadow = '0 12px 40px rgba(0,0,0,0.1)';
-        el.style.borderColor = '#ea580c';
+        el.style.transform = 'translateY(-6px)';
+        el.style.boxShadow = '0 16px 48px rgba(234,88,12,0.18)';
+        el.style.borderColor = 'rgba(234,88,12,0.3)';
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.transform = 'translateY(0)';
-        el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
+        el.style.boxShadow = '0 4px 24px rgba(0,0,0,0.08)';
         el.style.borderColor = '#e2e8f0';
       }}
     >
-      <span style={valueCardStyle.icon}>{icon}</span>
+      <div style={valueCardStyle.iconWrap}>
+        <span style={valueCardStyle.icon}>{icon}</span>
+      </div>
       <h3 style={valueCardStyle.title}>{title}</h3>
       <p style={valueCardStyle.description}>{description}</p>
     </div>
@@ -393,18 +401,28 @@ const valueCardStyle: Record<string, React.CSSProperties> = {
   card: {
     background: '#ffffff',
     border: '1.5px solid #e2e8f0',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: '2rem',
     display: 'flex',
     flexDirection: 'column',
     gap: '0.75rem',
-    transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+    transition: 'transform 0.22s, box-shadow 0.22s, border-color 0.22s',
     cursor: 'default',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
     flex: '1 1 240px',
   },
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    background: 'rgba(234,88,12,0.10)',
+    border: '1px solid rgba(234,88,12,0.2)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   icon: {
-    fontSize: '2.5rem',
+    fontSize: '1.75rem',
     lineHeight: 1,
   },
   title: {
@@ -421,6 +439,67 @@ const valueCardStyle: Record<string, React.CSSProperties> = {
   },
 };
 
+// ── Componente de tarjeta merch ──
+function MerchCard({ item }: { item: { icon: string; name: string; pts: number } }) {
+  return (
+    <div
+      style={merchCardStyle.card}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(-5px)';
+        el.style.boxShadow = '0 12px 32px rgba(234,88,12,0.18)';
+        el.style.borderColor = 'rgba(234,88,12,0.3)';
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(0)';
+        el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+        el.style.borderColor = '#e2e8f0';
+      }}
+    >
+      <span style={merchCardStyle.icon}>{item.icon}</span>
+      <span style={merchCardStyle.name}>{item.name}</span>
+      <span style={merchCardStyle.pts}>{item.pts.toLocaleString('es-ES')} pts</span>
+    </div>
+  );
+}
+
+const merchCardStyle: Record<string, React.CSSProperties> = {
+  card: {
+    background: '#fff',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: 16,
+    padding: '1.5rem 1.25rem',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '0.6rem',
+    minWidth: 148,
+    textAlign: 'center',
+    transition: 'transform 0.22s, box-shadow 0.22s, border-color 0.22s',
+    cursor: 'default',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+  },
+  icon: {
+    fontSize: '2.25rem',
+    lineHeight: 1,
+  },
+  name: {
+    fontSize: '0.825rem',
+    fontWeight: 600,
+    color: '#0d1b2a',
+    lineHeight: 1.3,
+  },
+  pts: {
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    color: '#ea580c',
+    background: 'rgba(234,88,12,0.10)',
+    padding: '3px 12px',
+    borderRadius: 999,
+  },
+};
+
 // ── Estilos principales ──
 const styles: Record<string, React.CSSProperties> = {
   page: {
@@ -430,51 +509,82 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Hero
   hero: {
-    background: '#0d1b2a',
-    padding: '5rem 2rem',
+    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+    padding: '6rem 2rem 5rem',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  heroGlow: {
+    position: 'absolute',
+    top: '-80px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: 700,
+    height: 700,
+    background: 'radial-gradient(circle, rgba(234,88,12,0.16) 0%, transparent 65%)',
+    pointerEvents: 'none',
+    borderRadius: '50%',
+  },
+  heroGlowBottom: {
+    position: 'absolute',
+    bottom: '-100px',
+    right: '-80px',
+    width: 400,
+    height: 400,
+    background: 'radial-gradient(circle, rgba(234,88,12,0.08) 0%, transparent 70%)',
+    pointerEvents: 'none',
+    borderRadius: '50%',
   },
   heroContent: {
-    maxWidth: 720,
+    maxWidth: 740,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     textAlign: 'center',
     gap: '1.25rem',
+    position: 'relative',
+    zIndex: 1,
   },
   heroBadge: {
     display: 'inline-block',
-    background: 'rgba(234,88,12,0.15)',
-    border: '1px solid rgba(234,88,12,0.4)',
+    background: 'rgba(234,88,12,0.16)',
+    border: '1px solid rgba(234,88,12,0.45)',
     color: '#fb923c',
     borderRadius: 999,
-    padding: '0.4rem 1.1rem',
-    fontSize: '0.85rem',
+    padding: '0.45rem 1.2rem',
+    fontSize: '0.875rem',
     fontWeight: 600,
-    letterSpacing: '0.01em',
+    letterSpacing: '0.02em',
   },
   heroTitle: {
-    fontSize: 'clamp(2rem, 4vw, 3rem)',
+    fontSize: 'clamp(2rem, 4vw, 3.25rem)',
     fontWeight: 900,
     color: '#ffffff',
     letterSpacing: '-0.03em',
-    lineHeight: 1.1,
+    lineHeight: 1.08,
     margin: 0,
   },
+  heroTitleAccent: {
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
   heroSubtitle: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.62)',
     fontSize: '1.1rem',
     lineHeight: 1.7,
-    maxWidth: 560,
+    maxWidth: 580,
     margin: 0,
   },
 
   // Historia
   storySection: {
     background: '#ffffff',
-    padding: '5rem 2rem',
+    padding: '6rem 2rem',
     display: 'flex',
     justifyContent: 'center',
   },
@@ -486,16 +596,16 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '1.5rem',
   },
   sectionTitle: {
-    fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+    fontSize: 'clamp(1.5rem, 3vw, 2.1rem)',
     fontWeight: 800,
     color: '#0d1b2a',
-    letterSpacing: '-0.02em',
+    letterSpacing: '-0.025em',
     margin: 0,
   },
   storyDivider: {
-    width: 48,
+    width: 52,
     height: 4,
-    background: '#ea580c',
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
     borderRadius: 2,
   },
   storyParagraph: {
@@ -508,7 +618,7 @@ const styles: Record<string, React.CSSProperties> = {
   // Valores
   valuesSection: {
     background: '#f8fafc',
-    padding: '5rem 2rem',
+    padding: '6rem 2rem',
   },
   sectionContainer: {
     maxWidth: 1000,
@@ -521,10 +631,10 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
   },
   sectionTitleCentered: {
-    fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+    fontSize: 'clamp(1.5rem, 3vw, 2.1rem)',
     fontWeight: 800,
     color: '#0d1b2a',
-    letterSpacing: '-0.02em',
+    letterSpacing: '-0.025em',
     margin: 0,
   },
   valuesGrid: {
@@ -537,7 +647,7 @@ const styles: Record<string, React.CSSProperties> = {
   // Por qué VKB Academy
   whySection: {
     background: '#ffffff',
-    padding: '5rem 2rem',
+    padding: '6rem 2rem',
   },
   whyInner: {
     maxWidth: 1000,
@@ -554,10 +664,10 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '1.5rem',
   },
   whyTitle: {
-    fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+    fontSize: 'clamp(1.5rem, 3vw, 2.1rem)',
     fontWeight: 800,
     color: '#0d1b2a',
-    letterSpacing: '-0.02em',
+    letterSpacing: '-0.025em',
     margin: 0,
   },
   whyList: {
@@ -587,15 +697,26 @@ const styles: Record<string, React.CSSProperties> = {
     flex: '1 1 280px',
   },
   quoteBox: {
-    background: '#0d1b2a',
-    borderRadius: 16,
-    padding: '2.5rem',
+    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+    borderRadius: 20,
+    padding: '2.75rem',
     position: 'relative',
     overflow: 'hidden',
     margin: 0,
     display: 'flex',
     flexDirection: 'column',
     gap: '1rem',
+    boxShadow: '0 8px 32px rgba(8,14,26,0.25)',
+  },
+  quoteGlow: {
+    position: 'absolute',
+    top: -80,
+    right: -80,
+    width: 250,
+    height: 250,
+    background: 'radial-gradient(circle, rgba(234,88,12,0.2) 0%, transparent 70%)',
+    pointerEvents: 'none',
+    borderRadius: '50%',
   },
   quoteAccent: {
     position: 'absolute',
@@ -603,28 +724,32 @@ const styles: Record<string, React.CSSProperties> = {
     top: 0,
     bottom: 0,
     width: 4,
-    background: '#ea580c',
-    borderRadius: '16px 0 0 16px',
+    background: 'linear-gradient(180deg, #ea580c 0%, #f97316 100%)',
+    borderRadius: '20px 0 0 20px',
   },
   quoteText: {
-    fontSize: '1.25rem',
+    fontSize: '1.3rem',
     fontWeight: 700,
     color: '#ffffff',
     lineHeight: 1.5,
     margin: 0,
     fontStyle: 'italic',
+    position: 'relative',
+    zIndex: 1,
   },
   quoteAuthor: {
     fontSize: '0.85rem',
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(255,255,255,0.42)',
     margin: 0,
     fontStyle: 'normal',
+    position: 'relative',
+    zIndex: 1,
   },
 
   // Equipo fundador
   teamSection: {
     background: '#f8fafc',
-    padding: '5rem 2rem',
+    padding: '6rem 2rem',
   },
   teamSubtitle: {
     color: '#64748b',
@@ -644,7 +769,7 @@ const styles: Record<string, React.CSSProperties> = {
   // Merchandising
   merchSection: {
     background: '#fff',
-    padding: '5rem 2rem',
+    padding: '6rem 2rem',
   },
   merchSubtitle: {
     color: '#64748b',
@@ -660,36 +785,6 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap' as const,
     justifyContent: 'center',
   },
-  merchCard: {
-    background: '#f8fafc',
-    border: '1.5px solid #e2e8f0',
-    borderRadius: 14,
-    padding: '1.25rem 1.5rem',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: '0.5rem',
-    minWidth: 140,
-    textAlign: 'center' as const,
-  },
-  merchIcon: {
-    fontSize: '2rem',
-    lineHeight: 1,
-  },
-  merchName: {
-    fontSize: '0.825rem',
-    fontWeight: 600,
-    color: '#0d1b2a',
-    lineHeight: 1.3,
-  },
-  merchPts: {
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    color: '#ea580c',
-    background: 'rgba(234,88,12,0.09)',
-    padding: '2px 10px',
-    borderRadius: 999,
-  },
   merchNote: {
     textAlign: 'center' as const,
     fontSize: '0.825rem',
@@ -701,11 +796,24 @@ const styles: Record<string, React.CSSProperties> = {
 
   // CTA final
   ctaSection: {
-    background: '#0d1b2a',
-    padding: '6rem 2rem',
+    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+    padding: '7rem 2rem',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  ctaGlow: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 600,
+    height: 600,
+    background: 'radial-gradient(circle, rgba(234,88,12,0.14) 0%, transparent 65%)',
+    pointerEvents: 'none',
+    borderRadius: '50%',
   },
   ctaContent: {
     maxWidth: 600,
@@ -713,34 +821,35 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     textAlign: 'center',
-    gap: '1.25rem',
+    gap: '1.5rem',
+    position: 'relative',
+    zIndex: 1,
   },
   ctaTitle: {
-    fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
+    fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
     fontWeight: 900,
     color: '#ffffff',
-    letterSpacing: '-0.02em',
+    letterSpacing: '-0.025em',
     margin: 0,
-    lineHeight: 1.15,
+    lineHeight: 1.12,
   },
   ctaSubtitle: {
     color: 'rgba(255,255,255,0.6)',
-    fontSize: '1rem',
+    fontSize: '1.0625rem',
     margin: 0,
     lineHeight: 1.6,
   },
   ctaButton: {
-    background: '#ea580c',
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
     color: '#ffffff',
     border: 'none',
-    borderRadius: 10,
-    padding: '16px 36px',
+    borderRadius: 12,
+    padding: '17px 40px',
     fontSize: '1.0625rem',
     fontWeight: 700,
     cursor: 'pointer',
-    transition: 'background 0.2s, transform 0.2s, box-shadow 0.2s',
-    boxShadow: '0 4px 16px rgba(234,88,12,0.3)',
-    marginTop: '0.5rem',
+    transition: 'transform 0.2s, box-shadow 0.2s, filter 0.2s',
+    boxShadow: '0 8px 32px rgba(234,88,12,0.4)',
     letterSpacing: '-0.01em',
   },
 };

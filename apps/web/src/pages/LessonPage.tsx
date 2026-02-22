@@ -10,75 +10,228 @@ import MatchLesson from '../components/lessons/MatchLesson';
 import SortLesson from '../components/lessons/SortLesson';
 import FillBlankLesson from '../components/lessons/FillBlankLesson';
 
-const styles: Record<string, React.CSSProperties> = {
-  page: { padding: '2rem', maxWidth: 800, margin: '0 auto' },
-  nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
+const LESSON_TYPE_LABELS: Partial<Record<LessonType, string>> = {
+  [LessonType.VIDEO]: 'Vídeo',
+  [LessonType.QUIZ]: 'Test',
+  [LessonType.EXERCISE]: 'Ejercicio',
+  [LessonType.MATCH]: 'Emparejar',
+  [LessonType.SORT]: 'Ordenar',
+  [LessonType.FILL_BLANK]: 'Rellenar',
+};
+
+const S: Record<string, React.CSSProperties> = {
+  page: { display: 'flex', flexDirection: 'column', gap: 0, maxWidth: 820, margin: '0 auto' },
+
+  // Navegación superior
+  nav: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   backBtn: {
-    background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--color-text-muted)', fontSize: '0.875rem', padding: 0,
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: 'var(--color-text-muted)',
+    fontSize: '0.875rem',
+    padding: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontFamily: 'inherit',
+    transition: 'color 0.15s',
   },
+  prevNextWrap: { display: 'flex', gap: 8 },
   prevNextBtn: {
-    background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-    borderRadius: 8, padding: '0.4rem 0.9rem', cursor: 'pointer',
-    fontSize: '0.875rem', color: 'var(--color-text)',
+    background: 'var(--color-surface)',
+    border: '1.5px solid var(--color-border)',
+    borderRadius: 8,
+    padding: '6px 14px',
+    cursor: 'pointer',
+    fontSize: '0.85rem',
+    color: 'var(--color-text)',
+    fontFamily: 'inherit',
+    fontWeight: 600,
+    transition: 'border-color 0.15s, background 0.15s',
   },
-  heading: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '1.25rem' },
+
+  // Breadcrumb dentro de la card de encabezado
+  lessonTypeBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 5,
+    padding: '3px 10px',
+    borderRadius: 999,
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase' as const,
+    background: 'rgba(234,88,12,0.10)',
+    color: 'var(--color-primary)',
+    marginBottom: 8,
+    width: 'fit-content',
+  },
+  heading: {
+    fontSize: '1.4rem',
+    fontWeight: 800,
+    color: 'var(--color-text)',
+    marginBottom: 24,
+    lineHeight: 1.25,
+    letterSpacing: '-0.01em',
+  },
+
+  // Marco de contenido (vídeo / actividad interactiva)
+  contentFrame: {
+    border: '2px solid rgba(234,88,12,0.20)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 24,
+  },
   iframeWrapper: {
-    aspectRatio: '16/9', borderRadius: 10, overflow: 'hidden',
-    marginBottom: '1.25rem', background: '#000',
+    aspectRatio: '16/9',
+    background: '#000',
   },
-  iframe: { width: '100%', height: '100%', border: 'none' },
+  iframe: { width: '100%', height: '100%', border: 'none', display: 'block' },
   noVideo: {
-    background: 'var(--color-border)', borderRadius: 10, height: 220,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    color: 'var(--color-text-muted)', marginBottom: '1.25rem',
+    background: 'var(--color-border)',
+    height: 220,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'var(--color-text-muted)',
+    fontSize: '0.9rem',
   },
-  completeBtn: {
-    background: 'var(--color-primary)', color: '#fff', border: 'none',
-    borderRadius: 8, padding: '0.6rem 1.25rem', cursor: 'pointer',
-    fontSize: '0.875rem', fontWeight: 600, marginBottom: '2rem',
+  activityFrame: {
+    background: '#fff',
+    padding: 0,
   },
+
+  // Completar / completada
   completedBadge: {
-    display: 'inline-flex', alignItems: 'center', gap: 6,
-    background: '#d1fae5', color: '#065f46', borderRadius: 8,
-    padding: '0.4rem 0.9rem', fontSize: '0.875rem', fontWeight: 600,
-    marginBottom: '2rem',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    background: '#d1fae5',
+    color: '#065f46',
+    borderRadius: 10,
+    padding: '10px 20px',
+    fontSize: '0.9rem',
+    fontWeight: 700,
+    marginBottom: 24,
   },
-  quizSection: { marginTop: '1rem' },
-  questionBlock: { marginBottom: '1.5rem' },
-  questionText: { fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-text)' },
+
+  // Quiz
+  quizSection: { marginBottom: 24 },
+  questionBlock: { marginBottom: 20 },
+  questionText: {
+    fontWeight: 700,
+    marginBottom: 10,
+    color: 'var(--color-text)',
+    fontSize: '0.9375rem',
+  },
   answerLabel: {
-    display: 'flex', alignItems: 'center', gap: 8,
-    padding: '0.5rem 0.75rem', borderRadius: 8, cursor: 'pointer',
-    border: '1px solid var(--color-border)', marginBottom: '0.4rem',
-    fontSize: '0.875rem', color: 'var(--color-text)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '10px 14px',
+    borderRadius: 10,
+    cursor: 'pointer',
+    border: '1.5px solid var(--color-border)',
+    marginBottom: 6,
+    fontSize: '0.875rem',
+    color: 'var(--color-text)',
+    transition: 'border-color 0.15s, background 0.15s',
   },
   submitBtn: {
-    background: 'var(--color-primary)', color: '#fff', border: 'none',
-    borderRadius: 8, padding: '0.6rem 1.5rem', cursor: 'pointer',
-    fontSize: '0.875rem', fontWeight: 600, marginTop: '0.5rem',
+    background: 'var(--color-primary)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    padding: '10px 24px',
+    cursor: 'pointer',
+    fontSize: '0.9rem',
+    fontWeight: 700,
+    fontFamily: 'inherit',
+    marginTop: 4,
+    transition: 'filter 0.15s',
   },
+
+  // Resultado del quiz
   resultBox: {
-    background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-    borderRadius: 10, padding: '1.25rem', marginTop: '1rem',
+    background: 'var(--color-surface)',
+    border: '1.5px solid var(--color-border)',
+    borderRadius: 14,
+    padding: '24px',
+    marginBottom: 24,
   },
-  score: { fontSize: '2rem', fontWeight: 700, color: 'var(--color-primary)' },
-  placeholder: {
-    background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-    borderRadius: 10, padding: '2rem', textAlign: 'center',
+  score: {
+    fontSize: '2.5rem',
+    fontWeight: 900,
+    color: 'var(--color-primary)',
+    letterSpacing: '-0.03em',
+    lineHeight: 1,
+    marginBottom: 4,
+  },
+  scoreSubtext: {
+    color: 'var(--color-text-muted)',
+    fontSize: '0.875rem',
+    marginTop: 4,
+    marginBottom: 0,
+  },
+
+  // Revisión de correcciones
+  correctionItem: { marginBottom: 14 },
+  correctionRow: { display: 'flex', gap: 10, alignItems: 'flex-start' },
+
+  // Historial
+  historySection: {
+    marginTop: 20,
+    borderTop: '1px solid var(--color-border)',
+    paddingTop: 16,
+  },
+  historyTitle: {
+    fontWeight: 700,
+    marginBottom: 10,
+    color: 'var(--color-text)',
+    fontSize: '0.875rem',
+  },
+  historyRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  historyText: {
+    fontSize: '0.875rem',
     color: 'var(--color-text-muted)',
   },
-  error: { color: 'var(--color-error)', padding: '1rem' },
-  skeleton: { background: 'var(--color-border)', borderRadius: 8 },
   downloadBtn: {
     background: 'none',
-    border: '1px solid var(--color-border)',
+    border: '1.5px solid var(--color-border)',
     borderRadius: 6,
-    padding: '0.25rem 0.6rem',
+    padding: '3px 10px',
     cursor: 'pointer',
     fontSize: '0.75rem',
     color: 'var(--color-text-muted)',
+    fontFamily: 'inherit',
+    fontWeight: 600,
+    transition: 'border-color 0.15s, color 0.15s',
   },
+
+  // Placeholder (ejercicio / actividad no configurada)
+  placeholder: {
+    background: 'var(--color-surface)',
+    border: '2px solid rgba(234,88,12,0.15)',
+    borderRadius: 16,
+    padding: '2.5rem',
+    textAlign: 'center' as const,
+    color: 'var(--color-text-muted)',
+    marginBottom: 24,
+  },
+
+  error: { color: 'var(--color-error)', padding: '1rem' },
+  skeleton: { background: 'var(--color-border)', borderRadius: 8 },
 };
 
 export default function LessonPage() {
@@ -106,6 +259,7 @@ export default function LessonPage() {
     setQuizResult(null);
     setQuizSnapshot(null);
   }, [lessonId]);
+
   const submitQuiz = useSubmitQuiz(lesson?.quiz?.id ?? '', lessonId);
   const { data: quizAttempts } = useQuizAttempts(lesson?.quiz?.id ?? '');
 
@@ -176,38 +330,74 @@ export default function LessonPage() {
     }
   }
 
-  if (isError) return <div style={styles.error}>Error al cargar la lección.</div>;
+  if (isError) return <div style={S.error}>Error al cargar la lección.</div>;
 
   if (isLoading || !lesson) {
     return (
-      <div style={styles.page}>
-        <div style={{ ...styles.skeleton, height: 24, width: '40%', marginBottom: 20 }} />
-        <div style={{ ...styles.skeleton, height: 36, width: '70%', marginBottom: 20 }} />
-        <div style={{ ...styles.skeleton, height: 220, width: '100%', marginBottom: 16 }} />
+      <div style={{ maxWidth: 820, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ ...S.skeleton, height: 24, width: '40%', marginBottom: 4 }} />
+        <div style={{ ...S.skeleton, height: 36, width: '70%', marginBottom: 4 }} />
+        <div style={{ ...S.skeleton, height: 240, width: '100%', borderRadius: 16 }} />
       </div>
     );
   }
 
+  const isInteractiveType = [LessonType.MATCH, LessonType.SORT, LessonType.FILL_BLANK]
+    .includes(lesson.type as LessonType);
+  // El botón solo se bloquea si la lección es interactiva Y tiene contenido configurado
+  // Si content es null ("Actividad no configurada"), se permite completar igualmente
+  const hasInteractiveContent = isInteractiveType && !!lesson.content;
+
   return (
-    <div style={styles.page}>
+    <div style={S.page}>
       {/* Navegación superior */}
-      <div style={styles.nav}>
-        <button style={styles.backBtn} onClick={() => navigate(`/courses/${courseId}`)}>
+      <div style={S.nav}>
+        <button
+          style={S.backBtn}
+          onClick={() => navigate(`/courses/${courseId}`)}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-primary)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-muted)'; }}
+        >
           ← Volver al curso
+          {course && (
+            <span style={{ fontWeight: 600, color: 'var(--color-text-muted)' }}>
+              · {course.title}
+            </span>
+          )}
         </button>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={S.prevNextWrap}>
           {prevLesson && (
             <button
-              style={styles.prevNextBtn}
+              style={S.prevNextBtn}
               onClick={() => navigate(`/courses/${courseId}/lessons/${prevLesson.id}`)}
+              onMouseEnter={(e) => {
+                const btn = e.currentTarget as HTMLButtonElement;
+                btn.style.borderColor = 'rgba(234,88,12,0.35)';
+                btn.style.background = 'rgba(234,88,12,0.04)';
+              }}
+              onMouseLeave={(e) => {
+                const btn = e.currentTarget as HTMLButtonElement;
+                btn.style.borderColor = 'var(--color-border)';
+                btn.style.background = 'var(--color-surface)';
+              }}
             >
               ← Anterior
             </button>
           )}
           {nextLesson && (
             <button
-              style={styles.prevNextBtn}
+              style={S.prevNextBtn}
               onClick={() => navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)}
+              onMouseEnter={(e) => {
+                const btn = e.currentTarget as HTMLButtonElement;
+                btn.style.borderColor = 'rgba(234,88,12,0.35)';
+                btn.style.background = 'rgba(234,88,12,0.04)';
+              }}
+              onMouseLeave={(e) => {
+                const btn = e.currentTarget as HTMLButtonElement;
+                btn.style.borderColor = 'var(--color-border)';
+                btn.style.background = 'var(--color-surface)';
+              }}
             >
               Siguiente →
             </button>
@@ -215,44 +405,55 @@ export default function LessonPage() {
         </div>
       </div>
 
-      <h1 style={styles.heading}>{lesson.title}</h1>
+      {/* Tipo de lección badge + título */}
+      <div style={S.lessonTypeBadge}>
+        {LESSON_TYPE_LABELS[lesson.type as LessonType] ?? lesson.type}
+      </div>
+      <h1 style={S.heading}>{lesson.title}</h1>
 
       {/* Contenido según tipo */}
+
+      {/* VIDEO */}
       {lesson.type === 'VIDEO' && (
-        lesson.youtubeId ? (
-          <div style={styles.iframeWrapper}>
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${lesson.youtubeId}`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              style={styles.iframe}
-              title={lesson.title}
-            />
+        <div style={S.contentFrame}>
+          <div style={S.iframeWrapper}>
+            {lesson.youtubeId ? (
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${lesson.youtubeId}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={S.iframe}
+                title={lesson.title}
+              />
+            ) : (
+              <div style={S.noVideo}>Vídeo no disponible</div>
+            )}
           </div>
-        ) : (
-          <div style={styles.noVideo}>Vídeo no disponible</div>
-        )
+        </div>
       )}
 
+      {/* QUIZ */}
       {lesson.type === 'QUIZ' && lesson.quiz && (
-        <div style={styles.quizSection}>
+        <div style={S.quizSection}>
           {!quizResult ? (
             <>
-              {lesson.quiz.questions.map((question) => (
-                <div key={question.id} style={styles.questionBlock}>
-                  <div style={styles.questionText}>{question.text}</div>
+              {lesson.quiz.questions.map((question, qIdx) => (
+                <div key={question.id} style={S.questionBlock}>
+                  <div style={S.questionText}>
+                    {qIdx + 1}. {question.text}
+                  </div>
                   {question.answers.map((answer) => (
                     <label
                       key={answer.id}
                       style={{
-                        ...styles.answerLabel,
+                        ...S.answerLabel,
                         borderColor:
                           selectedAnswers[question.id] === answer.id
                             ? 'var(--color-primary)'
                             : 'var(--color-border)',
                         background:
                           selectedAnswers[question.id] === answer.id
-                            ? 'var(--color-primary-subtle, rgba(var(--color-primary-rgb, 99,102,241), 0.08))'
+                            ? 'rgba(234,88,12,0.06)'
                             : 'transparent',
                       }}
                     >
@@ -262,6 +463,7 @@ export default function LessonPage() {
                         value={answer.id}
                         checked={selectedAnswers[question.id] === answer.id}
                         onChange={() => handleSelectAnswer(question.id, answer.id)}
+                        style={{ accentColor: 'var(--color-primary)' }}
                       />
                       {answer.text}
                     </label>
@@ -269,7 +471,7 @@ export default function LessonPage() {
                 </div>
               ))}
               <button
-                style={styles.submitBtn}
+                style={S.submitBtn}
                 onClick={handleSubmitQuiz}
                 disabled={submitQuiz.isPending}
               >
@@ -277,15 +479,15 @@ export default function LessonPage() {
               </button>
             </>
           ) : (
-            <div style={styles.resultBox}>
-              <div style={styles.score}>{quizResult.score.toFixed(1)}%</div>
-              <p style={{ color: 'var(--color-text-muted)', marginTop: 4 }}>
+            <div style={S.resultBox}>
+              <div style={S.score}>{quizResult.score.toFixed(1)}%</div>
+              <p style={S.scoreSubtext}>
                 {quizResult.correctCount} de {quizResult.totalCount} preguntas correctas
               </p>
 
               {/* Revisión pregunta a pregunta */}
               <div style={{ marginTop: '1.25rem' }}>
-                <div style={{ fontWeight: 600, marginBottom: '0.75rem', color: 'var(--color-text)' }}>
+                <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: 'var(--color-text)', fontSize: '0.875rem' }}>
                   Revisión:
                 </div>
                 {quizResult.corrections.map((correction) => {
@@ -293,18 +495,18 @@ export default function LessonPage() {
                   const selectedAnswer = question?.answers.find((a) => a.id === correction.selectedAnswerId);
                   const correctAnswer = question?.answers.find((a) => a.id === correction.correctAnswerId);
                   return (
-                    <div key={correction.questionId} style={{ marginBottom: '1rem' }}>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                        <span style={{ flexShrink: 0 }}>{correction.isCorrect ? '✅' : '❌'}</span>
+                    <div key={correction.questionId} style={S.correctionItem}>
+                      <div style={S.correctionRow}>
+                        <span style={{ flexShrink: 0, fontSize: '1rem' }}>{correction.isCorrect ? '✅' : '❌'}</span>
                         <div>
-                          <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--color-text)', fontSize: '0.875rem' }}>
                             {question?.text}
                           </div>
-                          <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                          <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
                             Tu respuesta: &ldquo;{selectedAnswer?.text ?? '—'}&rdquo;
                           </div>
                           {!correction.isCorrect && (
-                            <div style={{ fontSize: '0.875rem', color: '#059669', marginTop: 2 }}>
+                            <div style={{ fontSize: '0.82rem', color: '#059669', marginTop: 2, fontWeight: 600 }}>
                               Correcta: &ldquo;{correctAnswer?.text ?? '—'}&rdquo;
                             </div>
                           )}
@@ -315,9 +517,9 @@ export default function LessonPage() {
                 })}
               </div>
 
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' as const }}>
                 <button
-                  style={styles.submitBtn}
+                  style={S.submitBtn}
                   onClick={() => {
                     setQuizResult(null);
                     setSelectedAnswers({});
@@ -326,29 +528,19 @@ export default function LessonPage() {
                 >
                   Intentar de nuevo
                 </button>
-                <button style={styles.downloadBtn} onClick={handleDownloadCurrentPdf}>
-                  Descargar PDF
+                <button style={S.downloadBtn} onClick={handleDownloadCurrentPdf}>
+                  ⬇️ Descargar PDF
                 </button>
               </div>
 
               {/* Historial de intentos */}
               {quizAttempts && quizAttempts.length > 0 && (
-                <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
-                  <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-text)' }}>
-                    Historial de intentos:
-                  </div>
+                <div style={S.historySection}>
+                  <div style={S.historyTitle}>Historial de intentos:</div>
                   {quizAttempts.map((attempt) => (
-                    <div
-                      key={attempt.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '0.4rem',
-                      }}
-                    >
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
-                        • {attempt.score.toFixed(1)}% —{' '}
+                    <div key={attempt.id} style={S.historyRow}>
+                      <span style={S.historyText}>
+                        · {attempt.score.toFixed(1)}% —{' '}
                         {new Date(attempt.completedAt).toLocaleDateString('es-ES', {
                           day: 'numeric',
                           month: 'short',
@@ -356,7 +548,7 @@ export default function LessonPage() {
                         })}
                       </span>
                       <button
-                        style={styles.downloadBtn}
+                        style={S.downloadBtn}
                         onClick={() => handleDownloadHistoricPdf(attempt.id)}
                         disabled={downloadingAttemptId === attempt.id}
                       >
@@ -371,69 +563,76 @@ export default function LessonPage() {
         </div>
       )}
 
+      {/* EXERCISE */}
       {lesson.type === 'EXERCISE' && (
-        <div style={styles.placeholder}>
+        <div style={S.placeholder}>
           <span style={{ fontSize: 40 }}>💪</span>
-          <p style={{ marginTop: 8, fontWeight: 600 }}>Próximamente</p>
-          <p style={{ fontSize: '0.875rem', marginTop: 4 }}>Los ejercicios estarán disponibles pronto.</p>
+          <p style={{ marginTop: 12, fontWeight: 700, color: 'var(--color-text)' }}>Próximamente</p>
+          <p style={{ fontSize: '0.875rem', marginTop: 6 }}>Los ejercicios estarán disponibles pronto.</p>
         </div>
       )}
 
+      {/* MATCH */}
       {lesson.type === LessonType.MATCH && lesson.content && (
-        <MatchLesson
-          content={lesson.content as MatchContent}
-          onComplete={() => setInteractiveCompleted(true)}
-        />
+        <div style={S.contentFrame}>
+          <div style={S.activityFrame}>
+            <MatchLesson
+              content={lesson.content as MatchContent}
+              onComplete={() => setInteractiveCompleted(true)}
+            />
+          </div>
+        </div>
       )}
 
+      {/* SORT */}
       {lesson.type === LessonType.SORT && lesson.content && (
-        <SortLesson
-          content={lesson.content as SortContent}
-          onComplete={() => setInteractiveCompleted(true)}
-        />
+        <div style={S.contentFrame}>
+          <div style={S.activityFrame}>
+            <SortLesson
+              content={lesson.content as SortContent}
+              onComplete={() => setInteractiveCompleted(true)}
+            />
+          </div>
+        </div>
       )}
 
+      {/* FILL_BLANK */}
       {lesson.type === LessonType.FILL_BLANK && lesson.content && (
-        <FillBlankLesson
-          content={lesson.content as FillBlankContent}
-          onComplete={() => setInteractiveCompleted(true)}
-        />
+        <div style={S.contentFrame}>
+          <div style={S.activityFrame}>
+            <FillBlankLesson
+              content={lesson.content as FillBlankContent}
+              onComplete={() => setInteractiveCompleted(true)}
+            />
+          </div>
+        </div>
       )}
 
       {/* Lección interactiva sin contenido configurado todavía */}
-      {[LessonType.MATCH, LessonType.SORT, LessonType.FILL_BLANK].includes(lesson.type as LessonType) && !lesson.content && (
-        <div style={styles.placeholder}>
+      {isInteractiveType && !lesson.content && (
+        <div style={S.placeholder}>
           <span style={{ fontSize: 40 }}>⚡</span>
-          <p style={{ marginTop: 8, fontWeight: 600 }}>Actividad no configurada</p>
-          <p style={{ fontSize: '0.875rem', marginTop: 4 }}>El administrador aún no ha añadido el contenido.</p>
+          <p style={{ marginTop: 12, fontWeight: 700, color: 'var(--color-text)' }}>Actividad no configurada</p>
+          <p style={{ fontSize: '0.875rem', marginTop: 6 }}>El administrador aún no ha añadido el contenido.</p>
         </div>
       )}
 
       {/* Botón completar */}
-      {(() => {
-        const isInteractiveType = [LessonType.MATCH, LessonType.SORT, LessonType.FILL_BLANK]
-          .includes(lesson.type as LessonType);
-        // El botón solo se bloquea si la lección es interactiva Y tiene contenido configurado
-        // Si content es null ("Actividad no configurada"), se permite completar igualmente
-        const hasInteractiveContent = isInteractiveType && !!lesson.content;
-        return (
-          <div style={{ marginTop: '1.5rem' }}>
-            {isCompleted ? (
-              <div style={styles.completedBadge}>
-                <span>✓</span> Lección completada
-              </div>
-            ) : (
-              <button
-                style={styles.completeBtn}
-                onClick={() => completeLesson.mutate(lessonId)}
-                disabled={completeLesson.isPending || (hasInteractiveContent && !interactiveCompleted)}
-              >
-                {completeLesson.isPending ? 'Guardando...' : 'Marcar como completada'}
-              </button>
-            )}
+      <div style={{ marginTop: 8, marginBottom: 16 }}>
+        {isCompleted ? (
+          <div style={S.completedBadge}>
+            <span>✓</span> Lección completada
           </div>
-        );
-      })()}
+        ) : (
+          <button
+            className="btn btn-primary"
+            onClick={() => completeLesson.mutate(lessonId)}
+            disabled={completeLesson.isPending || (hasInteractiveContent && !interactiveCompleted)}
+          >
+            {completeLesson.isPending ? 'Guardando...' : 'Marcar como completada'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

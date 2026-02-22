@@ -10,69 +10,19 @@ import { downloadExamPdf } from '../utils/examPdf';
 
 type ExamState = 'config' | 'in-progress' | 'results';
 
-const styles: Record<string, React.CSSProperties> = {
-  page: { padding: '2rem', maxWidth: 760, margin: '0 auto' },
-  back: {
-    background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--color-text-muted)', fontSize: '0.875rem', padding: 0, marginBottom: '1.5rem',
-  },
-  heading: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.5rem' },
-  subheading: { fontSize: '1.1rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '1rem' },
-  card: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 12,
-    padding: '1.5rem',
-    marginBottom: '1.5rem',
-  },
-  label: { display: 'block', fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '0.4rem' },
-  input: {
-    width: '100%', padding: '0.5rem 0.75rem', borderRadius: 8,
-    border: '1px solid var(--color-border)', background: 'var(--color-bg)',
-    color: 'var(--color-text)', fontSize: '0.95rem', boxSizing: 'border-box' as const,
-  },
-  toggle: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' },
-  row: { display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' as const },
-  btn: {
-    padding: '0.6rem 1.25rem', borderRadius: 8, border: 'none', cursor: 'pointer',
-    fontWeight: 600, fontSize: '0.9rem', transition: 'opacity 0.15s',
-  },
-  btnPrimary: { background: 'var(--color-primary)', color: '#fff' },
-  btnSecondary: {
-    background: 'var(--color-border)', color: 'var(--color-text)',
-  },
-  progressBarWrap: { height: 8, background: 'var(--color-border)', borderRadius: 4, overflow: 'hidden', marginBottom: '1.5rem' },
-  progressBarFill: { height: '100%', background: 'var(--color-primary)', borderRadius: 4, transition: 'width 0.3s' },
-  timerBar: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: '1.25rem', fontSize: '0.9rem', color: 'var(--color-text-muted)',
-  },
-  questionCard: {
-    background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-    borderRadius: 10, padding: '1.25rem', marginBottom: '1rem',
-  },
-  questionText: { fontWeight: 600, marginBottom: '0.75rem', color: 'var(--color-text)' },
-  answerBtn: {
-    display: 'block', width: '100%', textAlign: 'left' as const,
-    padding: '0.5rem 0.875rem', marginBottom: '0.4rem', borderRadius: 8,
-    border: '1px solid var(--color-border)', background: 'var(--color-bg)',
-    color: 'var(--color-text)', cursor: 'pointer', fontSize: '0.9rem',
-    transition: 'all 0.15s',
-  },
-  scoreCard: {
-    textAlign: 'center' as const, padding: '2rem',
-    background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 12,
-    marginBottom: '1.5rem',
-  },
-  scoreBig: { fontSize: '3rem', fontWeight: 800, color: 'var(--color-primary)', lineHeight: 1 },
-  scoreLabel: { fontSize: '1rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' },
-  correctionCard: {
-    background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-    borderRadius: 10, padding: '1rem 1.25rem', marginBottom: '0.75rem',
-  },
-  error: { color: 'var(--color-error)', padding: '1rem' },
-  muted: { color: 'var(--color-text-muted)', fontSize: '0.85rem' },
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function scoreColor(score: number): string {
+  if (score >= 70) return '#16a34a';
+  if (score >= 50) return '#ea580c';
+  return '#dc2626';
+}
+
+function scoreGradient(score: number): string {
+  if (score >= 70) return 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)';
+  if (score >= 50) return 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)';
+  return 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)';
+}
 
 // ─── Componente: Configuración ────────────────────────────────────────────────
 
@@ -94,86 +44,147 @@ function ConfigStep({
   const [timeMins, setTimeMins] = useState(15);
   const [onlyOnce, setOnlyOnce] = useState(false);
 
-  return (
-    <div>
-      <h2 style={styles.subheading}>Configurar examen — {scopeTitle}</h2>
-      <div style={styles.card}>
-        <label style={styles.label}>Número de preguntas (máx. {maxQuestions})</label>
-        <input
-          type="number"
-          min={1}
-          max={maxQuestions}
-          value={numQ}
-          onChange={(e) => setNumQ(Math.min(maxQuestions, Math.max(1, Number(e.target.value))))}
-          style={{ ...styles.input, width: 120 }}
-        />
+  const inputStyle: React.CSSProperties = {
+    padding: '10px 14px',
+    borderRadius: 'var(--radius-sm)',
+    border: '1.5px solid var(--color-border)',
+    background: 'var(--color-bg)',
+    color: 'var(--color-text)',
+    fontSize: '0.95rem',
+    outline: 'none',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+    boxSizing: 'border-box' as const,
+  };
 
-        <div style={{ ...styles.toggle, marginTop: '1.25rem' }}>
+  const toggleRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '12px 0',
+    borderBottom: '1px solid var(--color-border)',
+    cursor: 'pointer',
+    fontSize: '0.9rem',
+    color: 'var(--color-text)',
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 20 }}>
+
+      {/* Card de configuracion */}
+      <div
+        className="vkb-card"
+        style={{ padding: '28px' }}
+      >
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: 20 }}>
+          {scopeTitle}
+        </h3>
+
+        {/* Numero de preguntas */}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 8 }}>
+            Numero de preguntas (maximo: {maxQuestions})
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <input
+              type="number"
+              min={1}
+              max={maxQuestions}
+              value={numQ}
+              onChange={(e) => setNumQ(Math.min(maxQuestions, Math.max(1, Number(e.target.value))))}
+              style={{ ...inputStyle, width: 100 }}
+            />
+            <div className="progress-bar" style={{ flex: 1 }}>
+              <div className="progress-fill" style={{ width: `${(numQ / maxQuestions) * 100}%` }} />
+            </div>
+            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, whiteSpace: 'nowrap' as const }}>
+              {numQ}/{maxQuestions}
+            </span>
+          </div>
+        </div>
+
+        {/* Toggle: limite de tiempo */}
+        <label style={toggleRowStyle}>
           <input
             id="use-timer"
             type="checkbox"
             checked={useTimer}
             onChange={(e) => setUseTimer(e.target.checked)}
+            style={{ accentColor: 'var(--color-primary)', width: 16, height: 16 }}
           />
-          <label htmlFor="use-timer" style={{ cursor: 'pointer' }}>
-            ⏱ Límite de tiempo
-          </label>
-        </div>
+          <span style={{ fontWeight: 500 }}>Limite de tiempo</span>
+        </label>
         {useTimer && (
-          <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 12px 26px' }}>
             <input
               type="number"
               min={1}
               max={180}
               value={timeMins}
               onChange={(e) => setTimeMins(Math.max(1, Number(e.target.value)))}
-              style={{ ...styles.input, width: 80 }}
+              style={{ ...inputStyle, width: 80 }}
             />
-            <span style={styles.muted}>minutos</span>
+            <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>minutos</span>
           </div>
         )}
 
-        <div style={styles.toggle}>
+        {/* Toggle: respuesta unica */}
+        <label style={{ ...toggleRowStyle, borderBottom: 'none', marginBottom: 0 }}>
           <input
             id="only-once"
             type="checkbox"
             checked={onlyOnce}
             onChange={(e) => setOnlyOnce(e.target.checked)}
+            style={{ accentColor: 'var(--color-primary)', width: 16, height: 16 }}
           />
-          <label htmlFor="only-once" style={{ cursor: 'pointer' }}>
-            🔒 Respuesta única (no se puede cambiar una vez elegida)
-          </label>
-        </div>
+          <span style={{ fontWeight: 500 }}>Respuesta unica (no se puede cambiar)</span>
+        </label>
 
         <button
-          style={{ ...styles.btn, ...styles.btnPrimary, marginTop: '0.5rem' }}
+          className="btn btn-primary"
+          style={{ marginTop: 24, width: '100%', fontSize: '1rem', padding: '13px' }}
           disabled={isLoading}
-          onClick={() =>
-            onStart(numQ, useTimer ? timeMins * 60 : undefined, onlyOnce || undefined)
-          }
+          onClick={() => onStart(numQ, useTimer ? timeMins * 60 : undefined, onlyOnce || undefined)}
         >
-          {isLoading ? 'Preparando...' : 'Empezar examen'}
+          {isLoading ? 'Preparando...' : 'Comenzar examen'}
         </button>
       </div>
 
+      {/* Historial reciente */}
       {recentAttempts.length > 0 && (
-        <div style={styles.card}>
-          <div style={{ fontWeight: 600, marginBottom: '0.75rem' }}>Historial reciente</div>
-          {recentAttempts.map((a) => (
-            <div
-              key={a.attemptId}
-              style={{
-                display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0',
-                borderBottom: '1px solid var(--color-border)', fontSize: '0.875rem',
-              }}
-            >
-              <span>{new Date(a.submittedAt).toLocaleDateString('es-ES')}</span>
-              <span>{a.numQuestions} preguntas</span>
-              <span style={{ fontWeight: 700, color: a.score >= 50 ? 'var(--color-primary)' : 'var(--color-error)' }}>
-                {a.score.toFixed(1)}%
-              </span>
-            </div>
-          ))}
+        <div className="vkb-card" style={{ padding: '24px' }}>
+          <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: 16 }}>
+            Intentos recientes
+          </h4>
+          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
+            {recentAttempts.map((a) => (
+              <div
+                key={a.attemptId}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 0',
+                  borderBottom: '1px solid var(--color-border)',
+                  fontSize: '0.875rem',
+                  gap: 12,
+                }}
+              >
+                <span style={{ color: 'var(--color-text-muted)' }}>
+                  {new Date(a.submittedAt).toLocaleDateString('es-ES')}
+                </span>
+                <span style={{ color: 'var(--color-text-muted)' }}>{a.numQuestions} preguntas</span>
+                <span
+                  style={{
+                    fontWeight: 800,
+                    color: scoreColor(a.score),
+                    fontSize: '0.95rem',
+                  }}
+                >
+                  {a.score.toFixed(1)}%
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -204,7 +215,7 @@ function InProgressStep({
     onSubmit(answers);
   }, [selectedAnswers, onSubmit]);
 
-  // Cuenta atrás
+  // Cuenta atras
   useEffect(() => {
     if (secondsLeft === null) return;
     if (secondsLeft <= 0) {
@@ -217,6 +228,9 @@ function InProgressStep({
 
   const answeredCount = Object.keys(selectedAnswers).length;
   const totalCount = attempt.questions.length;
+  const progressPct = (answeredCount / totalCount) * 100;
+
+  const isTimeCritical = secondsLeft !== null && secondsLeft < 60;
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -225,73 +239,146 @@ function InProgressStep({
   };
 
   const selectAnswer = (question: ExamQuestionPublic, answerId: string) => {
-    if (attempt.onlyOnce && selectedAnswers[question.id]) return; // bloqueado
+    if (attempt.onlyOnce && selectedAnswers[question.id]) return;
     setSelectedAnswers((prev) => ({ ...prev, [question.id]: answerId }));
   };
 
   return (
     <div>
-      <div style={styles.timerBar}>
-        <span>{answeredCount} de {totalCount} respondidas</span>
+      {/* Barra de estado */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 14,
+          gap: 12,
+          flexWrap: 'wrap' as const,
+        }}
+      >
+        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+          {answeredCount} de {totalCount} respondidas
+        </span>
+
+        {/* Temporizador */}
         {secondsLeft !== null && (
-          <span style={{ fontWeight: 700, color: secondsLeft < 60 ? 'var(--color-error)' : undefined }}>
-            ⏱ {formatTime(secondsLeft)}
-          </span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 16px',
+              borderRadius: 'var(--radius-md)',
+              background: isTimeCritical ? 'rgba(220,38,38,0.12)' : 'var(--color-surface)',
+              border: isTimeCritical
+                ? '1.5px solid rgba(220,38,38,0.35)'
+                : '1.5px solid var(--color-border)',
+              animation: isTimeCritical ? 'pulse-glow 0.8s ease-in-out infinite' : 'none',
+            }}
+          >
+            <span style={{ fontSize: '1rem' }}>⏱</span>
+            <span
+              style={{
+                fontSize: '1.1rem',
+                fontWeight: 800,
+                color: isTimeCritical ? '#dc2626' : 'var(--color-text)',
+                letterSpacing: '0.05em',
+              }}
+            >
+              {formatTime(secondsLeft)}
+            </span>
+          </div>
         )}
       </div>
-      <div style={styles.progressBarWrap}>
-        <div
-          style={{
-            ...styles.progressBarFill,
-            width: `${(answeredCount / totalCount) * 100}%`,
-          }}
-        />
+
+      {/* Barra de progreso */}
+      <div className="progress-bar" style={{ marginBottom: 28 }}>
+        <div className="progress-fill" style={{ width: `${progressPct}%` }} />
       </div>
 
+      {/* Preguntas */}
       {attempt.questions.map((q, idx) => {
         const chosen = selectedAnswers[q.id];
         return (
-          <div key={q.id} style={styles.questionCard}>
-            <div style={styles.questionText}>
-              {idx + 1}. {q.text}
+          <div
+            key={q.id}
+            className="vkb-card"
+            style={{ padding: '22px 24px', marginBottom: 16 }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 16, color: 'var(--color-text)', fontSize: '0.975rem', lineHeight: 1.4 }}>
+              <span style={{ color: 'var(--color-primary)', marginRight: 8, fontWeight: 900 }}>
+                {idx + 1}.
+              </span>
+              {q.text}
             </div>
-            {q.answers.map((a) => {
-              const isSelected = chosen === a.id;
-              const locked = attempt.onlyOnce && !!chosen;
-              return (
-                <button
-                  key={a.id}
-                  style={{
-                    ...styles.answerBtn,
-                    background: isSelected ? 'var(--color-primary)' : 'var(--color-bg)',
-                    color: isSelected ? '#fff' : 'var(--color-text)',
-                    borderColor: isSelected ? 'var(--color-primary)' : 'var(--color-border)',
-                    cursor: locked && !isSelected ? 'not-allowed' : 'pointer',
-                    opacity: locked && !isSelected ? 0.6 : 1,
-                  }}
-                  disabled={locked && !isSelected}
-                  onClick={() => selectAnswer(q, a.id)}
-                >
-                  {a.text}
-                </button>
-              );
-            })}
+
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+              {q.answers.map((a) => {
+                const isSelected = chosen === a.id;
+                const locked = attempt.onlyOnce && !!chosen;
+
+                return (
+                  <button
+                    key={a.id}
+                    disabled={locked && !isSelected}
+                    onClick={() => selectAnswer(q, a.id)}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      textAlign: 'left' as const,
+                      padding: '11px 16px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: isSelected
+                        ? '1.5px solid var(--color-primary)'
+                        : '1.5px solid rgba(234,88,12,0.20)',
+                      background: isSelected
+                        ? 'rgba(234,88,12,0.12)'
+                        : 'var(--color-bg)',
+                      color: isSelected ? 'var(--color-primary)' : 'var(--color-text)',
+                      cursor: locked && !isSelected ? 'not-allowed' : 'pointer',
+                      opacity: locked && !isSelected ? 0.5 : 1,
+                      fontSize: '0.9rem',
+                      fontWeight: isSelected ? 600 : 400,
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected && !(locked && !isSelected)) {
+                        (e.currentTarget as HTMLButtonElement).style.background = 'rgba(234,88,12,0.06)';
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(234,88,12,0.40)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg)';
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(234,88,12,0.20)';
+                      }
+                    }}
+                  >
+                    {a.text}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         );
       })}
 
-      <button
-        style={{
-          ...styles.btn,
-          ...styles.btnPrimary,
-          opacity: answeredCount < totalCount ? 0.5 : 1,
-          cursor: answeredCount < totalCount ? 'not-allowed' : 'pointer',
-        }}
-        disabled={answeredCount < totalCount || isLoading}
-        onClick={handleSubmit}
-      >
-        {isLoading ? 'Entregando...' : 'Entregar examen'}
-      </button>
+      {/* Boton entregar */}
+      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          className="btn btn-primary"
+          style={{
+            padding: '12px 28px',
+            fontSize: '1rem',
+            opacity: answeredCount < totalCount ? 0.45 : 1,
+            cursor: answeredCount < totalCount ? 'not-allowed' : 'pointer',
+          }}
+          disabled={answeredCount < totalCount || isLoading}
+          onClick={handleSubmit}
+        >
+          {isLoading ? 'Entregando...' : 'Entregar examen'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -315,7 +402,6 @@ function ResultsStep({
   onBack: () => void;
   historyItems: { attemptId: string; score: number | null; numQuestions: number; submittedAt: string | null }[];
 }) {
-  // Buscar el certificado de examen recién emitido
   const { data: certs } = useMyCertificates();
   const examCertType = courseId ? 'COURSE_EXAM' : 'MODULE_EXAM';
   const examScopeId = courseId ?? moduleId;
@@ -323,79 +409,149 @@ function ResultsStep({
     (c) => c.scopeId === examScopeId && c.type === examCertType,
   );
 
+  const passed = result.score >= 50;
+
   return (
     <div>
-      <div style={styles.scoreCard}>
-        <div style={styles.scoreBig}>{result.score.toFixed(1)}%</div>
-        <div style={styles.scoreLabel}>
-          {result.correctCount} de {result.numQuestions} correctas
+      {/* Score grande */}
+      <div
+        style={{
+          background: 'var(--gradient-hero)',
+          borderRadius: 'var(--radius-xl)',
+          padding: '40px 36px',
+          textAlign: 'center' as const,
+          marginBottom: 24,
+          position: 'relative' as const,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Glow decorativo */}
+        <div
+          style={{
+            position: 'absolute' as const,
+            top: -80,
+            right: -80,
+            width: 280,
+            height: 280,
+            background: `radial-gradient(circle, ${scoreColor(result.score)}22 0%, transparent 70%)`,
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div
+          style={{
+            fontSize: '5rem',
+            fontWeight: 900,
+            background: scoreGradient(result.score),
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            lineHeight: 1,
+            letterSpacing: '-0.03em',
+            marginBottom: 8,
+          }}
+        >
+          {result.score.toFixed(1)}%
         </div>
-        {result.score >= 50 && (
-          <div style={{
-            marginTop: '0.75rem',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '4px 14px',
-            borderRadius: 999,
-            background: '#f0fdf4',
-            border: '1px solid #86efac',
-            color: '#16a34a',
-            fontWeight: 600,
-            fontSize: '0.875rem',
-          }}>
-            📜 Certificado emitido
+
+        <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.65)', marginBottom: 16 }}>
+          {result.correctCount} de {result.numQuestions} respuestas correctas
+        </div>
+
+        {passed && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '6px 18px',
+              borderRadius: 999,
+              background: 'rgba(22,163,74,0.15)',
+              border: '1px solid rgba(22,163,74,0.35)',
+              color: '#4ade80',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+            }}
+          >
+            Certificado emitido
           </div>
         )}
       </div>
 
-      <div style={styles.card}>
-        <div style={{ fontWeight: 600, marginBottom: '1rem' }}>Correcciones</div>
-        {result.corrections.map((c, i) => (
-          <div
-            key={c.questionId}
-            style={{
-              ...styles.correctionCard,
-              borderLeft: `4px solid ${c.isCorrect ? 'var(--color-primary)' : 'var(--color-error)'}`,
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: '0.4rem' }}>
-              {c.isCorrect ? '✓' : '✗'} {i + 1}. {c.questionText}
+      {/* Correcciones */}
+      <div className="vkb-card" style={{ padding: '24px', marginBottom: 20 }}>
+        <h3 style={{ fontWeight: 700, marginBottom: 16, fontSize: '0.95rem', color: 'var(--color-text)' }}>
+          Correcciones
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+          {result.corrections.map((c, i) => (
+            <div
+              key={c.questionId}
+              style={{
+                borderRadius: 'var(--radius-sm)',
+                padding: '14px 16px',
+                borderLeft: `4px solid ${c.isCorrect ? '#16a34a' : '#dc2626'}`,
+                background: c.isCorrect ? 'rgba(22,163,74,0.05)' : 'rgba(220,38,38,0.04)',
+                border: `1px solid ${c.isCorrect ? 'rgba(22,163,74,0.20)' : 'rgba(220,38,38,0.18)'}`,
+                borderLeftWidth: 4,
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 6, fontSize: '0.9rem', color: 'var(--color-text)', lineHeight: 1.4 }}>
+                <span style={{ marginRight: 6, fontSize: '0.85rem' }}>
+                  {c.isCorrect ? '✓' : '✗'}
+                </span>
+                {i + 1}. {c.questionText}
+              </div>
+
+              {c.selectedAnswerText ? (
+                <div style={{ fontSize: '0.82rem', color: c.isCorrect ? 'var(--color-text-muted)' : '#dc2626', marginBottom: c.isCorrect ? 0 : 4 }}>
+                  Tu respuesta: {c.selectedAnswerText}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>Sin respuesta</div>
+              )}
+
+              {!c.isCorrect && c.correctAnswerText && (
+                <div style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 600, marginTop: 4 }}>
+                  Respuesta correcta: {c.correctAnswerText}
+                </div>
+              )}
             </div>
-            {c.selectedAnswerText ? (
-              <div style={{ fontSize: '0.85rem', color: c.isCorrect ? 'var(--color-text-muted)' : 'var(--color-error)' }}>
-                Tu respuesta: {c.selectedAnswerText}
-              </div>
-            ) : (
-              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                Sin respuesta
-              </div>
-            )}
-            {!c.isCorrect && c.correctAnswerText && (
-              <div style={{ fontSize: '0.85rem', color: 'var(--color-primary)', marginTop: '0.2rem' }}>
-                Respuesta correcta: {c.correctAnswerText}
-              </div>
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
+      {/* Historial */}
       {historyItems.filter((h) => h.submittedAt).length > 1 && (
-        <div style={styles.card}>
-          <div style={{ fontWeight: 600, marginBottom: '0.75rem' }}>Historial</div>
+        <div className="vkb-card" style={{ padding: '24px', marginBottom: 24 }}>
+          <h4 style={{ fontWeight: 700, marginBottom: 14, fontSize: '0.9rem', color: 'var(--color-text)' }}>
+            Historial de intentos
+          </h4>
           {historyItems
             .filter((h) => h.submittedAt)
             .map((h) => (
               <div
                 key={h.attemptId}
                 style={{
-                  display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0',
-                  borderBottom: '1px solid var(--color-border)', fontSize: '0.875rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '9px 0',
+                  borderBottom: '1px solid var(--color-border)',
+                  fontSize: '0.875rem',
+                  gap: 12,
                 }}
               >
-                <span>{new Date(h.submittedAt!).toLocaleDateString('es-ES')}</span>
-                <span>{h.numQuestions} preguntas</span>
-                <span style={{ fontWeight: 700, color: (h.score ?? 0) >= 50 ? 'var(--color-primary)' : 'var(--color-error)' }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>
+                  {new Date(h.submittedAt!).toLocaleDateString('es-ES')}
+                </span>
+                <span style={{ color: 'var(--color-text-muted)' }}>{h.numQuestions} preguntas</span>
+                <span
+                  style={{
+                    fontWeight: 800,
+                    color: scoreColor(h.score ?? 0),
+                  }}
+                >
                   {h.score?.toFixed(1)}%
                 </span>
               </div>
@@ -403,25 +559,31 @@ function ResultsStep({
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <button style={{ ...styles.btn, ...styles.btnSecondary }} onClick={onBack}>
-          ← Volver al curso
+      {/* Acciones */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' as const }}>
+        <button className="btn btn-ghost" onClick={onBack}>
+          Volver al curso
         </button>
-        <button style={{ ...styles.btn, ...styles.btnPrimary }} onClick={onRepeat}>
+        <button className="btn btn-primary" onClick={onRepeat}>
           Repetir examen
         </button>
         <button
-          style={{ ...styles.btn, ...styles.btnSecondary }}
+          className="btn btn-ghost"
           onClick={() => downloadExamPdf(result, scopeTitle)}
         >
-          ⬇️ Descargar PDF examen
+          Descargar PDF examen
         </button>
         {examCert && (
           <button
-            style={{ ...styles.btn, background: '#16a34a', color: '#fff' }}
+            className="btn"
+            style={{
+              background: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)',
+              color: '#fff',
+              boxShadow: '0 4px 16px rgba(22,163,74,0.30)',
+            }}
             onClick={() => downloadCertificatePdf(examCert)}
           >
-            📜 Descargar certificado
+            Descargar certificado
           </button>
         )}
       </div>
@@ -476,44 +638,151 @@ export default function ExamPage() {
     else navigate('/courses');
   };
 
+  // ── Estados de carga y error ──
+
   if (bankLoading) {
     return (
-      <div style={styles.page}>
-        <div style={{ color: 'var(--color-text-muted)' }}>Cargando banco de preguntas...</div>
+      <div style={{ maxWidth: 780, margin: '0 auto' }}>
+        <div className="page-hero animate-in">
+          <h1 className="hero-title">Cargando examen...</h1>
+          <p className="hero-subtitle">Preparando el banco de preguntas</p>
+        </div>
       </div>
     );
   }
 
   if (bankError || !bankInfo) {
-    return <div style={styles.error}>Error al cargar el examen.</div>;
+    return (
+      <div style={{ maxWidth: 780, margin: '0 auto', padding: '2rem' }}>
+        <div style={{ color: 'var(--color-error)', padding: '1rem' }}>
+          Error al cargar el examen.
+        </div>
+      </div>
+    );
   }
 
   if (bankInfo.questionCount === 0) {
     return (
-      <div style={styles.page}>
-        <button style={styles.back} onClick={handleBack}>← Volver</button>
-        <h1 style={styles.heading}>Examen — {bankInfo.scopeTitle}</h1>
-        <div style={styles.card}>
-          <p style={{ color: 'var(--color-text-muted)' }}>
-            Este banco de preguntas está vacío. El administrador debe añadir preguntas antes de poder examinarse.
+      <div style={{ maxWidth: 780, margin: '0 auto' }}>
+        <div className="page-hero animate-in">
+          <button
+            onClick={handleBack}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(255,255,255,0.55)',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              padding: 0,
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            Volver
+          </button>
+          <h1 className="hero-title">Examen — {bankInfo.scopeTitle}</h1>
+          <p className="hero-subtitle">Este banco de preguntas esta vacio.</p>
+        </div>
+        <div className="vkb-card" style={{ padding: '24px' }}>
+          <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
+            El administrador debe anadir preguntas antes de poder examinarse.
           </p>
         </div>
       </div>
     );
   }
 
+  // ── Estado del examen: label del paso activo ──
+
+  const stepLabel = examState === 'config'
+    ? 'Configuracion'
+    : examState === 'in-progress'
+    ? 'En progreso'
+    : 'Resultados';
+
+  const stepIndex = examState === 'config' ? 0 : examState === 'in-progress' ? 1 : 2;
+
   return (
-    <div style={styles.page}>
-      {examState !== 'in-progress' && (
-        <button style={styles.back} onClick={handleBack}>← Volver al curso</button>
-      )}
-      <h1 style={styles.heading}>
-        🎓 Examen — {bankInfo.scopeTitle}
-      </h1>
-      <div style={{ ...styles.muted, marginBottom: '1.5rem' }}>
-        Banco: {bankInfo.questionCount} preguntas disponibles
+    <div style={{ maxWidth: 780, margin: '0 auto' }}>
+
+      {/* Hero */}
+      <div className="page-hero animate-in">
+        {examState !== 'in-progress' && (
+          <button
+            onClick={handleBack}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(255,255,255,0.50)',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              padding: 0,
+              marginBottom: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            Volver al curso
+          </button>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' as const }}>
+          <div>
+            <h1 className="hero-title" style={{ fontSize: '1.6rem' }}>
+              Examen
+            </h1>
+            <p className="hero-subtitle">{bankInfo.scopeTitle}</p>
+          </div>
+
+          {/* Indicador de paso */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {['Configurar', 'Examen', 'Resultados'].map((label, idx) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: idx === stepIndex
+                      ? 'var(--gradient-orange)'
+                      : idx < stepIndex
+                      ? 'rgba(234,88,12,0.35)'
+                      : 'rgba(255,255,255,0.10)',
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    color: idx <= stepIndex ? '#fff' : 'rgba(255,255,255,0.40)',
+                    border: idx === stepIndex ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                  }}
+                >
+                  {idx < stepIndex ? '✓' : idx + 1}
+                </div>
+                {idx < 2 && (
+                  <div
+                    style={{
+                      width: 24,
+                      height: 2,
+                      background: idx < stepIndex ? 'rgba(234,88,12,0.50)' : 'rgba(255,255,255,0.12)',
+                      borderRadius: 1,
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', marginTop: 8 }}>
+          {stepLabel} · {bankInfo.questionCount} preguntas disponibles
+        </div>
       </div>
 
+      {/* Contenido del paso activo */}
       {examState === 'config' && (
         <ConfigStep
           scopeTitle={bankInfo.scopeTitle}

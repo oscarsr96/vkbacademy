@@ -110,8 +110,53 @@ export default function AdminBillingPage() {
     }
   }
 
+  // Estilos compartidos de celdas de costes
+  const costRowStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '120px 1fr auto 90px',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.75rem 0',
+    borderBottom: '1px solid var(--color-border)',
+  };
+
+  const totalRowStyle: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    fontSize: '0.9rem',
+    fontWeight: 600,
+    color: 'var(--color-text)',
+    paddingTop: '0.5rem',
+  };
+
+  const dividerStyle: React.CSSProperties = {
+    height: 1,
+    background: 'var(--color-border)',
+    margin: '0.75rem 0',
+  };
+
+  const presetBtnBase: React.CSSProperties = {
+    padding: '0.3rem 0.7rem',
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--color-border)',
+    background: 'transparent',
+    color: 'var(--color-text-muted)',
+    cursor: 'pointer',
+    fontSize: '0.82rem',
+    fontWeight: 500,
+    transition: 'all 0.15s',
+  };
+
+  const presetBtnActive: React.CSSProperties = {
+    ...presetBtnBase,
+    background: 'var(--color-primary)',
+    color: '#fff',
+    borderColor: 'var(--color-primary)',
+  };
+
   return (
-    <div style={s.page}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem' }}>
       {/* CSS de impresión */}
       <style>{`
         @media print {
@@ -125,17 +170,29 @@ export default function AdminBillingPage() {
         .print-title { display: none; }
       `}</style>
 
-      {/* Cabecera */}
-      <div style={s.pageHeader}>
-        <h1 style={s.title}>Facturación</h1>
-        {isFetching && <span style={s.fetchBadge}>Actualizando…</span>}
-        <div style={{ flex: 1 }} />
-        <button className="no-print" style={s.exportBtn} onClick={() => window.print()}>
-          Exportar PDF
-        </button>
+      {/* Hero */}
+      <div className="page-hero animate-in no-print">
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 className="hero-title">Facturación</h1>
+            <p className="hero-subtitle">
+              {data
+                ? `${fmtEur(data.revenue.total)} ingresos · ${fmtEur(data.costs.total)} costes · Margen ${data.margin}%`
+                : 'Informe de ingresos, costes y beneficio neto'}
+              {isFetching && (
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+                  Actualizando…
+                </span>
+              )}
+            </p>
+          </div>
+          <button className="btn btn-dark" onClick={() => window.print()}>
+            Exportar PDF
+          </button>
+        </div>
       </div>
 
-      {/* Título visible solo al imprimir */}
+      {/* Título de impresión */}
       <div
         className="print-title"
         style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: '#666' }}
@@ -144,32 +201,36 @@ export default function AdminBillingPage() {
       </div>
 
       {/* Filtros de período */}
-      <div className="no-print" style={s.filterCard}>
-        <div style={s.filterRow}>
-          <span style={s.filterLabel}>Período</span>
-          <div style={s.presets}>
+      <div className="vkb-card no-print" style={{ marginBottom: '1.75rem', padding: '1.25rem 1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
+            Período
+          </span>
+          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
             {PRESETS.map((p) => (
               <button
                 key={p.key}
-                style={{ ...s.presetBtn, ...(activePreset === p.key ? s.presetBtnActive : {}) }}
+                style={activePreset === p.key ? presetBtnActive : presetBtnBase}
                 onClick={() => applyPreset(p.key)}
               >
                 {p.label}
               </button>
             ))}
           </div>
-          <div style={s.dateRange}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
             <input
               type="date"
-              style={s.dateInput}
+              className="field"
+              style={{ padding: '0.3rem 0.5rem', fontSize: '0.82rem' }}
               value={from}
               max={to}
               onChange={(e) => { setFrom(e.target.value); setActivePreset(''); }}
             />
-            <span style={s.arrow}>→</span>
+            <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>→</span>
             <input
               type="date"
-              style={s.dateInput}
+              className="field"
+              style={{ padding: '0.3rem 0.5rem', fontSize: '0.82rem' }}
               value={to}
               min={from}
               onChange={(e) => { setTo(e.target.value); setActivePreset(''); }}
@@ -178,24 +239,18 @@ export default function AdminBillingPage() {
         </div>
       </div>
 
-      {isLoading && <p style={s.loading}>Cargando informe de facturación…</p>}
+      {isLoading && (
+        <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '3rem' }}>
+          Cargando informe de facturación…
+        </p>
+      )}
 
       {data && (
         <>
-          {/* KPIs principales */}
-          <div style={s.kpiGrid}>
-            <KpiCard
-              label="Ingresos totales"
-              value={fmtEur(data.revenue.total)}
-              color="#10b981"
-              icon="💰"
-            />
-            <KpiCard
-              label="Costes estimados"
-              value={fmtEur(data.costs.total)}
-              color="#f97316"
-              icon="🧾"
-            />
+          {/* KPIs */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.875rem', marginBottom: '1.75rem' }}>
+            <KpiCard label="Ingresos totales" value={fmtEur(data.revenue.total)} color="#10b981" icon="💰" />
+            <KpiCard label="Costes estimados" value={fmtEur(data.costs.total)} color="#f97316" icon="🧾" />
             <KpiCard
               label="Beneficio neto"
               value={fmtEur(data.net)}
@@ -211,132 +266,117 @@ export default function AdminBillingPage() {
           </div>
 
           {/* Ingresos + Costes en dos columnas */}
-          <div style={s.twoCol}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+
             {/* ── Ingresos ── */}
-            <section style={s.section}>
-              <h2 style={s.sectionTitle}>Ingresos</h2>
-              <div style={s.card}>
+            <section>
+              <h2 style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>
+                Ingresos
+              </h2>
+              <div className="vkb-card" style={{ padding: '1.25rem' }}>
                 {/* Suscripciones */}
-                <div style={s.revenueBlock}>
-                  <div style={s.revenueBlockHeader}>
-                    <span style={s.revenueBlockTitle}>Suscripciones</span>
-                    <span style={{ ...s.revenueAmount, color: '#10b981' }}>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text)' }}>Suscripciones</span>
+                    <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#10b981' }}>
                       {fmtEur(data.revenue.subscriptions.total)}
                     </span>
                   </div>
-                  <div style={s.revenueDetail}>
-                    <RevenueRow
-                      label={`${data.revenue.subscriptions.activeStudents} alumnos`}
-                      suffix={`× ${fmtEur(data.revenue.subscriptions.monthlyPrice)}/mes × ${data.revenue.subscriptions.months}m`}
-                    />
+                  <div style={{ paddingLeft: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'baseline', marginBottom: '0.2rem' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                        {data.revenue.subscriptions.activeStudents} alumnos
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                        × {fmtEur(data.revenue.subscriptions.monthlyPrice)}/mes × {data.revenue.subscriptions.months}m
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div style={s.divider} />
+                <div style={dividerStyle} />
 
                 {/* Clases (comisión) */}
-                <div style={s.revenueBlock}>
-                  <div style={s.revenueBlockHeader}>
-                    <span style={s.revenueBlockTitle}>
-                      Clases{' '}
-                      <span style={s.commissionBadge}>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      Clases
+                      <span style={{ fontSize: '0.68rem', fontWeight: 600, background: '#f0fdf4', color: '#16a34a', padding: '1px 6px', borderRadius: 8, border: '1px solid #bbf7d0' }}>
                         comisión {(data.revenue.classes.commissionRate * 100).toFixed(0)}%
                       </span>
                     </span>
-                    <span style={{ ...s.revenueAmount, color: '#10b981' }}>
+                    <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#10b981' }}>
                       {fmtEur(data.revenue.classes.commission)}
                     </span>
                   </div>
-                  <div style={s.revenueDetail}>
+                  <div style={{ paddingLeft: '0.5rem' }}>
                     {data.revenue.classes.onlineHours > 0 && (
-                      <RevenueRow
-                        label={`${data.revenue.classes.onlineHours}h online`}
-                        suffix={`× ${fmtEur(data.config.classOnlineRatePerHour)}/h`}
-                      />
+                      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'baseline', marginBottom: '0.2rem' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{data.revenue.classes.onlineHours}h online</span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>× {fmtEur(data.config.classOnlineRatePerHour)}/h</span>
+                      </div>
                     )}
                     {data.revenue.classes.inPersonHours > 0 && (
-                      <RevenueRow
-                        label={`${data.revenue.classes.inPersonHours}h presencial`}
-                        suffix={`× ${fmtEur(data.config.classInPersonRatePerHour)}/h`}
-                      />
+                      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'baseline', marginBottom: '0.2rem' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{data.revenue.classes.inPersonHours}h presencial</span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>× {fmtEur(data.config.classInPersonRatePerHour)}/h</span>
+                      </div>
                     )}
                     {data.revenue.classes.confirmedCount === 0 && (
-                      <span style={s.emptyDetail}>Sin clases confirmadas en el período</span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                        Sin clases confirmadas en el período
+                      </span>
                     )}
-                    <div style={s.subTotal}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px dashed var(--color-border)' }}>
                       <span>Bruto clases:</span>
                       <span>{fmtEur(data.revenue.classes.grossRevenue)}</span>
                     </div>
                   </div>
                 </div>
 
-                <div style={s.divider} />
+                <div style={dividerStyle} />
 
-                {/* Total ingresos */}
-                <div style={s.totalRow}>
+                <div style={totalRowStyle}>
                   <span>Total ingresos</span>
-                  <span style={{ color: '#10b981', fontWeight: 800 }}>
-                    {fmtEur(data.revenue.total)}
-                  </span>
+                  <span style={{ color: '#10b981', fontWeight: 800 }}>{fmtEur(data.revenue.total)}</span>
                 </div>
               </div>
             </section>
 
             {/* ── Costes ── */}
-            <section style={s.section}>
-              <h2 style={s.sectionTitle}>Costes detallados</h2>
-              <div style={s.card}>
-                <CostRow
-                  service="Resend"
-                  usage={`${data.costs.resend.estimatedEmails} emails estimados`}
-                  tier={data.costs.resend.tier}
-                  cost={data.costs.resend.estimated}
-                />
-                <CostRow
-                  service="Daily.co"
-                  usage={`${data.costs.dailyCo.participantMinutes} min participante`}
-                  tier={data.costs.dailyCo.tier}
-                  cost={data.costs.dailyCo.estimated}
-                />
-                <CostRow
-                  service="AWS S3"
-                  usage="almacenamiento"
-                  tier={null}
-                  cost={data.costs.s3.estimated}
-                />
-                <CostRow
-                  service="Anthropic"
-                  usage="generación IA"
-                  tier={null}
-                  cost={data.costs.anthropic.estimated}
-                />
-                <CostRow
-                  service="Infraestructura"
-                  usage="servidores"
-                  tier={null}
-                  cost={data.costs.infrastructure.estimated}
-                />
-
-                <div style={s.divider} />
-
-                <div style={s.totalRow}>
-                  <span>Total costes</span>
-                  <span style={{ color: '#f97316', fontWeight: 800 }}>
-                    {fmtEur(data.costs.total)}
-                  </span>
+            <section>
+              <h2 style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>
+                Costes detallados
+              </h2>
+              <div className="vkb-card" style={{ padding: '1.25rem' }}>
+                <div style={costRowStyle}>
+                  <CostRow service="Resend" usage={`${data.costs.resend.estimatedEmails} emails est.`} tier={data.costs.resend.tier} cost={data.costs.resend.estimated} />
+                </div>
+                <div style={costRowStyle}>
+                  <CostRow service="Daily.co" usage={`${data.costs.dailyCo.participantMinutes} min participante`} tier={data.costs.dailyCo.tier} cost={data.costs.dailyCo.estimated} />
+                </div>
+                <div style={costRowStyle}>
+                  <CostRow service="AWS S3" usage="almacenamiento" tier={null} cost={data.costs.s3.estimated} />
+                </div>
+                <div style={costRowStyle}>
+                  <CostRow service="Anthropic" usage="generación IA" tier={null} cost={data.costs.anthropic.estimated} />
+                </div>
+                <div style={{ ...costRowStyle, borderBottom: 'none' }}>
+                  <CostRow service="Infraestructura" usage="servidores" tier={null} cost={data.costs.infrastructure.estimated} />
                 </div>
 
-                <div style={s.divider} />
+                <div style={dividerStyle} />
 
-                <div style={s.totalRow}>
+                <div style={totalRowStyle}>
+                  <span>Total costes</span>
+                  <span style={{ color: '#f97316', fontWeight: 800 }}>{fmtEur(data.costs.total)}</span>
+                </div>
+
+                <div style={dividerStyle} />
+
+                <div style={totalRowStyle}>
                   <span style={{ fontWeight: 700 }}>Beneficio neto</span>
-                  <span
-                    style={{
-                      color: data.net >= 0 ? '#10b981' : '#ef4444',
-                      fontWeight: 800,
-                      fontSize: '1.1rem',
-                    }}
-                  >
+                  <span style={{ color: data.net >= 0 ? '#10b981' : '#ef4444', fontWeight: 800, fontSize: '1.05rem' }}>
                     {fmtEur(data.net)}
                   </span>
                 </div>
@@ -346,10 +386,12 @@ export default function AdminBillingPage() {
 
           {/* Configuración de tarifas */}
           {configForm !== null && (
-            <section style={s.section} className="no-print">
-              <h2 style={s.sectionTitle}>Configuración de tarifas</h2>
-              <div style={s.card}>
-                <div style={s.configGrid}>
+            <section className="no-print" style={{ marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>
+                Configuración de tarifas
+              </h2>
+              <div className="vkb-card" style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.875rem', marginBottom: '0.875rem' }}>
                   <ConfigField
                     label="Precio/mes alumno"
                     value={configForm.studentMonthlyPrice ?? 0}
@@ -376,7 +418,7 @@ export default function AdminBillingPage() {
                   />
                 </div>
 
-                <div style={{ ...s.configGrid, marginTop: '0.75rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.875rem', marginBottom: '1.25rem' }}>
                   <ConfigField
                     label="Infraestructura"
                     value={configForm.infrastructureMonthlyCost ?? 0}
@@ -397,20 +439,23 @@ export default function AdminBillingPage() {
                   />
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <button
-                    style={{ ...s.saveBtn, ...(isSaving ? s.saveBtnDisabled : {}) }}
+                    className="btn btn-primary"
+                    style={{ opacity: isSaving ? 0.6 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }}
                     onClick={handleSaveConfig}
                     disabled={isSaving}
                   >
                     {isSaving ? 'Guardando…' : 'Guardar configuración'}
                   </button>
                   {configSaved && (
-                    <span style={s.savedBadge}>✓ Guardado correctamente</span>
+                    <span style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 600 }}>
+                      Guardado correctamente
+                    </span>
                   )}
                 </div>
 
-                <p style={s.configNote}>
+                <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: '0.875rem' }}>
                   Los costes de Resend y Daily.co se calculan automáticamente según el uso estimado del período.
                 </p>
               </div>
@@ -431,22 +476,14 @@ function KpiCard({ label, value, color, icon }: {
   icon: string;
 }) {
   return (
-    <div style={s.kpiCard}>
-      <div style={{ ...s.kpiAccent, background: color }} />
-      <div style={s.kpiBody}>
-        <span style={s.kpiIcon}>{icon}</span>
-        <div style={{ ...s.kpiValue, color }}>{value}</div>
-        <div style={s.kpiLabel}>{label}</div>
+    <div className="stat-card" style={{ borderTop: `3px solid ${color}` }}>
+      <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{icon}</div>
+      <div style={{ fontSize: '1.5rem', fontWeight: 800, color, lineHeight: 1, marginBottom: 4 }}>
+        {value}
       </div>
-    </div>
-  );
-}
-
-function RevenueRow({ label, suffix }: { label: string; suffix: string }) {
-  return (
-    <div style={s.revenueRow}>
-      <span style={s.revenueRowLabel}>{label}</span>
-      <span style={s.revenueRowSuffix}>{suffix}</span>
+      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+        {label}
+      </div>
     </div>
   );
 }
@@ -462,19 +499,41 @@ function CostRow({
   tier: 'free' | 'paid' | null;
   cost: number;
 }) {
+  const tierFreeStyle: React.CSSProperties = {
+    fontSize: '0.65rem',
+    fontWeight: 700,
+    padding: '2px 7px',
+    borderRadius: 8,
+    background: '#f0fdf4',
+    color: '#16a34a',
+    border: '1px solid #bbf7d0',
+    textAlign: 'center',
+  };
+  const tierPaidStyle: React.CSSProperties = {
+    fontSize: '0.65rem',
+    fontWeight: 700,
+    padding: '2px 7px',
+    borderRadius: 8,
+    background: '#fff7ed',
+    color: '#c2410c',
+    border: '1px solid #fed7aa',
+    textAlign: 'center',
+  };
   return (
-    <div style={s.costRow}>
-      <span style={s.costService}>{service}</span>
-      <span style={s.costUsage}>{usage}</span>
+    <>
+      <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text)' }}>{service}</span>
+      <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{usage}</span>
       {tier !== null ? (
-        <span style={{ ...s.tierBadge, ...(tier === 'free' ? s.tierFree : s.tierPaid) }}>
+        <span style={tier === 'free' ? tierFreeStyle : tierPaidStyle}>
           {tier.toUpperCase()}
         </span>
       ) : (
-        <span style={s.tierEmpty}>—</span>
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>—</span>
       )}
-      <span style={s.costAmount}>{cost === 0 ? '0,00 €' : cost.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
-    </div>
+      <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text)', textAlign: 'right' }}>
+        {cost === 0 ? '0,00 €' : cost.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+      </span>
+    </>
   );
 }
 
@@ -490,95 +549,32 @@ function ConfigField({
   onChange: (v: string) => void;
 }) {
   return (
-    <div style={s.configField}>
-      <label style={s.configLabel}>{label}</label>
-      <div style={s.configInputWrap}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+      <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        {label}
+      </label>
+      <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: 'var(--color-bg)' }}>
         <input
           type="number"
           min={0}
           step={0.01}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          style={s.configInput}
+          style={{
+            flex: 1,
+            padding: '0.4rem 0.6rem',
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--color-text)',
+            fontSize: '0.9rem',
+            outline: 'none',
+            width: '100%',
+          }}
         />
-        <span style={s.configSuffix}>{suffix}</span>
+        <span style={{ padding: '0.4rem 0.6rem', fontSize: '0.78rem', color: 'var(--color-text-muted)', background: 'var(--color-border)', borderLeft: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
+          {suffix}
+        </span>
       </div>
     </div>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const s: Record<string, React.CSSProperties> = {
-  page: { padding: '2rem', maxWidth: 1100, margin: '0 auto' },
-  pageHeader: { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' },
-  title: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 },
-  fetchBadge: { fontSize: '0.75rem', color: 'var(--color-text-muted)', background: 'var(--color-border)', padding: '2px 8px', borderRadius: 12 },
-  exportBtn: { padding: '0.45rem 1rem', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 },
-
-  // ── Filtros
-  filterCard: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, padding: '1rem 1.25rem', marginBottom: '1.5rem' },
-  filterRow: { display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' as const },
-  filterLabel: { fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', width: 76, flexShrink: 0 },
-  presets: { display: 'flex', gap: '0.35rem' },
-  presetBtn: { padding: '0.3rem 0.65rem', borderRadius: 6, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 500 },
-  presetBtnActive: { background: 'var(--color-primary)', color: '#fff', borderColor: 'var(--color-primary)' },
-  dateRange: { display: 'flex', alignItems: 'center', gap: '0.4rem' },
-  dateInput: { padding: '0.3rem 0.5rem', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: '0.82rem', background: 'var(--color-bg)', color: 'var(--color-text)' },
-  arrow: { color: 'var(--color-text-muted)', fontSize: '0.8rem' },
-
-  // ── KPI grid
-  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.875rem', marginBottom: '1.75rem' },
-  kpiCard: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' as const },
-  kpiAccent: { height: 4 },
-  kpiBody: { padding: '1rem 1.1rem' },
-  kpiIcon: { fontSize: '1.1rem', display: 'block', marginBottom: '0.4rem' },
-  kpiValue: { fontSize: '1.5rem', fontWeight: 800, lineHeight: 1, marginBottom: 3 },
-  kpiLabel: { fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 500 },
-
-  // ── Layout
-  twoCol: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginBottom: '1.5rem' },
-  section: { marginBottom: '1.5rem' },
-  sectionTitle: { fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: '0.6rem' },
-  card: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, padding: '1.25rem' },
-
-  // ── Ingresos
-  revenueBlock: { marginBottom: '0.5rem' },
-  revenueBlockHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' },
-  revenueBlockTitle: { fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.4rem' },
-  revenueAmount: { fontSize: '1.1rem', fontWeight: 800 },
-  revenueDetail: { paddingLeft: '0.5rem' },
-  revenueRow: { display: 'flex', gap: '0.35rem', alignItems: 'baseline', marginBottom: '0.2rem' },
-  revenueRowLabel: { fontSize: '0.82rem', color: 'var(--color-text)', fontWeight: 600 },
-  revenueRowSuffix: { fontSize: '0.78rem', color: 'var(--color-text-muted)' },
-  commissionBadge: { fontSize: '0.68rem', fontWeight: 600, background: '#f0fdf4', color: '#16a34a', padding: '1px 6px', borderRadius: 8, border: '1px solid #bbf7d0' },
-  emptyDetail: { fontSize: '0.78rem', color: 'var(--color-text-muted)', fontStyle: 'italic' as const },
-  subTotal: { display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px dashed var(--color-border)' },
-  divider: { height: 1, background: 'var(--color-border)', margin: '0.875rem 0' },
-  totalRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: '0.9rem', color: 'var(--color-text)', fontWeight: 600 },
-
-  // ── Costes
-  costRow: { display: 'grid', gridTemplateColumns: '110px 1fr auto 80px', alignItems: 'center', gap: '0.5rem', paddingBottom: '0.6rem', marginBottom: '0.6rem', borderBottom: '1px solid var(--color-border)' },
-  costService: { fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text)' },
-  costUsage: { fontSize: '0.78rem', color: 'var(--color-text-muted)' },
-  tierBadge: { fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: 8, letterSpacing: '0.03em', textAlign: 'center' as const },
-  tierFree: { background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' },
-  tierPaid: { background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' },
-  tierEmpty: { fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'center' as const },
-  costAmount: { fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text)', textAlign: 'right' as const },
-
-  // ── Config form
-  configGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' },
-  configField: { display: 'flex', flexDirection: 'column' as const, gap: '0.3rem' },
-  configLabel: { fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
-  configInputWrap: { display: 'flex', alignItems: 'center', border: '1px solid var(--color-border)', borderRadius: 6, overflow: 'hidden', background: 'var(--color-bg)' },
-  configInput: { flex: 1, padding: '0.35rem 0.6rem', border: 'none', background: 'transparent', color: 'var(--color-text)', fontSize: '0.9rem', outline: 'none', width: '100%' },
-  configSuffix: { padding: '0.35rem 0.6rem', fontSize: '0.78rem', color: 'var(--color-text-muted)', background: 'var(--color-border)', borderLeft: '1px solid var(--color-border)', whiteSpace: 'nowrap' as const },
-  saveBtn: { padding: '0.5rem 1.25rem', borderRadius: 8, border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 },
-  saveBtnDisabled: { opacity: 0.6, cursor: 'not-allowed' },
-  savedBadge: { fontSize: '0.82rem', color: '#16a34a', fontWeight: 600 },
-  configNote: { fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: '0.875rem', marginBottom: 0 },
-
-  // ── Misc
-  loading: { textAlign: 'center' as const, color: 'var(--color-text-muted)', padding: '3rem' },
-};

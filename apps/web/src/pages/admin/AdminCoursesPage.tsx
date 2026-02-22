@@ -182,12 +182,19 @@ export default function AdminCoursesPage() {
         </div>
       )}
 
-      {/* Cabecera */}
-      <div style={s.header}>
-        <h1 style={s.title}>Gestión de Cursos</h1>
-        <button style={s.btnPrimary} onClick={() => setShowNewModal(true)}>
-          + Nuevo curso
-        </button>
+      {/* Hero */}
+      <div className="page-hero animate-in" style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' as const }}>
+          <div>
+            <h1 className="hero-title">Gestión de Cursos</h1>
+            <p className="hero-subtitle">
+              {data ? `${data.total} curso${data.total !== 1 ? 's' : ''} en total` : 'Cargando…'}
+            </p>
+          </div>
+          <button className="btn btn-primary" style={{ flexShrink: 0, marginTop: 4 }} onClick={() => setShowNewModal(true)}>
+            + Nuevo curso
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -199,7 +206,7 @@ export default function AdminCoursesPage() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
-          <button type="submit" style={s.btnSecondary}>Buscar</button>
+          <button type="submit" className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: '0.875rem' }}>Buscar</button>
         </form>
         <select
           style={s.select}
@@ -214,17 +221,17 @@ export default function AdminCoursesPage() {
       </div>
 
       {/* Tabla */}
-      <div style={s.tableWrapper}>
-        <table style={s.table}>
+      <div className="table-wrap">
+        <table>
           <thead>
             <tr>
-              <th style={s.th}>Título</th>
-              <th style={s.th}>Nivel</th>
-              <th style={s.th}>Asignatura</th>
-              <th style={s.th}>Módulos</th>
-              <th style={s.th}>Alumnos</th>
-              <th style={s.th}>Estado</th>
-              <th style={s.th}>Acciones</th>
+              <th>Título</th>
+              <th>Nivel</th>
+              <th>Asignatura</th>
+              <th>Módulos</th>
+              <th>Alumnos</th>
+              <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -238,35 +245,37 @@ export default function AdminCoursesPage() {
               </tr>
             ) : (
               data.data.map((course) => (
-                <tr key={course.id} style={s.tr}>
-                  <td style={s.td}>{course.title}</td>
-                  <td style={s.td}>{course.schoolYear?.label ?? '—'}</td>
-                  <td style={s.td}>{course.subject ?? '—'}</td>
-                  <td style={s.td}>
+                <tr key={course.id}>
+                  <td style={{ fontWeight: 600 }}>{course.title}</td>
+                  <td>{course.schoolYear?.label ?? '—'}</td>
+                  <td>{course.subject ?? '—'}</td>
+                  <td style={{ textAlign: 'center' as const }}>
                     {(course as unknown as { _count?: { modules?: number } })._count?.modules ?? 0}
                   </td>
-                  <td style={s.td}>
+                  <td style={{ textAlign: 'center' as const }}>
                     {(course as unknown as { studentCount?: number }).studentCount ?? 0}
                   </td>
-                  <td style={s.td}>
+                  <td>
                     <span style={course.published ? s.badgeOk : s.badgeDraft}>
                       {course.published ? 'Publicado' : 'Borrador'}
                     </span>
                   </td>
-                  <td style={s.td}>
-                    <button style={s.btnIcon} onClick={() => navigate(`/admin/courses/${course.id}`)} title="Gestionar contenido">📋</button>
-                    <button style={s.btnIcon} onClick={() => openEdit(course)} title="Editar">✏️</button>
-                    {deletingId === course.id ? (
-                      <span style={s.confirmDelete}>
-                        ¿Seguro?{' '}
-                        <button style={s.btnDangerSm} onClick={() => void handleDelete(course.id)} disabled={deleteMutation.isPending}>
-                          Sí
-                        </button>{' '}
-                        <button style={s.btnSecondarySmall} onClick={() => setDeletingId(null)}>No</button>
-                      </span>
-                    ) : (
-                      <button style={s.btnIcon} onClick={() => setDeletingId(course.id)} title="Eliminar">🗑️</button>
-                    )}
+                  <td>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <button style={s.btnIcon} onClick={() => navigate(`/admin/courses/${course.id}`)} title="Gestionar contenido">📋</button>
+                      <button style={s.btnIcon} onClick={() => openEdit(course)} title="Editar">✏️</button>
+                      {deletingId === course.id ? (
+                        <span style={s.confirmDelete}>
+                          ¿Seguro?{' '}
+                          <button style={s.btnDangerSm} onClick={() => void handleDelete(course.id)} disabled={deleteMutation.isPending}>
+                            Sí
+                          </button>{' '}
+                          <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.78rem' }} onClick={() => setDeletingId(null)}>No</button>
+                        </span>
+                      ) : (
+                        <button style={s.btnIcon} onClick={() => setDeletingId(course.id)} title="Eliminar">🗑️</button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -278,12 +287,12 @@ export default function AdminCoursesPage() {
       {/* Paginación */}
       {data && data.totalPages > 1 && (
         <div style={s.pagination}>
-          <button style={s.btnSecondary} disabled={page === 1} onClick={() => setPage(page - 1)}>
-            ‹ Anterior
+          <button className="btn btn-ghost" style={{ padding: '7px 14px', fontSize: '0.875rem' }} disabled={page === 1} onClick={() => setPage(page - 1)}>
+            Anterior
           </button>
           <span style={s.pageInfo}>Página {page} de {data.totalPages}</span>
-          <button style={s.btnSecondary} disabled={page === data.totalPages} onClick={() => setPage(page + 1)}>
-            Siguiente ›
+          <button className="btn btn-ghost" style={{ padding: '7px 14px', fontSize: '0.875rem' }} disabled={page === data.totalPages} onClick={() => setPage(page + 1)}>
+            Siguiente
           </button>
         </div>
       )}
@@ -315,42 +324,48 @@ export default function AdminCoursesPage() {
 
             {newTab === 'manual' ? (
               <form onSubmit={(e) => void handleCreateManual(e)} style={s.form}>
-                <label style={s.label}>Título</label>
-                <input
-                  required
-                  minLength={3}
-                  style={s.input}
-                  value={newForm.title}
-                  onChange={(e) => setNewForm({ ...newForm, title: e.target.value })}
-                />
-                <label style={s.label}>Descripción</label>
-                <textarea
-                  style={{ ...s.input, height: 80, resize: 'vertical' }}
-                  value={newForm.description}
-                  onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
-                />
-                <label style={s.label}>Nivel educativo</label>
-                <select
-                  style={s.select}
-                  value={newForm.schoolYearId}
-                  onChange={(e) => setNewForm({ ...newForm, schoolYearId: e.target.value })}
-                >
-                  <option value="">Sin nivel</option>
-                  {schoolYears.map((sy) => (
-                    <option key={sy.id} value={sy.id}>{sy.label}</option>
-                  ))}
-                </select>
-                <label style={s.label}>Asignatura</label>
-                <input
-                  list="subjects-datalist"
-                  style={s.input}
-                  placeholder="Selecciona o escribe una asignatura..."
-                  value={newForm.subject}
-                  onChange={(e) => setNewForm({ ...newForm, subject: e.target.value })}
-                />
+                <div className="field">
+                  <label>Título</label>
+                  <input
+                    required
+                    minLength={3}
+                    value={newForm.title}
+                    onChange={(e) => setNewForm({ ...newForm, title: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label>Descripción</label>
+                  <textarea
+                    style={{ height: 80, resize: 'vertical' as const }}
+                    value={newForm.description}
+                    onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label>Nivel educativo</label>
+                  <select
+                    value={newForm.schoolYearId}
+                    onChange={(e) => setNewForm({ ...newForm, schoolYearId: e.target.value })}
+                  >
+                    <option value="">Sin nivel</option>
+                    {schoolYears.map((sy) => (
+                      <option key={sy.id} value={sy.id}>{sy.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Asignatura</label>
+                  <input
+                    list="subjects-datalist"
+                    placeholder="Selecciona o escribe una asignatura..."
+                    value={newForm.subject}
+                    onChange={(e) => setNewForm({ ...newForm, subject: e.target.value })}
+                  />
+                </div>
                 <button
                   type="submit"
-                  style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                  className="btn btn-primary btn-full"
+                  style={{ marginTop: 16 }}
                   disabled={createMutation.isPending}
                 >
                   {createMutation.isPending ? 'Creando...' : 'Crear curso'}
@@ -358,29 +373,32 @@ export default function AdminCoursesPage() {
               </form>
             ) : (
               <form onSubmit={(e) => void handleGenerateIA(e)} style={s.form}>
-                <label style={s.label}>Nombre del curso</label>
-                <input
-                  required
-                  style={s.input}
-                  placeholder="Ej: Matemáticas, Historia del Arte..."
-                  value={iaName}
-                  onChange={(e) => setIaName(e.target.value)}
-                />
-                <label style={s.label}>Nivel educativo</label>
-                <select
-                  required
-                  style={s.select}
-                  value={iaSchoolYearId}
-                  onChange={(e) => setIaSchoolYearId(e.target.value)}
-                >
-                  <option value="">Selecciona un nivel</option>
-                  {schoolYears.map((sy) => (
-                    <option key={sy.id} value={sy.id}>{sy.label}</option>
-                  ))}
-                </select>
+                <div className="field">
+                  <label>Nombre del curso</label>
+                  <input
+                    required
+                    placeholder="Ej: Matemáticas, Historia del Arte..."
+                    value={iaName}
+                    onChange={(e) => setIaName(e.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label>Nivel educativo</label>
+                  <select
+                    required
+                    value={iaSchoolYearId}
+                    onChange={(e) => setIaSchoolYearId(e.target.value)}
+                  >
+                    <option value="">Selecciona un nivel</option>
+                    {schoolYears.map((sy) => (
+                      <option key={sy.id} value={sy.id}>{sy.label}</option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   type="submit"
-                  style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                  className="btn btn-primary btn-full"
+                  style={{ marginTop: 16 }}
                   disabled={generateMutation.isPending}
                 >
                   {generateMutation.isPending ? 'El agente está creando el curso...' : 'Generar con IA'}
@@ -410,40 +428,45 @@ export default function AdminCoursesPage() {
               <button style={s.closeBtn} onClick={() => setEditingCourse(null)}>✕</button>
             </div>
             <form onSubmit={(e) => void handleEdit(e)} style={s.form}>
-              <label style={s.label}>Título</label>
-              <input
-                required
-                minLength={3}
-                style={s.input}
-                value={editForm.title}
-                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-              />
-              <label style={s.label}>Descripción</label>
-              <textarea
-                style={{ ...s.input, height: 80, resize: 'vertical' }}
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-              />
-              <label style={s.label}>Nivel educativo</label>
-              <select
-                style={s.select}
-                value={editForm.schoolYearId}
-                onChange={(e) => setEditForm({ ...editForm, schoolYearId: e.target.value })}
-              >
-                <option value="">Sin nivel</option>
-                {schoolYears.map((sy) => (
-                  <option key={sy.id} value={sy.id}>{sy.label}</option>
-                ))}
-              </select>
-              <label style={s.label}>Asignatura</label>
-              <input
-                list="subjects-datalist"
-                style={s.input}
-                placeholder="Selecciona o escribe una asignatura..."
-                value={editForm.subject}
-                onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
-              />
-              <label style={{ ...s.label, display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+              <div className="field">
+                <label>Título</label>
+                <input
+                  required
+                  minLength={3}
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Descripción</label>
+                <textarea
+                  style={{ height: 80, resize: 'vertical' as const }}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Nivel educativo</label>
+                <select
+                  value={editForm.schoolYearId}
+                  onChange={(e) => setEditForm({ ...editForm, schoolYearId: e.target.value })}
+                >
+                  <option value="">Sin nivel</option>
+                  {schoolYears.map((sy) => (
+                    <option key={sy.id} value={sy.id}>{sy.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Asignatura</label>
+                <input
+                  list="subjects-datalist"
+                  placeholder="Selecciona o escribe una asignatura..."
+                  value={editForm.subject}
+                  onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+                />
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: '0.875rem', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={editForm.published}
@@ -453,7 +476,8 @@ export default function AdminCoursesPage() {
               </label>
               <button
                 type="submit"
-                style={{ ...s.btnPrimary, marginTop: 16, width: '100%' }}
+                className="btn btn-primary btn-full"
+                style={{ marginTop: 16 }}
                 disabled={updateMutation.isPending}
               >
                 {updateMutation.isPending ? 'Guardando...' : 'Guardar cambios'}
@@ -469,26 +493,22 @@ export default function AdminCoursesPage() {
 // ─── Estilos ─────────────────────────────────────────────────────────────────
 
 const s: Record<string, React.CSSProperties> = {
-  page: { padding: '2rem', position: 'relative' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
-  title: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)' },
-  filters: { display: 'flex', gap: 12, marginBottom: '1.25rem', flexWrap: 'wrap' },
+  page: { padding: '2rem', position: 'relative', maxWidth: 1100, margin: '0 auto' },
+  filters: { display: 'flex', gap: 12, marginBottom: '1.25rem', flexWrap: 'wrap' as const },
   searchForm: { display: 'flex', gap: 8, flex: 1, minWidth: 240 },
-
-  tableWrapper: { overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 8 },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: {
-    textAlign: 'left',
-    padding: '10px 14px',
-    fontSize: '0.8rem',
-    fontWeight: 600,
-    color: 'var(--color-text-muted)',
-    background: 'var(--color-surface)',
-    borderBottom: '1px solid var(--color-border)',
+  input: {
+    flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)', color: 'var(--color-text)',
+    fontSize: '0.9rem',
   },
-  tr: { borderBottom: '1px solid var(--color-border)' },
-  td: { padding: '12px 14px', fontSize: '0.9rem', color: 'var(--color-text)', verticalAlign: 'middle' },
-  tdCenter: { padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' },
+  select: {
+    padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)', color: 'var(--color-text)',
+    fontSize: '0.9rem', cursor: 'pointer',
+  },
+  tdCenter: { padding: '2rem', textAlign: 'center' as const, color: 'var(--color-text-muted)' },
 
   badgeOk: {
     display: 'inline-block', fontSize: '0.72rem', fontWeight: 600,
@@ -504,25 +524,9 @@ const s: Record<string, React.CSSProperties> = {
   pagination: { display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginTop: 20 },
   pageInfo: { fontSize: '0.875rem', color: 'var(--color-text-muted)' },
 
-  // Botones
-  btnPrimary: {
-    background: 'var(--color-primary)', color: '#fff',
-    border: 'none', borderRadius: 6, padding: '8px 16px',
-    fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
-  },
-  btnSecondary: {
-    background: 'var(--color-surface)', color: 'var(--color-text)',
-    border: '1px solid var(--color-border)', borderRadius: 6, padding: '8px 14px',
-    fontWeight: 500, fontSize: '0.875rem', cursor: 'pointer',
-  },
-  btnSecondarySmall: {
-    background: 'var(--color-surface)', color: 'var(--color-text)',
-    border: '1px solid var(--color-border)', borderRadius: 4, padding: '2px 8px',
-    fontWeight: 500, fontSize: '0.78rem', cursor: 'pointer',
-  },
   btnDangerSm: {
-    background: 'var(--color-error)', color: '#fff',
-    border: 'none', borderRadius: 4, padding: '2px 8px',
+    background: '#fef2f2', color: '#ef4444',
+    border: '1px solid #fecaca', borderRadius: 6, padding: '2px 8px',
     fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
   },
   btnIcon: {
@@ -531,52 +535,37 @@ const s: Record<string, React.CSSProperties> = {
   },
   confirmDelete: { fontSize: '0.82rem', color: 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 },
 
-  // Input / select
-  input: {
-    width: '100%', boxSizing: 'border-box',
-    padding: '8px 12px', borderRadius: 6,
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-surface)', color: 'var(--color-text)',
-    fontSize: '0.9rem',
-  },
-  select: {
-    padding: '8px 12px', borderRadius: 6,
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-surface)', color: 'var(--color-text)',
-    fontSize: '0.9rem', cursor: 'pointer',
-  },
-
   // Modal
   overlay: {
     position: 'fixed', inset: 0,
-    background: 'rgba(0,0,0,0.45)',
+    background: 'rgba(0,0,0,0.55)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     zIndex: 100,
   },
   modal: {
     background: 'var(--color-surface)',
-    borderRadius: 12, padding: 28,
+    borderRadius: 'var(--radius-md)', padding: 28,
     width: '100%', maxWidth: 480,
-    boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+    boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+    border: '1.5px solid var(--color-border)',
   },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text)' },
+  modalTitle: { fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 },
   closeBtn: { background: 'transparent', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--color-text-muted)' },
 
   // Tabs
-  tabs: { display: 'flex', gap: 4, marginBottom: 20, background: 'var(--color-border)', borderRadius: 6, padding: 3 },
+  tabs: { display: 'flex', gap: 4, marginBottom: 20, background: 'var(--color-border)', borderRadius: 8, padding: 3 },
   tab: {
-    flex: 1, padding: '6px 0', borderRadius: 5,
+    flex: 1, padding: '7px 0', borderRadius: 6,
     border: 'none', background: 'transparent',
     color: 'var(--color-text-muted)', fontWeight: 500,
     cursor: 'pointer', fontSize: '0.875rem',
   },
-  tabActive: { background: 'var(--color-surface)', color: 'var(--color-text)', fontWeight: 600 },
+  tabActive: { background: 'var(--color-surface)', color: 'var(--color-text)', fontWeight: 600, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
 
   // Formulario
-  form: { display: 'flex', flexDirection: 'column', gap: 8 },
-  label: { fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)' },
-  hint: { fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center', marginTop: 8 },
+  form: { display: 'flex', flexDirection: 'column', gap: 12 },
+  hint: { fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center' as const, marginTop: 8 },
 
   // Toast
   toast: {

@@ -132,10 +132,19 @@ export default function AdminUsersPage() {
 
   return (
     <div style={s.page}>
-      {/* Cabecera */}
-      <div style={s.header}>
-        <h1 style={s.title}>Usuarios</h1>
-        <button style={s.btnPrimary} onClick={() => setShowCreate(true)}>+ Nuevo usuario</button>
+      {/* Hero */}
+      <div className="page-hero animate-in" style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' as const }}>
+          <div>
+            <h1 className="hero-title">Gestión de Usuarios</h1>
+            <p className="hero-subtitle">
+              {users ? `${users.length} usuario${users.length !== 1 ? 's' : ''} registrados` : 'Cargando…'}
+            </p>
+          </div>
+          <button className="btn btn-primary" style={{ flexShrink: 0, marginTop: 4 }} onClick={() => setShowCreate(true)}>
+            + Nuevo usuario
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -162,17 +171,17 @@ export default function AdminUsersPage() {
       {isLoading && <p style={s.muted}>Cargando usuarios...</p>}
 
       {!isLoading && (
-        <div style={s.tableWrapper}>
-          <table style={s.table}>
+        <div className="table-wrap">
+          <table>
             <thead>
               <tr>
-                <th style={s.th}>Usuario</th>
-                <th style={s.th}>Email</th>
-                <th style={s.th}>Rol</th>
-                <th style={s.th}>Tutor</th>
-                <th style={s.th}>Alumnos</th>
-                <th style={s.th}>Registro</th>
-                <th style={s.th}></th>
+                <th>Usuario</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Tutor</th>
+                <th>Alumnos</th>
+                <th>Registro</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -266,8 +275,8 @@ function UserRow({
   const isDeleting = deleteId === user.id;
 
   return (
-    <tr style={s.row}>
-      <td style={s.td}>
+    <tr>
+      <td>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
           <div style={{ ...s.avatar, background: ROLE_COLORS[user.role] }}>
             {user.avatarUrl
@@ -277,8 +286,8 @@ function UserRow({
           <span style={{ fontWeight: 600, color: 'var(--color-text)', fontSize: '0.875rem' }}>{user.name}</span>
         </div>
       </td>
-      <td style={{ ...s.td, color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>{user.email}</td>
-      <td style={s.td}>
+      <td style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>{user.email}</td>
+      <td>
         <select
           style={{ ...s.selectInline, borderColor: ROLE_COLORS[user.role], color: ROLE_COLORS[user.role] }}
           value={user.role}
@@ -288,7 +297,7 @@ function UserRow({
           {ALL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
         </select>
       </td>
-      <td style={s.td}>
+      <td>
         {user.role === Role.STUDENT ? (
           <select
             style={s.selectInline}
@@ -301,18 +310,18 @@ function UserRow({
           </select>
         ) : <span style={s.muted}>—</span>}
       </td>
-      <td style={{ ...s.td, textAlign: 'center' as const }}>
+      <td style={{ textAlign: 'center' as const }}>
         {user.role === Role.TUTOR
           ? <span style={s.badge}>{user._count.students}</span>
           : <span style={s.muted}>—</span>}
       </td>
-      <td style={{ ...s.td, color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>{createdAt}</td>
-      <td style={s.td}>
+      <td style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>{createdAt}</td>
+      <td>
         {isDeleting ? (
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>¿Seguro?</span>
-            <button style={s.btnDanger} onClick={onDeleteConfirm} disabled={isPending}>Sí, eliminar</button>
-            <button style={s.btnGhost} onClick={onDeleteCancel}>Cancelar</button>
+            <button className="btn btn-ghost" style={{ padding: '3px 10px', fontSize: '0.78rem', color: '#ef4444', borderColor: '#ef4444' }} onClick={onDeleteConfirm} disabled={isPending}>Sí, eliminar</button>
+            <button className="btn btn-ghost" style={{ padding: '3px 10px', fontSize: '0.78rem' }} onClick={onDeleteCancel}>Cancelar</button>
           </div>
         ) : (
           <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -413,18 +422,17 @@ function UserModal({
       <div style={s.modal}>
         <h2 style={s.modalTitle}>{title}</h2>
         <form onSubmit={handleSubmit}>
-          <div style={s.field}>
-            <label style={s.label}>Nombre</label>
-            <input style={s.input} value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />
+          <div className="field" style={{ marginBottom: '0.875rem' }}>
+            <label>Nombre</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />
           </div>
-          <div style={s.field}>
-            <label style={s.label}>Email</label>
-            <input style={s.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <div className="field" style={{ marginBottom: '0.875rem' }}>
+            <label>Email</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
-          <div style={s.field}>
-            <label style={s.label}>{mode === 'create' ? 'Contraseña' : 'Nueva contraseña (opcional)'}</label>
+          <div className="field" style={{ marginBottom: '0.875rem' }}>
+            <label>{mode === 'create' ? 'Contraseña' : 'Nueva contraseña (opcional)'}</label>
             <input
-              style={s.input}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -434,24 +442,24 @@ function UserModal({
             />
           </div>
           {mode === 'create' && (
-            <div style={s.field}>
-              <label style={s.label}>Rol</label>
-              <select style={s.input} value={role} onChange={(e) => { setRole(e.target.value as Role); setTutorId(''); setShowNewTutor(false); }}>
+            <div className="field" style={{ marginBottom: '0.875rem' }}>
+              <label>Rol</label>
+              <select value={role} onChange={(e) => { setRole(e.target.value as Role); setTutorId(''); setShowNewTutor(false); }}>
                 {ALL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
               </select>
             </div>
           )}
           {role === Role.STUDENT && (
-            <div style={s.field}>
-              <label style={s.label}>Nivel educativo</label>
-              <select style={s.input} value={schoolYearId} onChange={(e) => setSchoolYearId(e.target.value)}>
+            <div className="field" style={{ marginBottom: '0.875rem' }}>
+              <label>Nivel educativo</label>
+              <select value={schoolYearId} onChange={(e) => setSchoolYearId(e.target.value)}>
                 <option value="">Sin asignar</option>
                 {schoolYears.map((sy) => <option key={sy.id} value={sy.id}>{sy.label}</option>)}
               </select>
             </div>
           )}
           {mode === 'create' && role === Role.STUDENT && (
-            <div style={s.field}>
+            <div style={{ marginBottom: '0.875rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
                 <label style={s.label}>Tutor</label>
                 {!showNewTutor && (
@@ -465,7 +473,7 @@ function UserModal({
                 )}
               </div>
               {!showNewTutor ? (
-                <select style={s.input} value={tutorId} onChange={(e) => setTutorId(e.target.value)}>
+                <select style={s.inputBase} value={tutorId} onChange={(e) => setTutorId(e.target.value)}>
                   <option value="">Sin tutor</option>
                   {localTutors.map((t) => (
                     <option key={t.id} value={t.id}>{t.name} — {t.email}</option>
@@ -476,10 +484,9 @@ function UserModal({
                   <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text)' }}>
                     Nuevo tutor
                   </p>
-                  <div style={s.field}>
-                    <label style={s.label}>Nombre del tutor</label>
+                  <div className="field" style={{ marginBottom: '0.625rem' }}>
+                    <label>Nombre del tutor</label>
                     <input
-                      style={s.input}
                       value={newTutorName}
                       onChange={(e) => setNewTutorName(e.target.value)}
                       required={showNewTutor}
@@ -487,10 +494,9 @@ function UserModal({
                       placeholder="Ej: Ana García"
                     />
                   </div>
-                  <div style={s.field}>
-                    <label style={s.label}>Email del tutor</label>
+                  <div className="field" style={{ marginBottom: '0.625rem' }}>
+                    <label>Email del tutor</label>
                     <input
-                      style={s.input}
                       type="email"
                       value={newTutorEmail}
                       onChange={(e) => setNewTutorEmail(e.target.value)}
@@ -498,10 +504,9 @@ function UserModal({
                       placeholder="tutor@ejemplo.com"
                     />
                   </div>
-                  <div style={s.field}>
-                    <label style={s.label}>Contraseña del tutor</label>
+                  <div className="field" style={{ marginBottom: '0.625rem' }}>
+                    <label>Contraseña del tutor</label>
                     <input
-                      style={s.input}
                       type="password"
                       value={newTutorPassword}
                       onChange={(e) => setNewTutorPassword(e.target.value)}
@@ -515,13 +520,14 @@ function UserModal({
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button
                       type="button"
-                      style={s.btnPrimary}
+                      className="btn btn-primary"
+                      style={{ padding: '7px 14px', fontSize: '0.85rem' }}
                       disabled={creatingTutor || !newTutorName || !newTutorEmail || newTutorPassword.length < 8}
                       onClick={(e) => handleCreateTutor(e)}
                     >
                       {creatingTutor ? 'Creando...' : 'Crear tutor'}
                     </button>
-                    <button type="button" style={s.btnSecondary} onClick={() => { setShowNewTutor(false); setTutorError(''); }}>
+                    <button type="button" className="btn btn-ghost" style={{ padding: '7px 14px', fontSize: '0.85rem' }} onClick={() => { setShowNewTutor(false); setTutorError(''); }}>
                       Cancelar
                     </button>
                   </div>
@@ -535,8 +541,8 @@ function UserModal({
             </p>
           )}
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-            <button type="button" style={s.btnSecondary} onClick={onClose}>Cancelar</button>
-            <button type="submit" style={s.btnPrimary} disabled={isPending || showNewTutor}>
+            <button type="button" className="btn btn-ghost" style={{ padding: '8px 16px' }} onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" style={{ padding: '8px 16px' }} disabled={isPending || showNewTutor}>
               {isPending ? 'Guardando...' : mode === 'create' ? 'Crear usuario' : 'Guardar cambios'}
             </button>
           </div>
@@ -580,7 +586,7 @@ function EnrollmentModal({ user, onClose }: { user: AdminUser; onClose: () => vo
   return (
     <div style={s.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ ...s.modal, maxWidth: 560 }}>
-        <h2 style={s.modalTitle}>📚 Cursos de {user.name}</h2>
+        <h2 style={s.modalTitle}>Cursos de {user.name}</h2>
         {isLoading ? (
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Cargando...</p>
         ) : (
@@ -597,8 +603,8 @@ function EnrollmentModal({ user, onClose }: { user: AdminUser; onClose: () => vo
                     alignItems: 'center',
                     padding: '10px 14px',
                     borderRadius: 8,
-                    border: `1.5px solid ${enrolled ? '#6366f1' : 'var(--color-border)'}`,
-                    background: enrolled ? '#eef2ff' : 'var(--color-bg)',
+                    border: `1.5px solid ${enrolled ? 'rgba(234,88,12,0.3)' : 'var(--color-border)'}`,
+                    background: enrolled ? 'rgba(234,88,12,0.06)' : 'var(--color-bg)',
                   }}
                 >
                   <div>
@@ -619,7 +625,7 @@ function EnrollmentModal({ user, onClose }: { user: AdminUser; onClose: () => vo
                       cursor: isPending ? 'not-allowed' : 'pointer',
                       fontSize: '0.78rem',
                       fontWeight: 600,
-                      background: enrolled ? '#ef4444' : '#6366f1',
+                      background: enrolled ? '#ef4444' : 'var(--gradient-orange)',
                       color: '#fff',
                       flexShrink: 0,
                     }}
@@ -635,7 +641,7 @@ function EnrollmentModal({ user, onClose }: { user: AdminUser; onClose: () => vo
           </div>
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-          <button style={s.btnSecondary} onClick={onClose}>Cerrar</button>
+          <button className="btn btn-ghost" style={{ padding: '8px 16px' }} onClick={onClose}>Cerrar</button>
         </div>
       </div>
     </div>
@@ -648,32 +654,21 @@ function EnrollmentModal({ user, onClose }: { user: AdminUser; onClose: () => vo
 
 const s: Record<string, React.CSSProperties> = {
   page: { padding: '2rem', maxWidth: 1200, margin: '0 auto' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
-  title: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 },
   filters: { display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap' as const },
   count: { marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--color-text-muted)' },
-  input: { padding: '0.45rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: '0.875rem', background: 'var(--color-bg)', color: 'var(--color-text)', width: '100%', boxSizing: 'border-box' as const },
-  select: { padding: '0.45rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: '0.875rem', background: 'var(--color-bg)', color: 'var(--color-text)' },
-  tableWrapper: { overflowX: 'auto' as const },
-  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '0.875rem' },
-  th: { textAlign: 'left' as const, padding: '0.6rem 0.75rem', borderBottom: '2px solid var(--color-border)', color: 'var(--color-text-muted)', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '0.04em', whiteSpace: 'nowrap' as const },
-  row: { borderBottom: '1px solid var(--color-border)' },
-  td: { padding: '0.65rem 0.75rem', verticalAlign: 'middle' as const },
+  input: { padding: '0.45rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: '0.875rem', background: 'var(--color-bg)', color: 'var(--color-text)', minWidth: 240 },
+  inputBase: { padding: '0.45rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: '0.875rem', background: 'var(--color-bg)', color: 'var(--color-text)', width: '100%', boxSizing: 'border-box' as const },
+  select: { padding: '0.45rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: '0.875rem', background: 'var(--color-bg)', color: 'var(--color-text)' },
   avatar: { width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '0.7rem', flexShrink: 0, overflow: 'hidden' },
   selectInline: { padding: '0.3rem 0.5rem', border: '1px solid var(--color-border)', borderRadius: 5, fontSize: '0.8rem', background: 'var(--color-bg)', color: 'var(--color-text)', cursor: 'pointer' },
   badge: { display: 'inline-block', padding: '2px 8px', borderRadius: 12, background: 'var(--color-border)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text)' },
   muted: { color: 'var(--color-text-muted)', fontSize: '0.8rem' },
   iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px 4px', borderRadius: 4 },
-  btnPrimary: { padding: '0.5rem 1rem', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem' },
-  btnSecondary: { padding: '0.5rem 1rem', background: 'transparent', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', fontSize: '0.875rem' },
-  btnDanger: { padding: '0.3rem 0.65rem', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: 5, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 },
-  btnGhost: { padding: '0.3rem 0.65rem', background: 'transparent', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', borderRadius: 5, cursor: 'pointer', fontSize: '0.78rem' },
   toast: { position: 'fixed' as const, bottom: '1.5rem', right: '1.5rem', padding: '0.75rem 1.25rem', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: '0.9rem', zIndex: 200 },
   btnLink: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', fontSize: '0.78rem', fontWeight: 600, padding: 0, textDecoration: 'underline' },
   miniForm: { background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '0.875rem', marginTop: '0.25rem' },
   overlay: { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
-  modal: { background: 'var(--color-surface)', borderRadius: 12, padding: '1.5rem', width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto' as const },
+  modal: { background: 'var(--color-surface)', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--color-border)', boxShadow: '0 16px 48px rgba(0,0,0,0.18)', padding: '1.75rem', width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto' as const },
   modalTitle: { fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--color-text)', marginTop: 0 },
-  field: { marginBottom: '0.875rem' },
   label: { display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.3rem' },
 };
