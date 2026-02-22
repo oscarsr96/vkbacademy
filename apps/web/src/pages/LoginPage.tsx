@@ -23,9 +23,11 @@ export default function LoginPage() {
       <div style={s.card} className="animate-in">
         {/* Encabezado */}
         <div style={s.header}>
-          <div style={s.logoWrap}>
-            <span style={s.logoEmoji}>🏀</span>
-          </div>
+          <img
+            src="https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png"
+            alt="Vallekas Basket"
+            style={s.logoImg}
+          />
           <h1 style={s.title}>Bienvenido de vuelta</h1>
           <p style={s.subtitle}>Accede a tu cuenta de VKB Academy</p>
         </div>
@@ -137,20 +139,10 @@ const s: Record<string, React.CSSProperties> = {
     gap: '12px',
     textAlign: 'center',
   },
-  logoWrap: {
-    width: '68px',
-    height: '68px',
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 8px 32px rgba(234,88,12,0.35)',
-    flexShrink: 0,
-  },
-  logoEmoji: {
-    fontSize: '32px',
-    lineHeight: 1,
+  logoImg: {
+    height: '80px',
+    width: 'auto',
+    objectFit: 'contain' as const,
   },
   title: {
     fontSize: '1.6rem',
