@@ -17,6 +17,9 @@ RUN pnpm install --frozen-lockfile
 COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 
+# Compilar el paquete shared (CommonJS) antes de compilar la API
+RUN pnpm --filter @vkbacademy/shared build
+
 WORKDIR /app/apps/api
 # URL ficticia solo para que prisma generate pueda parsear el schema (no hace conexión real)
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"

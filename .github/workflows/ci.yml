@@ -26,6 +26,9 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Build paquete shared
+        run: pnpm --filter @vkbacademy/shared build
+
       - name: Generar cliente Prisma
         run: pnpm --filter @vkbacademy/api exec prisma generate
 
