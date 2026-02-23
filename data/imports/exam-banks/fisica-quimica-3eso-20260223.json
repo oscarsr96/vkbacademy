@@ -1,0 +1,298 @@
+{
+  "questions": [
+    {
+      "type": "SINGLE",
+      "text": "¿Cuál de las siguientes propiedades es una propiedad intensiva de la materia?",
+      "answers": [
+        { "text": "Masa", "isCorrect": false },
+        { "text": "Volumen", "isCorrect": false },
+        { "text": "Densidad", "isCorrect": true },
+        { "text": "Peso", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Los átomos de un mismo elemento químico siempre tienen el mismo número de neutrones.",
+      "answers": [
+        { "text": "Verdadero", "isCorrect": false },
+        { "text": "Falso", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "En la tabla periódica, los elementos de un mismo período tienen en común que:",
+      "answers": [
+        { "text": "Tienen el mismo número de electrones en la última capa", "isCorrect": false },
+        { "text": "Tienen el mismo número de capas electrónicas", "isCorrect": true },
+        { "text": "Pertenecen al mismo grupo", "isCorrect": false },
+        { "text": "Son todos metales", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MULTIPLE",
+      "text": "¿Cuáles de las siguientes afirmaciones sobre el enlace iónico son correctas?",
+      "answers": [
+        { "text": "Se produce por transferencia de electrones entre átomos", "isCorrect": true },
+        { "text": "Se da entre dos átomos no metálicos", "isCorrect": false },
+        { "text": "El compuesto resultante es eléctricamente neutro", "isCorrect": true },
+        { "text": "Los iones formados tienen carga eléctrica opuesta", "isCorrect": true },
+        { "text": "Los compuestos iónicos tienen bajo punto de fusión", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "¿Cuál es la fórmula correcta del óxido de hierro (III)?",
+      "answers": [
+        { "text": "FeO", "isCorrect": false },
+        { "text": "Fe2O3", "isCorrect": true },
+        { "text": "Fe3O2", "isCorrect": false },
+        { "text": "FeO3", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "En una reacción química, la masa total de los reactivos es siempre igual a la masa total de los productos (ley de conservación de la masa).",
+      "answers": [
+        { "text": "Verdadero", "isCorrect": true },
+        { "text": "Falso", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "Si en una reacción química intervienen 2 mol de H2 y 1 mol de O2 para formar agua, ¿cuántos moles de H2O se producen?",
+      "answers": [
+        { "text": "1 mol", "isCorrect": false },
+        { "text": "3 mol", "isCorrect": false },
+        { "text": "2 mol", "isCorrect": true },
+        { "text": "4 mol", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MULTIPLE",
+      "text": "¿Cuáles de las siguientes son fuerzas de contacto?",
+      "answers": [
+        { "text": "Fricción", "isCorrect": true },
+        { "text": "Gravedad", "isCorrect": false },
+        { "text": "Normal", "isCorrect": true },
+        { "text": "Fuerza magnética a distancia", "isCorrect": false },
+        { "text": "Tensión en una cuerda", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "Según la primera ley de Newton (ley de inercia), un objeto en reposo permanecerá en reposo a menos que:",
+      "answers": [
+        { "text": "Se enfríe lo suficiente", "isCorrect": false },
+        { "text": "Actúe sobre él una fuerza neta no nula", "isCorrect": true },
+        { "text": "Se encuentre en el vacío", "isCorrect": false },
+        { "text": "Sea un objeto muy pesado", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Un objeto que se mueve a velocidad constante en línea recta tiene una fuerza neta distinta de cero actuando sobre él.",
+      "answers": [
+        { "text": "Verdadero", "isCorrect": false },
+        { "text": "Falso", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "Un coche parte del reposo y alcanza 72 km/h en 10 segundos moviéndose en línea recta. ¿Cuál es su aceleración media?",
+      "answers": [
+        { "text": "7,2 m/s²", "isCorrect": false },
+        { "text": "2 m/s²", "isCorrect": true },
+        { "text": "72 m/s²", "isCorrect": false },
+        { "text": "0,2 m/s²", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "¿Cuál de las siguientes unidades del Sistema Internacional se utiliza para medir la energía?",
+      "answers": [
+        { "text": "Watt (W)", "isCorrect": false },
+        { "text": "Newton (N)", "isCorrect": false },
+        { "text": "Joule (J)", "isCorrect": true },
+        { "text": "Pascal (Pa)", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MULTIPLE",
+      "text": "¿Cuáles de las siguientes situaciones suponen una transferencia de energía en forma de calor?",
+      "answers": [
+        { "text": "Una taza caliente que enfría al contacto con el aire", "isCorrect": true },
+        { "text": "Un libro en reposo sobre una mesa", "isCorrect": false },
+        { "text": "El Sol que calienta la superficie terrestre por radiación", "isCorrect": true },
+        { "text": "El agua de un radiador que calienta la habitación por convección", "isCorrect": true },
+        { "text": "Un automóvil que acelera en línea recta", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "La temperatura y el calor son la misma magnitud física expresada en distintas unidades.",
+      "answers": [
+        { "text": "Verdadero", "isCorrect": false },
+        { "text": "Falso", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "En un circuito eléctrico en serie con dos resistencias de 3 Ω y 6 Ω conectadas a una batería de 9 V, ¿qué intensidad circula por el circuito?",
+      "answers": [
+        { "text": "3 A", "isCorrect": false },
+        { "text": "0,5 A", "isCorrect": false },
+        { "text": "1 A", "isCorrect": true },
+        { "text": "2 A", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "Las ondas sonoras son ondas:",
+      "answers": [
+        { "text": "Transversales y electromagnéticas", "isCorrect": false },
+        { "text": "Longitudinales y mecánicas", "isCorrect": true },
+        { "text": "Transversales y mecánicas", "isCorrect": false },
+        { "text": "Longitudinales y electromagnéticas", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MULTIPLE",
+      "text": "¿Cuáles de los siguientes fenómenos se pueden explicar con el modelo corpuscular (fotónico) de la luz?",
+      "answers": [
+        { "text": "Efecto fotoeléctrico", "isCorrect": true },
+        { "text": "Difracción de la luz", "isCorrect": false },
+        { "text": "Interferencias lumínicas", "isCorrect": false },
+        { "text": "Absorción de luz por los átomos", "isCorrect": true },
+        { "text": "Reflexión especular", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "¿Qué número cuántico identifica el nivel de energía principal de un electrón en un átomo?",
+      "answers": [
+        { "text": "Número de masa (A)", "isCorrect": false },
+        { "text": "Número atómico (Z)", "isCorrect": false },
+        { "text": "Número cuántico principal (n)", "isCorrect": true },
+        { "text": "Número de oxidación", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Los metales alcalinos se encuentran en el grupo 18 de la tabla periódica.",
+      "answers": [
+        { "text": "Verdadero", "isCorrect": false },
+        { "text": "Falso", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "¿Cómo se denomina la cantidad de sustancia que contiene aproximadamente 6,022 × 10²³ partículas?",
+      "answers": [
+        { "text": "Un gramo", "isCorrect": false },
+        { "text": "Un mol", "isCorrect": true },
+        { "text": "Una unidad de masa atómica", "isCorrect": false },
+        { "text": "Un equivalente", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "¿Qué tipo de enlace forman dos átomos de cloro (Cl) al unirse para formar Cl2?",
+      "answers": [
+        { "text": "Enlace iónico", "isCorrect": false },
+        { "text": "Enlace metálico", "isCorrect": false },
+        { "text": "Enlace covalente apolar", "isCorrect": true },
+        { "text": "Enlace covalente polar", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MULTIPLE",
+      "text": "¿Cuáles de las siguientes son características de las mezclas heterogéneas?",
+      "answers": [
+        { "text": "Sus componentes se pueden distinguir a simple vista o con lupa", "isCorrect": true },
+        { "text": "Tienen composición uniforme en toda la muestra", "isCorrect": false },
+        { "text": "Se pueden separar por decantación o filtración", "isCorrect": true },
+        { "text": "Presentan más de una fase diferenciada", "isCorrect": true },
+        { "text": "Sus propiedades son iguales en todos sus puntos", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "El trabajo realizado por una fuerza perpendicular al desplazamiento es siempre cero.",
+      "answers": [
+        { "text": "Verdadero", "isCorrect": true },
+        { "text": "Falso", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "Según la tercera ley de Newton (acción y reacción), si un patinador empuja una pared con 50 N hacia la derecha, la pared ejerce sobre él una fuerza de:",
+      "answers": [
+        { "text": "50 N hacia la derecha", "isCorrect": false },
+        { "text": "100 N hacia la izquierda", "isCorrect": false },
+        { "text": "50 N hacia la izquierda", "isCorrect": true },
+        { "text": "0 N porque la pared no puede moverse", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "¿Qué nombre recibe el proceso por el que un sólido pasa directamente a estado gaseoso sin pasar por estado líquido?",
+      "answers": [
+        { "text": "Evaporación", "isCorrect": false },
+        { "text": "Condensación", "isCorrect": false },
+        { "text": "Sublimación", "isCorrect": true },
+        { "text": "Solidificación", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MULTIPLE",
+      "text": "¿Cuáles de las siguientes afirmaciones sobre la luz visible son correctas?",
+      "answers": [
+        { "text": "Se propaga en el vacío", "isCorrect": true },
+        { "text": "Necesita un medio material para propagarse", "isCorrect": false },
+        { "text": "Su velocidad en el vacío es aproximadamente 3 × 10⁸ m/s", "isCorrect": true },
+        { "text": "Es un tipo de onda electromagnética", "isCorrect": true },
+        { "text": "Solo se propaga en medios sólidos", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "La ley de Hooke establece que la fuerza ejercida por un muelle es proporcional a su deformación. Si un muelle con constante k = 200 N/m se estira 0,05 m, ¿qué fuerza ejerce?",
+      "answers": [
+        { "text": "4000 N", "isCorrect": false },
+        { "text": "10 N", "isCorrect": true },
+        { "text": "0,025 N", "isCorrect": false },
+        { "text": "40 N", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "¿Cuál es la unidad del Sistema Internacional para medir la resistencia eléctrica?",
+      "answers": [
+        { "text": "Voltio (V)", "isCorrect": false },
+        { "text": "Amperio (A)", "isCorrect": false },
+        { "text": "Ohmio (Ω)", "isCorrect": true },
+        { "text": "Culombio (C)", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "Un cuerpo de 5 kg se eleva 4 metros verticalmente. ¿Cuánto trabajo realiza la fuerza aplicada? (g = 10 m/s²)",
+      "answers": [
+        { "text": "20 J", "isCorrect": false },
+        { "text": "200 J", "isCorrect": true },
+        { "text": "50 J", "isCorrect": false },
+        { "text": "400 J", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SINGLE",
+      "text": "Cuando la luz pasa del aire al agua, su velocidad disminuye y el rayo se desvía hacia la normal a la superficie. Este fenómeno se denomina:",
+      "answers": [
+        { "text": "Reflexión", "isCorrect": false },
+        { "text": "Difracción", "isCorrect": false },
+        { "text": "Refracción", "isCorrect": true },
+        { "text": "Dispersión", "isCorrect": false }
+      ]
+    }
+  ]
+}
