@@ -852,7 +852,7 @@ export default function AdminExamBankPage() {
               Importar preguntas desde JSON
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '1.25rem' }}>
-              El JSON debe tener el formato: <code style={{ background: 'var(--color-bg)', padding: '1px 5px', borderRadius: 4, fontSize: '0.78rem' }}>{`{ "questions": [{ "text": "...", "answers": [{ "text": "...", "isCorrect": bool }] }] }`}</code>
+              Tipos disponibles: <code style={{ background: 'var(--color-bg)', padding: '1px 5px', borderRadius: 4, fontSize: '0.78rem' }}>SINGLE</code> (una correcta), <code style={{ background: 'var(--color-bg)', padding: '1px 5px', borderRadius: 4, fontSize: '0.78rem' }}>MULTIPLE</code> (varias correctas), <code style={{ background: 'var(--color-bg)', padding: '1px 5px', borderRadius: 4, fontSize: '0.78rem' }}>TRUE_FALSE</code>. Si se omite <code style={{ background: 'var(--color-bg)', padding: '1px 5px', borderRadius: 4, fontSize: '0.78rem' }}>type</code>, se usa <code style={{ background: 'var(--color-bg)', padding: '1px 5px', borderRadius: 4, fontSize: '0.78rem' }}>SINGLE</code> por defecto.
             </p>
             <form onSubmit={handleImport}>
               {/* Selector de archivo */}
@@ -878,7 +878,7 @@ export default function AdminExamBankPage() {
                   rows={10}
                   value={importJson}
                   onChange={(e) => { setImportJson(e.target.value); setImportError(''); }}
-                  placeholder={'{\n  "questions": [\n    {\n      "text": "¿Cuántos puntos vale un triple?",\n      "answers": [\n        { "text": "2", "isCorrect": false },\n        { "text": "3", "isCorrect": true },\n        { "text": "1", "isCorrect": false }\n      ]\n    }\n  ]\n}'}
+                  placeholder={'{\n  "questions": [\n    {\n      "type": "SINGLE",\n      "text": "¿Cuántos puntos vale un triple?",\n      "answers": [\n        { "text": "1", "isCorrect": false },\n        { "text": "2", "isCorrect": false },\n        { "text": "3", "isCorrect": true },\n        { "text": "4", "isCorrect": false }\n      ]\n    },\n    {\n      "type": "MULTIPLE",\n      "text": "¿Qué acciones dan puntos en baloncesto?",\n      "answers": [\n        { "text": "Canasta de 2", "isCorrect": true },\n        { "text": "Triple", "isCorrect": true },\n        { "text": "Tiro libre", "isCorrect": true },\n        { "text": "Saque de banda", "isCorrect": false }\n      ]\n    },\n    {\n      "type": "TRUE_FALSE",\n      "text": "Un tiro libre vale 2 puntos.",\n      "answers": [\n        { "text": "Verdadero", "isCorrect": false },\n        { "text": "Falso", "isCorrect": true }\n      ]\n    }\n  ]\n}'}
                   style={{ fontFamily: 'monospace', fontSize: '0.8rem', width: '100%', resize: 'vertical' }}
                 />
               </div>

@@ -4,9 +4,11 @@ import {
   IsNotEmpty,
   IsBoolean,
   IsArray,
+  IsEnum,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { QuestionType } from '@vkbacademy/shared';
 
 export class ImportExamAnswerDto {
   @IsString() @IsNotEmpty()
@@ -19,6 +21,11 @@ export class ImportExamAnswerDto {
 export class ImportExamQuestionItemDto {
   @IsString() @IsNotEmpty()
   text: string;
+
+  // Si no se especifica, el service usa SINGLE por defecto
+  @IsOptional()
+  @IsEnum(QuestionType)
+  type?: QuestionType;
 
   @IsArray()
   @ValidateNested({ each: true })

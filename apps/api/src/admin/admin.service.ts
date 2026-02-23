@@ -1133,7 +1133,7 @@ export class AdminService {
         const question = await tx.examQuestion.create({
           data: {
             text: q.text,
-            type: QuestionType.SINGLE,
+            type: q.type ?? QuestionType.SINGLE,
             order: nextOrder++,
             courseId: dto.courseId ?? null,
             moduleId: dto.moduleId ?? null,
