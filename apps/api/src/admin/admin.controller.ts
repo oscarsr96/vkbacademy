@@ -39,6 +39,7 @@ import { GenerateExamQuestionsDto } from './dto/generate-exam-questions.dto';
 import { IssueCertificateDto } from './dto/issue-certificate.dto';
 import { EnrollUserDto } from './dto/enroll-user.dto';
 import { ImportCourseDto } from './dto/import-course.dto';
+import { ImportExamQuestionsDto } from './dto/import-exam-questions.dto';
 import { CertificatesService } from '../certificates/certificates.service';
 
 @Controller('admin')
@@ -282,7 +283,12 @@ export class AdminController {
     return this.adminService.getExamQuestions(courseId, moduleId);
   }
 
-  // Debe declararse ANTES que POST /admin/exam-questions para evitar conflictos
+  // Debe declararse ANTES que POST /admin/exam-questions para evitar conflictos de ruta
+  @Post('exam-questions/import')
+  importExamQuestions(@Body() dto: ImportExamQuestionsDto) {
+    return this.adminService.importExamQuestions(dto);
+  }
+
   @Post('exam-questions/generate')
   generateExamQuestions(@Body() dto: GenerateExamQuestionsDto) {
     return this.courseGeneratorService.generateExamQuestions(

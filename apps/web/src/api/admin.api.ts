@@ -551,6 +551,15 @@ export const adminApi = {
       .post<import('./exams.api').AdminExamQuestion[]>('/admin/exam-questions/generate', payload)
       .then((r) => r.data),
 
+  importExamQuestions: (payload: {
+    courseId?: string;
+    moduleId?: string;
+    questions: { text: string; answers: { text: string; isCorrect: boolean }[] }[];
+  }) =>
+    api
+      .post<{ message: string; count: number }>('/admin/exam-questions/import', payload)
+      .then((r) => r.data),
+
   updateExamQuestion: (
     id: string,
     payload: {

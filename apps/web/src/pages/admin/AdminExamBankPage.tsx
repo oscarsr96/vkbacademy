@@ -360,9 +360,20 @@ export default function AdminExamBankPage() {
   const [activeTab, setActiveTab] = useState<'questions' | 'history'>('questions');
   const [showNewModal, setShowNewModal] = useState(false);
   const [showIaModal, setShowIaModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<AdminExamQuestion | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
+  const [importJson, setImportJson] = useState('');
+  const [importError, setImportError] = useState('');
+  const [importToast, setImportToast] = useState('');
+
+  const qc = useQueryClient();
+  const importMut = useMutation({
+    mutationFn: (payload: { questions: { text: string; answers: { text: string; isCorrect: boolean }[] }[] }) =>
+      adminApi.importExamQuestions({ courseId, moduleId, ...payload }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'exam-questions', courseId ?? moduleId] }),
+  });
 
   const { questions, attempts, createMut, generateMut, updateMut, deleteMut } = useExamBank(
     courseId,
@@ -418,6 +429,41 @@ export default function AdminExamBankPage() {
   const handleDelete = async (id: string) => {
     await deleteMut.mutateAsync(id);
     setDeletingId(null);
+  };
+
+  const handleImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setImportError('');
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(importJson);
+    } catch {
+      setImportError('El JSON no es válido. Revisa la sintaxis.');
+      return;
+    }
+    const data = parsed as { questions?: unknown[] };
+    if (!Array.isArray(data?.questions)) {
+      setImportError('El JSON debe tener una propiedad "questions" con un array.');
+      return;
+    }
+    try {
+      const result = await importMut.mutateAsync({ questions: data.questions as { text: string; answers: { text: string; isCorrect: boolean }[] }[] });
+      setShowImportModal(false);
+      setImportJson('');
+      setImportToast(result.message);
+      setTimeout(() => setImportToast(''), 3500);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setImportError(msg ?? 'Error al importar las preguntas');
+    }
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { setImportJson((ev.target?.result as string) ?? ''); setImportError(''); };
+    reader.readAsText(file);
   };
 
   const questionList = questions.data ?? [];
@@ -533,16 +579,20 @@ export default function AdminExamBankPage() {
               {scopeLabel} · {questionList.length} preguntas · {attemptList.length} intentos registrados
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.625rem' }}>
+          <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' as const }}>
             <button
               className="btn btn-ghost"
-              style={{
-                border: '1px solid rgba(255,255,255,0.25)',
-                color: 'rgba(255,255,255,0.9)',
-              }}
+              style={{ border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.9)' }}
               onClick={() => { setFormError(''); setShowIaModal(true); }}
             >
               Generar con IA
+            </button>
+            <button
+              className="btn btn-ghost"
+              style={{ border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.9)' }}
+              onClick={() => { setImportError(''); setImportJson(''); setShowImportModal(true); }}
+            >
+              ⬆️ Importar JSON
             </button>
             <button
               className="btn btn-dark"
@@ -774,6 +824,90 @@ export default function AdminExamBankPage() {
           isLoading={generateMut.isPending}
           error={formError}
         />
+      )}
+
+      {/* Toast importación */}
+      {importToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          background: 'var(--color-primary)',
+          color: '#fff',
+          padding: '10px 20px',
+          borderRadius: 8,
+          fontWeight: 600,
+          zIndex: 200,
+          boxShadow: '0 4px 16px rgba(234,88,12,0.4)',
+        }}>
+          {importToast}
+        </div>
+      )}
+
+      {/* Modal: Importar JSON */}
+      {showImportModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', padding: '1.75rem', width: '100%', maxWidth: 560, boxShadow: 'var(--shadow-card)', border: '1px solid var(--color-border)' }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--color-text)' }}>
+              Importar preguntas desde JSON
+            </h2>
+            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '1.25rem' }}>
+              El JSON debe tener el formato: <code style={{ background: 'var(--color-bg)', padding: '1px 5px', borderRadius: 4, fontSize: '0.78rem' }}>{`{ "questions": [{ "text": "...", "answers": [{ "text": "...", "isCorrect": bool }] }] }`}</code>
+            </p>
+            <form onSubmit={handleImport}>
+              {/* Selector de archivo */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.4rem' }}>
+                  Subir archivo .json (opcional)
+                </label>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleImportFile}
+                  style={{ fontSize: '0.85rem', color: 'var(--color-text)' }}
+                />
+              </div>
+
+              {/* Textarea para pegar JSON */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.4rem' }}>
+                  O pega el JSON aquí
+                </label>
+                <textarea
+                  className="field field-dark"
+                  rows={10}
+                  value={importJson}
+                  onChange={(e) => { setImportJson(e.target.value); setImportError(''); }}
+                  placeholder={'{\n  "questions": [\n    {\n      "text": "¿Cuántos puntos vale un triple?",\n      "answers": [\n        { "text": "2", "isCorrect": false },\n        { "text": "3", "isCorrect": true },\n        { "text": "1", "isCorrect": false }\n      ]\n    }\n  ]\n}'}
+                  style={{ fontFamily: 'monospace', fontSize: '0.8rem', width: '100%', resize: 'vertical' }}
+                />
+              </div>
+
+              {importError && (
+                <p style={{ color: 'var(--color-error)', fontSize: '0.82rem', marginBottom: '1rem', padding: '0.5rem 0.75rem', background: 'rgba(239,68,68,0.1)', borderRadius: 6 }}>
+                  {importError}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => { setShowImportModal(false); setImportJson(''); setImportError(''); }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={importMut.isPending || !importJson.trim()}
+                >
+                  {importMut.isPending ? 'Importando...' : 'Importar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Confirmación de borrado */}

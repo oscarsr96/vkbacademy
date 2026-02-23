@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus, LessonType, Prisma, QuestionType, Role } from '@prisma/client';
 import { ImportCourseDto } from './dto/import-course.dto';
+import { ImportExamQuestionsDto } from './dto/import-exam-questions.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateModuleDto } from './dto/create-module.dto';
 import { UpdateModuleDto } from './dto/update-module.dto';
@@ -1108,6 +1109,51 @@ export class AdminService {
       bookings: { total: totalBookings, confirmed: confirmedBookings, pending: pendingBookings },
       enrollments: totalEnrollments,
       quizAttempts: totalQuizAttempts,
+    };
+  }
+
+  // ─── Importación de batería de examen desde JSON ─────────────────────────
+
+  async importExamQuestions(dto: ImportExamQuestionsDto) {
+    if (!dto.courseId && !dto.moduleId) {
+      throw new BadRequestException('Debes especificar courseId o moduleId');
+    }
+
+    // Calcular el order de partida (añadir tras las preguntas existentes)
+    const where = dto.courseId ? { courseId: dto.courseId } : { moduleId: dto.moduleId };
+    const lastQuestion = await this.prisma.examQuestion.findFirst({
+      where,
+      orderBy: { order: 'desc' },
+    });
+    let nextOrder = (lastQuestion?.order ?? 0) + 1;
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const results = [];
+      for (const q of dto.questions) {
+        const question = await tx.examQuestion.create({
+          data: {
+            text: q.text,
+            type: QuestionType.SINGLE,
+            order: nextOrder++,
+            courseId: dto.courseId ?? null,
+            moduleId: dto.moduleId ?? null,
+          },
+        });
+        await tx.examAnswer.createMany({
+          data: q.answers.map((a) => ({
+            text: a.text,
+            isCorrect: a.isCorrect,
+            questionId: question.id,
+          })),
+        });
+        results.push(question.id);
+      }
+      return results;
+    });
+
+    return {
+      message: `${created.length} pregunta${created.length !== 1 ? 's' : ''} importada${created.length !== 1 ? 's' : ''} correctamente`,
+      count: created.length,
     };
   }
 
