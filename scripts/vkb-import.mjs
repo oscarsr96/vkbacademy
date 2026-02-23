@@ -104,3 +104,7 @@ if (!importRes.ok) {
 
 console.log('✅  Importación completada:');
 console.log(JSON.stringify(result, null, 2));
+
+// Línea machine-readable para que los agentes puedan extraer el ID fácilmente
+if (result.course?.id)  console.log(`IMPORT_ID=${result.course.id}`);
+if (result.count != null) console.log(`IMPORT_COUNT=${result.count}`);
