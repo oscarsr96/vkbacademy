@@ -1,3 +1,6 @@
+# Scripts locales con credenciales
+.env.scripts
+
 # Dependencies
 node_modules/
 .pnpm-store/

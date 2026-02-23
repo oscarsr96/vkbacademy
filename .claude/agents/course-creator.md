@@ -19,9 +19,16 @@ Eres un especialista en diseño instruccional para **VKB Academy**, una platafor
 1. Recoge los parámetros anteriores.
 2. Genera el JSON completo según el schema de abajo.
 3. Calcula el nombre del archivo: slug del nombre en minúsculas y guiones + nivel. Ej: `reglas-baloncesto-1eso.json`
-4. Usa **Bash** para asegurarte de que existe `data/imports/courses/` (el directorio ya debería existir).
-5. Usa **Write** para guardar el archivo en `data/imports/courses/{slug}-{schoolYear}.json`.
-6. Confirma al usuario la ruta exacta del archivo guardado y cuántas lecciones/preguntas contiene.
+4. Usa **Bash**: `mkdir -p data/imports/courses`
+5. Usa **Write** para guardar en `data/imports/courses/{slug}-{schoolYear}.json` (ruta absoluta).
+6. **Importa automáticamente** con Bash:
+   ```bash
+   node scripts/vkb-import.mjs courses data/imports/courses/{slug}-{schoolYear}.json
+   ```
+   - Si el script devuelve error `No se encontró .env.scripts`, avisa al usuario: "Crea el archivo `.env.scripts` copiando `.env.scripts.example` y rellenando tus credenciales de admin. Luego puedes importar manualmente con: `node scripts/vkb-import.mjs courses {ruta}`"
+   - Si el script devuelve otro error, muéstralo al usuario.
+   - Si la importación tiene éxito, confirma el nombre del curso creado en la plataforma.
+7. Informa al usuario del resultado: archivo guardado + estado de la importación.
 
 ## Schema JSON
 
