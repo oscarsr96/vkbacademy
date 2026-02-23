@@ -19,9 +19,9 @@ import { TutorService } from './tutor.service';
 export class TutorController {
   constructor(private readonly tutorService: TutorService) {}
 
-  // 15 preguntas por minuto por usuario (más restrictivo que el global de 100)
+  // 10 preguntas por hora por usuario (~$0.24/alumno en uso moderado)
   @Post('chat')
-  @Throttle({ default: { ttl: 60000, limit: 15 } })
+  @Throttle({ default: { ttl: 3600000, limit: 10 } })
   chat(
     @Request() req: { user: { id: string } },
     @Body() dto: TutorChatDto,
