@@ -16,6 +16,9 @@ export * from './types/exam.types';
 // Tipos de certificados
 export * from './types/certificate.types';
 
+// Tipos del tutor virtual
+export * from './types/tutor.types';
+
 // Utilidades de API
 export * from './types/pagination.types';
 export * from './types/api.types';

@@ -67,6 +67,7 @@ model User {
   redemptions      Redemption[]
   examAttempts     ExamAttempt[]
   certificates     Certificate[]
+  tutorMessages    TutorMessage[]
 }
 
 model RefreshToken {
@@ -105,6 +106,7 @@ model Course {
   examQuestions ExamQuestion[] @relation("CourseExamQuestions")
   examAttempts  ExamAttempt[]  @relation("CourseExamAttempts")
   certificates  Certificate[]  @relation("CourseCertificates")
+  tutorMessages TutorMessage[] @relation("TutorMessageCourse")
 }
 
 // ─────────────────────────────────────────────────────────
@@ -157,9 +159,10 @@ model Lesson {
   youtubeId String?
   content   Json?
 
-  module   Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  quiz     Quiz?
-  progress UserProgress[]
+  module        Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  quiz          Quiz?
+  progress      UserProgress[]
+  tutorMessages TutorMessage[] @relation("TutorMessageLesson")
 
   @@index([moduleId, order])
 }
@@ -462,4 +465,24 @@ model ExamAttempt {
   @@index([userId])
   @@index([courseId])
   @@index([moduleId])
+}
+
+// ─────────────────────────────────────────────────────────
+// TUTOR VIRTUAL
+// ─────────────────────────────────────────────────────────
+
+model TutorMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   // 'user' | 'assistant'
+  content   String   @db.Text
+  courseId  String?
+  lessonId  String?
+  createdAt DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course? @relation("TutorMessageCourse", fields: [courseId], references: [id], onDelete: SetNull)
+  lesson Lesson? @relation("TutorMessageLesson", fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
 }

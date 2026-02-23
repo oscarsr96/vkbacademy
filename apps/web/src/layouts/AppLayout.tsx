@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { useLogout } from '../hooks/useAuth';
 import { Role } from '@vkbacademy/shared';
+import TutorWidget from '../components/TutorWidget';
 
 type NavLink = { to: string; label: string; end?: boolean; divider?: boolean };
 
@@ -163,6 +164,9 @@ export default function AppLayout() {
       <main className="app-main">
         <Outlet />
       </main>
+
+      {/* Tutor virtual — solo para STUDENT y TUTOR */}
+      {(user?.role === Role.STUDENT || user?.role === Role.TUTOR) && <TutorWidget />}
     </div>
   );
 }
