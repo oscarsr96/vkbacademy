@@ -1,0 +1,500 @@
+{
+  "name": "Matemáticas 1º ESO",
+  "schoolYear": "1eso",
+  "modules": [
+    {
+      "title": "Números naturales y operaciones",
+      "order": 1,
+      "lessons": [
+        {
+          "title": "Introducción a los números naturales",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Suma y resta de números naturales",
+          "type": "QUIZ",
+          "order": 2,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuánto es 347 + 256?",
+                "answers": [
+                  { "text": "593", "isCorrect": false },
+                  { "text": "603", "isCorrect": true },
+                  { "text": "613", "isCorrect": false },
+                  { "text": "600", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuánto es 500 - 138?",
+                "answers": [
+                  { "text": "362", "isCorrect": true },
+                  { "text": "372", "isCorrect": false },
+                  { "text": "352", "isCorrect": false },
+                  { "text": "382", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué propiedad cumple: 5 + 3 = 3 + 5?",
+                "answers": [
+                  { "text": "Asociativa", "isCorrect": false },
+                  { "text": "Conmutativa", "isCorrect": true },
+                  { "text": "Distributiva", "isCorrect": false },
+                  { "text": "Elemento neutro", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Multiplicación y división",
+          "type": "MATCH",
+          "order": 3,
+          "content": {
+            "pairs": [
+              { "left": "6 × 7", "right": "42" },
+              { "left": "8 × 9", "right": "72" },
+              { "left": "48 ÷ 6", "right": "8" },
+              { "left": "63 ÷ 9", "right": "7" },
+              { "left": "5 × 12", "right": "60" },
+              { "left": "84 ÷ 7", "right": "12" }
+            ]
+          }
+        },
+        {
+          "title": "Potencias y raíces cuadradas",
+          "type": "FILL_BLANK",
+          "order": 4,
+          "content": {
+            "template": "La {{potencia}} de 3 elevado a 2 es {{9}}. La raíz cuadrada de 16 es {{4}}. El cuadrado de 5 vale {{25}}.",
+            "distractors": ["16", "6", "8", "3", "12"]
+          }
+        },
+        {
+          "title": "Orden de operaciones (PEMDAS)",
+          "type": "EXERCISE",
+          "order": 5
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Cuál es el resultado de 24 ÷ 6 + 3 × 2?",
+          "answers": [
+            { "text": "10", "isCorrect": true },
+            { "text": "14", "isCorrect": false },
+            { "text": "9", "isCorrect": false },
+            { "text": "18", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cuánto vale 2³?",
+          "answers": [
+            { "text": "6", "isCorrect": false },
+            { "text": "8", "isCorrect": true },
+            { "text": "9", "isCorrect": false },
+            { "text": "5", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cuál es el múltiplo común de 4 y 6 más pequeño (mínimo común múltiplo)?",
+          "answers": [
+            { "text": "24", "isCorrect": false },
+            { "text": "12", "isCorrect": true },
+            { "text": "8", "isCorrect": false },
+            { "text": "18", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Números enteros y decimales",
+      "order": 2,
+      "lessons": [
+        {
+          "title": "Los números enteros y la recta numérica",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Operaciones con números enteros",
+          "type": "QUIZ",
+          "order": 2,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuánto es (-5) + 3?",
+                "answers": [
+                  { "text": "-8", "isCorrect": false },
+                  { "text": "2", "isCorrect": false },
+                  { "text": "-2", "isCorrect": true },
+                  { "text": "8", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuánto es (-4) × (-3)?",
+                "answers": [
+                  { "text": "-12", "isCorrect": false },
+                  { "text": "-7", "isCorrect": false },
+                  { "text": "7", "isCorrect": false },
+                  { "text": "12", "isCorrect": true }
+                ]
+              },
+              {
+                "text": "¿Cuál de estos números es el mayor? -10, -3, 0, -7",
+                "answers": [
+                  { "text": "-10", "isCorrect": false },
+                  { "text": "-7", "isCorrect": false },
+                  { "text": "-3", "isCorrect": false },
+                  { "text": "0", "isCorrect": true }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Ordenar números enteros en la recta",
+          "type": "SORT",
+          "order": 3,
+          "content": {
+            "prompt": "Ordena los siguientes números enteros de menor a mayor:",
+            "items": [
+              { "text": "-8", "correctOrder": 1 },
+              { "text": "-3", "correctOrder": 2 },
+              { "text": "0", "correctOrder": 3 },
+              { "text": "2", "correctOrder": 4 },
+              { "text": "5", "correctOrder": 5 },
+              { "text": "11", "correctOrder": 6 }
+            ]
+          }
+        },
+        {
+          "title": "Números decimales: suma y resta",
+          "type": "FILL_BLANK",
+          "order": 4,
+          "content": {
+            "template": "La suma de 3,5 + 2,7 es {{6,2}}. La resta de 5,0 - 1,8 es {{3,2}}. El número 0,75 se lee como cero coma {{setenta y cinco}}.",
+            "distractors": ["6,5", "3,5", "cincuenta", "noventa", "4,8"]
+          }
+        },
+        {
+          "title": "Multiplicación y división de decimales",
+          "type": "EXERCISE",
+          "order": 5
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Cuánto es (-6) + (-4)?",
+          "answers": [
+            { "text": "10", "isCorrect": false },
+            { "text": "-10", "isCorrect": true },
+            { "text": "-2", "isCorrect": false },
+            { "text": "2", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cuánto es 2,4 × 3?",
+          "answers": [
+            { "text": "6,4", "isCorrect": false },
+            { "text": "7,2", "isCorrect": true },
+            { "text": "7,4", "isCorrect": false },
+            { "text": "6,2", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cuál es el valor absoluto de -9?",
+          "answers": [
+            { "text": "-9", "isCorrect": false },
+            { "text": "9", "isCorrect": true },
+            { "text": "0", "isCorrect": false },
+            { "text": "81", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Fracciones y proporcionalidad",
+      "order": 3,
+      "lessons": [
+        {
+          "title": "Introducción a las fracciones",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Operaciones con fracciones",
+          "type": "QUIZ",
+          "order": 2,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuánto es 1/2 + 1/4?",
+                "answers": [
+                  { "text": "2/6", "isCorrect": false },
+                  { "text": "3/4", "isCorrect": true },
+                  { "text": "1/4", "isCorrect": false },
+                  { "text": "2/4", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuál es la fracción equivalente a 2/3?",
+                "answers": [
+                  { "text": "3/4", "isCorrect": false },
+                  { "text": "6/9", "isCorrect": true },
+                  { "text": "4/9", "isCorrect": false },
+                  { "text": "2/5", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuánto es 3/4 de 20?",
+                "answers": [
+                  { "text": "12", "isCorrect": false },
+                  { "text": "18", "isCorrect": false },
+                  { "text": "15", "isCorrect": true },
+                  { "text": "10", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Tipos de fracciones",
+          "type": "MATCH",
+          "order": 3,
+          "content": {
+            "pairs": [
+              { "left": "Fracción propia", "right": "Numerador < denominador" },
+              { "left": "Fracción impropia", "right": "Numerador > denominador" },
+              { "left": "Número mixto", "right": "Parte entera + fracción propia" },
+              { "left": "2/7", "right": "Ejemplo de fracción propia" },
+              { "left": "9/4", "right": "Ejemplo de fracción impropia" },
+              { "left": "1/2", "right": "Fracción equivalente a 0,5" }
+            ]
+          }
+        },
+        {
+          "title": "Regla de tres y proporcionalidad",
+          "type": "SORT",
+          "order": 4,
+          "content": {
+            "prompt": "Ordena los pasos para resolver una regla de tres directa: Si 3 kg cuestan 6 euros, ¿cuánto cuestan 7 kg?",
+            "items": [
+              { "text": "Identificar las magnitudes proporcionales (kg y euros)", "correctOrder": 1 },
+              { "text": "Plantear la proporción: 3/6 = 7/x", "correctOrder": 2 },
+              { "text": "Multiplicar en cruz: 3·x = 6·7", "correctOrder": 3 },
+              { "text": "Calcular: 3x = 42", "correctOrder": 4 },
+              { "text": "Despejar x: x = 14", "correctOrder": 5 }
+            ]
+          }
+        },
+        {
+          "title": "Porcentajes",
+          "type": "FILL_BLANK",
+          "order": 5,
+          "content": {
+            "template": "El {{25}}% de 200 es 50. El 10% de 350 es {{35}}. Para calcular el 15% de 80, multiplico por {{0,15}}.",
+            "distractors": ["20", "30", "0,10", "50", "40"]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Cuánto es 2/5 + 1/5?",
+          "answers": [
+            { "text": "3/10", "isCorrect": false },
+            { "text": "3/5", "isCorrect": true },
+            { "text": "2/5", "isCorrect": false },
+            { "text": "1/5", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Si 4 lapiceros cuestan 2 euros, ¿cuánto cuestan 10 lapiceros?",
+          "answers": [
+            { "text": "4 euros", "isCorrect": false },
+            { "text": "5 euros", "isCorrect": true },
+            { "text": "8 euros", "isCorrect": false },
+            { "text": "6 euros", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cuál es el 20% de 150?",
+          "answers": [
+            { "text": "25", "isCorrect": false },
+            { "text": "30", "isCorrect": true },
+            { "text": "20", "isCorrect": false },
+            { "text": "35", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Geometría y medida",
+      "order": 4,
+      "lessons": [
+        {
+          "title": "Figuras geométricas básicas",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Perímetro y área de figuras planas",
+          "type": "QUIZ",
+          "order": 2,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuál es el área de un rectángulo de base 8 cm y altura 5 cm?",
+                "answers": [
+                  { "text": "13 cm²", "isCorrect": false },
+                  { "text": "26 cm²", "isCorrect": false },
+                  { "text": "40 cm²", "isCorrect": true },
+                  { "text": "45 cm²", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cómo se calcula el área de un triángulo?",
+                "answers": [
+                  { "text": "base × altura", "isCorrect": false },
+                  { "text": "(base × altura) / 2", "isCorrect": true },
+                  { "text": "base + altura", "isCorrect": false },
+                  { "text": "base² + altura²", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuál es el perímetro de un cuadrado de lado 6 cm?",
+                "answers": [
+                  { "text": "12 cm", "isCorrect": false },
+                  { "text": "36 cm", "isCorrect": false },
+                  { "text": "18 cm", "isCorrect": false },
+                  { "text": "24 cm", "isCorrect": true }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Clasificación de triángulos",
+          "type": "MATCH",
+          "order": 3,
+          "content": {
+            "pairs": [
+              { "left": "Triángulo equilátero", "right": "3 lados iguales" },
+              { "left": "Triángulo isósceles", "right": "2 lados iguales" },
+              { "left": "Triángulo escaleno", "right": "3 lados distintos" },
+              { "left": "Triángulo rectángulo", "right": "Tiene un ángulo de 90°" },
+              { "left": "Triángulo obtusángulo", "right": "Tiene un ángulo mayor de 90°" },
+              { "left": "Triángulo acutángulo", "right": "Todos sus ángulos son menores de 90°" }
+            ]
+          }
+        },
+        {
+          "title": "Unidades de medida y conversión",
+          "type": "SORT",
+          "order": 4,
+          "content": {
+            "prompt": "Ordena las unidades de longitud de mayor a menor:",
+            "items": [
+              { "text": "kilómetro (km)", "correctOrder": 1 },
+              { "text": "hectómetro (hm)", "correctOrder": 2 },
+              { "text": "decámetro (dam)", "correctOrder": 3 },
+              { "text": "metro (m)", "correctOrder": 4 },
+              { "text": "decímetro (dm)", "correctOrder": 5 },
+              { "text": "centímetro (cm)", "correctOrder": 6 },
+              { "text": "milímetro (mm)", "correctOrder": 7 }
+            ]
+          }
+        },
+        {
+          "title": "El Teorema de Pitágoras",
+          "type": "FILL_BLANK",
+          "order": 5,
+          "content": {
+            "template": "En un triángulo rectángulo, la {{hipotenusa}} es el lado opuesto al ángulo recto. El teorema dice que a² + b² = {{c²}}. Si los catetos miden 3 y 4, la hipotenusa mide {{5}}.",
+            "distractors": ["cateto", "7", "c", "6", "área"]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Cuál es el área de un cuadrado de lado 9 cm?",
+          "answers": [
+            { "text": "18 cm²", "isCorrect": false },
+            { "text": "36 cm²", "isCorrect": false },
+            { "text": "81 cm²", "isCorrect": true },
+            { "text": "72 cm²", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Un triángulo tiene catetos de 5 cm y 12 cm. ¿Cuánto mide la hipotenusa?",
+          "answers": [
+            { "text": "13 cm", "isCorrect": true },
+            { "text": "17 cm", "isCorrect": false },
+            { "text": "11 cm", "isCorrect": false },
+            { "text": "15 cm", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cuántos grados suman los ángulos interiores de un triángulo?",
+          "answers": [
+            { "text": "90°", "isCorrect": false },
+            { "text": "270°", "isCorrect": false },
+            { "text": "180°", "isCorrect": true },
+            { "text": "360°", "isCorrect": false }
+          ]
+        }
+      ]
+    }
+  ],
+  "examQuestions": [
+    {
+      "text": "¿Cuánto es 15² (15 al cuadrado)?",
+      "answers": [
+        { "text": "30", "isCorrect": false },
+        { "text": "225", "isCorrect": true },
+        { "text": "125", "isCorrect": false },
+        { "text": "200", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "¿Cuánto es (-3) - (-7)?",
+      "answers": [
+        { "text": "-10", "isCorrect": false },
+        { "text": "-4", "isCorrect": false },
+        { "text": "4", "isCorrect": true },
+        { "text": "10", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "¿Cuánto es 3/4 × 8?",
+      "answers": [
+        { "text": "6", "isCorrect": true },
+        { "text": "8", "isCorrect": false },
+        { "text": "4", "isCorrect": false },
+        { "text": "24", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "¿Cuánto mide el radio de una circunferencia de diámetro 14 cm?",
+      "answers": [
+        { "text": "14 cm", "isCorrect": false },
+        { "text": "28 cm", "isCorrect": false },
+        { "text": "7 cm", "isCorrect": true },
+        { "text": "3,5 cm", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "¿Cuánto es 40% de 250?",
+      "answers": [
+        { "text": "80", "isCorrect": false },
+        { "text": "100", "isCorrect": true },
+        { "text": "120", "isCorrect": false },
+        { "text": "90", "isCorrect": false }
+      ]
+    }
+  ]
+}
