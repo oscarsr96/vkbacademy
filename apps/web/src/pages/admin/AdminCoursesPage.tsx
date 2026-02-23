@@ -7,6 +7,7 @@ import {
   useGenerateCourse,
   useDeleteCourse,
   useUpdateCourse,
+  useImportCourse,
   useSchoolYears,
 } from '../../hooks/useAdminCourses';
 
@@ -17,7 +18,7 @@ const SUBJECTS = [
   'Rebote', 'Táctica', 'Preparación Física',
 ];
 
-type Tab = 'manual' | 'ia';
+type Tab = 'manual' | 'ia' | 'import';
 
 interface NewCourseForm {
   title: string;
@@ -52,6 +53,10 @@ export default function AdminCoursesPage() {
   const [newForm, setNewForm] = useState<NewCourseForm>({ title: '', description: '', schoolYearId: '', subject: '' });
   const [iaName, setIaName] = useState('');
   const [iaSchoolYearId, setIaSchoolYearId] = useState('');
+
+  // Estado importación JSON
+  const [importJson, setImportJson] = useState('');
+  const [importError, setImportError] = useState('');
   const [editForm, setEditForm] = useState<EditCourseForm>({
     title: '',
     description: '',
@@ -73,6 +78,7 @@ export default function AdminCoursesPage() {
   const { data: schoolYears = [] } = useSchoolYears();
   const createMutation = useCreateCourse();
   const generateMutation = useGenerateCourse();
+  const importMutation = useImportCourse();
   const deleteMutation = useDeleteCourse();
   const updateMutation = useUpdateCourse();
 
@@ -169,6 +175,39 @@ export default function AdminCoursesPage() {
     } catch {
       showToast('Error al eliminar el curso', 'err');
     }
+  }
+
+  // ── Handler importar JSON ────────────────────────────────────────────────
+  async function handleImport(e: React.FormEvent) {
+    e.preventDefault();
+    setImportError('');
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(importJson);
+    } catch {
+      setImportError('El JSON no es válido. Revisa la sintaxis.');
+      return;
+    }
+    try {
+      const result = await importMutation.mutateAsync(parsed);
+      setShowNewModal(false);
+      setImportJson('');
+      showToast(result.message);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setImportError(msg ?? 'Error al importar el curso');
+    }
+  }
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setImportJson((ev.target?.result as string) ?? '');
+      setImportError('');
+    };
+    reader.readAsText(file);
   }
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -320,6 +359,12 @@ export default function AdminCoursesPage() {
               >
                 Generar con IA
               </button>
+              <button
+                style={{ ...s.tab, ...(newTab === 'import' ? s.tabActive : {}) }}
+                onClick={() => { setNewTab('import'); setImportError(''); }}
+              >
+                ⬆️ Importar JSON
+              </button>
             </div>
 
             {newTab === 'manual' ? (
@@ -371,7 +416,7 @@ export default function AdminCoursesPage() {
                   {createMutation.isPending ? 'Creando...' : 'Crear curso'}
                 </button>
               </form>
-            ) : (
+            ) : newTab === 'ia' ? (
               <form onSubmit={(e) => void handleGenerateIA(e)} style={s.form}>
                 <div className="field">
                   <label>Nombre del curso</label>
@@ -406,6 +451,56 @@ export default function AdminCoursesPage() {
                 {generateMutation.isPending && (
                   <p style={s.hint}>Esto puede tardar unos segundos.</p>
                 )}
+              </form>
+            ) : (
+              /* ── Tab: Importar JSON ── */
+              <form onSubmit={(e) => void handleImport(e)} style={s.form}>
+                <p style={s.hint}>
+                  Sube un archivo <code>.json</code> generado con Claude o pégalo directamente.{' '}
+                  <a href="#" style={{ color: 'var(--color-primary)' }} onClick={(e) => { e.preventDefault(); setImportJson(EXAMPLE_JSON); setImportError(''); }}>
+                    Ver ejemplo
+                  </a>
+                </p>
+
+                {/* Selector de archivo */}
+                <div style={s.fileZone}>
+                  <label style={s.fileLabel}>
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      style={{ display: 'none' }}
+                      onChange={handleFileUpload}
+                    />
+                    <span style={s.fileBtn}>📂 Seleccionar archivo .json</span>
+                  </label>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>o pega el JSON abajo</span>
+                </div>
+
+                {/* Textarea JSON */}
+                <div className="field">
+                  <label>JSON del curso</label>
+                  <textarea
+                    required
+                    style={{ height: 180, resize: 'vertical' as const, fontFamily: 'monospace', fontSize: '0.8rem' }}
+                    placeholder={'{\n  "name": "...",\n  "schoolYear": "1eso",\n  "modules": [...]\n}'}
+                    value={importJson}
+                    onChange={(e) => { setImportJson(e.target.value); setImportError(''); }}
+                  />
+                </div>
+
+                {/* Error de validación */}
+                {importError && (
+                  <div style={s.importError}>{importError}</div>
+                )}
+
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-full"
+                  style={{ marginTop: 4 }}
+                  disabled={importMutation.isPending || !importJson.trim()}
+                >
+                  {importMutation.isPending ? 'Importando...' : 'Importar curso'}
+                </button>
               </form>
             )}
           </div>
@@ -574,4 +669,87 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 8, fontWeight: 600, fontSize: '0.9rem',
     boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: 200,
   },
+
+  // Importación
+  fileZone: {
+    display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
+    gap: 6, padding: '14px 16px',
+    border: '2px dashed var(--color-border)', borderRadius: 10,
+    background: 'rgba(234,88,12,0.03)',
+    cursor: 'pointer',
+  },
+  fileLabel: { cursor: 'pointer' },
+  fileBtn: {
+    display: 'inline-block', padding: '7px 16px',
+    background: 'rgba(234,88,12,0.08)',
+    border: '1px solid rgba(234,88,12,0.25)',
+    borderRadius: 8, color: 'var(--color-primary)',
+    fontWeight: 600, fontSize: '0.875rem',
+    cursor: 'pointer',
+  },
+  importError: {
+    background: 'rgba(220,38,38,0.08)',
+    border: '1px solid rgba(220,38,38,0.25)',
+    color: '#dc2626', borderRadius: 8,
+    padding: '10px 14px', fontSize: '0.875rem',
+  },
 };
+
+// ─── JSON de ejemplo (enlace "Ver ejemplo") ───────────────────────────────────
+
+const EXAMPLE_JSON = JSON.stringify({
+  name: "Fundamentos del Baloncesto",
+  schoolYear: "1eso",
+  modules: [
+    {
+      title: "Introducción al juego",
+      order: 1,
+      lessons: [
+        {
+          title: "Historia y reglas básicas",
+          type: "VIDEO",
+          order: 1,
+          youtubeId: "dQw4w9WgXcQ"
+        },
+        {
+          title: "¿Cuántos jugadores hay en cancha?",
+          type: "FILL_BLANK",
+          order: 2,
+          content: {
+            template: "Cada equipo tiene {{5}} jugadores en cancha. El partido se divide en {{4}} cuartos.",
+            distractors: ["3", "6", "2", "8"]
+          }
+        },
+        {
+          title: "Test del módulo",
+          type: "QUIZ",
+          order: 3,
+          quiz: {
+            questions: [
+              {
+                text: "¿Cuántos jugadores hay por equipo en cancha?",
+                answers: [
+                  { text: "5", isCorrect: true },
+                  { text: "6", isCorrect: false },
+                  { text: "4", isCorrect: false },
+                  { text: "7", isCorrect: false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      examQuestions: [
+        {
+          text: "¿Cuántos cuartos tiene un partido de baloncesto?",
+          answers: [
+            { text: "4", isCorrect: true },
+            { text: "2", isCorrect: false },
+            { text: "3", isCorrect: false },
+            { text: "5", isCorrect: false }
+          ]
+        }
+      ]
+    }
+  ]
+}, null, 2);

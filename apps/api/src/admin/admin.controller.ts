@@ -38,6 +38,7 @@ import { CreateExamQuestionDto, UpdateExamQuestionDto } from './dto/create-exam-
 import { GenerateExamQuestionsDto } from './dto/generate-exam-questions.dto';
 import { IssueCertificateDto } from './dto/issue-certificate.dto';
 import { EnrollUserDto } from './dto/enroll-user.dto';
+import { ImportCourseDto } from './dto/import-course.dto';
 import { CertificatesService } from '../certificates/certificates.service';
 
 @Controller('admin')
@@ -144,6 +145,11 @@ export class AdminController {
   @Post('courses/generate')
   generateCourse(@Body() dto: GenerateCourseDto) {
     return this.courseGeneratorService.generateAndCreate(dto.name, dto.schoolYearId);
+  }
+
+  @Post('courses/import')
+  importCourse(@Body() dto: ImportCourseDto) {
+    return this.adminService.importCourse(dto);
   }
 
   @Delete('courses/:id')

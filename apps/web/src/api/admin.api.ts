@@ -415,6 +415,9 @@ export const adminApi = {
   generateCourse: (payload: GenerateCoursePayload) =>
     api.post<Course>('/admin/courses/generate', payload).then((r) => r.data),
 
+  importCourse: (payload: unknown) =>
+    api.post<{ message: string; course: Course }>('/admin/courses/import', payload).then((r) => r.data),
+
   deleteCourse: (id: string) =>
     api.delete<{ message: string }>(`/admin/courses/${id}`).then((r) => r.data),
 

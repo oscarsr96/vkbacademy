@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { BookingStatus, LessonType, Prisma, Role } from '@prisma/client';
+import { BookingStatus, LessonType, Prisma, QuestionType, Role } from '@prisma/client';
+import { ImportCourseDto } from './dto/import-course.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateModuleDto } from './dto/create-module.dto';
 import { UpdateModuleDto } from './dto/update-module.dto';
@@ -1107,6 +1108,152 @@ export class AdminService {
       bookings: { total: totalBookings, confirmed: confirmedBookings, pending: pendingBookings },
       enrollments: totalEnrollments,
       quizAttempts: totalQuizAttempts,
+    };
+  }
+
+  // ─── Importación de curso desde JSON ─────────────────────────────────────
+
+  async importCourse(dto: ImportCourseDto) {
+    // Resolver el schoolYear por nombre ("1eso", "2eso", etc.)
+    const schoolYear = await this.prisma.schoolYear.findFirst({
+      where: { name: dto.schoolYear },
+    });
+    if (!schoolYear) {
+      throw new BadRequestException(
+        `Nivel educativo "${dto.schoolYear}" no encontrado. Valores válidos: 1eso, 2eso, 3eso, 4eso, 1bach, 2bach`,
+      );
+    }
+
+    // Crear todo en una transacción para garantizar atomicidad
+    const course = await this.prisma.$transaction(async (tx) => {
+      // 1. Crear el curso
+      const newCourse = await tx.course.create({
+        data: {
+          title: dto.name,
+          schoolYearId: schoolYear.id,
+        },
+      });
+
+      // 2. Preguntas de examen a nivel de curso (si las hay)
+      if (dto.examQuestions?.length) {
+        await tx.examQuestion.createMany({
+          data: dto.examQuestions.map((q, i) => ({
+            courseId: newCourse.id,
+            text: q.text,
+            type: QuestionType.SINGLE,
+            order: i + 1,
+          })),
+        });
+
+        // Recuperar los IDs creados para asociarles las respuestas
+        const createdExamQs = await tx.examQuestion.findMany({
+          where: { courseId: newCourse.id },
+          orderBy: { order: 'asc' },
+        });
+
+        for (let i = 0; i < dto.examQuestions.length; i++) {
+          await tx.examAnswer.createMany({
+            data: dto.examQuestions[i].answers.map((a) => ({
+              questionId: createdExamQs[i].id,
+              text: a.text,
+              isCorrect: a.isCorrect,
+            })),
+          });
+        }
+      }
+
+      // 3. Módulos
+      for (const modDto of dto.modules) {
+        const newModule = await tx.module.create({
+          data: {
+            title: modDto.title,
+            order: modDto.order,
+            courseId: newCourse.id,
+          },
+        });
+
+        // 3a. Preguntas de examen del módulo
+        if (modDto.examQuestions?.length) {
+          await tx.examQuestion.createMany({
+            data: modDto.examQuestions.map((q, i) => ({
+              moduleId: newModule.id,
+              text: q.text,
+              type: QuestionType.SINGLE,
+              order: i + 1,
+            })),
+          });
+
+          const createdModExamQs = await tx.examQuestion.findMany({
+            where: { moduleId: newModule.id },
+            orderBy: { order: 'asc' },
+          });
+
+          for (let i = 0; i < modDto.examQuestions.length; i++) {
+            await tx.examAnswer.createMany({
+              data: modDto.examQuestions[i].answers.map((a) => ({
+                questionId: createdModExamQs[i].id,
+                text: a.text,
+                isCorrect: a.isCorrect,
+              })),
+            });
+          }
+        }
+
+        // 3b. Lecciones
+        for (const lesDto of modDto.lessons) {
+          const newLesson = await tx.lesson.create({
+            data: {
+              title: lesDto.title,
+              type: lesDto.type,
+              order: lesDto.order,
+              moduleId: newModule.id,
+              youtubeId: lesDto.youtubeId ?? null,
+              content: (lesDto.content as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+            },
+          });
+
+          // 3c. Quiz (solo si type === QUIZ y hay preguntas)
+          if (lesDto.type === LessonType.QUIZ && lesDto.quiz?.questions?.length) {
+            const newQuiz = await tx.quiz.create({
+              data: { lessonId: newLesson.id },
+            });
+
+            for (let qi = 0; qi < lesDto.quiz.questions.length; qi++) {
+              const qDto = lesDto.quiz.questions[qi];
+              const newQuestion = await tx.question.create({
+                data: {
+                  text: qDto.text,
+                  type: QuestionType.SINGLE,
+                  order: qi + 1,
+                  quizId: newQuiz.id,
+                },
+              });
+
+              await tx.answer.createMany({
+                data: qDto.answers.map((a) => ({
+                  text: a.text,
+                  isCorrect: a.isCorrect,
+                  questionId: newQuestion.id,
+                })),
+              });
+            }
+          }
+        }
+      }
+
+      // Devolver el curso con estructura completa
+      return tx.course.findUnique({
+        where: { id: newCourse.id },
+        include: {
+          schoolYear: true,
+          _count: { select: { modules: true } },
+        },
+      });
+    });
+
+    return {
+      message: `Curso "${dto.name}" importado correctamente`,
+      course,
     };
   }
 }

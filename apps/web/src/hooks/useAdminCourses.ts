@@ -49,6 +49,16 @@ export function useUpdateCourse() {
   });
 }
 
+export function useImportCourse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: unknown) => adminApi.importCourse(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+    },
+  });
+}
+
 export function useSchoolYears() {
   return useQuery({
     queryKey: ['school-years'],
