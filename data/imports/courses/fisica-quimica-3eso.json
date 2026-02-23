@@ -1,0 +1,1904 @@
+{
+  "name": "Física y Química — 3º ESO",
+  "schoolYear": "3eso",
+  "modules": [
+    {
+      "title": "La materia y sus propiedades",
+      "order": 1,
+      "lessons": [
+        {
+          "title": "Propiedades generales y específicas de la materia",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Estados de agregación de la materia",
+          "type": "SORT",
+          "order": 2,
+          "content": {
+            "prompt": "Ordena los cambios de estado de la materia de menor a mayor temperatura de transición",
+            "items": [
+              { "text": "Condensación (gas → líquido)", "correctOrder": 4 },
+              { "text": "Solidificación (líquido → sólido)", "correctOrder": 3 },
+              { "text": "Fusión (sólido → líquido)", "correctOrder": 2 },
+              { "text": "Sublimación (sólido → gas)", "correctOrder": 5 },
+              { "text": "Vaporización (líquido → gas)", "correctOrder": 1 }
+            ]
+          }
+        },
+        {
+          "title": "Mezclas homogéneas y heterogéneas",
+          "type": "MATCH",
+          "order": 3,
+          "content": {
+            "pairs": [
+              { "left": "Agua con sal", "right": "Mezcla homogénea" },
+              { "left": "Agua con aceite", "right": "Mezcla heterogénea" },
+              { "left": "Aire", "right": "Mezcla homogénea" },
+              { "left": "Granito", "right": "Mezcla heterogénea" },
+              { "left": "Agua con azúcar", "right": "Mezcla homogénea" },
+              { "left": "Arena y limaduras de hierro", "right": "Mezcla heterogénea" }
+            ]
+          }
+        },
+        {
+          "title": "Técnicas de separación de mezclas",
+          "type": "FILL_BLANK",
+          "order": 4,
+          "content": {
+            "template": "La {{filtración}} se usa para separar sólidos de líquidos. La {{destilación}} separa líquidos con distinto punto de ebullición. La {{decantación}} aprovecha la diferencia de {{densidad}} entre fases.",
+            "distractors": ["evaporación", "cristalización", "masa", "volumen"]
+          }
+        },
+        {
+          "title": "Test: Propiedades y estados de la materia",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuál de las siguientes es una propiedad específica de la materia?",
+                "answers": [
+                  { "text": "Masa", "isCorrect": false },
+                  { "text": "Volumen", "isCorrect": false },
+                  { "text": "Densidad", "isCorrect": true },
+                  { "text": "Peso", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "El paso de estado gaseoso a líquido se denomina:",
+                "answers": [
+                  { "text": "Fusión", "isCorrect": false },
+                  { "text": "Evaporación", "isCorrect": false },
+                  { "text": "Condensación", "isCorrect": true },
+                  { "text": "Solidificación", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué técnica se utiliza para separar mezclas de líquidos con diferente punto de ebullición?",
+                "answers": [
+                  { "text": "Filtración", "isCorrect": false },
+                  { "text": "Decantación", "isCorrect": false },
+                  { "text": "Destilación", "isCorrect": true },
+                  { "text": "Cristalización", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Una disolución de agua y alcohol es un ejemplo de:",
+                "answers": [
+                  { "text": "Mezcla heterogénea", "isCorrect": false },
+                  { "text": "Sustancia pura", "isCorrect": false },
+                  { "text": "Mezcla homogénea", "isCorrect": true },
+                  { "text": "Compuesto", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Cuál es la diferencia entre una mezcla homogénea y una heterogénea?",
+          "answers": [
+            { "text": "En la homogénea los componentes no se distinguen; en la heterogénea sí", "isCorrect": true },
+            { "text": "En la homogénea los componentes se distinguen; en la heterogénea no", "isCorrect": false },
+            { "text": "La homogénea tiene más componentes que la heterogénea", "isCorrect": false },
+            { "text": "No hay diferencia entre ambas", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué propiedad de la materia mide la cantidad de materia por unidad de volumen?",
+          "answers": [
+            { "text": "Masa", "isCorrect": false },
+            { "text": "Peso", "isCorrect": false },
+            { "text": "Densidad", "isCorrect": true },
+            { "text": "Temperatura de fusión", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "El proceso de filtración se aplica principalmente para separar:",
+          "answers": [
+            { "text": "Dos líquidos miscibles", "isCorrect": false },
+            { "text": "Un sólido de un líquido", "isCorrect": true },
+            { "text": "Dos gases", "isCorrect": false },
+            { "text": "Dos sólidos de distinto tamaño", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Estructura atómica",
+      "order": 2,
+      "lessons": [
+        {
+          "title": "Modelos atómicos históricos",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Partículas subatómicas: protones, neutrones y electrones",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "Protón", "right": "Carga positiva, en el núcleo" },
+              { "left": "Neutrón", "right": "Sin carga, en el núcleo" },
+              { "left": "Electrón", "right": "Carga negativa, en la corteza" },
+              { "left": "Número atómico (Z)", "right": "Número de protones" },
+              { "left": "Número másico (A)", "right": "Protones + neutrones" },
+              { "left": "Isótopo", "right": "Mismo Z, distinto A" }
+            ]
+          }
+        },
+        {
+          "title": "Configuración electrónica y niveles de energía",
+          "type": "SORT",
+          "order": 3,
+          "content": {
+            "prompt": "Ordena los niveles de energía del átomo de menor a mayor energía",
+            "items": [
+              { "text": "Nivel N (4ª capa)", "correctOrder": 4 },
+              { "text": "Nivel K (1ª capa)", "correctOrder": 1 },
+              { "text": "Nivel M (3ª capa)", "correctOrder": 3 },
+              { "text": "Nivel L (2ª capa)", "correctOrder": 2 }
+            ]
+          }
+        },
+        {
+          "title": "Isótopos y aplicaciones",
+          "type": "FILL_BLANK",
+          "order": 4,
+          "content": {
+            "template": "Los isótopos son átomos del mismo elemento con igual número de {{protones}} pero distinto número de {{neutrones}}. El {{carbono-14}} se usa en datación de fósiles. Los isótopos comparten las mismas propiedades {{químicas}}.",
+            "distractors": ["electrones", "oxígeno-18", "físicas", "mesones"]
+          }
+        },
+        {
+          "title": "Test: Estructura atómica",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Qué partícula subatómica tiene carga negativa?",
+                "answers": [
+                  { "text": "Protón", "isCorrect": false },
+                  { "text": "Neutrón", "isCorrect": false },
+                  { "text": "Electrón", "isCorrect": true },
+                  { "text": "Nucleón", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Un átomo de oxígeno tiene Z = 8 y A = 16. ¿Cuántos neutrones tiene?",
+                "answers": [
+                  { "text": "8", "isCorrect": true },
+                  { "text": "16", "isCorrect": false },
+                  { "text": "24", "isCorrect": false },
+                  { "text": "6", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué tienen en común los isótopos de un mismo elemento?",
+                "answers": [
+                  { "text": "El número másico", "isCorrect": false },
+                  { "text": "El número de neutrones", "isCorrect": false },
+                  { "text": "El número atómico", "isCorrect": true },
+                  { "text": "La masa atómica", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Según el modelo atómico de Bohr, los electrones se mueven en:",
+                "answers": [
+                  { "text": "Una nube difusa alrededor del núcleo", "isCorrect": false },
+                  { "text": "Órbitas circulares de energía fija", "isCorrect": true },
+                  { "text": "El núcleo junto a los protones", "isCorrect": false },
+                  { "text": "Posiciones aleatorias", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "El número atómico de un elemento indica:",
+                "answers": [
+                  { "text": "El número de neutrones en el núcleo", "isCorrect": false },
+                  { "text": "La masa del átomo en gramos", "isCorrect": false },
+                  { "text": "El número de protones en el núcleo", "isCorrect": true },
+                  { "text": "El número total de nucleones", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "Un átomo de cloro tiene Z = 17 y A = 35. ¿Cuántos neutrones posee?",
+          "answers": [
+            { "text": "17", "isCorrect": false },
+            { "text": "35", "isCorrect": false },
+            { "text": "18", "isCorrect": true },
+            { "text": "52", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué modelo atómico introdujo la idea de que los electrones ocupan niveles de energía discretos?",
+          "answers": [
+            { "text": "Modelo de Thomson", "isCorrect": false },
+            { "text": "Modelo de Bohr", "isCorrect": true },
+            { "text": "Modelo de Dalton", "isCorrect": false },
+            { "text": "Modelo de Rutherford", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Dos átomos son isótopos cuando tienen:",
+          "answers": [
+            { "text": "El mismo número de neutrones y distinto número de protones", "isCorrect": false },
+            { "text": "El mismo número de electrones y distinta masa", "isCorrect": false },
+            { "text": "El mismo número de protones y distinto número de neutrones", "isCorrect": true },
+            { "text": "La misma masa y el mismo número de neutrones", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "La tabla periódica",
+      "order": 3,
+      "lessons": [
+        {
+          "title": "Organización de la tabla periódica: períodos y grupos",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Familias químicas más importantes",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "Grupo 1 (IA)", "right": "Metales alcalinos" },
+              { "left": "Grupo 2 (IIA)", "right": "Metales alcalinotérreos" },
+              { "left": "Grupo 17 (VIIA)", "right": "Halógenos" },
+              { "left": "Grupo 18 (0)", "right": "Gases nobles" },
+              { "left": "Grupos 3-12", "right": "Metales de transición" },
+              { "left": "Grupo 16 (VIA)", "right": "Calcógenos" }
+            ]
+          }
+        },
+        {
+          "title": "Propiedades periódicas: electronegatividad y radio atómico",
+          "type": "SORT",
+          "order": 3,
+          "content": {
+            "prompt": "Ordena estos elementos del período 3 de mayor a menor electronegatividad (de izquierda a derecha en la tabla)",
+            "items": [
+              { "text": "Cl (Cloro, grupo 17)", "correctOrder": 1 },
+              { "text": "Na (Sodio, grupo 1)", "correctOrder": 4 },
+              { "text": "S (Azufre, grupo 16)", "correctOrder": 2 },
+              { "text": "Mg (Magnesio, grupo 2)", "correctOrder": 3 }
+            ]
+          }
+        },
+        {
+          "title": "Posición de los elementos en la tabla periódica",
+          "type": "FILL_BLANK",
+          "order": 4,
+          "content": {
+            "template": "En la tabla periódica, las filas horizontales se llaman {{períodos}} y las columnas verticales se llaman {{grupos}}. El número de período indica el número de {{capas}} electrónicas del átomo. Los elementos del mismo grupo tienen el mismo número de electrones en la capa {{de valencia}}.",
+            "distractors": ["elementos", "bloques", "nucleones", "exterior"]
+          }
+        },
+        {
+          "title": "Test: La tabla periódica",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿En qué grupo se encuentran los gases nobles?",
+                "answers": [
+                  { "text": "Grupo 1", "isCorrect": false },
+                  { "text": "Grupo 17", "isCorrect": false },
+                  { "text": "Grupo 18", "isCorrect": true },
+                  { "text": "Grupo 2", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué indica el período de un elemento en la tabla periódica?",
+                "answers": [
+                  { "text": "El número de protones del átomo", "isCorrect": false },
+                  { "text": "El número de capas electrónicas del átomo", "isCorrect": true },
+                  { "text": "El número de electrones de valencia", "isCorrect": false },
+                  { "text": "La masa atómica del elemento", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cómo varía el radio atómico a lo largo de un período, de izquierda a derecha?",
+                "answers": [
+                  { "text": "Aumenta", "isCorrect": false },
+                  { "text": "Permanece constante", "isCorrect": false },
+                  { "text": "Disminuye", "isCorrect": true },
+                  { "text": "Primero aumenta y luego disminuye", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿A qué familia química pertenece el flúor (F, grupo 17)?",
+          "answers": [
+            { "text": "Metales alcalinos", "isCorrect": false },
+            { "text": "Gases nobles", "isCorrect": false },
+            { "text": "Halógenos", "isCorrect": true },
+            { "text": "Calcógenos", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cómo varía la electronegatividad al bajar en un grupo de la tabla periódica?",
+          "answers": [
+            { "text": "Aumenta", "isCorrect": false },
+            { "text": "Disminuye", "isCorrect": true },
+            { "text": "Permanece constante", "isCorrect": false },
+            { "text": "Primero aumenta y luego disminuye", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Un elemento en el período 3 y grupo 2 tiene:",
+          "answers": [
+            { "text": "3 electrones de valencia y 2 capas", "isCorrect": false },
+            { "text": "2 electrones de valencia y 3 capas", "isCorrect": true },
+            { "text": "2 electrones de valencia y 2 capas", "isCorrect": false },
+            { "text": "3 electrones de valencia y 3 capas", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "El enlace químico",
+      "order": 4,
+      "lessons": [
+        {
+          "title": "Introducción al enlace químico: regla del octeto",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Tipos de enlace químico",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "Enlace iónico", "right": "Metal + no metal (transferencia de electrones)" },
+              { "left": "Enlace covalente", "right": "No metal + no metal (compartición de electrones)" },
+              { "left": "Enlace metálico", "right": "Metal + metal (nube de electrones)" },
+              { "left": "NaCl", "right": "Compuesto iónico típico" },
+              { "left": "H₂O", "right": "Compuesto covalente típico" },
+              { "left": "Hierro (Fe)", "right": "Enlace metálico" }
+            ]
+          }
+        },
+        {
+          "title": "Propiedades de los compuestos según su enlace",
+          "type": "SORT",
+          "order": 3,
+          "content": {
+            "prompt": "Ordena estos pasos para determinar el tipo de enlace de un compuesto",
+            "items": [
+              { "text": "Identificar los elementos que forman el compuesto", "correctOrder": 1 },
+              { "text": "Comprobar si son metales, no metales o ambos", "correctOrder": 2 },
+              { "text": "Aplicar la regla: metal+no metal → iónico; no metal+no metal → covalente", "correctOrder": 3 },
+              { "text": "Determinar las propiedades esperadas (punto de fusión, solubilidad...)", "correctOrder": 4 }
+            ]
+          }
+        },
+        {
+          "title": "Representación de Lewis de moléculas sencillas",
+          "type": "EXERCISE",
+          "order": 4
+        },
+        {
+          "title": "Test: Enlace químico",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Qué tipo de enlace se forma entre Na y Cl?",
+                "answers": [
+                  { "text": "Covalente polar", "isCorrect": false },
+                  { "text": "Metálico", "isCorrect": false },
+                  { "text": "Iónico", "isCorrect": true },
+                  { "text": "Covalente apolar", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuántos electrones comparten los átomos en un enlace doble?",
+                "answers": [
+                  { "text": "2", "isCorrect": false },
+                  { "text": "4", "isCorrect": true },
+                  { "text": "6", "isCorrect": false },
+                  { "text": "1", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Los compuestos iónicos, en general:",
+                "answers": [
+                  { "text": "Tienen bajo punto de fusión", "isCorrect": false },
+                  { "text": "No conducen la electricidad en ningún estado", "isCorrect": false },
+                  { "text": "Tienen alto punto de fusión y conducen en disolución", "isCorrect": true },
+                  { "text": "Son insolubles en agua", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "La regla del octeto establece que los átomos tienden a tener:",
+                "answers": [
+                  { "text": "8 protones en el núcleo", "isCorrect": false },
+                  { "text": "8 electrones en la última capa", "isCorrect": true },
+                  { "text": "8 neutrones en el núcleo", "isCorrect": false },
+                  { "text": "8 capas electrónicas", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Cuál de las siguientes sustancias presenta enlace covalente?",
+          "answers": [
+            { "text": "NaCl", "isCorrect": false },
+            { "text": "MgO", "isCorrect": false },
+            { "text": "H₂O", "isCorrect": true },
+            { "text": "KBr", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué característica distingue el enlace metálico de los demás tipos de enlace?",
+          "answers": [
+            { "text": "Los electrones son transferidos de un átomo a otro", "isCorrect": false },
+            { "text": "Los electrones se comparten en pares entre dos átomos", "isCorrect": false },
+            { "text": "Los electrones forman una nube deslocalizada entre todos los átomos", "isCorrect": true },
+            { "text": "No hay electrones implicados en el enlace", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Un elemento con configuración electrónica 2, 7 (7 electrones en la última capa) tenderá a:",
+          "answers": [
+            { "text": "Ceder un electrón formando un catión", "isCorrect": false },
+            { "text": "Ganar un electrón formando un anión", "isCorrect": true },
+            { "text": "Compartir siempre 4 electrones", "isCorrect": false },
+            { "text": "No formar ningún enlace", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Formulación y nomenclatura inorgánica",
+      "order": 5,
+      "lessons": [
+        {
+          "title": "Valencias y estados de oxidación",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Óxidos, hidróxidos y ácidos: fórmulas básicas",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "Na₂O", "right": "Óxido de sodio" },
+              { "left": "NaOH", "right": "Hidróxido de sodio" },
+              { "left": "HCl", "right": "Ácido clorhídrico" },
+              { "left": "H₂SO₄", "right": "Ácido sulfúrico" },
+              { "left": "CaCO₃", "right": "Carbonato de calcio" },
+              { "left": "Fe₂O₃", "right": "Óxido de hierro (III)" }
+            ]
+          }
+        },
+        {
+          "title": "Reglas de nomenclatura IUPAC para compuestos binarios",
+          "type": "FILL_BLANK",
+          "order": 3,
+          "content": {
+            "template": "Los óxidos se forman combinando un {{metal}} o no metal con el {{oxígeno}}. Los hidróxidos se obtienen combinando un óxido básico con {{agua}}. Los ácidos sin oxígeno se nombran con el prefijo {{ácido}} seguido del nombre del no metal con el sufijo -hídrico.",
+            "distractors": ["hidrógeno", "nitrógeno", "sal", "base"]
+          }
+        },
+        {
+          "title": "Práctica de formulación: escribe las fórmulas",
+          "type": "EXERCISE",
+          "order": 4
+        },
+        {
+          "title": "Test: Formulación inorgánica",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuál es la fórmula del hidróxido de calcio?",
+                "answers": [
+                  { "text": "CaOH", "isCorrect": false },
+                  { "text": "Ca(OH)₂", "isCorrect": true },
+                  { "text": "Ca₂OH", "isCorrect": false },
+                  { "text": "CaO₂H₂", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "El HNO₃ se denomina:",
+                "answers": [
+                  { "text": "Ácido nitroso", "isCorrect": false },
+                  { "text": "Nitrato de hidrógeno", "isCorrect": false },
+                  { "text": "Ácido nítrico", "isCorrect": true },
+                  { "text": "Óxido de nitrógeno hidratado", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuál es el nombre del compuesto Fe₂O₃?",
+                "answers": [
+                  { "text": "Óxido de hierro (II)", "isCorrect": false },
+                  { "text": "Óxido ferroso", "isCorrect": false },
+                  { "text": "Óxido de hierro (III)", "isCorrect": true },
+                  { "text": "Trióxido de dihierro", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "La fórmula del ácido sulfhídrico es:",
+                "answers": [
+                  { "text": "H₂SO₄", "isCorrect": false },
+                  { "text": "H₂S", "isCorrect": true },
+                  { "text": "H₂SO₃", "isCorrect": false },
+                  { "text": "HS", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Cuál es la fórmula del óxido de magnesio?",
+          "answers": [
+            { "text": "Mg₂O", "isCorrect": false },
+            { "text": "MgO₂", "isCorrect": false },
+            { "text": "MgO", "isCorrect": true },
+            { "text": "Mg₂O₃", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "El compuesto Cu(OH)₂ se denomina:",
+          "answers": [
+            { "text": "Hidróxido de cobre (I)", "isCorrect": false },
+            { "text": "Hidróxido de cobre (II)", "isCorrect": true },
+            { "text": "Óxido de cobre (II)", "isCorrect": false },
+            { "text": "Hidróxido cuproso", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué tipo de compuesto se forma al reaccionar un óxido básico con agua?",
+          "answers": [
+            { "text": "Un ácido", "isCorrect": false },
+            { "text": "Una sal", "isCorrect": false },
+            { "text": "Un hidróxido (base)", "isCorrect": true },
+            { "text": "Un óxido anfótero", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Las reacciones químicas",
+      "order": 6,
+      "lessons": [
+        {
+          "title": "Qué es una reacción química: reactivos y productos",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Tipos de reacciones químicas",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "Síntesis o adición", "right": "A + B → AB" },
+              { "left": "Descomposición", "right": "AB → A + B" },
+              { "left": "Sustitución simple", "right": "A + BC → AC + B" },
+              { "left": "Doble sustitución", "right": "AB + CD → AD + CB" },
+              { "left": "Combustión", "right": "Combustible + O₂ → CO₂ + H₂O" }
+            ]
+          }
+        },
+        {
+          "title": "Ajuste de ecuaciones químicas",
+          "type": "SORT",
+          "order": 3,
+          "content": {
+            "prompt": "Ordena los pasos para ajustar una ecuación química por tanteo",
+            "items": [
+              { "text": "Escribir la ecuación sin ajustar con reactivos y productos", "correctOrder": 1 },
+              { "text": "Contar los átomos de cada elemento en ambos lados", "correctOrder": 2 },
+              { "text": "Añadir coeficientes para igualar el número de átomos", "correctOrder": 3 },
+              { "text": "Verificar que todos los átomos están balanceados", "correctOrder": 4 },
+              { "text": "Simplificar los coeficientes si es posible", "correctOrder": 5 }
+            ]
+          }
+        },
+        {
+          "title": "Factores que influyen en la velocidad de reacción",
+          "type": "FILL_BLANK",
+          "order": 4,
+          "content": {
+            "template": "La velocidad de reacción aumenta al incrementar la {{temperatura}}. Dividir el sólido en partículas más pequeñas aumenta la {{superficie}} de contacto. Un {{catalizador}} acelera la reacción sin consumirse. Aumentar la {{concentración}} de reactivos también acelera la reacción.",
+            "distractors": ["presión", "inhibidor", "masa", "volumen"]
+          }
+        },
+        {
+          "title": "Test: Reacciones químicas",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "En la reacción H₂ + Cl₂ → 2HCl, ¿cuántos átomos de cloro aparecen en los productos?",
+                "answers": [
+                  { "text": "1", "isCorrect": false },
+                  { "text": "2", "isCorrect": true },
+                  { "text": "3", "isCorrect": false },
+                  { "text": "4", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Una reacción de combustión siempre produce:",
+                "answers": [
+                  { "text": "Solo CO₂", "isCorrect": false },
+                  { "text": "CO₂ y H₂O (en combustión completa)", "isCorrect": true },
+                  { "text": "Solo H₂O", "isCorrect": false },
+                  { "text": "O₂ y N₂", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué ley garantiza que una ecuación química debe estar ajustada?",
+                "answers": [
+                  { "text": "Ley de las proporciones definidas", "isCorrect": false },
+                  { "text": "Ley de conservación de la masa", "isCorrect": true },
+                  { "text": "Ley de los volúmenes de Gay-Lussac", "isCorrect": false },
+                  { "text": "Ley de Boyle-Mariotte", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Cuál de las siguientes es una reacción de descomposición?",
+          "answers": [
+            { "text": "N₂ + 3H₂ → 2NH₃", "isCorrect": false },
+            { "text": "2H₂O → 2H₂ + O₂", "isCorrect": true },
+            { "text": "HCl + NaOH → NaCl + H₂O", "isCorrect": false },
+            { "text": "Fe + S → FeS", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué afirma la ley de conservación de la masa?",
+          "answers": [
+            { "text": "La masa de los productos es mayor que la de los reactivos", "isCorrect": false },
+            { "text": "La masa total se conserva en una reacción química", "isCorrect": true },
+            { "text": "La masa de los reactivos es siempre mayor que la de los productos", "isCorrect": false },
+            { "text": "La energía se conserva pero no la masa", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué función tiene un catalizador en una reacción química?",
+          "answers": [
+            { "text": "Aumenta la temperatura de la reacción", "isCorrect": false },
+            { "text": "Aumenta la velocidad de reacción sin consumirse", "isCorrect": true },
+            { "text": "Proporciona más reactivos", "isCorrect": false },
+            { "text": "Disminuye la velocidad de reacción", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Estequiometría",
+      "order": 7,
+      "lessons": [
+        {
+          "title": "El mol: cantidad de sustancia",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Cálculos con moles y masa molar",
+          "type": "SORT",
+          "order": 2,
+          "content": {
+            "prompt": "Ordena los pasos para calcular los gramos de producto formados en una reacción",
+            "items": [
+              { "text": "Escribir y ajustar la ecuación química", "correctOrder": 1 },
+              { "text": "Convertir los gramos de reactivo a moles", "correctOrder": 2 },
+              { "text": "Usar la relación molar de la ecuación ajustada", "correctOrder": 3 },
+              { "text": "Convertir los moles de producto a gramos", "correctOrder": 4 }
+            ]
+          }
+        },
+        {
+          "title": "Relaciones estequiométricas clave",
+          "type": "MATCH",
+          "order": 3,
+          "content": {
+            "pairs": [
+              { "left": "1 mol de cualquier sustancia", "right": "6,022 × 10²³ entidades (N_A)" },
+              { "left": "Masa molar del O₂", "right": "32 g/mol" },
+              { "left": "Masa molar del H₂O", "right": "18 g/mol" },
+              { "left": "Volumen molar a C.N.", "right": "22,4 L/mol" },
+              { "left": "Número de Avogadro", "right": "6,022 × 10²³ mol⁻¹" }
+            ]
+          }
+        },
+        {
+          "title": "Reactivo limitante y rendimiento de reacción",
+          "type": "FILL_BLANK",
+          "order": 4,
+          "content": {
+            "template": "El reactivo {{limitante}} es el que se agota primero y determina la cantidad de producto. El reactivo en {{exceso}} sobra al finalizar la reacción. El {{rendimiento}} de una reacción se calcula como la masa real dividida entre la masa {{teórica}} multiplicado por 100.",
+            "distractors": ["catalítico", "defecto", "velocidad", "experimental"]
+          }
+        },
+        {
+          "title": "Test: Estequiometría",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuántos gramos hay en 2 moles de agua (M = 18 g/mol)?",
+                "answers": [
+                  { "text": "9 g", "isCorrect": false },
+                  { "text": "18 g", "isCorrect": false },
+                  { "text": "36 g", "isCorrect": true },
+                  { "text": "28 g", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "El número de Avogadro es aproximadamente:",
+                "answers": [
+                  { "text": "6,022 × 10²¹", "isCorrect": false },
+                  { "text": "6,022 × 10²³", "isCorrect": true },
+                  { "text": "6,022 × 10²⁵", "isCorrect": false },
+                  { "text": "3,011 × 10²³", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "En la reacción 2H₂ + O₂ → 2H₂O, ¿cuántos moles de H₂O se forman a partir de 4 moles de H₂?",
+                "answers": [
+                  { "text": "2 moles", "isCorrect": false },
+                  { "text": "4 moles", "isCorrect": true },
+                  { "text": "8 moles", "isCorrect": false },
+                  { "text": "1 mol", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué es el reactivo limitante en una reacción?",
+                "answers": [
+                  { "text": "El que reacciona más lentamente", "isCorrect": false },
+                  { "text": "El que se agota primero y determina la cantidad de producto", "isCorrect": true },
+                  { "text": "El que tiene mayor masa molar", "isCorrect": false },
+                  { "text": "El que está en exceso al final de la reacción", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Cuántos moles hay en 44 g de CO₂ (M = 44 g/mol)?",
+          "answers": [
+            { "text": "44 moles", "isCorrect": false },
+            { "text": "0,5 moles", "isCorrect": false },
+            { "text": "1 mol", "isCorrect": true },
+            { "text": "2 moles", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué volumen ocupa 1 mol de gas en condiciones normales (0°C, 1 atm)?",
+          "answers": [
+            { "text": "11,2 L", "isCorrect": false },
+            { "text": "22,4 L", "isCorrect": true },
+            { "text": "44,8 L", "isCorrect": false },
+            { "text": "1 L", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "En la reacción 2Al + 3Cl₂ → 2AlCl₃, ¿cuántos moles de Cl₂ se necesitan para reaccionar con 4 moles de Al?",
+          "answers": [
+            { "text": "4 moles", "isCorrect": false },
+            { "text": "2 moles", "isCorrect": false },
+            { "text": "6 moles", "isCorrect": true },
+            { "text": "3 moles", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Las fuerzas",
+      "order": 8,
+      "lessons": [
+        {
+          "title": "Concepto de fuerza y sus efectos",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Tipos de fuerzas: gravitacional, eléctrica, friccional y normal",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "Peso (P = mg)", "right": "Fuerza gravitacional de la Tierra sobre un objeto" },
+              { "left": "Normal (N)", "right": "Fuerza perpendicular que ejerce una superficie" },
+              { "left": "Rozamiento", "right": "Fuerza que se opone al movimiento relativo" },
+              { "left": "Tensión (T)", "right": "Fuerza transmitida por una cuerda o hilo" },
+              { "left": "Fuerza elástica", "right": "Fuerza de un muelle (Ley de Hooke)" }
+            ]
+          }
+        },
+        {
+          "title": "La Ley de Hooke",
+          "type": "FILL_BLANK",
+          "order": 3,
+          "content": {
+            "template": "La Ley de Hooke establece que la fuerza de un muelle es proporcional a su {{deformación}}. La fórmula es F = k·x, donde k es la {{constante}} elástica del muelle y x es el {{alargamiento}}. La unidad de la constante elástica es el {{newton}} por metro (N/m).",
+            "distractors": ["masa", "velocidad", "peso", "joule"]
+          }
+        },
+        {
+          "title": "Composición de fuerzas y equilibrio",
+          "type": "EXERCISE",
+          "order": 4
+        },
+        {
+          "title": "Test: Las fuerzas",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuál es la unidad de fuerza en el Sistema Internacional?",
+                "answers": [
+                  { "text": "Kilogramo (kg)", "isCorrect": false },
+                  { "text": "Joule (J)", "isCorrect": false },
+                  { "text": "Newton (N)", "isCorrect": true },
+                  { "text": "Pascal (Pa)", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Un objeto de 5 kg en la superficie terrestre (g = 9,8 m/s²) pesa:",
+                "answers": [
+                  { "text": "5 N", "isCorrect": false },
+                  { "text": "49 N", "isCorrect": true },
+                  { "text": "9,8 N", "isCorrect": false },
+                  { "text": "0,5 N", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué ocurre cuando la resultante de todas las fuerzas sobre un objeto es cero?",
+                "answers": [
+                  { "text": "El objeto acelera", "isCorrect": false },
+                  { "text": "El objeto se detiene inmediatamente", "isCorrect": false },
+                  { "text": "El objeto está en equilibrio (reposo o movimiento uniforme)", "isCorrect": true },
+                  { "text": "El objeto cambia de dirección", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Qué ley relaciona la fuerza de un muelle con su deformación?",
+          "answers": [
+            { "text": "Ley de Newton", "isCorrect": false },
+            { "text": "Ley de Hooke", "isCorrect": true },
+            { "text": "Ley de Coulomb", "isCorrect": false },
+            { "text": "Ley de Arquímedes", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Un muelle de constante k = 200 N/m se estira 0,05 m. ¿Qué fuerza ejerce?",
+          "answers": [
+            { "text": "10 N", "isCorrect": true },
+            { "text": "4000 N", "isCorrect": false },
+            { "text": "1 N", "isCorrect": false },
+            { "text": "200 N", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cuál de las siguientes fuerzas es siempre perpendicular a la superficie de contacto?",
+          "answers": [
+            { "text": "Fuerza de rozamiento", "isCorrect": false },
+            { "text": "Peso", "isCorrect": false },
+            { "text": "Fuerza normal", "isCorrect": true },
+            { "text": "Tensión", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Las leyes de Newton",
+      "order": 9,
+      "lessons": [
+        {
+          "title": "Primera ley de Newton: principio de inercia",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Las tres leyes de Newton",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "1ª Ley (Inercia)", "right": "Un objeto mantiene su estado si la fuerza neta es cero" },
+              { "left": "2ª Ley (F = ma)", "right": "La aceleración es proporcional a la fuerza neta" },
+              { "left": "3ª Ley (acción-reacción)", "right": "Toda acción tiene una reacción igual y opuesta" },
+              { "left": "Aceleración", "right": "a = F/m (m/s²)" },
+              { "left": "Masa inercial", "right": "Resistencia del objeto a cambiar su estado de movimiento" }
+            ]
+          }
+        },
+        {
+          "title": "Aplicaciones de la 2ª ley de Newton",
+          "type": "SORT",
+          "order": 3,
+          "content": {
+            "prompt": "Ordena los pasos para resolver un problema con la 2ª Ley de Newton",
+            "items": [
+              { "text": "Dibujar el diagrama de fuerzas (diagrama de cuerpo libre)", "correctOrder": 1 },
+              { "text": "Identificar todas las fuerzas que actúan sobre el objeto", "correctOrder": 2 },
+              { "text": "Calcular la fuerza resultante (suma vectorial)", "correctOrder": 3 },
+              { "text": "Aplicar F = m·a para obtener la aceleración", "correctOrder": 4 },
+              { "text": "Verificar las unidades del resultado", "correctOrder": 5 }
+            ]
+          }
+        },
+        {
+          "title": "Problemas de aplicación: plano inclinado y sistemas de bloques",
+          "type": "EXERCISE",
+          "order": 4
+        },
+        {
+          "title": "Test: Leyes de Newton",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "Según la 2ª Ley de Newton, si la masa de un objeto se duplica y la fuerza se mantiene constante, la aceleración:",
+                "answers": [
+                  { "text": "Se duplica", "isCorrect": false },
+                  { "text": "Se mantiene igual", "isCorrect": false },
+                  { "text": "Se reduce a la mitad", "isCorrect": true },
+                  { "text": "Se cuadruplica", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuál es el enunciado de la 3ª Ley de Newton?",
+                "answers": [
+                  { "text": "La fuerza es igual a masa por aceleración", "isCorrect": false },
+                  { "text": "Un cuerpo en reposo tiende a permanecer en reposo", "isCorrect": false },
+                  { "text": "Toda acción produce una reacción igual y de sentido contrario", "isCorrect": true },
+                  { "text": "La energía se conserva en un sistema aislado", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Una fuerza de 30 N actúa sobre un cuerpo de 6 kg. ¿Cuál es la aceleración?",
+                "answers": [
+                  { "text": "180 m/s²", "isCorrect": false },
+                  { "text": "0,2 m/s²", "isCorrect": false },
+                  { "text": "5 m/s²", "isCorrect": true },
+                  { "text": "24 m/s²", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "La inercia de un objeto depende de su:",
+                "answers": [
+                  { "text": "Velocidad", "isCorrect": false },
+                  { "text": "Forma", "isCorrect": false },
+                  { "text": "Masa", "isCorrect": true },
+                  { "text": "Peso", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Qué ocurre con un objeto sobre el que actúa una fuerza neta distinta de cero?",
+          "answers": [
+            { "text": "Se mueve a velocidad constante", "isCorrect": false },
+            { "text": "Permanece en reposo", "isCorrect": false },
+            { "text": "Experimenta una aceleración", "isCorrect": true },
+            { "text": "Su masa aumenta", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Si empujas una pared con 50 N, ¿con qué fuerza te empuja la pared a ti?",
+          "answers": [
+            { "text": "0 N (la pared no empuja)", "isCorrect": false },
+            { "text": "25 N en la misma dirección", "isCorrect": false },
+            { "text": "50 N en dirección opuesta", "isCorrect": true },
+            { "text": "100 N en dirección opuesta", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Un objeto de 10 kg tiene una aceleración de 3 m/s². ¿Cuál es la fuerza neta?",
+          "answers": [
+            { "text": "3,3 N", "isCorrect": false },
+            { "text": "13 N", "isCorrect": false },
+            { "text": "30 N", "isCorrect": true },
+            { "text": "7 N", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "El movimiento: cinemática",
+      "order": 10,
+      "lessons": [
+        {
+          "title": "Conceptos básicos: posición, desplazamiento, velocidad y aceleración",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Tipos de movimiento y sus características",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "MRU (Movimiento Rectilíneo Uniforme)", "right": "Velocidad constante, aceleración = 0" },
+              { "left": "MRUA (Movimiento Rectilíneo Uniformemente Acelerado)", "right": "Aceleración constante, velocidad cambia uniformemente" },
+              { "left": "Caída libre", "right": "MRUA vertical con a = g = 9,8 m/s²" },
+              { "left": "Movimiento circular uniforme", "right": "Módulo de velocidad constante, dirección varía" },
+              { "left": "Velocidad media", "right": "Desplazamiento total / tiempo total" }
+            ]
+          }
+        },
+        {
+          "title": "Fórmulas cinemáticas del MRUA",
+          "type": "FILL_BLANK",
+          "order": 3,
+          "content": {
+            "template": "En el MRUA, la velocidad final se calcula como v = v₀ + a·{{t}}. El espacio recorrido es e = v₀·t + ½·a·{{t²}}. La velocidad al cuadrado cumple v² = v₀² + 2·a·{{e}}. Estas fórmulas asumen {{aceleración}} constante.",
+            "distractors": ["m", "F", "velocidad", "masa"]
+          }
+        },
+        {
+          "title": "Gráficas de movimiento: posición-tiempo y velocidad-tiempo",
+          "type": "SORT",
+          "order": 4,
+          "content": {
+            "prompt": "Ordena las características que describen una gráfica v-t de un MRUA positivo",
+            "items": [
+              { "text": "La gráfica es una recta (no una curva)", "correctOrder": 2 },
+              { "text": "La pendiente de la recta es la aceleración", "correctOrder": 3 },
+              { "text": "El eje horizontal representa el tiempo", "correctOrder": 1 },
+              { "text": "El área bajo la curva representa el desplazamiento", "correctOrder": 4 }
+            ]
+          }
+        },
+        {
+          "title": "Test: Cinemática",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "Un coche circula a 20 m/s de forma constante. ¿Qué tipo de movimiento realiza?",
+                "answers": [
+                  { "text": "MRUA", "isCorrect": false },
+                  { "text": "Caída libre", "isCorrect": false },
+                  { "text": "MRU", "isCorrect": true },
+                  { "text": "Movimiento circular", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuál es la aceleración de la gravedad en la superficie terrestre?",
+                "answers": [
+                  { "text": "9,8 m/s", "isCorrect": false },
+                  { "text": "9,8 m/s²", "isCorrect": true },
+                  { "text": "10 m/s", "isCorrect": false },
+                  { "text": "8,9 m/s²", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Un objeto parte del reposo con a = 2 m/s². ¿Cuánto tarda en alcanzar 10 m/s?",
+                "answers": [
+                  { "text": "2 s", "isCorrect": false },
+                  { "text": "20 s", "isCorrect": false },
+                  { "text": "5 s", "isCorrect": true },
+                  { "text": "12 s", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "En una gráfica posición-tiempo, ¿qué representa la pendiente de la curva?",
+                "answers": [
+                  { "text": "La aceleración", "isCorrect": false },
+                  { "text": "La fuerza", "isCorrect": false },
+                  { "text": "La velocidad", "isCorrect": true },
+                  { "text": "La masa", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "Un tren viaja a 30 m/s y frena con a = -3 m/s². ¿En cuánto tiempo se detiene?",
+          "answers": [
+            { "text": "3 s", "isCorrect": false },
+            { "text": "90 s", "isCorrect": false },
+            { "text": "10 s", "isCorrect": true },
+            { "text": "0,1 s", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué diferencia hay entre distancia y desplazamiento?",
+          "answers": [
+            { "text": "Son la misma magnitud en cualquier caso", "isCorrect": false },
+            { "text": "La distancia es escalar; el desplazamiento es vectorial (tiene dirección)", "isCorrect": true },
+            { "text": "El desplazamiento es siempre mayor que la distancia", "isCorrect": false },
+            { "text": "La distancia tiene dirección; el desplazamiento no", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Un objeto cae libremente desde el reposo durante 3 s (g = 9,8 m/s²). ¿Qué velocidad alcanza?",
+          "answers": [
+            { "text": "9,8 m/s", "isCorrect": false },
+            { "text": "3 m/s", "isCorrect": false },
+            { "text": "29,4 m/s", "isCorrect": true },
+            { "text": "44,1 m/s", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Energía y trabajo",
+      "order": 11,
+      "lessons": [
+        {
+          "title": "Trabajo mecánico y energía cinética",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Tipos de energía mecánica",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "Energía cinética (Ec)", "right": "Ec = ½·m·v² (J)" },
+              { "left": "Energía potencial gravitatoria (Ep)", "right": "Ep = m·g·h (J)" },
+              { "left": "Energía mecánica total (Em)", "right": "Em = Ec + Ep" },
+              { "left": "Trabajo (W)", "right": "W = F·d·cos θ (J)" },
+              { "left": "Potencia (P)", "right": "P = W/t (W = J/s)" },
+              { "left": "Principio de conservación de la energía", "right": "Em es constante si no hay rozamiento" }
+            ]
+          }
+        },
+        {
+          "title": "Conservación de la energía mecánica",
+          "type": "FILL_BLANK",
+          "order": 3,
+          "content": {
+            "template": "La energía mecánica se conserva si no hay fuerzas {{disipativas}}. En caída libre, la energía potencial se transforma en energía {{cinética}}. La unidad de energía en el SI es el {{joule}}. La {{potencia}} indica la rapidez con que se realiza trabajo.",
+            "distractors": ["gravitatorias", "térmica", "newton", "fuerza"]
+          }
+        },
+        {
+          "title": "Eficiencia energética y fuentes de energía",
+          "type": "SORT",
+          "order": 4,
+          "content": {
+            "prompt": "Ordena estas fuentes de energía de mayor a menor impacto ambiental (CO₂ equivalente por kWh)",
+            "items": [
+              { "text": "Carbón", "correctOrder": 1 },
+              { "text": "Gas natural", "correctOrder": 2 },
+              { "text": "Nuclear", "correctOrder": 3 },
+              { "text": "Eólica", "correctOrder": 4 }
+            ]
+          }
+        },
+        {
+          "title": "Test: Energía y trabajo",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuál es la unidad de trabajo y energía en el SI?",
+                "answers": [
+                  { "text": "Newton (N)", "isCorrect": false },
+                  { "text": "Watio (W)", "isCorrect": false },
+                  { "text": "Joule (J)", "isCorrect": true },
+                  { "text": "Pascal (Pa)", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Un objeto de 2 kg se mueve a 4 m/s. ¿Cuál es su energía cinética?",
+                "answers": [
+                  { "text": "8 J", "isCorrect": false },
+                  { "text": "4 J", "isCorrect": false },
+                  { "text": "16 J", "isCorrect": true },
+                  { "text": "32 J", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuándo realiza trabajo una fuerza aplicada sobre un objeto?",
+                "answers": [
+                  { "text": "Siempre que exista la fuerza", "isCorrect": false },
+                  { "text": "Solo cuando la fuerza es vertical", "isCorrect": false },
+                  { "text": "Cuando provoca desplazamiento en la dirección de la fuerza", "isCorrect": true },
+                  { "text": "Cuando el objeto está en reposo", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Una máquina realiza 600 J en 30 s. ¿Cuál es su potencia?",
+                "answers": [
+                  { "text": "18 000 W", "isCorrect": false },
+                  { "text": "20 W", "isCorrect": true },
+                  { "text": "30 W", "isCorrect": false },
+                  { "text": "570 W", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "Un objeto de 5 kg se eleva 10 m (g = 9,8 m/s²). ¿Cuánta energía potencial gravitatoria gana?",
+          "answers": [
+            { "text": "50 J", "isCorrect": false },
+            { "text": "490 J", "isCorrect": true },
+            { "text": "98 J", "isCorrect": false },
+            { "text": "980 J", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué principio físico establece que la energía total de un sistema aislado no cambia?",
+          "answers": [
+            { "text": "Ley de Newton", "isCorrect": false },
+            { "text": "Ley de Hooke", "isCorrect": false },
+            { "text": "Principio de conservación de la energía", "isCorrect": true },
+            { "text": "Ley de Coulomb", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué trabajo realiza una fuerza de 100 N que desplaza un objeto 5 m en la dirección de la fuerza?",
+          "answers": [
+            { "text": "20 J", "isCorrect": false },
+            { "text": "500 J", "isCorrect": true },
+            { "text": "105 J", "isCorrect": false },
+            { "text": "50 J", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Calor y temperatura",
+      "order": 12,
+      "lessons": [
+        {
+          "title": "Diferencia entre calor y temperatura",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Escalas termométricas y conversiones",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "0 °C", "right": "273 K (punto de fusión del agua)" },
+              { "left": "100 °C", "right": "373 K (punto de ebullición del agua)" },
+              { "left": "−273 °C", "right": "0 K (cero absoluto)" },
+              { "left": "Conversión °C a K", "right": "T(K) = T(°C) + 273" },
+              { "left": "Calor específico del agua", "right": "4 186 J/(kg·°C)" }
+            ]
+          }
+        },
+        {
+          "title": "Calor específico y calorimetría",
+          "type": "FILL_BLANK",
+          "order": 3,
+          "content": {
+            "template": "La fórmula de la calorimetría es Q = m·c·{{ΔT}}, donde m es la {{masa}}, c es el calor específico y ΔT es la variación de temperatura. En un intercambio de calor sin cambio de estado, el calor cedido es igual al calor {{absorbido}}. La unidad de calor en el SI es el {{joule}}.",
+            "distractors": ["volumen", "velocidad", "liberado", "watio"]
+          }
+        },
+        {
+          "title": "Mecanismos de transmisión del calor",
+          "type": "SORT",
+          "order": 4,
+          "content": {
+            "prompt": "Ordena estos mecanismos de transmisión de calor de mayor a menor importancia en los sólidos",
+            "items": [
+              { "text": "Conducción (transmisión por contacto directo entre partículas)", "correctOrder": 1 },
+              { "text": "Convección (movimiento de fluido caliente)", "correctOrder": 2 },
+              { "text": "Radiación (emisión de ondas electromagnéticas)", "correctOrder": 3 }
+            ]
+          }
+        },
+        {
+          "title": "Test: Calor y temperatura",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuál es la diferencia principal entre calor y temperatura?",
+                "answers": [
+                  { "text": "Son la misma magnitud física", "isCorrect": false },
+                  { "text": "El calor es energía en tránsito; la temperatura mide el estado térmico", "isCorrect": true },
+                  { "text": "La temperatura es energía en tránsito; el calor mide el estado térmico", "isCorrect": false },
+                  { "text": "El calor se mide en Kelvin", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuántos kelvin corresponden a 25 °C?",
+                "answers": [
+                  { "text": "25 K", "isCorrect": false },
+                  { "text": "248 K", "isCorrect": false },
+                  { "text": "298 K", "isCorrect": true },
+                  { "text": "302 K", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué mecanismo de transmisión de calor no requiere medio material?",
+                "answers": [
+                  { "text": "Conducción", "isCorrect": false },
+                  { "text": "Convección", "isCorrect": false },
+                  { "text": "Radiación", "isCorrect": true },
+                  { "text": "Evaporación", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Para calentar 2 kg de agua (c = 4 186 J/kg°C) de 20 °C a 30 °C se necesita:",
+                "answers": [
+                  { "text": "4 186 J", "isCorrect": false },
+                  { "text": "83 720 J", "isCorrect": true },
+                  { "text": "41 860 J", "isCorrect": false },
+                  { "text": "8 372 J", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Qué temperatura en kelvin corresponde a 100 °C?",
+          "answers": [
+            { "text": "100 K", "isCorrect": false },
+            { "text": "173 K", "isCorrect": false },
+            { "text": "373 K", "isCorrect": true },
+            { "text": "273 K", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cuánto calor se necesita para calentar 500 g de agua 10 °C? (c = 4 186 J/kg·°C)",
+          "answers": [
+            { "text": "20 930 J", "isCorrect": true },
+            { "text": "41 860 J", "isCorrect": false },
+            { "text": "4 186 J", "isCorrect": false },
+            { "text": "2 093 J", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cómo se transmite el calor en el interior de un metal sólido?",
+          "answers": [
+            { "text": "Por convección", "isCorrect": false },
+            { "text": "Por radiación", "isCorrect": false },
+            { "text": "Por conducción", "isCorrect": true },
+            { "text": "Por evaporación", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "La electricidad",
+      "order": 13,
+      "lessons": [
+        {
+          "title": "Carga eléctrica, corriente y circuitos básicos",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Magnitudes eléctricas fundamentales",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "Tensión (V)", "right": "Diferencia de potencial, medida en voltios (V)" },
+              { "left": "Intensidad (I)", "right": "Carga por unidad de tiempo, medida en amperios (A)" },
+              { "left": "Resistencia (R)", "right": "Oposición al paso de corriente, medida en ohmios (Ω)" },
+              { "left": "Ley de Ohm", "right": "V = I · R" },
+              { "left": "Potencia eléctrica (P)", "right": "P = V · I (vatios, W)" },
+              { "left": "Energía eléctrica (E)", "right": "E = P · t (julios o kWh)" }
+            ]
+          }
+        },
+        {
+          "title": "Circuitos en serie y en paralelo",
+          "type": "FILL_BLANK",
+          "order": 3,
+          "content": {
+            "template": "En un circuito en {{serie}}, la intensidad es la misma en todos los componentes. En un circuito en {{paralelo}}, la tensión es la misma en todas las ramas. En serie, la resistencia total es la {{suma}} de las individuales. En paralelo, la resistencia total es {{menor}} que cualquiera de las individuales.",
+            "distractors": ["mixto", "cerrado", "diferencia", "mayor"]
+          }
+        },
+        {
+          "title": "Efectos de la corriente eléctrica",
+          "type": "SORT",
+          "order": 4,
+          "content": {
+            "prompt": "Ordena estos efectos de la corriente eléctrica de menor a mayor aplicación práctica en el hogar",
+            "items": [
+              { "text": "Efecto luminoso (iluminación LED)", "correctOrder": 3 },
+              { "text": "Efecto magnético (electroimanes, motores)", "correctOrder": 4 },
+              { "text": "Efecto químico (electrólisis, baterías)", "correctOrder": 2 },
+              { "text": "Efecto térmico (calefacción, plancha)", "correctOrder": 1 }
+            ]
+          }
+        },
+        {
+          "title": "Test: La electricidad",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "Según la Ley de Ohm, si V = 12 V e I = 3 A, la resistencia es:",
+                "answers": [
+                  { "text": "36 Ω", "isCorrect": false },
+                  { "text": "9 Ω", "isCorrect": false },
+                  { "text": "4 Ω", "isCorrect": true },
+                  { "text": "15 Ω", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Cuál es la característica principal de un circuito en paralelo?",
+                "answers": [
+                  { "text": "La intensidad es la misma en todos los brazos", "isCorrect": false },
+                  { "text": "La tensión es la misma en todas las ramas", "isCorrect": true },
+                  { "text": "Si un componente falla, todos se apagan", "isCorrect": false },
+                  { "text": "La resistencia total es la suma de las individuales", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿En qué unidad se mide la resistencia eléctrica?",
+                "answers": [
+                  { "text": "Voltio (V)", "isCorrect": false },
+                  { "text": "Amperio (A)", "isCorrect": false },
+                  { "text": "Ohmio (Ω)", "isCorrect": true },
+                  { "text": "Watio (W)", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Una bombilla de 100 W encendida durante 2 horas consume:",
+                "answers": [
+                  { "text": "0,1 kWh", "isCorrect": false },
+                  { "text": "0,2 kWh", "isCorrect": true },
+                  { "text": "2 kWh", "isCorrect": false },
+                  { "text": "200 kWh", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "Tres resistencias de 6 Ω cada una se conectan en serie. ¿Cuál es la resistencia total?",
+          "answers": [
+            { "text": "2 Ω", "isCorrect": false },
+            { "text": "6 Ω", "isCorrect": false },
+            { "text": "18 Ω", "isCorrect": true },
+            { "text": "12 Ω", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Qué magnitud mide el voltímetro?",
+          "answers": [
+            { "text": "Intensidad de corriente", "isCorrect": false },
+            { "text": "Resistencia eléctrica", "isCorrect": false },
+            { "text": "Diferencia de potencial (tensión)", "isCorrect": true },
+            { "text": "Potencia eléctrica", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cuál es la potencia de un aparato que funciona a 230 V y consume 2 A?",
+          "answers": [
+            { "text": "115 W", "isCorrect": false },
+            { "text": "232 W", "isCorrect": false },
+            { "text": "460 W", "isCorrect": true },
+            { "text": "46 W", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Las ondas y el sonido",
+      "order": 14,
+      "lessons": [
+        {
+          "title": "Concepto de onda: magnitudes características",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Magnitudes de las ondas",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "Amplitud (A)", "right": "Máximo desplazamiento de la onda desde el equilibrio" },
+              { "left": "Longitud de onda (λ)", "right": "Distancia entre dos puntos en fase consecutivos" },
+              { "left": "Período (T)", "right": "Tiempo en completar una oscilación completa" },
+              { "left": "Frecuencia (f)", "right": "Número de oscilaciones por segundo (Hz)" },
+              { "left": "Velocidad de onda (v)", "right": "v = λ · f" },
+              { "left": "Sonido", "right": "Onda mecánica longitudinal que necesita medio material" }
+            ]
+          }
+        },
+        {
+          "title": "El sonido: propiedades y cualidades",
+          "type": "FILL_BLANK",
+          "order": 3,
+          "content": {
+            "template": "La {{intensidad}} del sonido determina si lo percibimos fuerte o débil. La {{frecuencia}} determina el tono: sonidos agudos tienen alta frecuencia. El timbre diferencia instrumentos con la {{misma}} nota. El sonido no puede propagarse en el {{vacío}} porque necesita un medio material.",
+            "distractors": ["amplitud", "longitud", "distinta", "aire"]
+          }
+        },
+        {
+          "title": "Propiedades de las ondas: reflexión, refracción y difracción",
+          "type": "SORT",
+          "order": 4,
+          "content": {
+            "prompt": "Ordena estos fenómenos ondulatorios según su descripción (del más simple al más complejo)",
+            "items": [
+              { "text": "Reflexión: el sonido rebota en una superficie (eco)", "correctOrder": 1 },
+              { "text": "Refracción: la onda cambia de velocidad al pasar a otro medio", "correctOrder": 2 },
+              { "text": "Difracción: la onda rodea obstáculos o pasa por rendijas", "correctOrder": 3 },
+              { "text": "Interferencia: superposición de dos o más ondas", "correctOrder": 4 }
+            ]
+          }
+        },
+        {
+          "title": "Test: Las ondas y el sonido",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuál es la velocidad aproximada del sonido en el aire a 20 °C?",
+                "answers": [
+                  { "text": "300 000 km/s", "isCorrect": false },
+                  { "text": "340 m/s", "isCorrect": true },
+                  { "text": "1 500 m/s", "isCorrect": false },
+                  { "text": "1 m/s", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué tipo de onda es el sonido?",
+                "answers": [
+                  { "text": "Onda electromagnética transversal", "isCorrect": false },
+                  { "text": "Onda mecánica longitudinal", "isCorrect": true },
+                  { "text": "Onda mecánica transversal", "isCorrect": false },
+                  { "text": "Onda electromagnética longitudinal", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué cualidad del sonido depende de su frecuencia?",
+                "answers": [
+                  { "text": "Intensidad", "isCorrect": false },
+                  { "text": "Timbre", "isCorrect": false },
+                  { "text": "Tono", "isCorrect": true },
+                  { "text": "Amplitud", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "Una onda tiene longitud de onda λ = 2 m y frecuencia f = 5 Hz. ¿Cuál es su velocidad?",
+                "answers": [
+                  { "text": "2,5 m/s", "isCorrect": false },
+                  { "text": "7 m/s", "isCorrect": false },
+                  { "text": "10 m/s", "isCorrect": true },
+                  { "text": "3 m/s", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Puede el sonido propagarse en el vacío?",
+          "answers": [
+            { "text": "Sí, a 340 m/s", "isCorrect": false },
+            { "text": "Sí, pero más lentamente que en el aire", "isCorrect": false },
+            { "text": "No, necesita un medio material para propagarse", "isCorrect": true },
+            { "text": "Sí, porque es una onda electromagnética", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Una onda de frecuencia 200 Hz tiene un período de:",
+          "answers": [
+            { "text": "200 s", "isCorrect": false },
+            { "text": "0,005 s", "isCorrect": true },
+            { "text": "0,5 s", "isCorrect": false },
+            { "text": "2 s", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "¿Cómo se llama el fenómeno por el que el sonido rebota en una superficie?",
+          "answers": [
+            { "text": "Refracción", "isCorrect": false },
+            { "text": "Difracción", "isCorrect": false },
+            { "text": "Reflexión (eco)", "isCorrect": true },
+            { "text": "Interferencia", "isCorrect": false }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "La luz y la óptica",
+      "order": 15,
+      "lessons": [
+        {
+          "title": "Naturaleza de la luz: espectro electromagnético",
+          "type": "VIDEO",
+          "order": 1,
+          "youtubeId": "dQw4w9WgXcQ"
+        },
+        {
+          "title": "Fenómenos lumínicos: reflexión y refracción",
+          "type": "MATCH",
+          "order": 2,
+          "content": {
+            "pairs": [
+              { "left": "Reflexión especular", "right": "Rebote en superficie lisa (espejo)" },
+              { "left": "Reflexión difusa", "right": "Rebote en superficie rugosa en múltiples direcciones" },
+              { "left": "Refracción", "right": "Cambio de velocidad y dirección al cambiar de medio" },
+              { "left": "Índice de refracción (n)", "right": "n = c / v (adimensional)" },
+              { "left": "Reflexión total interna", "right": "Base de las fibras ópticas" },
+              { "left": "Dispersión", "right": "Separación de colores al atravesar un prisma (arco iris)" }
+            ]
+          }
+        },
+        {
+          "title": "El espectro electromagnético ordenado",
+          "type": "SORT",
+          "order": 3,
+          "content": {
+            "prompt": "Ordena las radiaciones del espectro electromagnético de menor a mayor frecuencia",
+            "items": [
+              { "text": "Rayos gamma", "correctOrder": 7 },
+              { "text": "Ondas de radio", "correctOrder": 1 },
+              { "text": "Luz visible", "correctOrder": 4 },
+              { "text": "Infrarrojos", "correctOrder": 3 },
+              { "text": "Ultravioleta", "correctOrder": 5 },
+              { "text": "Rayos X", "correctOrder": 6 },
+              { "text": "Microondas", "correctOrder": 2 }
+            ]
+          }
+        },
+        {
+          "title": "Lentes y espejos: formación de imágenes",
+          "type": "FILL_BLANK",
+          "order": 4,
+          "content": {
+            "template": "Las lentes {{convergentes}} hacen que los rayos de luz se unan en un punto. Las lentes {{divergentes}} hacen que los rayos se separen. Un espejo {{cóncavo}} converge la luz y puede formar imágenes reales. La velocidad de la luz en el vacío es aproximadamente {{300 000}} km/s.",
+            "distractors": ["planas", "convexas", "plano", "150 000"]
+          }
+        },
+        {
+          "title": "Test: La luz y la óptica",
+          "type": "QUIZ",
+          "order": 5,
+          "quiz": {
+            "questions": [
+              {
+                "text": "¿Cuál es la velocidad de la luz en el vacío?",
+                "answers": [
+                  { "text": "340 m/s", "isCorrect": false },
+                  { "text": "3 × 10⁸ m/s", "isCorrect": true },
+                  { "text": "3 × 10⁶ m/s", "isCorrect": false },
+                  { "text": "3 × 10¹⁰ m/s", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué fenómeno produce el arco iris?",
+                "answers": [
+                  { "text": "Reflexión total interna", "isCorrect": false },
+                  { "text": "Difracción de la luz", "isCorrect": false },
+                  { "text": "Dispersión de la luz por refracción en gotas de agua", "isCorrect": true },
+                  { "text": "Interferencia de la luz", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué tipo de lente usa un miope para corregir su visión?",
+                "answers": [
+                  { "text": "Lente convergente (convexa)", "isCorrect": false },
+                  { "text": "Lente plana", "isCorrect": false },
+                  { "text": "Lente divergente (cóncava)", "isCorrect": true },
+                  { "text": "Espejo cóncavo", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "La radiación con mayor frecuencia del espectro electromagnético es:",
+                "answers": [
+                  { "text": "Ondas de radio", "isCorrect": false },
+                  { "text": "Luz visible", "isCorrect": false },
+                  { "text": "Rayos gamma", "isCorrect": true },
+                  { "text": "Rayos X", "isCorrect": false }
+                ]
+              },
+              {
+                "text": "¿Qué aplicación tecnológica utiliza la reflexión total interna de la luz?",
+                "answers": [
+                  { "text": "Televisión de plasma", "isCorrect": false },
+                  { "text": "Paneles solares", "isCorrect": false },
+                  { "text": "Fibras ópticas", "isCorrect": true },
+                  { "text": "Antenas de radio", "isCorrect": false }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "examQuestions": [
+        {
+          "text": "¿Qué tipo de radiación tiene mayor longitud de onda en el espectro electromagnético?",
+          "answers": [
+            { "text": "Rayos gamma", "isCorrect": false },
+            { "text": "Rayos X", "isCorrect": false },
+            { "text": "Ondas de radio", "isCorrect": true },
+            { "text": "Luz ultravioleta", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Cuando la luz pasa del aire al agua (más denso), su velocidad:",
+          "answers": [
+            { "text": "Aumenta", "isCorrect": false },
+            { "text": "Se mantiene igual", "isCorrect": false },
+            { "text": "Disminuye", "isCorrect": true },
+            { "text": "Se hace cero", "isCorrect": false }
+          ]
+        },
+        {
+          "text": "Un espejo plano produce una imagen que es:",
+          "answers": [
+            { "text": "Real, invertida y más pequeña", "isCorrect": false },
+            { "text": "Virtual, derecha y del mismo tamaño", "isCorrect": true },
+            { "text": "Real, derecha y más grande", "isCorrect": false },
+            { "text": "Virtual, invertida y más pequeña", "isCorrect": false }
+          ]
+        }
+      ]
+    }
+  ],
+  "examQuestions": [
+    {
+      "text": "¿Cuál de las siguientes afirmaciones sobre la materia es correcta?",
+      "answers": [
+        { "text": "Los sólidos no tienen forma definida", "isCorrect": false },
+        { "text": "Los gases tienen volumen definido pero no forma", "isCorrect": false },
+        { "text": "Los líquidos tienen volumen definido pero adoptan la forma del recipiente", "isCorrect": true },
+        { "text": "Los sólidos tienen forma pero no volumen definido", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "El número de protones del sodio (Na) es 11 y su número másico es 23. ¿Cuántos neutrones tiene?",
+      "answers": [
+        { "text": "11", "isCorrect": false },
+        { "text": "23", "isCorrect": false },
+        { "text": "12", "isCorrect": true },
+        { "text": "34", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "¿Qué tipo de enlace une el Na⁺ y el Cl⁻ en el cloruro de sodio?",
+      "answers": [
+        { "text": "Covalente polar", "isCorrect": false },
+        { "text": "Metálico", "isCorrect": false },
+        { "text": "Iónico", "isCorrect": true },
+        { "text": "Covalente apolar", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "En la reacción CH₄ + 2O₂ → CO₂ + 2H₂O, ¿cuántos moles de O₂ se necesitan para quemar 3 moles de CH₄?",
+      "answers": [
+        { "text": "3", "isCorrect": false },
+        { "text": "4", "isCorrect": false },
+        { "text": "6", "isCorrect": true },
+        { "text": "2", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "¿Cuál es la fuerza resultante sobre un objeto de 4 kg que acelera a 2,5 m/s²?",
+      "answers": [
+        { "text": "1,6 N", "isCorrect": false },
+        { "text": "6,5 N", "isCorrect": false },
+        { "text": "10 N", "isCorrect": true },
+        { "text": "4 N", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "Un objeto cae libremente durante 4 s (g = 9,8 m/s²). ¿Qué distancia recorre?",
+      "answers": [
+        { "text": "39,2 m", "isCorrect": false },
+        { "text": "78,4 m", "isCorrect": true },
+        { "text": "19,6 m", "isCorrect": false },
+        { "text": "156,8 m", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "¿Cuál de los siguientes es un conductor eléctrico?",
+      "answers": [
+        { "text": "Plástico", "isCorrect": false },
+        { "text": "Madera seca", "isCorrect": false },
+        { "text": "Cobre", "isCorrect": true },
+        { "text": "Goma", "isCorrect": false }
+      ]
+    },
+    {
+      "text": "¿Cuál es la fórmula del ácido clorhídrico?",
+      "answers": [
+        { "text": "HClO₃", "isCorrect": false },
+        { "text": "ClH₂", "isCorrect": false },
+        { "text": "HCl", "isCorrect": true },
+        { "text": "H₂Cl", "isCorrect": false }
+      ]
+    }
+  ]
+}
