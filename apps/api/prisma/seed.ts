@@ -45,7 +45,7 @@ async function main() {
       email: 'admin@vkbacademy.com',
       passwordHash,
       role: Role.ADMIN,
-      name: 'Admin VKB',
+      name: 'admin',
     },
   });
 
@@ -55,7 +55,7 @@ async function main() {
       email: 'teacher@vkbacademy.com',
       passwordHash,
       role: Role.TEACHER,
-      name: 'Coach Martínez',
+      name: 'teacher',
       teacherProfile: {
         create: {
           bio: 'Entrenador de baloncesto con 10 años de experiencia.',
@@ -80,7 +80,7 @@ async function main() {
       email: 'oscar.sanchez@egocogito.com',
       passwordHash,
       role: Role.TUTOR,
-      name: 'María López',
+      name: 'maria-lopez',
     },
   });
 
@@ -90,7 +90,7 @@ async function main() {
       email: 'student@vkbacademy.com',
       passwordHash,
       role: Role.STUDENT,
-      name: 'Juan García',
+      name: 'juan-garcia',
       schoolYearId: sy3eso.id,
       tutorId: tutor.id,
     },
