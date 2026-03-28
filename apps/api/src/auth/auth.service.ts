@@ -57,10 +57,16 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-      include: { schoolYear: true },
-    });
+    const isEmail = dto.identifier.includes('@');
+    const user = isEmail
+      ? await this.prisma.user.findUnique({
+          where: { email: dto.identifier },
+          include: { schoolYear: true },
+        })
+      : await this.prisma.user.findFirst({
+          where: { name: { equals: dto.identifier, mode: 'insensitive' } },
+          include: { schoolYear: true },
+        });
     if (!user) throw new UnauthorizedException('Credenciales incorrectas');
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);

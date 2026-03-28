@@ -8,7 +8,7 @@ export interface AuthResponse {
 }
 
 export interface LoginPayload {
-  email: string;
+  identifier: string;
   password: string;
 }
 

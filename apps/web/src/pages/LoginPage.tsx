@@ -33,7 +33,7 @@ interface FloatingBall {
 }
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const { mutate, isPending, error } = useLogin();
   const [mounted, setMounted] = useState(false);
@@ -54,7 +54,7 @@ export default function LoginPage() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    mutate({ email, password });
+    mutate({ identifier, password });
   }
 
   const apiError =
@@ -140,14 +140,14 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} style={s.form} noValidate>
           <div className="field field-dark field-glow">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="identifier">Email o nombre de usuario</label>
             <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
+              id="identifier"
+              type="text"
+              autoComplete="username"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="tu@email.com o tu nombre"
               required
             />
           </div>

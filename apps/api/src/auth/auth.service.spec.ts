@@ -201,7 +201,7 @@ describe('AuthService', () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.login({ email: 'desconocido@club.es', password: 'pass' }),
+        service.login({ identifier: 'desconocido@club.es', password: 'pass' }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -210,7 +210,7 @@ describe('AuthService', () => {
       mockedBcrypt.compare.mockResolvedValue(false as never); // contraseña incorrecta
 
       await expect(
-        service.login({ email: 'alumno@vkbacademy.es', password: 'wrong_pass' }),
+        service.login({ identifier: 'alumno@vkbacademy.es', password: 'wrong_pass' }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -218,7 +218,7 @@ describe('AuthService', () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.login({ email: 'cualquiera@email.es', password: 'pass' }),
+        service.login({ identifier: 'cualquiera@email.es', password: 'pass' }),
       ).rejects.toThrow('Credenciales incorrectas');
     });
 
@@ -227,7 +227,7 @@ describe('AuthService', () => {
       mockedBcrypt.compare.mockResolvedValue(true as never);
 
       const result = await service.login({
-        email: 'alumno@vkbacademy.es',
+        identifier: 'alumno@vkbacademy.es',
         password: 'correcta',
       });
 
@@ -242,7 +242,7 @@ describe('AuthService', () => {
       mockedBcrypt.compare.mockResolvedValue(true as never);
 
       const result = await service.login({
-        email: 'alumno@vkbacademy.es',
+        identifier: 'alumno@vkbacademy.es',
         password: 'correcta',
       });
 
@@ -254,7 +254,7 @@ describe('AuthService', () => {
       mockedBcrypt.compare.mockResolvedValue(true as never);
 
       const result = await service.login({
-        email: 'alumno@vkbacademy.es',
+        identifier: 'alumno@vkbacademy.es',
         password: 'correcta',
       });
 
@@ -271,7 +271,7 @@ describe('AuthService', () => {
       mockedBcrypt.compare.mockResolvedValue(true as never);
 
       const result = await service.login({
-        email: 'alumno@vkbacademy.es',
+        identifier: 'alumno@vkbacademy.es',
         password: 'correcta',
       });
 
