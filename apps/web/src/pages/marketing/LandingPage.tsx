@@ -154,7 +154,87 @@ export default function LandingPage() {
 
           {/* Texto informativo sutil */}
           <p style={styles.heroFootnote}>
-            Solo 15 € al mes por alumno · Disponible de 1º ESO a 2º Bachillerato
+            Disponible de 1º ESO a 2º Bachillerato
+          </p>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════
+          SECCIÓN 1b — PRICING HIGHLIGHT
+      ════════════════════════════════════════ */}
+      <section style={styles.pricingHighlight}>
+        <div style={styles.pricingGlow} />
+        <div style={styles.pricingInner}>
+          <p style={styles.pricingEyebrow}>Menos de lo que cuesta una clase particular</p>
+          <h2 style={styles.pricingHeadline}>
+            Todo esto, desde{' '}
+            <span style={styles.pricingAmount}>10 €<span style={styles.pricingPeriod}>/mes</span></span>
+          </h2>
+
+          <div style={styles.pricingCards}>
+            {/* Plan Básico */}
+            <div
+              style={styles.pricingCard}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.transform = 'translateY(-6px)';
+                el.style.boxShadow = '0 20px 50px rgba(234,88,12,0.2)';
+                el.style.borderColor = 'rgba(234,88,12,0.4)';
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.transform = 'translateY(0)';
+                el.style.boxShadow = '0 4px 24px rgba(0,0,0,0.3)';
+                el.style.borderColor = 'rgba(255,255,255,0.1)';
+              }}
+            >
+              <span style={styles.pricingCardLabel}>Básico</span>
+              <div style={styles.pricingCardPrice}>
+                <span style={styles.pricingCardAmount}>10€</span>
+                <span style={styles.pricingCardPeriod}>/mes</span>
+              </div>
+              <ul style={styles.pricingCardList}>
+                <li>✓ Todos los cursos de su nivel</li>
+                <li>✓ Lecciones en vídeo ilimitadas</li>
+                <li>✓ Tests y exámenes con certificado</li>
+                <li>✓ Seguimiento de progreso para tutores</li>
+                <li>✓ Retos y puntos canjeables</li>
+              </ul>
+            </div>
+
+            {/* Plan Avanzado */}
+            <div
+              style={{ ...styles.pricingCard, ...styles.pricingCardFeatured }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.transform = 'translateY(-6px) scale(1.02)';
+                el.style.boxShadow = '0 24px 60px rgba(234,88,12,0.35)';
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.transform = 'translateY(0) scale(1)';
+                el.style.boxShadow = '0 8px 40px rgba(234,88,12,0.25)';
+              }}
+            >
+              <span style={styles.pricingCardBadge}>Popular</span>
+              <span style={styles.pricingCardLabelFeatured}>Avanzado</span>
+              <div style={styles.pricingCardPrice}>
+                <span style={styles.pricingCardAmount}>20€</span>
+                <span style={styles.pricingCardPeriod}>/mes</span>
+              </div>
+              <ul style={styles.pricingCardList}>
+                <li>✓ Todo lo del plan Básico</li>
+                <li>✓ Clases particulares online y presenciales</li>
+                <li>✓ Actividades interactivas avanzadas</li>
+                <li>✓ Tutor virtual con IA 24/7</li>
+                <li>✓ Acceso prioritario a nuevo contenido</li>
+              </ul>
+            </div>
+          </div>
+
+          <p style={styles.pricingCompare}>
+            Una clase particular = 20-30 €/hora. Aquí tu hijo/a tiene{' '}
+            <strong style={{ color: '#fb923c' }}>acceso ilimitado todo el mes</strong> por menos que eso.
           </p>
         </div>
       </section>
@@ -528,6 +608,149 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.8rem',
     margin: 0,
     letterSpacing: '0.01em',
+  },
+
+  // Pricing highlight
+  pricingHighlight: {
+    background: 'linear-gradient(180deg, #0d1b2a 0%, #111d2e 100%)',
+    padding: '5rem 2rem',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  pricingGlow: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 700,
+    height: 700,
+    background: 'radial-gradient(circle, rgba(234,88,12,0.08) 0%, transparent 65%)',
+    pointerEvents: 'none',
+    borderRadius: '50%',
+  },
+  pricingInner: {
+    maxWidth: 820,
+    margin: '0 auto',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    textAlign: 'center',
+    gap: '2rem',
+    position: 'relative',
+    zIndex: 1,
+  },
+  pricingEyebrow: {
+    color: '#fb923c',
+    fontSize: '0.9rem',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    margin: 0,
+  },
+  pricingHeadline: {
+    fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)',
+    fontWeight: 900,
+    color: '#ffffff',
+    letterSpacing: '-0.03em',
+    lineHeight: 1.15,
+    margin: 0,
+  },
+  pricingAmount: {
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
+  pricingPeriod: {
+    fontSize: '0.5em',
+    fontWeight: 600,
+  },
+  pricingCards: {
+    display: 'flex',
+    gap: '1.5rem',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: '0.5rem',
+  },
+  pricingCard: {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1.5px solid rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    padding: '2.5rem 2rem',
+    width: 300,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '1rem',
+    transition: 'transform 0.25s, box-shadow 0.25s, border-color 0.25s',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+    position: 'relative',
+  },
+  pricingCardFeatured: {
+    background: 'linear-gradient(135deg, rgba(234,88,12,0.12) 0%, rgba(249,115,22,0.06) 100%)',
+    border: '2px solid rgba(234,88,12,0.4)',
+    boxShadow: '0 8px 40px rgba(234,88,12,0.25)',
+  },
+  pricingCardBadge: {
+    position: 'absolute',
+    top: -12,
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    color: '#fff',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    padding: '4px 16px',
+    borderRadius: 999,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+  },
+  pricingCardLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  },
+  pricingCardLabelFeatured: {
+    color: '#fb923c',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  },
+  pricingCardPrice: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: '2px',
+  },
+  pricingCardAmount: {
+    fontSize: '3rem',
+    fontWeight: 900,
+    color: '#ffffff',
+    lineHeight: 1,
+  },
+  pricingCardPeriod: {
+    fontSize: '1rem',
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: 600,
+  },
+  pricingCardList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.6rem',
+    textAlign: 'left',
+    fontSize: '0.9rem',
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: 1.5,
+  },
+  pricingCompare: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: '0.95rem',
+    margin: 0,
+    maxWidth: 520,
+    lineHeight: 1.6,
   },
 
   // Stats bar
