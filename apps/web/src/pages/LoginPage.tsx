@@ -1,11 +1,56 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useAuth';
+
+/* ---------- Basketball SVG component ---------- */
+function Basketball({ size = 40, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      style={style}
+      aria-hidden="true"
+    >
+      <circle cx="50" cy="50" r="48" fill="#ea580c" stroke="#c2410c" strokeWidth="3" />
+      {/* líneas del balón */}
+      <path d="M50 2 Q50 50 50 98" fill="none" stroke="#1a1a1a" strokeWidth="2.5" opacity="0.35" />
+      <path d="M2 50 Q50 50 98 50" fill="none" stroke="#1a1a1a" strokeWidth="2.5" opacity="0.35" />
+      <path d="M15 15 Q50 35 85 15" fill="none" stroke="#1a1a1a" strokeWidth="2" opacity="0.3" />
+      <path d="M15 85 Q50 65 85 85" fill="none" stroke="#1a1a1a" strokeWidth="2" opacity="0.3" />
+    </svg>
+  );
+}
+
+/* ---------- Floating ball config ---------- */
+interface FloatingBall {
+  id: number;
+  x: number;
+  size: number;
+  duration: number;
+  delay: number;
+  opacity: number;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { mutate, isPending, error } = useLogin();
+  const [mounted, setMounted] = useState(false);
+  const [balls] = useState<FloatingBall[]>(() =>
+    Array.from({ length: 8 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      size: 18 + Math.random() * 28,
+      duration: 6 + Math.random() * 8,
+      delay: Math.random() * 5,
+      opacity: 0.06 + Math.random() * 0.1,
+    })),
+  );
+
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+  }, []);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -17,31 +62,84 @@ export default function LoginPage() {
 
   return (
     <div style={s.page}>
-      {/* Glow decorativo fondo */}
+      {/* Estilos de animación */}
+      <style>{animationCSS}</style>
+
+      {/* Glow naranja */}
       <div style={s.bgGlow} />
 
-      <div style={s.card} className="animate-in">
+      {/* Líneas de cancha de fondo */}
+      <svg style={s.courtLines} viewBox="0 0 800 800" aria-hidden="true">
+        {/* Círculo central */}
+        <circle cx="400" cy="400" r="120" fill="none" stroke="rgba(234,88,12,0.08)" strokeWidth="3" />
+        <circle cx="400" cy="400" r="5" fill="rgba(234,88,12,0.1)" />
+        {/* Línea media */}
+        <line x1="0" y1="400" x2="800" y2="400" stroke="rgba(234,88,12,0.06)" strokeWidth="3" />
+        {/* Semicírculo tiro libre arriba */}
+        <path d="M280 0 L280 180 A120 120 0 0 0 520 180 L520 0" fill="none" stroke="rgba(234,88,12,0.06)" strokeWidth="2.5" />
+        {/* Semicírculo tiro libre abajo */}
+        <path d="M280 800 L280 620 A120 120 0 0 1 520 620 L520 800" fill="none" stroke="rgba(234,88,12,0.06)" strokeWidth="2.5" />
+        {/* Borde exterior */}
+        <rect x="50" y="50" width="700" height="700" rx="8" fill="none" stroke="rgba(234,88,12,0.05)" strokeWidth="3" />
+      </svg>
+
+      {/* Balones flotantes */}
+      {balls.map((b) => (
+        <div
+          key={b.id}
+          className="floating-ball"
+          style={{
+            position: 'fixed',
+            left: `${b.x}%`,
+            bottom: '-60px',
+            animationDuration: `${b.duration}s`,
+            animationDelay: `${b.delay}s`,
+            opacity: 0,
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+        >
+          <Basketball size={b.size} style={{ opacity: b.opacity }} />
+        </div>
+      ))}
+
+      {/* Balón principal rebotando */}
+      <div className="hero-ball" style={s.heroBall}>
+        <Basketball size={70} style={{ filter: 'drop-shadow(0 8px 24px rgba(234,88,12,0.4))' }} />
+      </div>
+
+      {/* Card */}
+      <div
+        style={{
+          ...s.card,
+          transform: mounted ? 'translateY(0) scale(1)' : 'translateY(-40px) scale(0.95)',
+          opacity: mounted ? 1 : 0,
+        }}
+      >
         {/* Encabezado */}
         <div style={s.header}>
           <img
             src="https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png"
             alt="Vallekas Basket"
             style={s.logoImg}
+            className="logo-pulse"
           />
-          <h1 style={s.title}>Bienvenido de vuelta</h1>
+          <h1 style={s.title}>
+            Bienvenido de vuelta
+          </h1>
           <p style={s.subtitle}>Accede a tu cuenta de VKB Academy</p>
         </div>
 
         {/* Error de API */}
         {apiError && (
-          <div style={s.errorBox}>
+          <div style={s.errorBox} className="shake-error">
             <span style={s.errorIcon}>!</span>
             {apiError}
           </div>
         )}
 
         <form onSubmit={handleSubmit} style={s.form} noValidate>
-          <div className="field field-dark">
+          <div className="field field-dark field-glow">
             <label htmlFor="email">Email</label>
             <input
               id="email"
@@ -54,7 +152,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="field field-dark">
+          <div className="field field-dark field-glow">
             <label htmlFor="password">Contraseña</label>
             <input
               id="password"
@@ -69,9 +167,9 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="btn btn-primary btn-full"
+            className="btn btn-primary btn-full slam-btn"
             disabled={isPending}
-            style={{ marginTop: 4, padding: '13px 22px', fontSize: '1rem' }}
+            style={{ marginTop: 4, padding: '14px 22px', fontSize: '1.05rem', position: 'relative', overflow: 'hidden' }}
           >
             {isPending ? <span className="spinner" /> : 'Entrar'}
           </button>
@@ -95,6 +193,75 @@ export default function LoginPage() {
   );
 }
 
+/* ---------- Animation CSS ---------- */
+const animationCSS = `
+  @keyframes float-up {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+  }
+
+  @keyframes bounce-ball {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    30%      { transform: translateY(-80px) rotate(90deg); }
+    50%      { transform: translateY(0) rotate(180deg); }
+    70%      { transform: translateY(-35px) rotate(270deg); }
+    85%      { transform: translateY(0) rotate(330deg); }
+  }
+
+  @keyframes logo-glow {
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(234,88,12,0.0)); }
+    50%      { filter: drop-shadow(0 0 20px rgba(234,88,12,0.5)); }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-8px); }
+    40%      { transform: translateX(8px); }
+    60%      { transform: translateX(-5px); }
+    80%      { transform: translateX(5px); }
+  }
+
+  @keyframes slam-ripple {
+    0%   { transform: scale(0); opacity: 0.5; }
+    100% { transform: scale(4); opacity: 0; }
+  }
+
+  .floating-ball {
+    animation: float-up linear infinite;
+  }
+
+  .hero-ball {
+    animation: bounce-ball 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  .logo-pulse {
+    animation: logo-glow 3s ease-in-out infinite;
+  }
+
+  .shake-error {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  .slam-btn {
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+  }
+  .slam-btn:hover:not(:disabled) {
+    transform: scale(1.04) !important;
+    box-shadow: 0 0 30px rgba(234,88,12,0.5), 0 4px 15px rgba(0,0,0,0.4) !important;
+  }
+  .slam-btn:active:not(:disabled) {
+    transform: scale(0.97) !important;
+  }
+
+  .field-glow input:focus {
+    box-shadow: 0 0 0 2px rgba(234,88,12,0.3), 0 0 20px rgba(234,88,12,0.1) !important;
+    border-color: rgba(234,88,12,0.5) !important;
+  }
+`;
+
+/* ---------- Styles ---------- */
 const s: Record<string, React.CSSProperties> = {
   page: {
     minHeight: '100vh',
@@ -116,21 +283,39 @@ const s: Record<string, React.CSSProperties> = {
     pointerEvents: 'none',
     zIndex: 0,
   },
+  courtLines: {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    width: '110vmin',
+    height: '110vmin',
+    transform: 'translate(-50%, -50%)',
+    pointerEvents: 'none',
+    zIndex: 0,
+  },
+  heroBall: {
+    position: 'fixed',
+    bottom: '10%',
+    right: '8%',
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
   card: {
     position: 'relative',
     zIndex: 1,
     width: '100%',
     maxWidth: '420px',
-    background: 'rgba(8,14,26,0.88)',
-    backdropFilter: 'blur(20px)',
-    WebkitBackdropFilter: 'blur(20px)',
-    border: '1.5px solid rgba(234,88,12,0.20)',
+    background: 'rgba(8,14,26,0.92)',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    border: '1.5px solid rgba(234,88,12,0.22)',
     borderRadius: '20px',
     padding: '40px 36px',
-    boxShadow: '0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(234,88,12,0.10)',
+    boxShadow: '0 24px 64px rgba(0,0,0,0.55), 0 0 80px rgba(234,88,12,0.08), 0 0 0 1px rgba(234,88,12,0.10)',
     display: 'flex',
     flexDirection: 'column',
     gap: '22px',
+    transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease',
   },
   header: {
     display: 'flex',
