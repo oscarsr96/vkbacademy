@@ -13,9 +13,9 @@ const MERCH = [
 const FEATURES = [
   {
     icon: '📹',
-    title: 'Vídeos del club, en casa',
+    title: 'Lecciones en vídeo',
     description:
-      'Los propios entrenadores de Vallekas Basket crean y actualizan los vídeos técnicos y tácticos. No es contenido genérico.',
+      'Contenido actualizado con los mejores vídeos de cada una de las temáticas.',
   },
   {
     icon: '✏️',
@@ -50,8 +50,8 @@ const FEATURES = [
 ];
 
 const STATS = [
-  { value: '+30', label: 'Años del club' },
-  { value: '+300', label: 'Jugadores al año' },
+  { value: '+50', label: 'Cursos disponibles' },
+  { value: '+500', label: 'Lecciones interactivas' },
   { value: '6', label: 'Niveles educativos' },
   { value: '24/7', label: 'Disponible siempre' },
 ];
@@ -183,7 +183,7 @@ export default function LandingPage() {
               Todo lo que tu hijo/a necesita para mejorar
             </h2>
             <p style={styles.sectionSubtitle}>
-              Una plataforma pensada para jugadores de baloncesto en edad escolar, con acceso y seguimiento para padres y tutores
+              Una plataforma pensada para optimizar el rendimiento escolar, con acceso y seguimiento para padres y tutores
             </p>
           </div>
 
