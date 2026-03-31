@@ -110,6 +110,13 @@ export default function AcademyLandingPage() {
               {academy.name}
             </span>
           </div>
+          {/* Nav links */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+            <a href="#features" onClick={(e) => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }} style={navLinkStyle}>Inicio</a>
+            <a href="/nosotros" onClick={(e) => { e.preventDefault(); navigate('/nosotros'); }} style={navLinkStyle}>Sobre nosotros</a>
+            <a href="/precios" onClick={(e) => { e.preventDefault(); navigate('/precios'); }} style={navLinkStyle}>Precios</a>
+          </nav>
+
           <div style={{ display: 'flex', gap: 12 }}>
             <button
               onClick={() => navigate('/login')}
@@ -223,6 +230,15 @@ export default function AcademyLandingPage() {
     </div>
   );
 }
+
+const navLinkStyle: React.CSSProperties = {
+  color: '#ffffff',
+  textDecoration: 'none',
+  fontSize: '0.9375rem',
+  fontWeight: 500,
+  opacity: 0.8,
+  cursor: 'pointer',
+};
 
 function btnPrimary(color?: string | null): React.CSSProperties {
   const c = color ?? '#ea580c';

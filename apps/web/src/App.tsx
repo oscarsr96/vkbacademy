@@ -56,7 +56,8 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 }
 
 // Ruta raíz: landing pública si no autenticado, dashboard si autenticado
-// Si estamos en un dominio de academia, muestra la landing de esa academia
+// Si estamos en un dominio de academia, muestra la landing de esa academia (sin PublicLayout)
+// Si no, muestra la landing de VKB envuelta en PublicLayout
 function RootIndex() {
   const isAuthenticated = useAuthStore((s) => !!s.accessToken);
   const { academy, isAcademyDomain, isLoading } = useAcademyDomain();
@@ -64,21 +65,27 @@ function RootIndex() {
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   if (isLoading) return null;
 
-  // Si estamos en un dominio de academia, mostrar su landing
+  // Dominio de academia → landing propia (tiene su propio navbar/footer)
   if (isAcademyDomain && academy) {
     return <AcademyLandingPage />;
   }
 
-  return <LandingPage />;
+  // Dominio principal → landing VKB con PublicLayout
+  return (
+    <PublicLayout>
+      <LandingPage />
+    </PublicLayout>
+  );
 }
 
 export default function App() {
   return (
     <Routes>
-      {/* ── Rutas de marketing (públicas, con navbar + footer) ── */}
+      {/* ── Ruta raíz: si dominio de academia, renderiza sin PublicLayout ── */}
+      <Route path="/" element={<RootIndex />} />
+
+      {/* ── Rutas de marketing (públicas, con navbar + footer de VKB) ── */}
       <Route element={<PublicLayout />}>
-        {/* / → landing o dashboard según autenticación */}
-        <Route path="/" element={<RootIndex />} />
         {/* /nosotros → página Sobre nosotros */}
         <Route path="/nosotros" element={<AboutPage />} />
         {/* /precios → página de precios */}

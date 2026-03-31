@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 
 // Navbar fija con glassmorphism para las páginas públicas de marketing
-export default function PublicLayout() {
+export default function PublicLayout({ children }: { children?: React.ReactNode }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -84,7 +84,7 @@ export default function PublicLayout() {
 
       {/* ── Contenido de la página ── */}
       <main style={styles.main}>
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
 
       {/* ── Footer ── */}
