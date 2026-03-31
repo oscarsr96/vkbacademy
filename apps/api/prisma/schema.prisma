@@ -21,6 +21,43 @@ model SchoolYear {
 }
 
 // ─────────────────────────────────────────────────────────
+// ACADEMIAS (multi-tenancy)
+// ─────────────────────────────────────────────────────────
+
+model Academy {
+  id           String   @id @default(cuid())
+  slug         String   @unique   // "vallekas-basket", "cb-oscar"
+  name         String              // "Vallekas Basket Academy"
+  logoUrl      String?
+  primaryColor String?  @default("#6366f1")
+  domain       String?  @unique   // dominio personalizado (opcional)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  members        AcademyMember[]
+  billingConfig  BillingConfig?
+  enrollments    Enrollment[]
+  bookings       Booking[]
+  redemptions    Redemption[]
+  userChallenges UserChallenge[]
+}
+
+model AcademyMember {
+  id        String   @id @default(cuid())
+  userId    String
+  academyId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academy Academy @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, academyId])
+  @@index([academyId])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────
 // USUARIOS
 // ─────────────────────────────────────────────────────────
 
@@ -29,6 +66,7 @@ enum Role {
   TUTOR
   TEACHER
   ADMIN
+  SUPER_ADMIN
 }
 
 model User {
@@ -68,6 +106,7 @@ model User {
   examAttempts     ExamAttempt[]
   certificates     Certificate[]
   tutorMessages    TutorMessage[]
+  academyMembers   AcademyMember[]
 }
 
 model RefreshToken {
@@ -117,13 +156,16 @@ model Enrollment {
   id        String   @id @default(cuid())
   userId    String
   courseId  String
+  academyId String?
   createdAt DateTime @default(now())
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  academy Academy? @relation(fields: [academyId], references: [id])
 
   @@unique([userId, courseId])
   @@index([userId])
+  @@index([academyId])
 }
 
 model Module {
@@ -289,6 +331,7 @@ model Booking {
   mode      BookingMode   @default(IN_PERSON)
   notes      String?
   courseId   String?
+  academyId  String?
   /// URL de sala Daily.co — solo presente cuando mode=ONLINE y status=CONFIRMED
   meetingUrl String?
   createdAt  DateTime     @default(now())
@@ -297,10 +340,12 @@ model Booking {
   student User           @relation("StudentBookings", fields: [studentId], references: [id])
   teacher TeacherProfile @relation(fields: [teacherId], references: [id])
   course  Course?        @relation(fields: [courseId], references: [id])
+  academy Academy?       @relation(fields: [academyId], references: [id])
 
   @@index([studentId])
   @@index([teacherId])
   @@index([startAt])
+  @@index([academyId])
 }
 
 // ─────────────────────────────────────────────────────────
@@ -312,14 +357,17 @@ model Redemption {
   userId      String
   itemName    String
   cost        Int
+  academyId   String?
   redeemedAt  DateTime  @default(now())
   delivered   Boolean   @default(false)
   deliveredAt DateTime?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academy Academy? @relation(fields: [academyId], references: [id])
 
   @@index([userId])
   @@index([redeemedAt])
+  @@index([academyId])
 }
 
 // ─────────────────────────────────────────────────────────
@@ -356,6 +404,7 @@ model UserChallenge {
   id            String    @id @default(cuid())
   userId        String
   challengeId   String
+  academyId     String?
   progress      Int       @default(0)
   completed     Boolean   @default(false)
   completedAt   DateTime?
@@ -363,9 +412,11 @@ model UserChallenge {
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  academy   Academy?  @relation(fields: [academyId], references: [id])
 
   @@unique([userId, challengeId])
   @@index([userId])
+  @@index([academyId])
 }
 
 // ─────────────────────────────────────────────────────────
@@ -374,6 +425,7 @@ model UserChallenge {
 
 model BillingConfig {
   id                       String   @id @default("default")
+  academyId                String?  @unique
   studentMonthlyPrice      Float    @default(15.00)
   classOnlineRatePerHour   Float    @default(15.00)
   classInPersonRatePerHour Float    @default(18.00)
@@ -382,6 +434,8 @@ model BillingConfig {
   s3MonthlyCost            Float    @default(2.00)
   anthropicMonthlyCost     Float    @default(5.00)
   updatedAt                DateTime @updatedAt
+
+  academy Academy? @relation(fields: [academyId], references: [id])
 }
 
 // ─────────────────────────────────────────────────────────

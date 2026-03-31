@@ -9,6 +9,7 @@ const ROLE_LABELS: Record<Role, string> = {
   [Role.TUTOR]: 'Tutor',
   [Role.TEACHER]: 'Profesor',
   [Role.ADMIN]: 'Admin',
+  [Role.SUPER_ADMIN]: 'Super Admin',
 };
 
 const ROLE_COLORS: Record<Role, string> = {
@@ -16,6 +17,7 @@ const ROLE_COLORS: Record<Role, string> = {
   [Role.TUTOR]: '#f59e0b',
   [Role.TEACHER]: '#10b981',
   [Role.ADMIN]: '#ef4444',
+  [Role.SUPER_ADMIN]: '#dc2626',
 };
 
 const ALL_ROLES = Object.values(Role);

@@ -23,7 +23,7 @@ export class BookingsService {
     private readonly challenges: ChallengesService,
   ) {}
 
-  async getMyBookings(userId: string, role: Role) {
+  async getMyBookings(userId: string, role: Role, academyId?: string | null) {
     if (role === Role.STUDENT) {
       return this.prisma.booking.findMany({
         where: { studentId: userId },
@@ -63,8 +63,9 @@ export class BookingsService {
       });
     }
 
-    // ADMIN ve todas
+    // ADMIN / SUPER_ADMIN ve todas (filtrado por academia si hay)
     return this.prisma.booking.findMany({
+      where: academyId ? { academyId } : {},
       orderBy: { startAt: 'asc' },
       include: {
         student: { select: { name: true, avatarUrl: true } },
@@ -74,7 +75,7 @@ export class BookingsService {
     });
   }
 
-  async create(dto: CreateBookingDto, creatorId: string, creatorRole: Role) {
+  async create(dto: CreateBookingDto, creatorId: string, creatorRole: Role, academyId?: string | null) {
     // Si es TUTOR, verificar que el studentId pertenece a sus alumnos
     if (creatorRole === Role.TUTOR) {
       const student = await this.prisma.user.findUnique({
@@ -126,6 +127,7 @@ export class BookingsService {
         mode: dto.mode,
         notes: dto.notes,
         courseId: dto.courseId,
+        academyId: academyId ?? undefined,
       },
     });
 
@@ -235,7 +237,7 @@ export class BookingsService {
       isTutor = student?.tutorId === userId;
     }
 
-    if (role !== Role.ADMIN && !isStudent && !isTeacher && !isTutor) {
+    if (role !== Role.ADMIN && role !== Role.SUPER_ADMIN && !isStudent && !isTeacher && !isTutor) {
       throw new ForbiddenException('No tienes permisos para cancelar esta reserva');
     }
 

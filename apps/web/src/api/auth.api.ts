@@ -17,6 +17,7 @@ export interface RegisterPayload {
   email: string;
   password: string;
   schoolYearId?: string;
+  academySlug?: string;
 }
 
 export const authApi = {

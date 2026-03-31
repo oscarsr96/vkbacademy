@@ -41,9 +41,11 @@ import { EnrollUserDto } from './dto/enroll-user.dto';
 import { ImportCourseDto } from './dto/import-course.dto';
 import { ImportExamQuestionsDto } from './dto/import-exam-questions.dto';
 import { CertificatesService } from '../certificates/certificates.service';
+import { AcademyGuard } from '../auth/guards/academy.guard';
+import { CurrentAcademy } from '../auth/decorators/current-academy.decorator';
 
 @Controller('admin')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, AcademyGuard)
 @Roles(Role.ADMIN)
 export class AdminController {
   constructor(
@@ -54,8 +56,8 @@ export class AdminController {
   ) {}
 
   @Get('users')
-  getUsers() {
-    return this.adminService.getUsers();
+  getUsers(@CurrentAcademy() academyId: string | null) {
+    return this.adminService.getUsers(academyId);
   }
 
   @Patch('users/:id/role')
@@ -69,8 +71,8 @@ export class AdminController {
   }
 
   @Post('users')
-  createUser(@Body() dto: CreateAdminUserDto) {
-    return this.adminService.createUser(dto);
+  createUser(@Body() dto: CreateAdminUserDto, @CurrentAcademy() academyId: string | null) {
+    return this.adminService.createUser(dto, academyId);
   }
 
   @Patch('users/:id')
@@ -108,13 +110,13 @@ export class AdminController {
   // ─── Facturación ──────────────────────────────────────────────────────────
 
   @Get('billing')
-  getBilling(@Query() query: BillingQueryDto) {
-    return this.billingService.getReport(query.from, query.to);
+  getBilling(@Query() query: BillingQueryDto, @CurrentAcademy() academyId: string | null) {
+    return this.billingService.getReport(query.from, query.to, academyId);
   }
 
   @Patch('billing/config')
-  updateBillingConfig(@Body() dto: UpdateBillingConfigDto) {
-    return this.billingService.updateConfig(dto);
+  updateBillingConfig(@Body() dto: UpdateBillingConfigDto, @CurrentAcademy() academyId: string | null) {
+    return this.billingService.updateConfig(dto, academyId);
   }
 
   @Get('analytics')
@@ -237,8 +239,8 @@ export class AdminController {
   // ─── Canjes ───────────────────────────────────────────────────────────────
 
   @Get('redemptions')
-  listRedemptions() {
-    return this.adminService.listRedemptions();
+  listRedemptions(@CurrentAcademy() academyId: string | null) {
+    return this.adminService.listRedemptions(academyId);
   }
 
   @Patch('redemptions/:id/deliver')

@@ -1,16 +1,36 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useRegister } from '../hooks/useAuth';
 import { useSchoolYears } from '../hooks/useCourses';
+import api from '../lib/axios';
+
+interface PublicAcademy {
+  id: string;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  primaryColor: string | null;
+}
 
 export default function RegisterPage() {
+  const [searchParams] = useSearchParams();
+  const preselectedAcademy = searchParams.get('academy') ?? '';
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [schoolYearId, setSchoolYearId] = useState('');
+  const [academySlug, setAcademySlug] = useState(preselectedAcademy);
   const [passwordError, setPasswordError] = useState('');
   const { mutate, isPending, error } = useRegister();
   const { data: schoolYears = [] } = useSchoolYears();
+  const { data: academies = [] } = useQuery<PublicAcademy[]>({
+    queryKey: ['academies-public'],
+    queryFn: () => api.get('/academies/public').then((r) => r.data),
+  });
+
+  const selectedAcademy = academies.find((a) => a.slug === academySlug);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -21,7 +41,13 @@ export default function RegisterPage() {
       return;
     }
 
-    mutate({ name, email, password, ...(schoolYearId ? { schoolYearId } : {}) });
+    mutate({
+      name,
+      email,
+      password,
+      ...(schoolYearId ? { schoolYearId } : {}),
+      ...(academySlug ? { academySlug } : {}),
+    });
   }
 
   const apiError =
@@ -39,7 +65,9 @@ export default function RegisterPage() {
             <span style={s.logoEmoji}>🏀</span>
           </div>
           <h1 style={s.title}>Crear cuenta</h1>
-          <p style={s.subtitle}>Únete a VKB Academy</p>
+          <p style={s.subtitle}>
+            {selectedAcademy ? `Únete a ${selectedAcademy.name}` : 'Únete a la academia'}
+          </p>
         </div>
 
         {/* Error de API */}
@@ -93,6 +121,22 @@ export default function RegisterPage() {
               <span style={s.fieldError}>{passwordError}</span>
             )}
           </div>
+
+          {academies.length > 0 && (
+            <div className="field field-dark">
+              <label htmlFor="academy">Academia</label>
+              <select
+                id="academy"
+                value={academySlug}
+                onChange={(e) => setAcademySlug(e.target.value)}
+              >
+                <option value="">Selecciona tu academia</option>
+                {academies.map((a) => (
+                  <option key={a.id} value={a.slug}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {schoolYears.length > 0 && (
             <div className="field field-dark">

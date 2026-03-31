@@ -73,15 +73,16 @@ apps/api/src/
 ├── challenges/       # Retos, puntos, rachas y canje de merchandising
 ├── certificates/     # Certificados digitales (MODULE/COURSE_COMPLETION y MODULE/COURSE_EXAM)
 ├── school-years/     # Niveles educativos (1eso … 2bach)
-└── tutors/           # Gestión de alumnos asignados a un tutor
+├── tutors/           # Gestión de alumnos asignados a un tutor
+└── academies/        # Multi-tenancy: CRUD de academias y membresías
 ```
 
 ---
 
 ## 5. Roles y permisos
 
-| Acción | student | tutor | teacher | admin |
-|--------|---------|-------|---------|-------|
+| Acción | student | tutor | teacher | admin | super_admin |
+|--------|---------|-------|---------|-------|-------------|
 | Ver cursos asignados | ✅ | ✅ | ✅ | ✅ |
 | Ver todos los cursos | ❌ | ✅ | ✅ | ✅ |
 | Crear / editar cursos | ❌ | ❌ | ✅* | ✅ |
@@ -469,9 +470,10 @@ pnpm --filter mobile build    # EAS Build
 | 8.5 | Certificados digitales (completar módulo/curso, aprobar examen) | ✅ Completado |
 | 8.6 | Páginas de marketing (Landing, Sobre nosotros, Precios) | ✅ Completado |
 | 9 | Deployment parcial (Vercel + Railway) | ✅ Completado |
-| 10 | App móvil | ⬜ Pendiente |
-| 11 | Testing | ⬜ Pendiente |
-| 12 | Deployment completo | ⬜ Pendiente |
+| 10 | Multi-tenancy (N academias) | ✅ Completado |
+| 11 | App móvil | ⬜ Pendiente |
+| 12 | Testing | ⬜ Pendiente |
+| 13 | Deployment completo | ⬜ Pendiente |
 
 ---
 
@@ -791,4 +793,67 @@ Sección "El esfuerzo tiene premio" con los 5 artículos del club y sus costes e
 
 ---
 
-*Última actualización: Febrero 2026 — Fase 9 (Deployment parcial Vercel + Railway) completada*
+## 20. Multi-tenancy (Fase 10)
+
+### Arquitectura
+
+BD compartida con columna discriminadora `academyId`. Profesores y cursos son globales (compartidos entre academias). Alumnos, tutores y admins pertenecen a una academia vía `AcademyMember`.
+
+### Modelos nuevos
+
+| Modelo | Descripción |
+|--------|-------------|
+| `Academy` | slug, name, logoUrl, primaryColor, domain, isActive |
+| `AcademyMember` | Join table (userId + academyId) — membresía flexible |
+
+### Nuevo rol: `SUPER_ADMIN`
+
+- Gestiona todas las academias
+- Puede operar en el contexto de cualquier academia vía header `X-Academy-Id`
+- Pasa todas las comprobaciones de rol que incluyan `ADMIN`
+
+### Tablas con `academyId` (scoped)
+
+`Enrollment`, `Booking`, `Redemption`, `UserChallenge`, `BillingConfig`
+
+### Tablas globales (compartidas)
+
+`User`, `Course`, `Module`, `Lesson`, `Quiz`, `Challenge`, `Certificate`, `SchoolYear`, `ExamQuestion`, etc.
+
+### Resolución de academia
+
+1. JWT payload incluye `academyId` (null para SUPER_ADMIN y TEACHER)
+2. `AcademyGuard` adjunta `request.academyId` desde JWT o header `X-Academy-Id`
+3. Decorador `@CurrentAcademy()` para controllers
+4. `JwtStrategy` resuelve la primera membresía del usuario
+
+### Endpoints nuevos
+
+```
+GET    /academies/by-slug/:slug   → público (branding)
+GET    /academies                 → [SUPER_ADMIN]
+GET    /academies/:id             → [SUPER_ADMIN]
+POST   /academies                 → [SUPER_ADMIN]
+PATCH  /academies/:id             → [SUPER_ADMIN]
+GET    /academies/:id/members     → [ADMIN, SUPER_ADMIN]
+POST   /academies/:id/members     → [ADMIN, SUPER_ADMIN]
+DELETE /academies/:id/members/:userId → [ADMIN, SUPER_ADMIN]
+```
+
+### Frontend
+
+- Auth store incluye `academy` con branding dinámico (logo + color)
+- Sidebar muestra enlace "Academias" para SUPER_ADMIN
+- `AdminAcademiesPage`: crear academias, ver miembros, activar/desactivar
+- `AdminRoute` acepta tanto ADMIN como SUPER_ADMIN
+
+### Academias de ejemplo (seed)
+
+| Slug | Nombre |
+|------|--------|
+| `vallekas-basket` | Vallekas Basket Academy |
+| `cb-oscar` | CB Oscar Academy |
+
+---
+
+*Última actualización: Marzo 2026 — Fase 10 (Multi-tenancy) completada*

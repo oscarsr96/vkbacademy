@@ -17,4 +17,8 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   schoolYearId?: string;
+
+  @IsOptional()
+  @IsString()
+  academySlug?: string;
 }

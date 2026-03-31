@@ -13,7 +13,7 @@ const DAILY_CO_RATE_USD_PER_MINUTE = 0.00099; // ~0.00099 $/min participante
 export class BillingService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getReport(from?: string, to?: string) {
+  async getReport(from?: string, to?: string, academyId?: string | null) {
     // Rango por defecto: mes en curso
     const now = new Date();
     const periodFrom = from
@@ -26,17 +26,21 @@ export class BillingService {
     const days = (periodTo.getTime() - periodFrom.getTime()) / msInDay + 1;
     const months = days / 30.44;
 
-    // Obtener (o crear) la configuración singleton
+    // Obtener (o crear) la configuración (por academia o singleton)
+    const configId = academyId ?? 'default';
     const config = await this.prisma.billingConfig.upsert({
-      where: { id: 'default' },
-      create: { id: 'default' },
+      where: { id: configId },
+      create: { id: configId, academyId },
       update: {},
     });
 
     // ── Ingresos: suscripciones ────────────────────────────────────────────────
 
     const activeStudents = await this.prisma.user.count({
-      where: { role: Role.STUDENT },
+      where: {
+        role: Role.STUDENT,
+        ...(academyId ? { academyMembers: { some: { academyId } } } : {}),
+      },
     });
 
     const subscriptionTotal = activeStudents * config.studentMonthlyPrice * months;
@@ -47,6 +51,7 @@ export class BillingService {
       where: {
         status: BookingStatus.CONFIRMED,
         startAt: { gte: periodFrom, lte: periodTo },
+        ...(academyId ? { academyId } : {}),
       },
       select: { startAt: true, endAt: true, mode: true },
     });
@@ -80,11 +85,17 @@ export class BillingService {
     // Estimación de emails: nuevos usuarios × 2 (bienvenida + verificación)
     //                       + reservas del período × 3 (confirmación, recordatorio, cancelación)
     const newUsers = await this.prisma.user.count({
-      where: { createdAt: { gte: periodFrom, lte: periodTo } },
+      where: {
+        createdAt: { gte: periodFrom, lte: periodTo },
+        ...(academyId ? { academyMembers: { some: { academyId } } } : {}),
+      },
     });
 
     const bookingsInPeriod = await this.prisma.booking.count({
-      where: { createdAt: { gte: periodFrom, lte: periodTo } },
+      where: {
+        createdAt: { gte: periodFrom, lte: periodTo },
+        ...(academyId ? { academyId } : {}),
+      },
     });
 
     const estimatedEmailsPerMonth = newUsers * 2 + bookingsInPeriod * 3;
@@ -164,10 +175,11 @@ export class BillingService {
     };
   }
 
-  async updateConfig(dto: UpdateBillingConfigDto) {
+  async updateConfig(dto: UpdateBillingConfigDto, academyId?: string | null) {
+    const configId = academyId ?? 'default';
     return this.prisma.billingConfig.upsert({
-      where: { id: 'default' },
-      create: { id: 'default', ...dto },
+      where: { id: configId },
+      create: { id: configId, academyId, ...dto },
       update: dto,
     });
   }

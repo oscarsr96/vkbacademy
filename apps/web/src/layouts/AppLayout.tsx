@@ -21,6 +21,20 @@ function buildNavLinks(role: Role | undefined): NavLink[] {
     ];
   }
 
+  if (role === Role.SUPER_ADMIN) {
+    return [
+      ...base,
+      { to: '/admin', label: '⚙️ Dashboard', end: true, divider: true },
+      { to: '/admin/academies', label: '🏫 Academias' },
+      { to: '/admin/users', label: '👥 Usuarios' },
+      { to: '/admin/courses', label: '📚 Cursos' },
+      { to: '/admin/billing', label: '💳 Facturación' },
+      { to: '/admin/challenges', label: '🎯 Retos' },
+      { to: '/admin/redemptions', label: '🎁 Canjes' },
+      { to: '/profile', label: '👤 Mi perfil', divider: true },
+    ];
+  }
+
   if (role === Role.ADMIN) {
     return [
       ...base,
@@ -57,10 +71,13 @@ function buildNavLinks(role: Role | undefined): NavLink[] {
 
 export default function AppLayout() {
   const user = useAuthStore((s) => s.user);
+  const academy = useAuthStore((s) => s.academy);
   const { mutate: logout, isPending } = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const links = buildNavLinks(user?.role);
+  const brandName = academy?.name ?? 'VKB Academy';
+  const brandLogo = academy?.logoUrl ?? 'https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png';
 
   return (
     <div className="app-shell">
@@ -73,7 +90,7 @@ export default function AppLayout() {
         >
           ☰
         </button>
-        <span className="app-topbar-brand">🏀 VKB Academy</span>
+        <span className="app-topbar-brand">🏀 {brandName}</span>
         <button
           className="app-topbar-logout"
           onClick={() => logout()}
@@ -103,15 +120,15 @@ export default function AppLayout() {
         {/* Brand */}
         <div style={styles.brand}>
           <img
-            src="https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png"
-            alt="Vallekas Basket"
+            src={brandLogo}
+            alt={brandName}
             style={styles.brandLogo}
             onError={(e) => {
               // Fallback si la imagen no carga
               (e.currentTarget as HTMLImageElement).style.display = 'none';
             }}
           />
-          <span style={styles.brandFallback}>🏀 VKB Academy</span>
+          <span style={styles.brandFallback}>🏀 {brandName}</span>
         </div>
 
         {/* Navegación */}

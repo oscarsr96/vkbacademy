@@ -7,8 +7,11 @@ async function main() {
   console.log('🌱 Iniciando seed...');
 
   // Limpiar datos existentes en orden correcto
+  await prisma.academyMember.deleteMany();
+  await prisma.billingConfig.deleteMany();
   await prisma.userChallenge.deleteMany();
   await prisma.challenge.deleteMany();
+  await prisma.redemption.deleteMany();
   await prisma.booking.deleteMany();
   await prisma.availabilitySlot.deleteMany();
   await prisma.quizAttempt.deleteMany();
@@ -24,6 +27,7 @@ async function main() {
   await prisma.refreshToken.deleteMany();
   await prisma.user.deleteMany();
   await prisma.schoolYear.deleteMany();
+  await prisma.academy.deleteMany();
 
   // Crear niveles educativos
   const schoolYears = await Promise.all([
@@ -37,15 +41,55 @@ async function main() {
 
   const [sy1eso, , sy3eso, sy4eso] = schoolYears;
 
+  // Crear academias
+  const vkbAcademy = await prisma.academy.create({
+    data: {
+      slug: 'vallekas-basket',
+      name: 'Vallekas Basket Academy',
+      logoUrl: 'https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png',
+      primaryColor: '#ea580c',
+    },
+  });
+
+  const cbOscar = await prisma.academy.create({
+    data: {
+      slug: 'cb-oscar',
+      name: 'CB Oscar Academy',
+      primaryColor: '#3b82f6',
+    },
+  });
+
   const passwordHash = await bcrypt.hash('password123', 10);
 
-  // Crear admin
+  // Crear super admin
+  const superAdmin = await prisma.user.create({
+    data: {
+      email: 'superadmin@vkbacademy.com',
+      passwordHash,
+      role: Role.SUPER_ADMIN,
+      name: 'super-admin',
+    },
+  });
+
+  // Crear admin (vinculado a Vallekas Basket)
   const admin = await prisma.user.create({
     data: {
       email: 'admin@vkbacademy.com',
       passwordHash,
       role: Role.ADMIN,
       name: 'admin',
+      academyMembers: { create: { academyId: vkbAcademy.id } },
+    },
+  });
+
+  // Crear admin para CB Oscar
+  const adminOscar = await prisma.user.create({
+    data: {
+      email: 'admin@cboscar.com',
+      passwordHash,
+      role: Role.ADMIN,
+      name: 'admin-oscar',
+      academyMembers: { create: { academyId: cbOscar.id } },
     },
   });
 
@@ -74,17 +118,18 @@ async function main() {
     },
   });
 
-  // Crear tutor
+  // Crear tutor (vinculado a VKB)
   const tutor = await prisma.user.create({
     data: {
       email: 'oscar.sanchez@egocogito.com',
       passwordHash,
       role: Role.TUTOR,
       name: 'maria-lopez',
+      academyMembers: { create: { academyId: vkbAcademy.id } },
     },
   });
 
-  // Crear estudiante asignado a 3º ESO, con tutor asignado
+  // Crear estudiante asignado a 3º ESO, con tutor asignado (vinculado a VKB)
   const student = await prisma.user.create({
     data: {
       email: 'student@vkbacademy.com',
@@ -93,6 +138,7 @@ async function main() {
       name: 'juan-garcia',
       schoolYearId: sy3eso.id,
       tutorId: tutor.id,
+      academyMembers: { create: { academyId: vkbAcademy.id } },
     },
   });
 
@@ -283,10 +329,14 @@ async function main() {
   ]);
 
   console.log('✅ Seed completado:');
-  console.log(`   👤 Admin:    ${admin.email}`);
-  console.log(`   👤 Teacher:  ${teacher.email}`);
-  console.log(`   👤 Tutor:    ${tutor.email} → alumno: ${student.name}`);
-  console.log(`   👤 Student:  ${student.email} (${sy3eso.label}) → tutor: ${tutor.name}`);
+  console.log(`   🏫 Academy:  ${vkbAcademy.name} (${vkbAcademy.slug})`);
+  console.log(`   🏫 Academy:  ${cbOscar.name} (${cbOscar.slug})`);
+  console.log(`   👤 SuperAdmin: ${superAdmin.email}`);
+  console.log(`   👤 Admin VKB:  ${admin.email}`);
+  console.log(`   👤 Admin Oscar: ${adminOscar.email}`);
+  console.log(`   👤 Teacher:  ${teacher.email} (compartido)`);
+  console.log(`   👤 Tutor:    ${tutor.email} → alumno: ${student.name} (VKB)`);
+  console.log(`   👤 Student:  ${student.email} (${sy3eso.label}, VKB) → tutor: ${tutor.name}`);
   console.log(`   📚 Curso:    ${course.title} (${sy3eso.label})`);
   console.log(`   📚 Curso:    ${courseMath.title} (${sy3eso.label}) ← Juan matriculado`);
   console.log(`   📚 Curso:    ${course2.title} (${sy1eso.label})`);

@@ -20,8 +20,14 @@ import * as bcrypt from 'bcrypt';
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getUsers() {
+  async getUsers(academyId?: string | null) {
+    // Si hay academyId, solo devolver miembros de esa academia
+    const where = academyId
+      ? { academyMembers: { some: { academyId } } }
+      : {};
+
     return this.prisma.user.findMany({
+      where,
       select: {
         id: true,
         email: true,
@@ -32,6 +38,9 @@ export class AdminService {
         tutorId: true,
         tutor: { select: { id: true, name: true } },
         _count: { select: { students: true } },
+        academyMembers: {
+          select: { academy: { select: { id: true, slug: true, name: true } } },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -62,7 +71,7 @@ export class AdminService {
     });
   }
 
-  async createUser(dto: CreateAdminUserDto) {
+  async createUser(dto: CreateAdminUserDto, academyId?: string | null) {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existing) throw new BadRequestException('Ya existe un usuario con ese email');
 
@@ -75,12 +84,16 @@ export class AdminService {
         role: dto.role,
         schoolYearId: dto.schoolYearId ?? null,
         tutorId: dto.tutorId ?? null,
+        ...(academyId ? { academyMembers: { create: { academyId } } } : {}),
       },
       select: {
         id: true, email: true, name: true, role: true,
         avatarUrl: true, createdAt: true, tutorId: true,
         tutor: { select: { id: true, name: true } },
         _count: { select: { students: true } },
+        academyMembers: {
+          select: { academy: { select: { id: true, slug: true, name: true } } },
+        },
       },
     });
   }
@@ -903,8 +916,9 @@ export class AdminService {
 
   // ─── Canjes ───────────────────────────────────────────────────────────────
 
-  async listRedemptions() {
+  async listRedemptions(academyId?: string | null) {
     return this.prisma.redemption.findMany({
+      where: academyId ? { academyId } : {},
       orderBy: { redeemedAt: 'desc' },
       include: {
         user: { select: { id: true, name: true, email: true, avatarUrl: true } },

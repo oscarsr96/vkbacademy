@@ -2,27 +2,29 @@ import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/co
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { AcademyGuard } from '../auth/guards/academy.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CurrentAcademy } from '../auth/decorators/current-academy.decorator';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { User } from '@prisma/client';
 
 @Controller('bookings')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AcademyGuard)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Get('mine')
-  getMyBookings(@CurrentUser() user: User) {
-    return this.bookingsService.getMyBookings(user.id, user.role);
+  getMyBookings(@CurrentUser() user: User, @CurrentAcademy() academyId: string | null) {
+    return this.bookingsService.getMyBookings(user.id, user.role, academyId);
   }
 
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.TUTOR, Role.ADMIN)
-  create(@Body() dto: CreateBookingDto, @CurrentUser() user: User) {
-    return this.bookingsService.create(dto, user.id, user.role);
+  create(@Body() dto: CreateBookingDto, @CurrentUser() user: User, @CurrentAcademy() academyId: string | null) {
+    return this.bookingsService.create(dto, user.id, user.role, academyId);
   }
 
   @Patch(':id/confirm')

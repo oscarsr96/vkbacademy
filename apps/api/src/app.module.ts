@@ -18,6 +18,7 @@ import { ChallengesModule } from './challenges/challenges.module';
 import { ExamsModule } from './exams/exams.module';
 import { CertificatesModule } from './certificates/certificates.module';
 import { TutorModule } from './tutor/tutor.module';
+import { AcademiesModule } from './academies/academies.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { TutorModule } from './tutor/tutor.module';
     ExamsModule,
     CertificatesModule,
     TutorModule,
+    AcademiesModule,
   ],
 })
 export class AppModule {}

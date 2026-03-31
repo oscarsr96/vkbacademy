@@ -22,6 +22,8 @@ export type AuthResponse = AuthTokens & {
     avatarUrl: string | null;
     schoolYearId: string | null;
     schoolYear: { id: string; name: string; label: string } | null;
+    academyId: string | null;
+    academy: { id: string; slug: string; name: string; logoUrl: string | null; primaryColor: string | null; isActive: boolean } | null;
   };
 };
 
@@ -42,18 +44,30 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
+    // Resolver la academia por slug si se proporcionó
+    let academyId: string | null = null;
+    let academy: { id: string; slug: string; name: string; logoUrl: string | null; primaryColor: string | null; isActive: boolean } | null = null;
+    if (dto.academySlug) {
+      const found = await this.prisma.academy.findUnique({ where: { slug: dto.academySlug } });
+      if (found) {
+        academyId = found.id;
+        academy = found;
+      }
+    }
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
         passwordHash,
         name: dto.name,
         ...(dto.schoolYearId ? { schoolYearId: dto.schoolYearId } : {}),
+        ...(academyId ? { academyMembers: { create: { academyId } } } : {}),
       },
       include: { schoolYear: true },
     });
 
-    const tokens = await this.generateTokens({ sub: user.id, email: user.email, role: user.role });
-    return { ...tokens, user: this.toPublic(user) };
+    const tokens = await this.generateTokens({ sub: user.id, email: user.email, role: user.role, academyId });
+    return { ...tokens, user: this.toPublic(user, academyId, academy) };
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
@@ -61,19 +75,23 @@ export class AuthService {
     const user = isEmail
       ? await this.prisma.user.findUnique({
           where: { email: dto.identifier },
-          include: { schoolYear: true },
+          include: { schoolYear: true, academyMembers: { take: 1, include: { academy: true } } },
         })
       : await this.prisma.user.findFirst({
           where: { name: { equals: dto.identifier, mode: 'insensitive' } },
-          include: { schoolYear: true },
+          include: { schoolYear: true, academyMembers: { take: 1, include: { academy: true } } },
         });
     if (!user) throw new UnauthorizedException('Credenciales incorrectas');
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Credenciales incorrectas');
 
-    const tokens = await this.generateTokens({ sub: user.id, email: user.email, role: user.role });
-    return { ...tokens, user: this.toPublic(user) };
+    const membership = user.academyMembers[0];
+    const academyId = membership?.academyId ?? null;
+    const academy = membership?.academy ?? null;
+
+    const tokens = await this.generateTokens({ sub: user.id, email: user.email, role: user.role, academyId });
+    return { ...tokens, user: this.toPublic(user, academyId, academy) };
   }
 
   async refresh(token: string): Promise<AuthTokens> {
@@ -88,8 +106,12 @@ export class AuthService {
       data: { revoked: true },
     });
 
-    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: stored.userId } });
-    return this.generateTokens({ sub: user.id, email: user.email, role: user.role });
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: stored.userId },
+      include: { academyMembers: { take: 1 } },
+    });
+    const academyId = user.academyMembers[0]?.academyId ?? null;
+    return this.generateTokens({ sub: user.id, email: user.email, role: user.role, academyId });
   }
 
   async logout(token: string): Promise<{ message: string }> {
@@ -181,15 +203,19 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private toPublic(user: {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-    avatarUrl: string | null;
-    schoolYearId?: string | null;
-    schoolYear?: { id: string; name: string; label: string } | null;
-  }) {
+  private toPublic(
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      role: string;
+      avatarUrl: string | null;
+      schoolYearId?: string | null;
+      schoolYear?: { id: string; name: string; label: string } | null;
+    },
+    academyId?: string | null,
+    academy?: { id: string; slug: string; name: string; logoUrl: string | null; primaryColor: string | null; isActive: boolean } | null,
+  ) {
     return {
       id: user.id,
       email: user.email,
@@ -198,6 +224,8 @@ export class AuthService {
       avatarUrl: user.avatarUrl,
       schoolYearId: user.schoolYearId ?? null,
       schoolYear: user.schoolYear ?? null,
+      academyId: academyId ?? null,
+      academy: academy ?? null,
     };
   }
 }

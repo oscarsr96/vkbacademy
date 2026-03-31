@@ -1344,7 +1344,7 @@ export default function BookingsPage() {
       {user?.role === Role.STUDENT && <StudentView />}
       {user?.role === Role.TUTOR   && <TutorView />}
       {user?.role === Role.TEACHER && <TeacherView />}
-      {user?.role === Role.ADMIN   && <AdminView />}
+      {(user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN) && <AdminView />}
     </div>
   );
 }

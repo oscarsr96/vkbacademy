@@ -19,10 +19,24 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: {
+        academyMembers: {
+          take: 1,
+          include: { academy: true },
+        },
+      },
+    });
     if (!user) {
       throw new UnauthorizedException('Usuario no encontrado');
     }
+
+    // Adjuntar academyId desde JWT payload o primera membresía
+    const membership = user.academyMembers[0];
+    (user as any).academyId = payload.academyId ?? membership?.academyId ?? null;
+    (user as any).academy = membership?.academy ?? null;
+
     return user;
   }
 }

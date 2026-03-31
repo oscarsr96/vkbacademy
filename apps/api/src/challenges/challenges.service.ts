@@ -248,7 +248,7 @@ export class ChallengesService {
   }
 
   /** Canjea puntos del usuario por un artículo de merchandising */
-  async redeemItem(userId: string, itemName: string, cost: number) {
+  async redeemItem(userId: string, itemName: string, cost: number, academyId?: string | null) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { totalPoints: true },
@@ -266,7 +266,7 @@ export class ChallengesService {
         select: { totalPoints: true },
       }),
       this.prisma.redemption.create({
-        data: { userId, itemName, cost },
+        data: { userId, itemName, cost, academyId: academyId ?? undefined },
       }),
     ]);
 

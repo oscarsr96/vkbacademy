@@ -26,6 +26,8 @@ import ExamPage from './pages/ExamPage';
 import ExamsListPage from './pages/ExamsListPage';
 import AdminExamBankPage from './pages/admin/AdminExamBankPage';
 import CertificatesPage from './pages/CertificatesPage';
+import AdminAcademiesPage from './pages/admin/AdminAcademiesPage';
+import AcademyLandingPage from './pages/marketing/AcademyLandingPage';
 import AppLayout from './layouts/AppLayout';
 import PublicLayout from './layouts/PublicLayout';
 import LandingPage from './pages/marketing/LandingPage';
@@ -38,11 +40,11 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
-// Guarda: solo ADMIN, si no redirige al inicio privado
+// Guarda: solo ADMIN o SUPER_ADMIN, si no redirige al inicio privado
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== Role.ADMIN) return <Navigate to="/dashboard" replace />;
+  if (user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
 
@@ -70,6 +72,9 @@ export default function App() {
         {/* /precios → página de precios */}
         <Route path="/precios" element={<PricingPage />} />
       </Route>
+
+      {/* ── Landing por academia (sin layout compartido — tiene su propio navbar) ── */}
+      <Route path="/a/:slug" element={<AcademyLandingPage />} />
 
       {/* ── Rutas de autenticación (sin layout compartido) ── */}
       <Route
@@ -149,6 +154,10 @@ export default function App() {
         <Route
           path="admin/exam-banks"
           element={<AdminRoute><AdminExamBankPage /></AdminRoute>}
+        />
+        <Route
+          path="admin/academies"
+          element={<AdminRoute><AdminAcademiesPage /></AdminRoute>}
         />
       </Route>
 
