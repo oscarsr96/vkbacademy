@@ -126,7 +126,7 @@ export default function AdminAcademiesPage() {
                   >
                     {a.name.charAt(0)}
                   </div>
-                  <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <h3 style={{ color: '#f1f5f9', fontWeight: 600, margin: 0 }}>{a.name}</h3>
                     <span style={{ color: '#64748b', fontSize: '0.8rem' }}>/{a.slug}</span>
                     {a.domain && <span style={{ color: '#475569', fontSize: '0.75rem' }}>{a.domain}</span>}
