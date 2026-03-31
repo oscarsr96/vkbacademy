@@ -30,6 +30,22 @@ export class AcademiesService {
     });
   }
 
+  async findByDomain(domain: string) {
+    const academy = await this.prisma.academy.findFirst({
+      where: { domain, isActive: true },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        logoUrl: true,
+        primaryColor: true,
+        isActive: true,
+      },
+    });
+    if (!academy) throw new NotFoundException('Academia no encontrada para este dominio');
+    return academy;
+  }
+
   async findBySlug(slug: string) {
     const academy = await this.prisma.academy.findUnique({
       where: { slug },

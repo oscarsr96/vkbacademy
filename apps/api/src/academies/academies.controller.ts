@@ -31,6 +31,12 @@ export class AcademiesController {
     return this.academiesService.findBySlug(slug);
   }
 
+  // Endpoint público: resolver academia por dominio
+  @Get('by-domain/:domain')
+  findByDomain(@Param('domain') domain: string) {
+    return this.academiesService.findByDomain(domain);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN)

@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../lib/axios';
+import { useAcademyDomain } from '../../contexts/AcademyContext';
 
 interface AcademyPublic {
   id: string;
@@ -52,16 +53,23 @@ const STATS = [
 ];
 
 export default function AcademyLandingPage() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug: paramSlug } = useParams<{ slug: string }>();
+  const { academy: domainAcademy } = useAcademyDomain();
   const navigate = useNavigate();
 
-  const { data: academy, isLoading, error } = useQuery<AcademyPublic>({
-    queryKey: ['academy-public', slug],
-    queryFn: () => api.get(`/academies/by-slug/${slug}`).then((r) => r.data),
-    enabled: !!slug,
+  // Prioridad: slug de la URL (/a/:slug), luego academia resuelta por dominio
+  const resolvedSlug = paramSlug ?? domainAcademy?.slug;
+
+  const { data: fetchedAcademy, isLoading, error } = useQuery<AcademyPublic>({
+    queryKey: ['academy-public', resolvedSlug],
+    queryFn: () => api.get(`/academies/by-slug/${resolvedSlug}`).then((r) => r.data),
+    enabled: !!resolvedSlug && !domainAcademy,
   });
 
-  if (isLoading) {
+  // Usar la academia del dominio si ya la tenemos, sino la del fetch
+  const academy = domainAcademy ?? fetchedAcademy;
+
+  if (isLoading && !academy) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080e1a' }}>
         <span className="spinner" />
@@ -69,17 +77,19 @@ export default function AcademyLandingPage() {
     );
   }
 
-  if (error || !academy) {
+  if ((error && !domainAcademy) || !academy) {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
         <h2 style={{ color: '#f1f5f9', fontSize: '1.5rem' }}>Academia no encontrada</h2>
-        <p style={{ color: '#94a3b8' }}>No existe ninguna academia con el identificador "{slug}"</p>
-        <button onClick={() => navigate('/')} style={btnPrimary(academy?.primaryColor)}>
+        <p style={{ color: '#94a3b8' }}>No existe ninguna academia con el identificador "{resolvedSlug}"</p>
+        <button onClick={() => navigate('/')} style={btnPrimary(null)}>
           Ir al inicio
         </button>
       </div>
     );
   }
+
+  const slug = academy.slug;
 
   const color = academy.primaryColor ?? '#ea580c';
 

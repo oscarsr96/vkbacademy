@@ -27,11 +27,13 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => {
       // Permite requests sin Origin (Postman, apps móviles nativas)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origen no permitido por CORS: ${origin}`));
-      }
+      if (!origin) return callback(null, true);
+      // Permite orígenes explícitos en FRONTEND_URL
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Permite cualquier subdominio de vercel.app (para N academias)
+      if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)) return callback(null, true);
+
+      callback(new Error(`Origen no permitido por CORS: ${origin}`));
     },
     credentials: true,
   });

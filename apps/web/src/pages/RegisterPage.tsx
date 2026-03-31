@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useRegister } from '../hooks/useAuth';
 import { useSchoolYears } from '../hooks/useCourses';
+import { useAcademyDomain } from '../contexts/AcademyContext';
 import api from '../lib/axios';
 
 interface PublicAcademy {
@@ -15,7 +16,9 @@ interface PublicAcademy {
 
 export default function RegisterPage() {
   const [searchParams] = useSearchParams();
-  const preselectedAcademy = searchParams.get('academy') ?? '';
+  const { academy: domainAcademy } = useAcademyDomain();
+  // Prioridad: dominio > query param
+  const preselectedAcademy = domainAcademy?.slug ?? searchParams.get('academy') ?? '';
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

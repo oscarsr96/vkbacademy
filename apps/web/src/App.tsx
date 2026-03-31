@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/auth.store';
+import { useAcademyDomain } from './contexts/AcademyContext';
 import { Role } from '@vkbacademy/shared';
 
 import LoginPage from './pages/LoginPage';
@@ -55,9 +56,20 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 }
 
 // Ruta raíz: landing pública si no autenticado, dashboard si autenticado
+// Si estamos en un dominio de academia, muestra la landing de esa academia
 function RootIndex() {
   const isAuthenticated = useAuthStore((s) => !!s.accessToken);
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+  const { academy, isAcademyDomain, isLoading } = useAcademyDomain();
+
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isLoading) return null;
+
+  // Si estamos en un dominio de academia, mostrar su landing
+  if (isAcademyDomain && academy) {
+    return <AcademyLandingPage />;
+  }
+
+  return <LandingPage />;
 }
 
 export default function App() {

@@ -48,6 +48,7 @@ async function main() {
       name: 'Vallekas Basket Academy',
       logoUrl: 'https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png',
       primaryColor: '#ea580c',
+      domain: 'vkbacademy.vercel.app',
     },
   });
 
@@ -56,6 +57,7 @@ async function main() {
       slug: 'cb-oscar',
       name: 'CB Oscar Academy',
       primaryColor: '#3b82f6',
+      domain: 'cboscaracademy.vercel.app',
     },
   });
 
