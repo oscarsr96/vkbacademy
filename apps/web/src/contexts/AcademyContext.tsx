@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
+import { contrastText } from '../utils/color';
 
 interface AcademyPublic {
   id: string;
@@ -83,7 +84,8 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
           // Generar favicon SVG con la inicial y el color primario
           const initial = data.name.charAt(0).toUpperCase();
           const color = data.primaryColor ?? '#6366f1';
-          const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="${color}"/><text x="16" y="22" text-anchor="middle" fill="white" font-size="18" font-weight="bold" font-family="system-ui">${initial}</text></svg>`;
+          const textColor = contrastText(color);
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="${color}"/><text x="16" y="22" text-anchor="middle" fill="${textColor}" font-size="18" font-weight="bold" font-family="system-ui">${initial}</text></svg>`;
           link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
           link.type = 'image/svg+xml';
         }

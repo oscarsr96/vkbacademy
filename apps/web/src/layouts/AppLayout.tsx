@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { useLogout } from '../hooks/useAuth';
 import { useAcademyDomain } from '../contexts/AcademyContext';
+import { contrastText } from '../utils/color';
 import { Role } from '@vkbacademy/shared';
 import TutorWidget from '../components/TutorWidget';
 
@@ -113,7 +114,7 @@ export default function AppLayout() {
               width: 56, height: 56, borderRadius: 12,
               background: `linear-gradient(135deg, ${c}, ${c}cc)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: 800, fontSize: '1.5rem',
+              color: contrastText(c), fontWeight: 800, fontSize: '1.5rem',
               boxShadow: `0 4px 16px ${c}44`,
             }}>
               {brandName.charAt(0)}
@@ -153,7 +154,7 @@ export default function AppLayout() {
           <div style={{
             width: 38, height: 38, borderRadius: '50%',
             background: `linear-gradient(135deg, ${c} 0%, ${c}cc 100%)`,
-            color: '#fff', fontWeight: 700,
+            color: contrastText(c), fontWeight: 700,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, fontSize: '0.9375rem',
             boxShadow: `0 0 0 3px ${c}40`,

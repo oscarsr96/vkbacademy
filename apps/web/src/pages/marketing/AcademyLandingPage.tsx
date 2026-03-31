@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../lib/axios';
 import { useAcademyDomain } from '../../contexts/AcademyContext';
+import { contrastText, lighten } from '../../utils/color';
 
 interface AcademyPublic {
   id: string;
@@ -244,7 +245,7 @@ function btnPrimary(color?: string | null): React.CSSProperties {
   const c = color ?? '#ea580c';
   return {
     background: `linear-gradient(135deg, ${c} 0%, ${lighten(c)} 100%)`,
-    color: '#fff',
+    color: contrastText(c),
     border: 'none',
     borderRadius: 10,
     padding: '10px 24px',
@@ -253,11 +254,4 @@ function btnPrimary(color?: string | null): React.CSSProperties {
     cursor: 'pointer',
     boxShadow: `0 6px 24px ${c}55`,
   };
-}
-
-function lighten(hex: string): string {
-  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + 30);
-  const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + 30);
-  const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + 30);
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }

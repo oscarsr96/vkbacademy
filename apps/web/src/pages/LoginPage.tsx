@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useAuth';
 import { useAcademyDomain } from '../contexts/AcademyContext';
+import { contrastText } from '../utils/color';
 
 /* ---------- Basketball SVG component ---------- */
 function Basketball({ size = 40, style, color = '#ea580c' }: { size?: number; style?: React.CSSProperties; color?: string }) {
@@ -135,7 +136,7 @@ export default function LoginPage() {
               width: 72, height: 72, borderRadius: '50%',
               background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '2rem', fontWeight: 800, color: '#fff',
+              fontSize: '2rem', fontWeight: 800, color: contrastText(accentColor),
               boxShadow: `0 8px 32px ${accentColor}55`,
             }}>
               {academyName.charAt(0)}
