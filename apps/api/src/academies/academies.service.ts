@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAcademyDto, UpdateAcademyDto } from './dto/create-academy.dto';
 
 @Injectable()
 export class AcademiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(AcademiesService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
 
   async findAll() {
     return this.prisma.academy.findMany({
@@ -75,23 +81,91 @@ export class AcademiesService {
     const existing = await this.prisma.academy.findUnique({ where: { slug: dto.slug } });
     if (existing) throw new ConflictException('Ya existe una academia con ese slug');
 
-    return this.prisma.academy.create({
+    // Generar dominio automáticamente si no se proporciona
+    const domain = dto.domain ?? `${dto.slug.replace(/-/g, '')}academy.vercel.app`;
+
+    const academy = await this.prisma.academy.create({
       data: {
         name: dto.name,
         slug: dto.slug,
         logoUrl: dto.logoUrl,
         primaryColor: dto.primaryColor,
-        domain: dto.domain,
+        domain,
       },
     });
+
+    // Registrar dominio en Vercel automáticamente
+    void this.registerVercelDomain(domain);
+
+    return academy;
   }
 
   async update(id: string, dto: UpdateAcademyDto) {
-    await this.findById(id);
-    return this.prisma.academy.update({
+    const current = await this.findById(id);
+    const academy = await this.prisma.academy.update({
       where: { id },
       data: dto,
     });
+
+    // Si cambió el dominio, registrar el nuevo y quitar el viejo
+    if (dto.domain && dto.domain !== current.domain) {
+      void this.registerVercelDomain(dto.domain);
+      if (current.domain) {
+        void this.removeVercelDomain(current.domain);
+      }
+    }
+
+    return academy;
+  }
+
+  /**
+   * Registra un dominio en el proyecto de Vercel.
+   * Requiere VERCEL_TOKEN y VERCEL_PROJECT_ID en las variables de entorno.
+   */
+  private async registerVercelDomain(domain: string): Promise<void> {
+    const token = this.config.get<string>('VERCEL_TOKEN');
+    const projectId = this.config.get<string>('VERCEL_PROJECT_ID');
+    if (!token || !projectId) {
+      this.logger.warn('VERCEL_TOKEN o VERCEL_PROJECT_ID no configurados — dominio no registrado automáticamente');
+      return;
+    }
+
+    try {
+      const res = await fetch(`https://api.vercel.com/v10/projects/${projectId}/domains`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: domain }),
+      });
+
+      if (res.ok) {
+        this.logger.log(`Dominio ${domain} registrado en Vercel`);
+      } else {
+        const body = await res.text();
+        this.logger.warn(`Error registrando dominio ${domain} en Vercel: ${res.status} ${body}`);
+      }
+    } catch (err) {
+      this.logger.error(`Error llamando a Vercel API para dominio ${domain}`, err);
+    }
+  }
+
+  /** Elimina un dominio del proyecto de Vercel */
+  private async removeVercelDomain(domain: string): Promise<void> {
+    const token = this.config.get<string>('VERCEL_TOKEN');
+    const projectId = this.config.get<string>('VERCEL_PROJECT_ID');
+    if (!token || !projectId) return;
+
+    try {
+      await fetch(`https://api.vercel.com/v10/projects/${projectId}/domains/${domain}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      this.logger.log(`Dominio ${domain} eliminado de Vercel`);
+    } catch (err) {
+      this.logger.error(`Error eliminando dominio ${domain} de Vercel`, err);
+    }
   }
 
   async getMembers(academyId: string) {
