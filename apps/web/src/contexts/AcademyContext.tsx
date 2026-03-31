@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 
@@ -70,6 +70,29 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
     staleTime: Infinity,
     retry: false,
   });
+
+  // Actualizar título y favicon según la academia
+  useEffect(() => {
+    if (data) {
+      document.title = data.name;
+      const link = document.getElementById('favicon') as HTMLLinkElement | null;
+      if (link) {
+        if (data.logoUrl) {
+          link.href = data.logoUrl;
+        } else {
+          // Generar favicon SVG con la inicial y el color primario
+          const initial = data.name.charAt(0).toUpperCase();
+          const color = data.primaryColor ?? '#6366f1';
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="${color}"/><text x="16" y="22" text-anchor="middle" fill="white" font-size="18" font-weight="bold" font-family="system-ui">${initial}</text></svg>`;
+          link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+          link.type = 'image/svg+xml';
+        }
+      }
+    } else if (!domain) {
+      // Dominio principal: título por defecto
+      document.title = 'VKB Academy';
+    }
+  }, [data, domain]);
 
   const value: AcademyContextValue = {
     academy: data ?? null,
