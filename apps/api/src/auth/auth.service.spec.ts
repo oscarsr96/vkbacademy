@@ -39,6 +39,7 @@ describe('AuthService', () => {
     avatarUrl: null,
     schoolYearId: 'sy1',
     schoolYear: { id: 'sy1', name: '1eso', label: '1º ESO' },
+    academyMembers: [],
   };
 
   beforeEach(async () => {
