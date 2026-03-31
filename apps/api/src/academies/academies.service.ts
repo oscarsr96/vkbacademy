@@ -1,5 +1,7 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Role } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAcademyDto, UpdateAcademyDto } from './dto/create-academy.dto';
 
@@ -84,6 +86,9 @@ export class AcademiesService {
     // Generar dominio automáticamente si no se proporciona (o vacío)
     const domain = dto.domain?.trim() || `${dto.slug.replace(/-/g, '')}academy.vercel.app`;
 
+    const passwordHash = await bcrypt.hash('password123', 10);
+    const emailSuffix = `${dto.slug.replace(/-/g, '')}.academy`;
+
     const academy = await this.prisma.academy.create({
       data: {
         name: dto.name,
@@ -91,11 +96,48 @@ export class AcademiesService {
         logoUrl: dto.logoUrl,
         primaryColor: dto.primaryColor,
         domain,
+        members: {
+          create: [
+            {
+              user: {
+                create: {
+                  email: `admin@${emailSuffix}`,
+                  name: `admin-${dto.slug}`,
+                  passwordHash,
+                  role: Role.ADMIN,
+                },
+              },
+            },
+            {
+              user: {
+                create: {
+                  email: `tutor@${emailSuffix}`,
+                  name: `tutor-${dto.slug}`,
+                  passwordHash,
+                  role: Role.TUTOR,
+                },
+              },
+            },
+            {
+              user: {
+                create: {
+                  email: `student@${emailSuffix}`,
+                  name: `student-${dto.slug}`,
+                  passwordHash,
+                  role: Role.STUDENT,
+                },
+              },
+            },
+          ],
+        },
       },
+      include: { _count: { select: { members: true } } },
     });
 
     // Registrar dominio en Vercel automáticamente
     void this.registerVercelDomain(domain);
+
+    this.logger.log(`Academia "${dto.name}" creada con 3 usuarios por defecto (admin/tutor/student@${emailSuffix})`);
 
     return academy;
   }
@@ -166,6 +208,21 @@ export class AcademiesService {
     } catch (err) {
       this.logger.error(`Error eliminando dominio ${domain} de Vercel`, err);
     }
+  }
+
+  async delete(id: string) {
+    const academy = await this.findById(id);
+
+    // Eliminar miembros y la academia (cascade elimina AcademyMember)
+    await this.prisma.academy.delete({ where: { id } });
+
+    // Eliminar dominio de Vercel
+    if (academy.domain) {
+      void this.removeVercelDomain(academy.domain);
+    }
+
+    this.logger.log(`Academia "${academy.name}" eliminada (dominio: ${academy.domain})`);
+    return { message: `Academia "${academy.name}" eliminada correctamente` };
   }
 
   async getMembers(academyId: string) {

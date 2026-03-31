@@ -58,6 +58,13 @@ export class AcademiesController {
     return this.academiesService.create(dto);
   }
 
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN)
+  delete(@Param('id') id: string) {
+    return this.academiesService.delete(id);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN)

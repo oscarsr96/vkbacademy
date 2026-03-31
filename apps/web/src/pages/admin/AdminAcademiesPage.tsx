@@ -76,6 +76,14 @@ export default function AdminAcademiesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['academy-members', selectedAcademy] }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/academies/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['academies'] });
+      setSelectedAcademy(null);
+    },
+  });
+
   const set = (k: keyof CreateForm, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
   return (
@@ -152,6 +160,25 @@ export default function AdminAcademiesPage() {
                     }}
                   >
                     {a.isActive ? 'Activa' : 'Inactiva'}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`¿Eliminar "${a.name}"? Se eliminará el dominio de Vercel y todos los miembros.`)) {
+                        deleteMutation.mutate(a.id);
+                      }
+                    }}
+                    style={{
+                      background: 'transparent',
+                      color: '#ef4444',
+                      border: '1px solid #ef444466',
+                      padding: '4px 12px',
+                      borderRadius: 6,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Eliminar
                   </button>
                 </div>
               </div>
