@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/auth.store';
+import { useAcademyFilterStore } from '../store/academy-filter.store';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 
@@ -8,12 +9,19 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor: adjuntar token de acceso
+// Interceptor: adjuntar token de acceso y X-Academy-Id (SUPER_ADMIN)
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // SUPER_ADMIN: enviar academia seleccionada como header
+  const selectedAcademyId = useAcademyFilterStore.getState().selectedAcademyId;
+  if (selectedAcademyId) {
+    config.headers['X-Academy-Id'] = selectedAcademyId;
+  }
+
   return config;
 });
 

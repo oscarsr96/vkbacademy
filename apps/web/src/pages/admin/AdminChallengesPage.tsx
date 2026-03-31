@@ -7,6 +7,8 @@ import {
   useToggleChallenge,
 } from '../../hooks/useChallenges';
 import type { AdminChallenge, AdminChallengeType, CreateChallengePayload } from '../../api/admin.api';
+import AcademyFilter from '../../components/AcademyFilter';
+import { useAcademyFilterStore } from '../../store/academy-filter.store';
 
 const CHALLENGE_TYPE_LABELS: Record<AdminChallengeType, string> = {
   LESSON_COMPLETED: 'Lecciones completadas',
@@ -177,7 +179,8 @@ function ChallengeForm({ initial, onSubmit, onCancel, isPending, title }: Challe
 }
 
 export default function AdminChallengesPage() {
-  const { data: challenges, isLoading } = useAdminChallenges();
+  const selectedAcademyId = useAcademyFilterStore((s) => s.selectedAcademyId);
+  const { data: challenges, isLoading } = useAdminChallenges(selectedAcademyId);
   const createMutation = useCreateChallenge();
   const updateMutation = useUpdateChallenge();
   const deleteMutation = useDeleteChallenge();
@@ -224,6 +227,7 @@ export default function AdminChallengesPage() {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem' }}>
+      <AcademyFilter />
 
       {/* Hero */}
       <div className="page-hero animate-in">

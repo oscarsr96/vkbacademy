@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi, type AdminUser, type CreateUserPayload, type UpdateUserPayload } from '../../api/admin.api';
 import { Role } from '@vkbacademy/shared';
 import type { Course } from '@vkbacademy/shared';
+import AcademyFilter from '../../components/AcademyFilter';
+import { useAcademyFilterStore } from '../../store/academy-filter.store';
 
 const ROLE_LABELS: Record<Role, string> = {
   [Role.STUDENT]: 'Alumno',
@@ -27,10 +29,11 @@ const ALL_ROLES = Object.values(Role);
 // ---------------------------------------------------------------------------
 
 export default function AdminUsersPage() {
+  const selectedAcademyId = useAcademyFilterStore((s) => s.selectedAcademyId);
   const qc = useQueryClient();
 
   const { data: users, isLoading } = useQuery({
-    queryKey: ['admin', 'users'],
+    queryKey: ['admin', 'users', selectedAcademyId],
     queryFn: adminApi.getUsers,
   });
 
@@ -134,6 +137,7 @@ export default function AdminUsersPage() {
 
   return (
     <div style={s.page}>
+      <AcademyFilter />
       {/* Hero */}
       <div className="page-hero animate-in" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' as const }}>

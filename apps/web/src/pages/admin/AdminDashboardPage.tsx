@@ -13,6 +13,8 @@ import {
   type AdminCertificate,
   type AdminCertificateType,
 } from '../../api/admin.api';
+import AcademyFilter from '../../components/AcademyFilter';
+import { useAcademyFilterStore } from '../../store/academy-filter.store';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,6 +58,8 @@ function fmtDateLabel(date: string, gran: Granularity): string {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
+  const selectedAcademyId = useAcademyFilterStore((s) => s.selectedAcademyId);
+
   const init = presetRange('30d');
   const [from, setFrom] = useState(init.from);
   const [to, setTo] = useState(init.to);
@@ -81,7 +85,7 @@ export default function AdminDashboardPage() {
   };
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['admin', 'analytics', params],
+    queryKey: ['admin', 'analytics', params, selectedAcademyId],
     queryFn: () => adminApi.getAnalytics(params),
     staleTime: 60_000,
   });
@@ -92,12 +96,12 @@ export default function AdminDashboardPage() {
   });
 
   const { data: coursesPage } = useQuery({
-    queryKey: ['admin', 'courses-all'],
+    queryKey: ['admin', 'courses-all', selectedAcademyId],
     queryFn: () => adminApi.listCourses({ limit: 200 }),
   });
 
   const { data: certs = [] } = useQuery({
-    queryKey: ['admin', 'certificates'],
+    queryKey: ['admin', 'certificates', selectedAcademyId],
     queryFn: adminApi.listCertificates,
     staleTime: 60_000,
   });
@@ -121,6 +125,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div style={s.page}>
+      <AcademyFilter />
       {/* ── CSS de impresión ── */}
       <style>{`
         @media print {

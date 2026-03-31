@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi, type AdminCoursesParams, type UpdateCoursePayload, type GenerateCoursePayload, type CreateCoursePayload } from '../api/admin.api';
 
-export function useAdminCourses(page: number, filters?: Omit<AdminCoursesParams, 'page'>) {
+export function useAdminCourses(page: number, filters?: Omit<AdminCoursesParams, 'page'>, selectedAcademyId?: string | null) {
   return useQuery({
-    queryKey: ['admin', 'courses', page, filters],
+    queryKey: ['admin', 'courses', page, filters, selectedAcademyId],
     queryFn: () => adminApi.listCourses({ page, limit: 10, ...filters }),
   });
 }

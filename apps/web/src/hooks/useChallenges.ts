@@ -30,9 +30,9 @@ export function useMyChallenges() {
 
 // ─── Admin hooks ─────────────────────────────────────────────────────────────
 
-export function useAdminChallenges() {
+export function useAdminChallenges(selectedAcademyId?: string | null) {
   return useQuery({
-    queryKey: ['admin', 'challenges'],
+    queryKey: ['admin', 'challenges', selectedAcademyId],
     queryFn: () => adminApi.listChallenges(),
   });
 }

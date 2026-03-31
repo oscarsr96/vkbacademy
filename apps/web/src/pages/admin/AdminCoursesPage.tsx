@@ -10,6 +10,8 @@ import {
   useImportCourse,
   useSchoolYears,
 } from '../../hooks/useAdminCourses';
+import AcademyFilter from '../../components/AcademyFilter';
+import { useAcademyFilterStore } from '../../store/academy-filter.store';
 
 // ─── Tipos internos ──────────────────────────────────────────────────────────
 
@@ -38,6 +40,8 @@ interface EditCourseForm {
 // ─── Componente principal ────────────────────────────────────────────────────
 
 export default function AdminCoursesPage() {
+  const selectedAcademyId = useAcademyFilterStore((s) => s.selectedAcademyId);
+
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [filterSchoolYearId, setFilterSchoolYearId] = useState('');
@@ -74,7 +78,7 @@ export default function AdminCoursesPage() {
   const { data, isLoading } = useAdminCourses(page, {
     search: search || undefined,
     schoolYearId: filterSchoolYearId || undefined,
-  });
+  }, selectedAcademyId);
   const { data: schoolYears = [] } = useSchoolYears();
   const createMutation = useCreateCourse();
   const generateMutation = useGenerateCourse();
@@ -214,6 +218,7 @@ export default function AdminCoursesPage() {
 
   return (
     <div style={s.page}>
+      <AcademyFilter />
       {/* Toast */}
       {toast && (
         <div style={{ ...s.toast, background: toast.type === 'ok' ? 'var(--color-primary)' : 'var(--color-error)' }}>

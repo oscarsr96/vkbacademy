@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../api/admin.api';
+import AcademyFilter from '../../components/AcademyFilter';
+import { useAcademyFilterStore } from '../../store/academy-filter.store';
 
 export default function AdminRedemptionsPage() {
+  const selectedAcademyId = useAcademyFilterStore((s) => s.selectedAcademyId);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'redemptions'],
+    queryKey: ['admin', 'redemptions', selectedAcademyId],
     queryFn: () => adminApi.listRedemptions(),
   });
 
@@ -54,6 +57,7 @@ export default function AdminRedemptionsPage() {
 
   return (
     <div style={{ maxWidth: 1060, margin: '0 auto', padding: '2rem' }}>
+      <AcademyFilter />
 
       {/* Hero */}
       <div className="page-hero animate-in">

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi, type BillingConfigPayload } from '../../api/admin.api';
+import AcademyFilter from '../../components/AcademyFilter';
+import { useAcademyFilterStore } from '../../store/academy-filter.store';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -41,6 +43,8 @@ function presetRange(p: BillingPreset): { from: string; to: string } {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminBillingPage() {
+  const selectedAcademyId = useAcademyFilterStore((s) => s.selectedAcademyId);
+
   const init = presetRange('current-month');
   const [from, setFrom] = useState(init.from);
   const [to, setTo] = useState(init.to);
@@ -55,7 +59,7 @@ export default function AdminBillingPage() {
   const params = { from, to };
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['admin', 'billing', params],
+    queryKey: ['admin', 'billing', params, selectedAcademyId],
     queryFn: () => adminApi.getBilling(params),
     staleTime: 60_000,
   });
@@ -157,6 +161,7 @@ export default function AdminBillingPage() {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem' }}>
+      <AcademyFilter />
       {/* CSS de impresión */}
       <style>{`
         @media print {
