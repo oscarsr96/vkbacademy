@@ -1,9 +1,10 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useAuth';
+import { useAcademyDomain } from '../contexts/AcademyContext';
 
 /* ---------- Basketball SVG component ---------- */
-function Basketball({ size = 40, style }: { size?: number; style?: React.CSSProperties }) {
+function Basketball({ size = 40, style, color = '#ea580c' }: { size?: number; style?: React.CSSProperties; color?: string }) {
   return (
     <svg
       width={size}
@@ -12,7 +13,7 @@ function Basketball({ size = 40, style }: { size?: number; style?: React.CSSProp
       style={style}
       aria-hidden="true"
     >
-      <circle cx="50" cy="50" r="48" fill="#ea580c" stroke="#c2410c" strokeWidth="3" />
+      <circle cx="50" cy="50" r="48" fill={color} stroke={`${color}cc`} strokeWidth="3" />
       {/* líneas del balón */}
       <path d="M50 2 Q50 50 50 98" fill="none" stroke="#1a1a1a" strokeWidth="2.5" opacity="0.35" />
       <path d="M2 50 Q50 50 98 50" fill="none" stroke="#1a1a1a" strokeWidth="2.5" opacity="0.35" />
@@ -36,7 +37,14 @@ export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const { mutate, isPending, error } = useLogin();
+  const { academy: domainAcademy } = useAcademyDomain();
   const [mounted, setMounted] = useState(false);
+
+  // Branding dinámico
+  const accentColor = domainAcademy?.primaryColor ?? '#ea580c';
+  const academyName = domainAcademy?.name ?? 'VKB Academy';
+  const academyLogo = domainAcademy?.logoUrl ?? 'https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png';
+
   const [balls] = useState<FloatingBall[]>(() =>
     Array.from({ length: 8 }, (_, i) => ({
       id: i,
@@ -63,24 +71,19 @@ export default function LoginPage() {
   return (
     <div style={s.page}>
       {/* Estilos de animación */}
-      <style>{animationCSS}</style>
+      <style>{getAnimationCSS(accentColor)}</style>
 
-      {/* Glow naranja */}
-      <div style={s.bgGlow} />
+      {/* Glow */}
+      <div style={{ ...s.bgGlow, background: `radial-gradient(circle, ${accentColor}1f 0%, transparent 60%)` }} />
 
       {/* Líneas de cancha de fondo */}
       <svg style={s.courtLines} viewBox="0 0 800 800" aria-hidden="true">
-        {/* Círculo central */}
-        <circle cx="400" cy="400" r="120" fill="none" stroke="rgba(234,88,12,0.08)" strokeWidth="3" />
-        <circle cx="400" cy="400" r="5" fill="rgba(234,88,12,0.1)" />
-        {/* Línea media */}
-        <line x1="0" y1="400" x2="800" y2="400" stroke="rgba(234,88,12,0.06)" strokeWidth="3" />
-        {/* Semicírculo tiro libre arriba */}
-        <path d="M280 0 L280 180 A120 120 0 0 0 520 180 L520 0" fill="none" stroke="rgba(234,88,12,0.06)" strokeWidth="2.5" />
-        {/* Semicírculo tiro libre abajo */}
-        <path d="M280 800 L280 620 A120 120 0 0 1 520 620 L520 800" fill="none" stroke="rgba(234,88,12,0.06)" strokeWidth="2.5" />
-        {/* Borde exterior */}
-        <rect x="50" y="50" width="700" height="700" rx="8" fill="none" stroke="rgba(234,88,12,0.05)" strokeWidth="3" />
+        <circle cx="400" cy="400" r="120" fill="none" stroke={`${accentColor}14`} strokeWidth="3" />
+        <circle cx="400" cy="400" r="5" fill={`${accentColor}1a`} />
+        <line x1="0" y1="400" x2="800" y2="400" stroke={`${accentColor}0f`} strokeWidth="3" />
+        <path d="M280 0 L280 180 A120 120 0 0 0 520 180 L520 0" fill="none" stroke={`${accentColor}0f`} strokeWidth="2.5" />
+        <path d="M280 800 L280 620 A120 120 0 0 1 520 620 L520 800" fill="none" stroke={`${accentColor}0f`} strokeWidth="2.5" />
+        <rect x="50" y="50" width="700" height="700" rx="8" fill="none" stroke={`${accentColor}0d`} strokeWidth="3" />
       </svg>
 
       {/* Balones flotantes */}
@@ -99,35 +102,49 @@ export default function LoginPage() {
             pointerEvents: 'none',
           }}
         >
-          <Basketball size={b.size} style={{ opacity: b.opacity }} />
+          <Basketball size={b.size} color={accentColor} style={{ opacity: b.opacity }} />
         </div>
       ))}
 
       {/* Balón principal rebotando */}
       <div className="hero-ball" style={s.heroBall}>
-        <Basketball size={70} style={{ filter: 'drop-shadow(0 8px 24px rgba(234,88,12,0.4))' }} />
+        <Basketball size={70} color={accentColor} style={{ filter: `drop-shadow(0 8px 24px ${accentColor}66)` }} />
       </div>
 
       {/* Card */}
       <div
         style={{
           ...s.card,
+          border: `1.5px solid ${accentColor}38`,
+          boxShadow: `0 24px 64px rgba(0,0,0,0.55), 0 0 80px ${accentColor}14, 0 0 0 1px ${accentColor}1a`,
           transform: mounted ? 'translateY(0) scale(1)' : 'translateY(-40px) scale(0.95)',
           opacity: mounted ? 1 : 0,
         }}
       >
         {/* Encabezado */}
         <div style={s.header}>
-          <img
-            src="https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png"
-            alt="Vallekas Basket"
-            style={s.logoImg}
-            className="logo-pulse"
-          />
+          {academyLogo ? (
+            <img
+              src={academyLogo}
+              alt={academyName}
+              style={s.logoImg}
+              className="logo-pulse"
+            />
+          ) : (
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '2rem', fontWeight: 800, color: '#fff',
+              boxShadow: `0 8px 32px ${accentColor}55`,
+            }}>
+              {academyName.charAt(0)}
+            </div>
+          )}
           <h1 style={s.title}>
             Bienvenido de vuelta
           </h1>
-          <p style={s.subtitle}>Accede a tu cuenta de VKB Academy</p>
+          <p style={s.subtitle}>Accede a tu cuenta de {academyName}</p>
         </div>
 
         {/* Error de API */}
@@ -177,13 +194,13 @@ export default function LoginPage() {
 
         <div style={s.footerLinks}>
           <p style={s.footerText}>
-            <Link to="/forgot-password" style={s.link}>
+            <Link to="/forgot-password" style={{ ...s.link, color: accentColor }}>
               ¿Olvidaste tu contraseña?
             </Link>
           </p>
           <p style={s.footerText}>
             <span style={s.footerMuted}>¿No tienes cuenta? </span>
-            <Link to="/register" style={s.link}>
+            <Link to="/register" style={{ ...s.link, color: accentColor }}>
               Regístrate
             </Link>
           </p>
@@ -194,7 +211,8 @@ export default function LoginPage() {
 }
 
 /* ---------- Animation CSS ---------- */
-const animationCSS = `
+function getAnimationCSS(color: string) {
+  return `
   @keyframes float-up {
     0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
     10%  { opacity: 1; }
@@ -211,8 +229,8 @@ const animationCSS = `
   }
 
   @keyframes logo-glow {
-    0%, 100% { filter: drop-shadow(0 0 8px rgba(234,88,12,0.0)); }
-    50%      { filter: drop-shadow(0 0 20px rgba(234,88,12,0.5)); }
+    0%, 100% { filter: drop-shadow(0 0 8px ${color}00); }
+    50%      { filter: drop-shadow(0 0 20px ${color}80); }
   }
 
   @keyframes shake {
@@ -223,43 +241,24 @@ const animationCSS = `
     80%      { transform: translateX(5px); }
   }
 
-  @keyframes slam-ripple {
-    0%   { transform: scale(0); opacity: 0.5; }
-    100% { transform: scale(4); opacity: 0; }
-  }
+  .floating-ball { animation: float-up linear infinite; }
+  .hero-ball { animation: bounce-ball 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+  .logo-pulse { animation: logo-glow 3s ease-in-out infinite; }
+  .shake-error { animation: shake 0.5s ease-in-out; }
 
-  .floating-ball {
-    animation: float-up linear infinite;
-  }
-
-  .hero-ball {
-    animation: bounce-ball 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-  }
-
-  .logo-pulse {
-    animation: logo-glow 3s ease-in-out infinite;
-  }
-
-  .shake-error {
-    animation: shake 0.5s ease-in-out;
-  }
-
-  .slam-btn {
-    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-  }
+  .slam-btn { transition: transform 0.15s ease, box-shadow 0.15s ease !important; }
   .slam-btn:hover:not(:disabled) {
     transform: scale(1.04) !important;
-    box-shadow: 0 0 30px rgba(234,88,12,0.5), 0 4px 15px rgba(0,0,0,0.4) !important;
+    box-shadow: 0 0 30px ${color}80, 0 4px 15px rgba(0,0,0,0.4) !important;
   }
-  .slam-btn:active:not(:disabled) {
-    transform: scale(0.97) !important;
-  }
+  .slam-btn:active:not(:disabled) { transform: scale(0.97) !important; }
 
   .field-glow input:focus {
-    box-shadow: 0 0 0 2px rgba(234,88,12,0.3), 0 0 20px rgba(234,88,12,0.1) !important;
-    border-color: rgba(234,88,12,0.5) !important;
+    box-shadow: 0 0 0 2px ${color}4d, 0 0 20px ${color}1a !important;
+    border-color: ${color}80 !important;
   }
 `;
+}
 
 /* ---------- Styles ---------- */
 const s: Record<string, React.CSSProperties> = {
