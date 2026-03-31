@@ -81,8 +81,8 @@ export class AcademiesService {
     const existing = await this.prisma.academy.findUnique({ where: { slug: dto.slug } });
     if (existing) throw new ConflictException('Ya existe una academia con ese slug');
 
-    // Generar dominio automáticamente si no se proporciona
-    const domain = dto.domain ?? `${dto.slug.replace(/-/g, '')}academy.vercel.app`;
+    // Generar dominio automáticamente si no se proporciona (o vacío)
+    const domain = dto.domain?.trim() || `${dto.slug.replace(/-/g, '')}academy.vercel.app`;
 
     const academy = await this.prisma.academy.create({
       data: {

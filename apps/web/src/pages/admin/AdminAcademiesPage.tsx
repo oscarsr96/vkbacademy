@@ -212,9 +212,15 @@ export default function AdminAcademiesPage() {
               <input
                 placeholder="Slug (ej: cb-oscar)"
                 value={form.slug}
-                onChange={(e) => set('slug', e.target.value)}
+                onChange={(e) => set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                 style={inputStyle}
               />
+              {form.slug && (
+                <div style={{ background: '#0f172a', borderRadius: 6, padding: '8px 12px', fontSize: '0.8rem' }}>
+                  <span style={{ color: '#64748b' }}>Dominio: </span>
+                  <span style={{ color: '#38bdf8' }}>{form.slug.replace(/-/g, '')}academy.vercel.app</span>
+                </div>
+              )}
               <input
                 placeholder="URL del logo (opcional)"
                 value={form.logoUrl}
