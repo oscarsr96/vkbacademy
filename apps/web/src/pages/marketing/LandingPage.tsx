@@ -14,8 +14,7 @@ const FEATURES = [
   {
     icon: '📹',
     title: 'Lecciones en vídeo',
-    description:
-      'Contenido actualizado con los mejores vídeos de cada una de las temáticas.',
+    description: 'Contenido actualizado con los mejores vídeos de cada una de las temáticas.',
   },
   {
     icon: '✏️',
@@ -103,15 +102,15 @@ export default function LandingPage() {
 
           {/* Titular principal */}
           <h1 style={styles.heroHeadline}>
-            El entrenamiento de tu hijo/a,{' '}
-            <span style={styles.heroHeadlineAccent}>también en casa</span>
+            Metodología VKB para el{' '}
+            <span style={styles.heroHeadlineAccent}>rendimiento académico</span>
           </h1>
 
           {/* Subtítulo */}
           <p style={styles.heroSubtitle}>
-            La metodología real de Vallekas Basket en formato digital. Cursos,
-            lecciones interactivas, exámenes con certificado y clases particulares
-            — todo en un solo lugar, supervisado por ti.
+            La metodología real de Vallekas Basket en formato digital. Cursos, lecciones
+            interactivas, exámenes con certificado y clases particulares — todo en un solo lugar,
+            supervisado por ti.
           </p>
 
           {/* Botones CTA */}
@@ -153,9 +152,7 @@ export default function LandingPage() {
           </div>
 
           {/* Texto informativo sutil */}
-          <p style={styles.heroFootnote}>
-            Disponible de 1º ESO a 2º Bachillerato
-          </p>
+          <p style={styles.heroFootnote}>Disponible de 1º ESO a 2º Bachillerato</p>
         </div>
       </section>
 
@@ -168,7 +165,9 @@ export default function LandingPage() {
           <p style={styles.pricingEyebrow}>Menos de lo que cuesta una clase particular</p>
           <h2 style={styles.pricingHeadline}>
             Todo esto, desde{' '}
-            <span style={styles.pricingAmount}>10 €<span style={styles.pricingPeriod}>/mes</span></span>
+            <span style={styles.pricingAmount}>
+              10 €<span style={styles.pricingPeriod}>/mes</span>
+            </span>
           </h2>
 
           <div style={styles.pricingCards}>
@@ -234,7 +233,8 @@ export default function LandingPage() {
 
           <p style={styles.pricingCompare}>
             Una clase particular = 20-30 €/hora. Aquí tu hijo/a tiene{' '}
-            <strong style={{ color: '#fb923c' }}>acceso ilimitado todo el mes</strong> por menos que eso.
+            <strong style={{ color: '#fb923c' }}>acceso ilimitado todo el mes</strong> por menos que
+            eso.
           </p>
         </div>
       </section>
@@ -259,11 +259,10 @@ export default function LandingPage() {
       <section id="features" style={styles.features}>
         <div style={styles.sectionContainer}>
           <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>
-              Todo lo que tu hijo/a necesita para mejorar
-            </h2>
+            <h2 style={styles.sectionTitle}>Todo lo que tu hijo/a necesita para mejorar</h2>
             <p style={styles.sectionSubtitle}>
-              Una plataforma pensada para optimizar el rendimiento escolar, con acceso y seguimiento para padres y tutores
+              Una plataforma pensada para optimizar el rendimiento escolar, con acceso y seguimiento
+              para padres y tutores
             </p>
           </div>
 
@@ -283,7 +282,8 @@ export default function LandingPage() {
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>🏆 El esfuerzo tiene premio</h2>
             <p style={styles.sectionSubtitle}>
-              Tu hijo/a gana puntos completando lecciones y retos. Canjéalos por merchandising exclusivo de Vallekas Basket.
+              Tu hijo/a gana puntos completando lecciones y retos. Canjéalos por merchandising
+              exclusivo de Vallekas Basket.
             </p>
           </div>
           <div style={styles.merchGrid}>
@@ -292,7 +292,8 @@ export default function LandingPage() {
             ))}
           </div>
           <p style={styles.merchNote}>
-            Puntos acumulables completando lecciones, módulos, exámenes y manteniendo la racha semanal de estudio.
+            Puntos acumulables completando lecciones, módulos, exámenes y manteniendo la racha
+            semanal de estudio.
           </p>
         </div>
       </section>
@@ -311,9 +312,7 @@ export default function LandingPage() {
               <div key={idx} style={styles.stepWrapper}>
                 <div style={styles.stepCircle}>{step.number}</div>
 
-                {idx < STEPS.length - 1 && (
-                  <div style={styles.stepConnector} />
-                )}
+                {idx < STEPS.length - 1 && <div style={styles.stepConnector} />}
 
                 <div style={styles.stepContent}>
                   <h3 style={styles.stepTitle}>{step.title}</h3>
@@ -331,9 +330,7 @@ export default function LandingPage() {
       <section style={styles.ctaBottom}>
         <div style={styles.ctaBottomGlow} />
         <div style={styles.ctaBottomContent}>
-          <h2 style={styles.ctaBottomTitle}>
-            ¿Tu hijo/a ya es de Vallekas Basket?
-          </h2>
+          <h2 style={styles.ctaBottomTitle}>¿Tu hijo/a ya es de Vallekas Basket?</h2>
           <p style={styles.ctaBottomSubtitle}>
             Entra con las credenciales que te ha facilitado el club y empieza hoy.
           </p>
