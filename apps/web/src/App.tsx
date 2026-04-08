@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/auth.store';
-import { useAcademyDomain } from './contexts/AcademyContext';
 import { Role } from '@vkbacademy/shared';
 
 import LoginPage from './pages/LoginPage';
@@ -32,10 +30,9 @@ import AdminAcademiesPage from './pages/admin/AdminAcademiesPage';
 import AcademyLandingPage from './pages/marketing/AcademyLandingPage';
 import AppLayout from './layouts/AppLayout';
 import PublicLayout from './layouts/PublicLayout';
-import LandingPage from './pages/marketing/LandingPage';
 import AboutPage from './pages/marketing/AboutPage';
 import PricingPage from './pages/marketing/PricingPage';
-import SplashScreen from './components/SplashScreen';
+import RootIndex from './components/RootIndex';
 
 // Guarda: redirige a /dashboard si ya está autenticado
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -56,33 +53,6 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => !!s.accessToken);
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : <>{children}</>;
-}
-
-// Ruta raíz: landing pública si no autenticado, dashboard si autenticado
-// Si estamos en un dominio de academia, muestra la landing de esa academia (sin PublicLayout)
-// Si no, muestra la landing de VKB envuelta en PublicLayout
-function RootIndex() {
-  const isAuthenticated = useAuthStore((s) => !!s.accessToken);
-  const { academy, isAcademyDomain, isLoading } = useAcademyDomain();
-  const [showSplash, setShowSplash] = useState(!isAuthenticated);
-
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
-  if (isLoading) return null;
-
-  // Dominio de academia → landing propia (tiene su propio navbar/footer)
-  if (isAcademyDomain && academy) {
-    return <AcademyLandingPage />;
-  }
-
-  // Dominio principal → splash + landing VKB con PublicLayout
-  return (
-    <>
-      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
-      <PublicLayout>
-        <LandingPage />
-      </PublicLayout>
-    </>
-  );
 }
 
 export default function App() {
