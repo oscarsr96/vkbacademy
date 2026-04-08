@@ -93,10 +93,32 @@ export default function LandingPage() {
 
   return (
     <div style={styles.page}>
+      {/* Responsive overrides — no se pueden hacer con inline styles */}
+      <style>{`
+        @media (max-width: 768px) {
+          .lp-hero { min-height: auto !important; padding: 3rem 1.25rem !important; }
+          .lp-pricing-hl { padding: 3rem 1.25rem !important; }
+          .lp-pricing-cards { flex-direction: column !important; align-items: center !important; }
+          .lp-pricing-card { width: 100% !important; max-width: 360px !important; }
+          .lp-stats-inner { gap: 1.5rem !important; padding: 1.75rem 1.25rem !important; }
+          .lp-stat-value { font-size: 1.75rem !important; }
+          .lp-features { padding: 3.5rem 1.25rem !important; }
+          .lp-features-grid { grid-template-columns: 1fr !important; }
+          .lp-merch { padding: 3.5rem 1.25rem !important; }
+          .lp-merch-grid { gap: 0.75rem !important; }
+          .lp-merch-card { min-width: 120px !important; padding: 1rem 0.75rem !important; }
+          .lp-how { padding: 3.5rem 1.25rem !important; }
+          .lp-steps-row { flex-direction: column !important; align-items: center !important; gap: 2rem !important; }
+          .lp-step-connector { display: none !important; }
+          .lp-step-wrapper { max-width: 100% !important; padding: 0 !important; }
+          .lp-cta-bottom { padding: 4rem 1.25rem !important; }
+        }
+      `}</style>
+
       {/* ════════════════════════════════════════
           SECCIÓN 1 — HERO
       ════════════════════════════════════════ */}
-      <section style={styles.hero}>
+      <section className="lp-hero" style={styles.hero}>
         {/* Glow central grande */}
         <div style={styles.heroGlowCenter} />
         {/* Glow lateral */}
@@ -165,7 +187,7 @@ export default function LandingPage() {
       {/* ════════════════════════════════════════
           SECCIÓN 1b — PRICING HIGHLIGHT
       ════════════════════════════════════════ */}
-      <section style={styles.pricingHighlight}>
+      <section className="lp-pricing-hl" style={styles.pricingHighlight}>
         <div style={styles.pricingGlow} />
         <div style={styles.pricingInner}>
           <p style={styles.pricingEyebrow}>Menos de lo que cuesta una clase particular</p>
@@ -176,9 +198,10 @@ export default function LandingPage() {
             </span>
           </h2>
 
-          <div style={styles.pricingCards}>
+          <div className="lp-pricing-cards" style={styles.pricingCards}>
             {/* Plan Básico */}
             <div
+              className="lp-pricing-card"
               style={styles.pricingCard}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
@@ -209,6 +232,7 @@ export default function LandingPage() {
 
             {/* Plan Avanzado */}
             <div
+              className="lp-pricing-card"
               style={{ ...styles.pricingCard, ...styles.pricingCardFeatured }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
@@ -249,10 +273,12 @@ export default function LandingPage() {
           SECCIÓN 2 — BARRA DE ESTADÍSTICAS
       ════════════════════════════════════════ */}
       <section style={styles.statsBar}>
-        <div style={styles.statsInner}>
+        <div className="lp-stats-inner" style={styles.statsInner}>
           {STATS.map((stat, idx) => (
             <div key={idx} style={styles.statItem}>
-              <span style={styles.statValue}>{stat.value}</span>
+              <span className="lp-stat-value" style={styles.statValue}>
+                {stat.value}
+              </span>
               <span style={styles.statLabel}>{stat.label}</span>
             </div>
           ))}
@@ -262,7 +288,7 @@ export default function LandingPage() {
       {/* ════════════════════════════════════════
           SECCIÓN 3 — CARACTERÍSTICAS
       ════════════════════════════════════════ */}
-      <section id="features" style={styles.features}>
+      <section id="features" className="lp-features" style={styles.features}>
         <div style={styles.sectionContainer}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>Todo lo que tu hijo/a necesita para mejorar</h2>
@@ -272,7 +298,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div style={styles.featuresGrid}>
+          <div className="lp-features-grid" style={styles.featuresGrid}>
             {FEATURES.map((feat, idx) => (
               <FeatureCard key={idx} {...feat} />
             ))}
@@ -283,7 +309,7 @@ export default function LandingPage() {
       {/* ════════════════════════════════════════
           SECCIÓN 3b — MERCHANDISING
       ════════════════════════════════════════ */}
-      <section style={styles.merchSection}>
+      <section className="lp-merch" style={styles.merchSection}>
         <div style={styles.sectionContainer}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>🏆 El esfuerzo tiene premio</h2>
@@ -292,7 +318,7 @@ export default function LandingPage() {
               exclusivo de Vallekas Basket.
             </p>
           </div>
-          <div style={styles.merchGrid}>
+          <div className="lp-merch-grid" style={styles.merchGrid}>
             {MERCH.map((item) => (
               <MerchCard key={item.name} item={item} />
             ))}
@@ -307,18 +333,20 @@ export default function LandingPage() {
       {/* ════════════════════════════════════════
           SECCIÓN 4 — CÓMO FUNCIONA
       ════════════════════════════════════════ */}
-      <section style={styles.howItWorks}>
+      <section className="lp-how" style={styles.howItWorks}>
         <div style={styles.sectionContainer}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>¿Cómo funciona?</h2>
           </div>
 
-          <div style={styles.stepsRow}>
+          <div className="lp-steps-row" style={styles.stepsRow}>
             {STEPS.map((step, idx) => (
-              <div key={idx} style={styles.stepWrapper}>
+              <div key={idx} className="lp-step-wrapper" style={styles.stepWrapper}>
                 <div style={styles.stepCircle}>{step.number}</div>
 
-                {idx < STEPS.length - 1 && <div style={styles.stepConnector} />}
+                {idx < STEPS.length - 1 && (
+                  <div className="lp-step-connector" style={styles.stepConnector} />
+                )}
 
                 <div style={styles.stepContent}>
                   <h3 style={styles.stepTitle}>{step.title}</h3>
@@ -333,7 +361,7 @@ export default function LandingPage() {
       {/* ════════════════════════════════════════
           SECCIÓN 5 — CTA FINAL
       ════════════════════════════════════════ */}
-      <section style={styles.ctaBottom}>
+      <section className="lp-cta-bottom" style={styles.ctaBottom}>
         <div style={styles.ctaBottomGlow} />
         <div style={styles.ctaBottomContent}>
           <h2 style={styles.ctaBottomTitle}>¿Tu hijo/a ya es de Vallekas Basket?</h2>
@@ -401,6 +429,7 @@ function FeatureCard({
 function MerchCard({ item }: { item: { icon: string; name: string; pts: number } }) {
   return (
     <div
+      className="lp-merch-card"
       style={merchCardStyle.card}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
