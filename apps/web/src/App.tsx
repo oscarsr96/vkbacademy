@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/auth.store';
 import { useAcademyDomain } from './contexts/AcademyContext';
@@ -34,6 +35,7 @@ import PublicLayout from './layouts/PublicLayout';
 import LandingPage from './pages/marketing/LandingPage';
 import AboutPage from './pages/marketing/AboutPage';
 import PricingPage from './pages/marketing/PricingPage';
+import SplashScreen from './components/SplashScreen';
 
 // Guarda: redirige a /dashboard si ya está autenticado
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -45,7 +47,8 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) return <Navigate to="/dashboard" replace />;
+  if (user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN)
+    return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
 
@@ -61,6 +64,7 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 function RootIndex() {
   const isAuthenticated = useAuthStore((s) => !!s.accessToken);
   const { academy, isAcademyDomain, isLoading } = useAcademyDomain();
+  const [showSplash, setShowSplash] = useState(!isAuthenticated);
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   if (isLoading) return null;
@@ -70,11 +74,14 @@ function RootIndex() {
     return <AcademyLandingPage />;
   }
 
-  // Dominio principal → landing VKB con PublicLayout
+  // Dominio principal → splash + landing VKB con PublicLayout
   return (
-    <PublicLayout>
-      <LandingPage />
-    </PublicLayout>
+    <>
+      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+      <PublicLayout>
+        <LandingPage />
+      </PublicLayout>
+    </>
   );
 }
 
@@ -154,29 +161,77 @@ export default function App() {
         <Route path="teacher" element={<TeacherPortalPage />} />
 
         {/* Fase 6 — Panel de administración */}
-        <Route path="admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-        <Route path="admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
-        <Route path="admin/courses" element={<AdminRoute><AdminCoursesPage /></AdminRoute>} />
+        <Route
+          path="admin"
+          element={
+            <AdminRoute>
+              <AdminDashboardPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="admin/users"
+          element={
+            <AdminRoute>
+              <AdminUsersPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="admin/courses"
+          element={
+            <AdminRoute>
+              <AdminCoursesPage />
+            </AdminRoute>
+          }
+        />
         <Route
           path="admin/courses/:courseId"
-          element={<AdminRoute><AdminCourseDetailPage /></AdminRoute>}
+          element={
+            <AdminRoute>
+              <AdminCourseDetailPage />
+            </AdminRoute>
+          }
         />
-        <Route path="admin/billing" element={<AdminRoute><AdminBillingPage /></AdminRoute>} />
+        <Route
+          path="admin/billing"
+          element={
+            <AdminRoute>
+              <AdminBillingPage />
+            </AdminRoute>
+          }
+        />
         <Route
           path="admin/challenges"
-          element={<AdminRoute><AdminChallengesPage /></AdminRoute>}
+          element={
+            <AdminRoute>
+              <AdminChallengesPage />
+            </AdminRoute>
+          }
         />
         <Route
           path="admin/redemptions"
-          element={<AdminRoute><AdminRedemptionsPage /></AdminRoute>}
+          element={
+            <AdminRoute>
+              <AdminRedemptionsPage />
+            </AdminRoute>
+          }
         />
         <Route
           path="admin/exam-banks"
-          element={<AdminRoute><AdminExamBankPage /></AdminRoute>}
+          element={
+            <AdminRoute>
+              <AdminExamBankPage />
+            </AdminRoute>
+          }
         />
         <Route
           path="admin/academies"
-          element={<AdminRoute><AdminAcademiesPage /></AdminRoute>}
+          element={
+            <AdminRoute>
+              <AdminAcademiesPage />
+            </AdminRoute>
+          }
         />
       </Route>
 
