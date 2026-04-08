@@ -35,6 +35,12 @@ const FEATURES = [
       'Al superar los exámenes del club, recibe un certificado digital descargable en PDF que acredita su progreso.',
   },
   {
+    icon: '🎯',
+    title: 'Practica lo que quieras',
+    description:
+      'Tu hijo/a puede generar ejercicios de cualquier tema: polinomios, sintaxis, el Renacimiento… La IA crea actividades personalizadas al instante.',
+  },
+  {
     icon: '📅',
     title: 'Reserva clases con sus profes',
     description:
