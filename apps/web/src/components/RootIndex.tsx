@@ -19,23 +19,19 @@ export default function RootIndex() {
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
-  // Mientras se resuelve el dominio, mostrar solo el splash (cubre toda la pantalla)
-  if (isLoading) {
-    return showSplash ? <SplashScreen onComplete={() => setShowSplash(false)} /> : null;
-  }
-
-  // Dominio de academia → landing propia (tiene su propio navbar/footer)
-  if (isAcademyDomain && academy) {
-    return <AcademyLandingPage />;
-  }
-
-  // Dominio principal → splash + landing VKB con PublicLayout
+  // El splash es un overlay fijo (z-index 99999) que cubre toda la pantalla.
+  // El contenido se carga detrás y se revela cuando el splash termina.
   return (
     <>
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
-      <PublicLayout>
-        <LandingPage />
-      </PublicLayout>
+      {!isLoading &&
+        (isAcademyDomain && academy ? (
+          <AcademyLandingPage />
+        ) : (
+          <PublicLayout>
+            <LandingPage />
+          </PublicLayout>
+        ))}
     </>
   );
 }

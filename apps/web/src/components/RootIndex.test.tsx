@@ -56,7 +56,6 @@ describe('RootIndex — splash visibility', () => {
       </MemoryRouter>,
     );
 
-    // El splash DEBE ser visible incluso durante la carga
     expect(screen.queryByTestId('splash-screen')).toBeInTheDocument();
   });
 
@@ -77,9 +76,11 @@ describe('RootIndex — splash visibility', () => {
     expect(screen.getByTestId('landing-page')).toBeInTheDocument();
   });
 
-  it('muestra AcademyLandingPage cuando la academia se resuelve (sin splash)', () => {
+  it('muestra el splash TAMBIÉN cuando la academia se resuelve', () => {
+    // CASO CLAVE: vkbacademy.vercel.app resuelve como academia,
+    // pero el splash debe verse igualmente como overlay
     mockAcademyDomain.mockReturnValue({
-      academy: { id: '1', slug: 'test', name: 'Test Academy' },
+      academy: { id: '1', slug: 'vkb', name: 'VKB Academy' },
       isAcademyDomain: true,
       isLoading: false,
     });
@@ -90,8 +91,8 @@ describe('RootIndex — splash visibility', () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByTestId('splash-screen')).toBeInTheDocument();
     expect(screen.getByTestId('academy-landing')).toBeInTheDocument();
-    expect(screen.queryByTestId('splash-screen')).not.toBeInTheDocument();
   });
 
   it('no muestra la landing detrás del splash durante la carga', () => {
@@ -107,12 +108,12 @@ describe('RootIndex — splash visibility', () => {
       </MemoryRouter>,
     );
 
-    // Durante la carga, solo el splash — la landing no debe mostrarse aún
     expect(screen.queryByTestId('splash-screen')).toBeInTheDocument();
     expect(screen.queryByTestId('landing-page')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('academy-landing')).not.toBeInTheDocument();
   });
 
-  it('muestra la landing cuando la carga completa sin academia', () => {
+  it('muestra la landing VKB cuando la carga completa sin academia', () => {
     mockAcademyDomain.mockReturnValue({
       academy: null,
       isAcademyDomain: true,
@@ -125,7 +126,6 @@ describe('RootIndex — splash visibility', () => {
       </MemoryRouter>,
     );
 
-    // Sin academia encontrada → muestra VKB landing con splash
     expect(screen.getByTestId('splash-screen')).toBeInTheDocument();
     expect(screen.getByTestId('landing-page')).toBeInTheDocument();
   });
