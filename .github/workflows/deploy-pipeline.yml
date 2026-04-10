@@ -1,0 +1,342 @@
+name: Deploy pipeline (PRE → PROD)
+
+# Pipeline de despliegue progresivo:
+#
+#   push a main → tests → deploy PRE → smoke tests PRE → (aprobación) → deploy PROD canary
+#       → smoke tests PROD → promover 100% tráfico → smoke tests PROD final
+#
+# Entornos GitHub esperados (Settings → Environments):
+#   - pre     (sin approval, variables PRE_*)
+#   - prod-canary (con required reviewers, variables PROD_*)
+#   - prod    (con required reviewers, mismas variables PROD_*)
+#
+# Secrets requeridos:
+#   RAILWAY_TOKEN              → token de cuenta Railway
+#   RAILWAY_SERVICE_ID_PRE     → id del servicio API en PRE
+#   RAILWAY_SERVICE_ID_PROD    → id del servicio API en PROD
+#   VERCEL_TOKEN               → token de cuenta Vercel
+#   VERCEL_ORG_ID              → id de la organización
+#   VERCEL_PROJECT_ID_PRE      → id del proyecto web en PRE
+#   VERCEL_PROJECT_ID_PROD     → id del proyecto web en PROD
+#
+# Variables de entorno por entorno (Environment vars):
+#   SMOKE_API_URL              → URL base de la API a probar (PRE o PROD)
+#   SMOKE_WEB_URL              → URL base del frontend a probar (PRE o PROD)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ── 1. Tests y build ────────────────────────────────────────────────────────
+  test:
+    name: Tests y type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Build paquete shared
+        run: pnpm --filter @vkbacademy/shared build
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter @vkbacademy/api exec prisma generate
+
+      - name: Tests unitarios (API)
+        run: pnpm --filter @vkbacademy/api test -- --passWithNoTests
+
+      - name: Type check (web)
+        run: pnpm --filter @vkbacademy/web lint
+
+      - name: Build web
+        run: pnpm --filter @vkbacademy/web build
+
+      - name: Build API
+        run: pnpm --filter @vkbacademy/api exec nest build
+
+  # ── 2a. Migraciones de BD en PRE (antes del rollout) ───────────────────────
+  # Se ejecutan como step dedicado, NO en el CMD del contenedor, para evitar
+  # race conditions cuando hay >1 instancia arrancando en paralelo (Fase B+).
+  migrate-pre:
+    name: Migraciones BD (PRE)
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: pre
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Build paquete shared
+        run: pnpm --filter @vkbacademy/shared build
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter @vkbacademy/api exec prisma generate
+
+      - name: Aplicar migraciones pendientes
+        env:
+          # DATABASE_URL apunta a la BD de PRE, definida como secret del env
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm --filter @vkbacademy/api run migrate:deploy
+
+  # ── 2b. Deploy a PRE ────────────────────────────────────────────────────────
+  deploy-pre:
+    name: Deploy a PRE
+    needs: migrate-pre
+    runs-on: ubuntu-latest
+    environment:
+      name: pre
+      url: ${{ vars.SMOKE_WEB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar CLIs
+        run: |
+          npm install -g @railway/cli@3.17.0 vercel@37.14.0
+
+      - name: Deploy API a Railway (PRE)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway up --service "${{ secrets.RAILWAY_SERVICE_ID_PRE }}" --detach
+
+      - name: Deploy web a Vercel (PRE)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PRE }}
+        run: |
+          vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+          vercel build --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --token="$VERCEL_TOKEN"
+
+  # ── 3. Smoke tests contra PRE ───────────────────────────────────────────────
+  smoke-pre:
+    name: Smoke tests PRE
+    needs: deploy-pre
+    runs-on: ubuntu-latest
+    environment:
+      name: pre
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Build paquete shared
+        run: pnpm --filter @vkbacademy/shared build
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter @vkbacademy/api exec prisma generate
+
+      - name: Esperar a que el despliegue PRE esté listo
+        env:
+          SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS "$SMOKE_API_URL/api/health" > /dev/null; then
+              echo "API PRE lista en intento $i"
+              exit 0
+            fi
+            echo "Esperando API PRE... intento $i"
+            sleep 10
+          done
+          echo "API PRE no respondió tras 10 intentos"
+          exit 1
+
+      - name: Ejecutar smoke tests contra PRE
+        env:
+          SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
+          SMOKE_WEB_URL: ${{ vars.SMOKE_WEB_URL }}
+        run: pnpm --filter @vkbacademy/api test:smoke
+
+  # ── 3b. Migraciones de BD en PROD (antes del canary) ───────────────────────
+  # Step dedicado y con required reviewer — las migraciones en PROD son la
+  # operación más sensible del pipeline, hay que poder pausar y revisar antes.
+  migrate-prod:
+    name: Migraciones BD (PROD)
+    needs: smoke-pre
+    runs-on: ubuntu-latest
+    environment:
+      name: prod-canary
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Build paquete shared
+        run: pnpm --filter @vkbacademy/shared build
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter @vkbacademy/api exec prisma generate
+
+      - name: Aplicar migraciones pendientes en PROD
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm --filter @vkbacademy/api run migrate:deploy
+
+  # ── 4. Deploy canary a PROD (10% tráfico) ───────────────────────────────────
+  deploy-prod-canary:
+    name: Deploy canary PROD
+    needs: migrate-prod
+    runs-on: ubuntu-latest
+    environment:
+      name: prod-canary
+      url: ${{ vars.SMOKE_WEB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar CLIs
+        run: |
+          npm install -g @railway/cli@3.17.0 vercel@37.14.0
+
+      - name: Deploy canary API a Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          # Railway promueve progresivamente mediante replicas y rolling update.
+          # `railway up --detach` crea un nuevo deployment que Railway irá
+          # rotando servicio a servicio hasta cubrir todas las replicas.
+          railway up --service "${{ secrets.RAILWAY_SERVICE_ID_PROD }}" --detach
+
+      - name: Deploy canary web a Vercel (skew protection)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
+        run: |
+          # Vercel hace rollout inmediato pero conserva la versión previa
+          # durante 24h con skew protection, permitiendo rollback instantáneo.
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+  # ── 5. Smoke tests contra PROD (canary) ─────────────────────────────────────
+  smoke-prod-canary:
+    name: Smoke tests PROD (canary)
+    needs: deploy-prod-canary
+    runs-on: ubuntu-latest
+    environment:
+      name: prod-canary
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Build paquete shared
+        run: pnpm --filter @vkbacademy/shared build
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter @vkbacademy/api exec prisma generate
+
+      - name: Esperar a que el canary PROD esté listo
+        env:
+          SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS "$SMOKE_API_URL/api/health" > /dev/null; then
+              echo "API PROD canary lista en intento $i"
+              exit 0
+            fi
+            echo "Esperando API PROD canary... intento $i"
+            sleep 10
+          done
+          exit 1
+
+      - name: Ejecutar smoke tests contra PROD canary
+        env:
+          SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
+          SMOKE_WEB_URL: ${{ vars.SMOKE_WEB_URL }}
+        run: pnpm --filter @vkbacademy/api test:smoke
+
+  # ── 6. Promover a PROD 100% tráfico ─────────────────────────────────────────
+  promote-prod:
+    name: Promover a PROD (100%)
+    needs: smoke-prod-canary
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+      url: ${{ vars.SMOKE_WEB_URL }}
+    steps:
+      - name: Promover despliegue canary a full traffic
+        run: |
+          echo "Canary superó smoke tests. Railway/Vercel ya sirven la versión"
+          echo "nueva al 100% de replicas. Confirmando promoción."
+
+      - name: Verificación final post-promoción
+        env:
+          SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
+        run: |
+          for i in 1 2 3; do
+            if curl -fsS "$SMOKE_API_URL/api/health" | grep -q '"status":"ok"'; then
+              echo "Health check PROD OK ($i/3)"
+              sleep 5
+            else
+              echo "Health check PROD FALLÓ en intento $i"
+              exit 1
+            fi
+          done

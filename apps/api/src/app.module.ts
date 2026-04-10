@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { envValidationSchema } from './config/env.schema';
+import { buildThrottlerOptions } from './config/throttler-options.factory';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -19,6 +21,7 @@ import { ExamsModule } from './exams/exams.module';
 import { CertificatesModule } from './certificates/certificates.module';
 import { TutorModule } from './tutor/tutor.module';
 import { AcademiesModule } from './academies/academies.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -26,15 +29,19 @@ import { AcademiesModule } from './academies/academies.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      validationSchema: envValidationSchema,
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
     }),
 
-    // Rate limiting global
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 1 minuto
-        limit: 100, // 100 requests por minuto
-      },
-    ]),
+    // Rate limiting global — usa Redis si REDIS_URL está definido (PRE/PROD),
+    // in-memory en dev local. Ver `config/throttler-options.factory.ts`.
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => buildThrottlerOptions(config),
+    }),
 
     // Base de datos
     PrismaModule,
@@ -57,6 +64,7 @@ import { AcademiesModule } from './academies/academies.module';
     CertificatesModule,
     TutorModule,
     AcademiesModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

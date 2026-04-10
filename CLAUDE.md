@@ -1,4 +1,4 @@
-# CLAUDE.md —  Educational App
+# CLAUDE.md — Educational App
 
 > Este archivo es leído automáticamente por Claude Code al inicio de cada sesión.
 > Contiene el contexto completo del proyecto para mantener consistencia entre sesiones.
@@ -15,24 +15,24 @@ App educativa web y móvil para jugadores de un club de baloncesto. Similar a Mo
 
 ## 2. Stack tecnológico
 
-| Capa | Tecnología |
-|------|-----------|
-| Web frontend | React 18 + Vite + TypeScript |
-| Mobile | React Native + Expo (SDK 51+) |
-| Backend | NestJS + TypeScript |
-| Base de datos | PostgreSQL 16 |
-| ORM | Prisma |
-| Caché / sesiones | Redis |
-| Autenticación | JWT + Refresh tokens (implementación propia) |
-| Almacenamiento vídeo | AWS S3 + URLs firmadas |
-| Email transaccional | Resend |
-| Push notifications | Expo Notifications |
-| Videollamadas | Daily.co |
-| Estado global (web) | Zustand |
-| Data fetching | React Query (TanStack Query v5) |
-| HTTP client | Axios |
-| Monorepo | Turborepo |
-| Contenedores locales | Docker Compose |
+| Capa                 | Tecnología                                   |
+| -------------------- | -------------------------------------------- |
+| Web frontend         | React 18 + Vite + TypeScript                 |
+| Mobile               | React Native + Expo (SDK 51+)                |
+| Backend              | NestJS + TypeScript                          |
+| Base de datos        | PostgreSQL 16                                |
+| ORM                  | Prisma                                       |
+| Caché / sesiones     | Redis                                        |
+| Autenticación        | JWT + Refresh tokens (implementación propia) |
+| Almacenamiento vídeo | AWS S3 + URLs firmadas                       |
+| Email transaccional  | Resend                                       |
+| Push notifications   | Expo Notifications                           |
+| Videollamadas        | Daily.co                                     |
+| Estado global (web)  | Zustand                                      |
+| Data fetching        | React Query (TanStack Query v5)              |
+| HTTP client          | Axios                                        |
+| Monorepo             | Turborepo                                    |
+| Contenedores locales | Docker Compose                               |
 
 ---
 
@@ -81,26 +81,26 @@ apps/api/src/
 
 ## 5. Roles y permisos
 
-| Acción | student | tutor | teacher | admin | super_admin |
-|--------|---------|-------|---------|-------|-------------|
-| Ver cursos asignados | ✅ | ✅ | ✅ | ✅ |
-| Ver todos los cursos | ❌ | ✅ | ✅ | ✅ |
-| Crear / editar cursos | ❌ | ❌ | ✅* | ✅ |
-| Subir vídeos | ❌ | ❌ | ✅* | ✅ |
-| Realizar tests | ✅ | ✅ | ✅ | ✅ |
-| Ver resultados propios | ✅ | ✅ | ✅ | ✅ |
-| Ver resultados de todos | ❌ | ✅ | ✅ | ✅ |
-| Ver progreso de alumnos | ❌ | ✅ | ✅ | ✅ |
-| Crear reservas (para sus alumnos) | ❌ | ✅ | ❌ | ✅ |
-| Gestionar disponibilidad | ❌ | ❌ | ✅ | ✅ |
-| Gestionar usuarios | ❌ | ❌ | ❌ | ✅ |
-| Asignar tutores a alumnos | ❌ | ❌ | ❌ | ✅ |
-| Ver métricas globales | ❌ | ❌ | ❌ | ✅ |
-| Ver retos y canjear puntos | ✅ | ✅ | ❌ | ❌ |
-| Gestionar retos (CRUD) | ❌ | ❌ | ❌ | ✅ |
-| Ver y gestionar canjes | ❌ | ❌ | ❌ | ✅ |
+| Acción                            | student | tutor | teacher | admin | super_admin |
+| --------------------------------- | ------- | ----- | ------- | ----- | ----------- |
+| Ver cursos asignados              | ✅      | ✅    | ✅      | ✅    |
+| Ver todos los cursos              | ❌      | ✅    | ✅      | ✅    |
+| Crear / editar cursos             | ❌      | ❌    | ✅\*    | ✅    |
+| Subir vídeos                      | ❌      | ❌    | ✅\*    | ✅    |
+| Realizar tests                    | ✅      | ✅    | ✅      | ✅    |
+| Ver resultados propios            | ✅      | ✅    | ✅      | ✅    |
+| Ver resultados de todos           | ❌      | ✅    | ✅      | ✅    |
+| Ver progreso de alumnos           | ❌      | ✅    | ✅      | ✅    |
+| Crear reservas (para sus alumnos) | ❌      | ✅    | ❌      | ✅    |
+| Gestionar disponibilidad          | ❌      | ❌    | ✅      | ✅    |
+| Gestionar usuarios                | ❌      | ❌    | ❌      | ✅    |
+| Asignar tutores a alumnos         | ❌      | ❌    | ❌      | ✅    |
+| Ver métricas globales             | ❌      | ❌    | ❌      | ✅    |
+| Ver retos y canjear puntos        | ✅      | ✅    | ❌      | ❌    |
+| Gestionar retos (CRUD)            | ❌      | ❌    | ❌      | ✅    |
+| Ver y gestionar canjes            | ❌      | ❌    | ❌      | ✅    |
 
-*Solo en cursos donde estén asignados como autor.
+\*Solo en cursos donde estén asignados como autor.
 
 **Filtrado por nivel:** `GET /courses` para STUDENT devuelve solo los cursos del `schoolYear` asignado al usuario. TEACHER, TUTOR y ADMIN ven todos los cursos (TUTOR puede filtrar por `schoolYearId` via query param). `GET /courses/:id` devuelve 403 si el STUDENT intenta acceder a un curso de otro nivel.
 
@@ -230,6 +230,7 @@ enum BookingMode   { IN_PERSON ONLINE }
 ## 7. API REST — Endpoints principales
 
 ### Auth
+
 ```
 POST   /auth/register
 POST   /auth/login          → { accessToken, refreshToken }
@@ -238,6 +239,7 @@ POST   /auth/logout
 ```
 
 ### Cursos
+
 ```
 GET    /courses             → lista paginada (filtrada por schoolYear para STUDENT)
 GET    /courses/:id         → detalle con módulos
@@ -247,6 +249,7 @@ GET    /courses/:id/progress → progreso del usuario autenticado
 ```
 
 ### Lecciones y vídeos
+
 ```
 GET    /lessons/:id         → detalle (sin isCorrect en answers)
 POST   /lessons/:id/complete → marcar como completada
@@ -255,6 +258,7 @@ GET    /media/view-url/:key → genera URL firmada temporal para ver vídeo
 ```
 
 ### Tests
+
 ```
 GET    /quizzes/:id         → preguntas SIN isCorrect
 POST   /quizzes/:id/submit  → [{questionId, answerId}] → devuelve score y correcciones
@@ -262,6 +266,7 @@ GET    /quizzes/:id/attempts → historial de intentos del usuario
 ```
 
 ### Reservas
+
 ```
 GET    /teachers                          → lista de teachers con disponibilidad
 GET    /teachers/:id/slots?from=&to=      → slots libres en un rango de fechas
@@ -272,6 +277,7 @@ GET    /bookings/mine                     → mis reservas (filtrado por rol)
 ```
 
 ### Disponibilidad del profesor
+
 ```
 GET    /availability/mine    → slots propios [TEACHER, ADMIN]
 POST   /availability         → añadir slot [TEACHER, ADMIN]
@@ -279,17 +285,20 @@ DELETE /availability/:id     → eliminar slot [TEACHER, ADMIN]
 ```
 
 ### Niveles educativos
+
 ```
 GET    /school-years         → lista de niveles disponibles [autenticado]
 ```
 
 ### Tutores
+
 ```
 GET    /tutors/my-students                 → alumnos del tutor autenticado [TUTOR, ADMIN]
 GET    /tutors/my-students/:id/courses     → cursos matriculados del alumno [TUTOR, ADMIN]
 ```
 
 ### Retos y gamificación
+
 ```
 GET    /challenges           → retos activos con progreso del usuario [JWT]
 GET    /challenges/summary   → { totalPoints, currentStreak, longestStreak, completedCount, recentBadges } [JWT]
@@ -297,6 +306,7 @@ POST   /challenges/redeem    → body: { itemName, cost } → descuenta puntos y
 ```
 
 ### Certificados
+
 ```
 GET  /certificates               → mis certificados [JWT]
 GET  /certificates/:id           → un certificado [JWT]
@@ -304,6 +314,7 @@ GET  /certificates/verify/:code  → verificación pública sin JWT
 ```
 
 ### Admin — Usuarios
+
 ```
 GET    /admin/users
 POST   /admin/users                        body: { name, email, password, role, schoolYearId?, tutorId? }
@@ -314,6 +325,7 @@ DELETE /admin/users/:id
 ```
 
 ### Admin — Cursos
+
 ```
 GET    /admin/courses?page=&limit=&schoolYearId=&search=
 GET    /admin/courses/:courseId/detail     → árbol completo (módulos, lecciones, quizzes)
@@ -337,6 +349,7 @@ DELETE /admin/questions/:questionId
 ```
 
 ### Admin — Analytics y facturación
+
 ```
 GET    /admin/metrics                      → totales globales (legacy)
 GET    /admin/analytics?from=&to=&granularity=day|week|month&courseId=&schoolYearId=
@@ -345,6 +358,7 @@ PATCH  /admin/billing/config               body: { studentMonthlyPrice?, ... }
 ```
 
 ### Admin — Retos y canjes
+
 ```
 GET    /admin/challenges
 POST   /admin/challenges                   body: { title, description, type, target, points, badgeIcon?, badgeColor? }
@@ -356,6 +370,7 @@ PATCH  /admin/redemptions/:id/deliver      → marca como entregado (guarda deli
 ```
 
 ### Admin — Certificados
+
 ```
 GET  /admin/certificates              [ADMIN]
 POST /admin/certificates              [ADMIN] body: { userId, courseId?, moduleId?, type }
@@ -455,25 +470,26 @@ pnpm --filter mobile build    # EAS Build
 
 ## 12. Roadmap de fases
 
-| Fase | Descripción | Estado |
-|------|-------------|--------|
-| 0 | Setup monorepo, Docker, Prisma | ✅ Completado |
-| 1 | Autenticación y roles | ✅ Completado |
-| 2 | Cursos, módulos, vídeos | ✅ Completado |
-| 3 | Tests y progreso | ✅ Completado |
-| 4 | Sistema de reservas + rol TUTOR | ✅ Completado |
-| 5 | Notificaciones | ✅ Completado |
-| 6 | Panel de administración | ✅ Completado |
-| 7 | Gamificación (retos + tienda) | ✅ Completado |
-| 7.5 | Lecciones interactivas (MATCH, SORT, FILL_BLANK) | ✅ Completado |
-| 8 | Sistema de exámenes por curso y módulo | ✅ Completado |
-| 8.5 | Certificados digitales (completar módulo/curso, aprobar examen) | ✅ Completado |
-| 8.6 | Páginas de marketing (Landing, Sobre nosotros, Precios) | ✅ Completado |
-| 9 | Deployment parcial (Vercel + Railway) | ✅ Completado |
-| 10 | Multi-tenancy (N academias) | ✅ Completado |
-| 11 | App móvil | ⬜ Pendiente |
-| 12 | Testing | ⬜ Pendiente |
-| 13 | Deployment completo | ⬜ Pendiente |
+| Fase | Descripción                                                     | Estado        |
+| ---- | --------------------------------------------------------------- | ------------- |
+| 0    | Setup monorepo, Docker, Prisma                                  | ✅ Completado |
+| 1    | Autenticación y roles                                           | ✅ Completado |
+| 2    | Cursos, módulos, vídeos                                         | ✅ Completado |
+| 3    | Tests y progreso                                                | ✅ Completado |
+| 4    | Sistema de reservas + rol TUTOR                                 | ✅ Completado |
+| 5    | Notificaciones                                                  | ✅ Completado |
+| 6    | Panel de administración                                         | ✅ Completado |
+| 7    | Gamificación (retos + tienda)                                   | ✅ Completado |
+| 7.5  | Lecciones interactivas (MATCH, SORT, FILL_BLANK)                | ✅ Completado |
+| 8    | Sistema de exámenes por curso y módulo                          | ✅ Completado |
+| 8.5  | Certificados digitales (completar módulo/curso, aprobar examen) | ✅ Completado |
+| 8.6  | Páginas de marketing (Landing, Sobre nosotros, Precios)         | ✅ Completado |
+| 9    | Deployment parcial (Vercel + Railway)                           | ✅ Completado |
+| 10   | Multi-tenancy (N academias)                                     | ✅ Completado |
+| 10.5 | Entorno PRE + pipeline progresivo (Issue #11)                   | ✅ Completado |
+| 11   | App móvil                                                       | ⬜ Pendiente  |
+| 12   | Testing                                                         | ⬜ Pendiente  |
+| 13   | Deployment completo                                             | ⬜ Pendiente  |
 
 ---
 
@@ -481,15 +497,15 @@ pnpm --filter mobile build    # EAS Build
 
 ### Páginas implementadas
 
-| Ruta | Página | Estado |
-|------|--------|--------|
-| `/admin` | Dashboard con analytics | ✅ |
-| `/admin/users` | Gestión de usuarios (CRUD) | ✅ |
-| `/admin/courses` | Gestión de cursos (CRUD + IA) — 6 tipos de lección incluyendo MATCH, SORT, FILL_BLANK | ✅ |
-| `/admin/billing` | Facturación y costes | ✅ |
-| `/admin/challenges` | Gestión de retos (CRUD + toggle) | ✅ |
-| `/admin/redemptions` | Registro de canjes + marcar entregado | ✅ |
-| `/admin/certificates` | Certificados emitidos + emisión manual | ✅ |
+| Ruta                  | Página                                                                                | Estado |
+| --------------------- | ------------------------------------------------------------------------------------- | ------ |
+| `/admin`              | Dashboard con analytics                                                               | ✅     |
+| `/admin/users`        | Gestión de usuarios (CRUD)                                                            | ✅     |
+| `/admin/courses`      | Gestión de cursos (CRUD + IA) — 6 tipos de lección incluyendo MATCH, SORT, FILL_BLANK | ✅     |
+| `/admin/billing`      | Facturación y costes                                                                  | ✅     |
+| `/admin/challenges`   | Gestión de retos (CRUD + toggle)                                                      | ✅     |
+| `/admin/redemptions`  | Registro de canjes + marcar entregado                                                 | ✅     |
+| `/admin/certificates` | Certificados emitidos + emisión manual                                                | ✅     |
 
 ### Dashboard analytics — filtros disponibles
 
@@ -529,12 +545,12 @@ pnpm --filter mobile build    # EAS Build
 
 ### Tienda de merchandising
 
-| Artículo | Coste |
-|----------|-------|
-| 🎨 Pack de stickers VKB | 100 pts |
-| 💧 Botella termo del club | 200 pts |
-| 🧢 Gorra oficial VKB | 350 pts |
-| 👕 Camiseta oficial del club | 500 pts |
+| Artículo                       | Coste    |
+| ------------------------------ | -------- |
+| 🎨 Pack de stickers VKB        | 100 pts  |
+| 💧 Botella termo del club      | 200 pts  |
+| 🧢 Gorra oficial VKB           | 350 pts  |
+| 👕 Camiseta oficial del club   | 500 pts  |
 | 🏀 Balón firmado por el equipo | 1000 pts |
 
 - El canje descuenta puntos en transacción atómica y crea un registro `Redemption`
@@ -551,11 +567,11 @@ pnpm --filter mobile build    # EAS Build
 
 ### Tipos implementados
 
-| Tipo | Icono | Descripción | Estructura `content` |
-|------|-------|-------------|----------------------|
-| `MATCH` | 🔗 | Emparejar dos columnas | `{ pairs: [{ left, right }] }` |
-| `SORT` | ↕️ | Ordenar una lista | `{ prompt, items: [{ text, correctOrder }] }` |
-| `FILL_BLANK` | ✏️ | Rellenar huecos en un texto | `{ template, distractors }` |
+| Tipo         | Icono | Descripción                 | Estructura `content`                          |
+| ------------ | ----- | --------------------------- | --------------------------------------------- |
+| `MATCH`      | 🔗    | Emparejar dos columnas      | `{ pairs: [{ left, right }] }`                |
+| `SORT`       | ↕️    | Ordenar una lista           | `{ prompt, items: [{ text, correctOrder }] }` |
+| `FILL_BLANK` | ✏️    | Rellenar huecos en un texto | `{ template, distractors }`                   |
 
 ### Formato del campo `template` (FILL_BLANK)
 
@@ -585,9 +601,17 @@ Las palabras correctas se marcan con dobles llaves: `"El {{triple}} vale {{3}} p
 ### Tipos compartidos (`packages/shared/src/types/course.types.ts`)
 
 ```typescript
-export interface MatchContent  { pairs: { left: string; right: string }[] }
-export interface SortContent   { prompt: string; items: { text: string; correctOrder: number }[] }
-export interface FillBlankContent { template: string; distractors: string[] }
+export interface MatchContent {
+  pairs: { left: string; right: string }[];
+}
+export interface SortContent {
+  prompt: string;
+  items: { text: string; correctOrder: number }[];
+}
+export interface FillBlankContent {
+  template: string;
+  distractors: string[];
+}
 // Lesson.content?: MatchContent | SortContent | FillBlankContent | null
 ```
 
@@ -605,11 +629,11 @@ El agente (`course-generator.service.ts`) puede generar los 3 tipos interactivos
 
 ### Modelos de datos
 
-| Modelo | Descripción |
-|--------|-------------|
-| `ExamQuestion` | Pregunta de banco (courseId o moduleId, nunca ambos) |
-| `ExamAnswer` | Respuesta con `isCorrect` — nunca expuesto al alumno antes del submit |
-| `ExamAttempt` | Intento con `questionsSnapshot` (incluye `isCorrect` para corrección server-side) |
+| Modelo         | Descripción                                                                       |
+| -------------- | --------------------------------------------------------------------------------- |
+| `ExamQuestion` | Pregunta de banco (courseId o moduleId, nunca ambos)                              |
+| `ExamAnswer`   | Respuesta con `isCorrect` — nunca expuesto al alumno antes del submit             |
+| `ExamAttempt`  | Intento con `questionsSnapshot` (incluye `isCorrect` para corrección server-side) |
 
 ### Flujo del alumno
 
@@ -649,14 +673,14 @@ GET    /admin/exam-attempts?courseId=&moduleId=    [ADMIN]
 
 ### Archivos clave
 
-| Capa | Archivo |
-|------|---------|
-| Backend | `apps/api/src/exams/` — `exams.module.ts`, `exams.service.ts`, `exams.controller.ts` |
-| Backend admin | `apps/api/src/admin/dto/create-exam-question.dto.ts`, `generate-exam-questions.dto.ts` |
-| IA | `course-generator.service.ts` → `generateExamQuestions()` (incluye contexto curso/módulo) |
-| Shared | `packages/shared/src/types/exam.types.ts` |
-| Frontend | `apps/web/src/pages/ExamPage.tsx`, `ExamsListPage.tsx`, `admin/AdminExamBankPage.tsx` |
-| PDF | `apps/web/src/utils/examPdf.ts` — descarga PDF con jsPDF 4.x |
+| Capa          | Archivo                                                                                   |
+| ------------- | ----------------------------------------------------------------------------------------- |
+| Backend       | `apps/api/src/exams/` — `exams.module.ts`, `exams.service.ts`, `exams.controller.ts`      |
+| Backend admin | `apps/api/src/admin/dto/create-exam-question.dto.ts`, `generate-exam-questions.dto.ts`    |
+| IA            | `course-generator.service.ts` → `generateExamQuestions()` (incluye contexto curso/módulo) |
+| Shared        | `packages/shared/src/types/exam.types.ts`                                                 |
+| Frontend      | `apps/web/src/pages/ExamPage.tsx`, `ExamsListPage.tsx`, `admin/AdminExamBankPage.tsx`     |
+| PDF           | `apps/web/src/utils/examPdf.ts` — descarga PDF con jsPDF 4.x                              |
 
 ### Seguridad clave
 
@@ -670,12 +694,12 @@ GET    /admin/exam-attempts?courseId=&moduleId=    [ADMIN]
 
 ### Tipos de certificado
 
-| Tipo | Descripción | Condición |
-|------|-------------|-----------|
-| `MODULE_COMPLETION` | Módulo completado | Alumno completa 100% lecciones del módulo |
-| `COURSE_COMPLETION` | Curso completado | Alumno completa 100% lecciones del curso |
-| `MODULE_EXAM` | Examen de módulo superado | Score >= 50% en examen de módulo |
-| `COURSE_EXAM` | Examen de curso superado | Score >= 50% en examen de curso |
+| Tipo                | Descripción               | Condición                                 |
+| ------------------- | ------------------------- | ----------------------------------------- |
+| `MODULE_COMPLETION` | Módulo completado         | Alumno completa 100% lecciones del módulo |
+| `COURSE_COMPLETION` | Curso completado          | Alumno completa 100% lecciones del curso  |
+| `MODULE_EXAM`       | Examen de módulo superado | Score >= 50% en examen de módulo          |
+| `COURSE_EXAM`       | Examen de curso superado  | Score >= 50% en examen de curso           |
 
 ### Generación automática
 
@@ -720,11 +744,11 @@ model Certificate {
 
 ### Rutas públicas (sin autenticación)
 
-| Ruta | Página | Descripción |
-|------|--------|-------------|
-| `/` | `LandingPage` | Home dirigida a padres/tutores de Vallekas Basket |
-| `/nosotros` | `AboutPage` | Historia del club, equipo fundador, valores |
-| `/precios` | `PricingPage` | 15 EUR/alumno/mes con FAQ y merchandising |
+| Ruta        | Página        | Descripción                                       |
+| ----------- | ------------- | ------------------------------------------------- |
+| `/`         | `LandingPage` | Home dirigida a padres/tutores de Vallekas Basket |
+| `/nosotros` | `AboutPage`   | Historia del club, equipo fundador, valores       |
+| `/precios`  | `PricingPage` | 15 EUR/alumno/mes con FAQ y merchandising         |
 
 ### Layout público (`PublicLayout`)
 
@@ -732,7 +756,7 @@ Navbar sticky (`#0d1b2a`, 64px): logo + links (Inicio / Sobre nosotros / Precios
 
 ### Enfoque de audiencia
 
-Todas las páginas de marketing están dirigidas a **padres y tutores de Vallekas Basket**, no a otros clubes. El pitch es: *"La formación del club, accesible para tu hijo/a desde casa"*.
+Todas las páginas de marketing están dirigidas a **padres y tutores de Vallekas Basket**, no a otros clubes. El pitch es: _"La formación del club, accesible para tu hijo/a desde casa"_.
 
 ### Merchandising en las 3 páginas
 
@@ -752,32 +776,32 @@ Sección "El esfuerzo tiene premio" con los 5 artículos del club y sus costes e
 
 ### Arquitectura
 
-| Capa | Plataforma | Coste |
-|------|------------|-------|
-| `apps/web` (React/Vite) | Vercel | Gratis |
-| `apps/api` (NestJS) | Railway (Docker) | ~$5/mes crédito gratis |
-| PostgreSQL | Railway add-on | Incluido en crédito |
-| Redis | No desplegado (no usado activamente) | — |
+| Capa                    | Plataforma                           | Coste                  |
+| ----------------------- | ------------------------------------ | ---------------------- |
+| `apps/web` (React/Vite) | Vercel                               | Gratis                 |
+| `apps/api` (NestJS)     | Railway (Docker)                     | ~$5/mes crédito gratis |
+| PostgreSQL              | Railway add-on                       | Incluido en crédito    |
+| Redis                   | No desplegado (no usado activamente) | —                      |
 
 ### Archivos clave
 
-| Archivo | Descripción |
-|---------|-------------|
-| `vercel.json` | Build command, outputDirectory y rewrite SPA para Vercel |
-| `apps/api/Dockerfile` | Build en 2 etapas; build context = raíz del repo |
-| `.dockerignore` | Excluye node_modules, apps/web, dist, .env |
-| `apps/web/src/lib/axios.ts` | `VITE_API_URL` env var → URL absoluta en producción |
-| `apps/api/src/main.ts` | CORS multi-origen via `FRONTEND_URL` separado por comas |
+| Archivo                     | Descripción                                              |
+| --------------------------- | -------------------------------------------------------- |
+| `vercel.json`               | Build command, outputDirectory y rewrite SPA para Vercel |
+| `apps/api/Dockerfile`       | Build en 2 etapas; build context = raíz del repo         |
+| `.dockerignore`             | Excluye node_modules, apps/web, dist, .env               |
+| `apps/web/src/lib/axios.ts` | `VITE_API_URL` env var → URL absoluta en producción      |
+| `apps/api/src/main.ts`      | CORS multi-origen via `FRONTEND_URL` separado por comas  |
 
 ### Variables de entorno
 
-| Plataforma | Variable | Valor |
-|-----------|----------|-------|
-| Vercel | `VITE_API_URL` | `https://<api>.up.railway.app/api` |
-| Railway | `FRONTEND_URL` | `https://<app>.vercel.app` (comas para múltiples) |
-| Railway | `DATABASE_URL` | auto-linked desde plugin PostgreSQL |
-| Railway | `NODE_ENV` | `production` |
-| Railway | `JWT_SECRET` / `JWT_REFRESH_SECRET` | `openssl rand -hex 32` |
+| Plataforma | Variable                            | Valor                                             |
+| ---------- | ----------------------------------- | ------------------------------------------------- |
+| Vercel     | `VITE_API_URL`                      | `https://<api>.up.railway.app/api`                |
+| Railway    | `FRONTEND_URL`                      | `https://<app>.vercel.app` (comas para múltiples) |
+| Railway    | `DATABASE_URL`                      | auto-linked desde plugin PostgreSQL               |
+| Railway    | `NODE_ENV`                          | `production`                                      |
+| Railway    | `JWT_SECRET` / `JWT_REFRESH_SECRET` | `openssl rand -hex 32`                            |
 
 ### Notas Railway
 
@@ -801,9 +825,9 @@ BD compartida con columna discriminadora `academyId`. Profesores y cursos son gl
 
 ### Modelos nuevos
 
-| Modelo | Descripción |
-|--------|-------------|
-| `Academy` | slug, name, logoUrl, primaryColor, domain, isActive |
+| Modelo          | Descripción                                          |
+| --------------- | ---------------------------------------------------- |
+| `Academy`       | slug, name, logoUrl, primaryColor, domain, isActive  |
 | `AcademyMember` | Join table (userId + academyId) — membresía flexible |
 
 ### Nuevo rol: `SUPER_ADMIN`
@@ -849,11 +873,90 @@ DELETE /academies/:id/members/:userId → [ADMIN, SUPER_ADMIN]
 
 ### Academias de ejemplo (seed)
 
-| Slug | Nombre |
-|------|--------|
+| Slug              | Nombre                  |
+| ----------------- | ----------------------- |
 | `vallekas-basket` | Vallekas Basket Academy |
-| `cb-oscar` | CB Oscar Academy |
+| `cb-oscar`        | CB Oscar Academy        |
 
 ---
 
-*Última actualización: Marzo 2026 — Fase 10 (Multi-tenancy) completada*
+## 21. Entorno de pre-producción y pipeline progresivo (Issue #11)
+
+### Objetivo
+
+Replicar un entorno idéntico al de producción (PRE) para validar cada cambio antes de subirlo a PROD. Flujo:
+
+```
+push main → tests → deploy PRE → smoke tests PRE → deploy PROD canary → smoke tests PROD → promover 100%
+```
+
+### Arquitectura
+
+| Capa          | PRE                           | PROD                      |
+| ------------- | ----------------------------- | ------------------------- |
+| Web (Vercel)  | proyecto `vkbacademy-web-pre` | proyecto `vkbacademy-web` |
+| API (Railway) | servicio `api-pre`            | servicio `api-prod`       |
+| PostgreSQL    | BD dedicada en Railway        | BD dedicada en Railway    |
+
+**Crítico:** PRE debe tener su propia BD (nunca compartir con PROD) para evitar que migraciones en pruebas afecten datos reales.
+
+### Pipeline (`.github/workflows/deploy-pipeline.yml`)
+
+| Job                  | Entorno GitHub | Gate              |
+| -------------------- | -------------- | ----------------- |
+| `test`               | —              | —                 |
+| `deploy-pre`         | `pre`          | automático        |
+| `smoke-pre`          | `pre`          | automático        |
+| `deploy-prod-canary` | `prod-canary`  | required reviewer |
+| `smoke-prod-canary`  | `prod-canary`  | automático        |
+| `promote-prod`       | `prod`         | required reviewer |
+
+Los environments `prod-canary` y `prod` se configuran en _Settings → Environments → Required reviewers_ para añadir una puerta manual antes de cada promoción.
+
+### Secrets / variables requeridas
+
+**Repository secrets:**
+
+- `RAILWAY_TOKEN`, `RAILWAY_SERVICE_ID_PRE`, `RAILWAY_SERVICE_ID_PROD`
+- `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_PRE`, `VERCEL_PROJECT_ID_PROD`
+
+**Environment vars** (por cada entorno `pre`, `prod-canary`, `prod`):
+
+- `SMOKE_API_URL` — URL absoluta de la API a probar
+- `SMOKE_WEB_URL` — URL absoluta del frontend a probar
+
+### Smoke tests (`apps/api/test/smoke/`)
+
+Suite independiente que hace peticiones HTTP con `fetch` nativo contra un entorno desplegado. No arranca Nest ni toca BD. Cobertura:
+
+- `GET /api/health` → 200 con `{status: 'ok'}`
+- `GET /api/courses` sin token → 401 (guard activo)
+- `POST /api/auth/login` con credenciales falsas → 401 (validación activa)
+- `GET /api/academies/by-slug/vallekas-basket` → 200 o 404 (no 5xx)
+- `GET /` (web) → HTML del SPA con `<div id="root">`
+- `GET /ruta-inexistente` → HTML (rewrite SPA de Vercel)
+
+Ejecución local: `SMOKE_API_URL=... SMOKE_WEB_URL=... pnpm --filter @vkbacademy/api test:smoke`
+
+### Health endpoint (`apps/api/src/health/`)
+
+`GET /api/health` devuelve `{ status, timestamp, uptime, node, env }`. **No consulta BD** — un fallo de Postgres no debe tumbar la probe de readiness. Cubierto por `health.controller.spec.ts`.
+
+### Workflow red/green TDD aplicado
+
+La Issue #11 se implementó en ciclos rojo/verde:
+
+1. **RED**: `health.controller.spec.ts` falla (controlador no existe)
+2. **GREEN**: se crea `health.controller.ts` y se registra en `HealthModule` → tests pasan
+3. **RED**: smoke tests fallan contra cualquier URL sin `/api/health`
+4. **GREEN**: health endpoint desplegado → smoke tests pasan en PRE → pipeline promueve a PROD
+
+### Promoción progresiva
+
+- **Railway** usa _rolling update_ entre replicas: el nuevo deployment se rota gradualmente.
+- **Vercel** hace switch instantáneo pero mantiene la versión previa 24h (_skew protection_) → rollback con un click desde el dashboard.
+- Para un canary más fino (10% → 50% → 100%) hay que mover Railway a Pro y activar _Deployment Stages_ con traffic splitting.
+
+---
+
+_Última actualización: Abril 2026 — Fase 10.5 (Entorno PRE + pipeline progresivo) completada_

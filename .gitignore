@@ -51,3 +51,4 @@ android/
 *.mobileprovision
 *.orig.*
 web-build/
+.vercel

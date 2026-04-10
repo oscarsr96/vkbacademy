@@ -264,7 +264,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
             textTransform: 'uppercase',
           }}
         >
-          La formación del club, en tus manos
+          Rendimiento académico al nivel del club
         </p>
       </div>
 

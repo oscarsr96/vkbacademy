@@ -47,6 +47,18 @@ RUN pnpm exec prisma generate
 
 ENV NODE_ENV=production
 
-# 'migrate deploy' es idempotente; DATABASE_URL solo está disponible en runtime
-CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node dist/main"]
+# IMPORTANTE: las migraciones NO se ejecutan aquí.
+#
+# Motivo: en Fase B (ECS Fargate con >1 task) varias instancias arrancando
+# a la vez intentarían correr `prisma migrate deploy` en paralelo, lo que
+# puede provocar race conditions en el shadow database y dejar migraciones
+# en estado `failed`.
+#
+# Las migraciones se ejecutan en un step dedicado del pipeline CI/CD
+# (ver `.github/workflows/deploy-pipeline.yml`) ANTES del rollout:
+#   pnpm --filter @vkbacademy/api run migrate:deploy
+#
+# En Render se configura como "pre-deploy command" en `render.yaml`.
+# En Fargate se lanza vía `aws ecs run-task` con la misma imagen.
+CMD ["node", "dist/main"]
 EXPOSE 3001
