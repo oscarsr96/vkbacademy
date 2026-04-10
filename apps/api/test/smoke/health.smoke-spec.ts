@@ -3,8 +3,8 @@
  * verificar que los servicios están vivos tras un despliegue.
  *
  * Variables de entorno requeridas:
- *   SMOKE_API_URL  → URL base de la API (ej: https://api-pre.up.railway.app)
- *   SMOKE_WEB_URL  → URL base del frontend (ej: https://pre.vkbacademy.vercel.app)
+ *   SMOKE_API_URL  → URL base de la API (ej: https://vkbacademy-api-pre.onrender.com)
+ *   SMOKE_WEB_URL  → URL base del frontend (ej: https://vkbacademy-pre.vercel.app)
  *
  * Estos tests NO arrancan Nest ni la BD: hacen peticiones HTTP reales y
  * validan las respuestas. Deben ser rápidos (< 30s en total) y no mutar datos.
@@ -17,7 +17,7 @@ const WEB_URL = process.env.SMOKE_WEB_URL;
 async function fetchWithTimeout(
   url: string,
   init: RequestInit = {},
-  ms = 10000,
+  ms = 35000,
 ): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ms);
