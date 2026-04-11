@@ -127,21 +127,37 @@ jobs:
           cache: 'pnpm'
 
       - name: Deploy API a Render (PRE)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_PRE }}
         run: |
-          # Trigger deploy via Render API — espera hasta que el status sea 'live'
-          DEPLOY_ID=$(curl -sS -X POST \
-            "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID_PRE }}/deploys" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{}' | jq -r '.id')
+          API="https://api.render.com/v1/services/$RENDER_SERVICE_ID"
+          AUTH="Authorization: Bearer $RENDER_API_KEY"
 
-          echo "Deploy iniciado: $DEPLOY_ID"
+          # Trigger deploy — la API puede devolver body vacío si ya hay uno en cola
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "$API/deploys" \
+            -H "$AUTH" -H "Content-Type: application/json" -d '{}')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+          DEPLOY_ID=$(echo "$BODY" | jq -r '.id // empty' 2>/dev/null || true)
 
-          # Esperar hasta 10 min a que el deploy termine
+          # Si no hubo ID, coger el deploy más reciente
+          if [ -z "$DEPLOY_ID" ]; then
+            echo "POST devolvió vacío (HTTP $HTTP_CODE) — buscando deploy más reciente..."
+            DEPLOY_ID=$(curl -sS "$API/deploys?limit=1" -H "$AUTH" \
+              | jq -r '.[0].deploy.id // .[0].id // empty' 2>/dev/null || true)
+          fi
+
+          if [ -z "$DEPLOY_ID" ]; then
+            echo "No se encontró ningún deploy"
+            exit 1
+          fi
+
+          echo "Monitoreando deploy: $DEPLOY_ID"
+
           for i in $(seq 1 40); do
-            STATUS=$(curl -sS \
-              "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID_PRE }}/deploys/$DEPLOY_ID" \
-              -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" | jq -r '.status')
+            STATUS=$(curl -sS "$API/deploys/$DEPLOY_ID" -H "$AUTH" \
+              | jq -r '.status // empty' 2>/dev/null || echo "unknown")
 
             echo "Intento $i — status: $STATUS"
 
@@ -277,19 +293,35 @@ jobs:
           cache: 'pnpm'
 
       - name: Deploy API a Render (PROD)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_PROD }}
         run: |
-          DEPLOY_ID=$(curl -sS -X POST \
-            "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID_PROD }}/deploys" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{}' | jq -r '.id')
+          API="https://api.render.com/v1/services/$RENDER_SERVICE_ID"
+          AUTH="Authorization: Bearer $RENDER_API_KEY"
 
-          echo "Deploy PROD iniciado: $DEPLOY_ID"
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "$API/deploys" \
+            -H "$AUTH" -H "Content-Type: application/json" -d '{}')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+          DEPLOY_ID=$(echo "$BODY" | jq -r '.id // empty' 2>/dev/null || true)
+
+          if [ -z "$DEPLOY_ID" ]; then
+            echo "POST devolvió vacío (HTTP $HTTP_CODE) — buscando deploy más reciente..."
+            DEPLOY_ID=$(curl -sS "$API/deploys?limit=1" -H "$AUTH" \
+              | jq -r '.[0].deploy.id // .[0].id // empty' 2>/dev/null || true)
+          fi
+
+          if [ -z "$DEPLOY_ID" ]; then
+            echo "No se encontró ningún deploy"
+            exit 1
+          fi
+
+          echo "Monitoreando deploy: $DEPLOY_ID"
 
           for i in $(seq 1 40); do
-            STATUS=$(curl -sS \
-              "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID_PROD }}/deploys/$DEPLOY_ID" \
-              -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" | jq -r '.status')
+            STATUS=$(curl -sS "$API/deploys/$DEPLOY_ID" -H "$AUTH" \
+              | jq -r '.status // empty' 2>/dev/null || echo "unknown")
 
             echo "Intento $i — status: $STATUS"
 
