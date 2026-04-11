@@ -281,17 +281,6 @@ jobs:
       name: prod-canary
       url: ${{ vars.SMOKE_WEB_URL }}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.14.4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
       - name: Deploy API a Render (PROD)
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
@@ -340,19 +329,21 @@ jobs:
           echo "Timeout esperando deploy PROD"
           exit 1
 
-      - name: Instalar dependencias (para Vercel build)
-        run: pnpm install --frozen-lockfile
-
-      - name: Deploy web a Vercel (PROD)
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
+      # Vercel PROD no se despliega aquí — la Git integration de Vercel
+      # ya detecta el push a main y despliega automáticamente.
+      # Solo desplegamos la API (Render) desde el pipeline.
+      - name: Verificar que Vercel PROD está respondiendo
         run: |
-          npm install -g vercel@37.14.0
-          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-          vercel build --prod --token="$VERCEL_TOKEN"
-          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+          for i in $(seq 1 10); do
+            if curl -fsS --max-time 10 "${{ vars.SMOKE_WEB_URL }}/" > /dev/null 2>&1; then
+              echo "Vercel PROD respondiendo en intento $i"
+              exit 0
+            fi
+            echo "Esperando Vercel PROD... intento $i"
+            sleep 10
+          done
+          echo "Vercel PROD no respondió"
+          exit 1
 
   # ── 5. Smoke tests contra PROD ─────────────────────────────────────────────
   smoke-prod:
