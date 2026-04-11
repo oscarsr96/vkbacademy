@@ -123,7 +123,7 @@ async function main() {
   // Crear tutor (vinculado a VKB)
   const tutor = await prisma.user.create({
     data: {
-      email: 'oscar.sanchez@egocogito.com',
+      email: 'tutor@vkbacademy.com',
       passwordHash,
       role: Role.TUTOR,
       name: 'maria-lopez',
