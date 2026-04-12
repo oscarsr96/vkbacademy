@@ -4,11 +4,9 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import Anthropic from '@anthropic-ai/sdk';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-
+import { AiProviderService } from '../ai/ai-provider.service';
 
 // ─── Estructuras generadas por Claude ────────────────────────────────────────
 
@@ -102,16 +100,11 @@ function buildNestedLessonData(lesson: GeneratedLesson) {
 @Injectable()
 export class CourseGeneratorService {
   private readonly logger = new Logger(CourseGeneratorService.name);
-  private readonly anthropic: Anthropic;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
-  ) {
-    this.anthropic = new Anthropic({
-      apiKey: this.config.get<string>('ANTHROPIC_API_KEY'),
-    });
-  }
+    private readonly ai: AiProviderService,
+  ) {}
 
   async generateAndCreate(name: string, schoolYearId: string) {
     const schoolYear = await this.prisma.schoolYear.findUnique({
@@ -182,9 +175,7 @@ export class CourseGeneratorService {
     });
 
     const nextOrder =
-      course.modules.length > 0
-        ? Math.max(...course.modules.map((m) => m.order)) + 1
-        : 1;
+      course.modules.length > 0 ? Math.max(...course.modules.map((m) => m.order)) + 1 : 1;
 
     return this.prisma.$transaction(async (tx) => {
       const module = await tx.module.create({
@@ -231,9 +222,7 @@ export class CourseGeneratorService {
     });
 
     const nextOrder =
-      module.lessons.length > 0
-        ? Math.max(...module.lessons.map((l) => l.order)) + 1
-        : 1;
+      module.lessons.length > 0 ? Math.max(...module.lessons.map((l) => l.order)) + 1 : 1;
 
     return this.prisma.$transaction(async (tx) => {
       const lesson = await tx.lesson.create({
@@ -242,7 +231,9 @@ export class CourseGeneratorService {
           type: lessonData.type,
           order: nextOrder,
           moduleId,
-          ...(lessonData.content ? { content: lessonData.content as unknown as Prisma.InputJsonValue } : {}),
+          ...(lessonData.content
+            ? { content: lessonData.content as unknown as Prisma.InputJsonValue }
+            : {}),
           ...(lessonData.type === 'QUIZ' && lessonData.quiz
             ? {
                 quiz: {
@@ -307,9 +298,7 @@ export class CourseGeneratorService {
     });
 
     const nextOrder =
-      quiz.questions.length > 0
-        ? Math.max(...quiz.questions.map((q) => q.order)) + 1
-        : 1;
+      quiz.questions.length > 0 ? Math.max(...quiz.questions.map((q) => q.order)) + 1 : 1;
 
     return this.prisma.$transaction(async (tx) => {
       const question = await tx.question.create({
@@ -454,28 +443,20 @@ Reglas:
 - Contenido curricular real relacionado con el tema "${topic}"
 - Solo devuelve JSON puro, sin markdown ni texto adicional`;
 
-    this.logger.log(
-      `Llamando a Claude para generar pregunta: "${topic}" en quiz de "${lessonTitle}"`,
-    );
+    this.logger.log(`Generando pregunta: "${topic}" en quiz de "${lessonTitle}"`);
 
-    const message = await this.anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const textContent = message.content.find((c) => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new InternalServerErrorException('Claude no devolvió contenido de texto');
-    }
+    const text = await this.ai.generate(prompt, 512);
 
     try {
-      const raw = textContent.text.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
+      const raw = text
+        .trim()
+        .replace(/^```json\n?/, '')
+        .replace(/\n?```$/, '');
       const parsed = JSON.parse(raw) as GeneratedQuestion;
       this.logger.log(`Pregunta generada correctamente: "${parsed.text}"`);
       return parsed;
     } catch {
-      this.logger.error('Error al parsear JSON de Claude (pregunta):', textContent.text);
+      this.logger.error('Error al parsear JSON de IA (pregunta):', text);
       throw new InternalServerErrorException(
         'El agente IA devolvió un formato inválido. Inténtalo de nuevo.',
       );
@@ -591,28 +572,20 @@ Reglas:
 - Contenido curricular real y adecuado para ${schoolYearLabel} en España
 - Solo devuelve JSON puro, sin markdown ni texto adicional`;
 
-    this.logger.log(
-      `Llamando a Claude para generar lección: "${topic}" en módulo "${moduleTitle}"`,
-    );
+    this.logger.log(`Generando lección: "${topic}" en módulo "${moduleTitle}"`);
 
-    const message = await this.anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const textContent = message.content.find((c) => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new InternalServerErrorException('Claude no devolvió contenido de texto');
-    }
+    const text = await this.ai.generate(prompt, 1024);
 
     try {
-      const raw = textContent.text.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
+      const raw = text
+        .trim()
+        .replace(/^```json\n?/, '')
+        .replace(/\n?```$/, '');
       const parsed = JSON.parse(raw) as Omit<GeneratedLesson, 'order'>;
       this.logger.log(`Lección generada correctamente: "${parsed.title}" (${parsed.type})`);
       return parsed;
     } catch {
-      this.logger.error('Error al parsear JSON de Claude (lección):', textContent.text);
+      this.logger.error('Error al parsear JSON de IA (lección):', text);
       throw new InternalServerErrorException(
         'El agente IA devolvió un formato inválido. Inténtalo de nuevo.',
       );
@@ -706,26 +679,20 @@ Reglas:
 - El contenido debe ser coherente con el curso "${courseTitle}" y no repetir los módulos existentes
 - Solo devuelve JSON puro, sin markdown ni texto adicional`;
 
-    this.logger.log(`Llamando a Claude para generar módulo: "${name}" en curso "${courseTitle}"`);
+    this.logger.log(`Generando módulo: "${name}" en curso "${courseTitle}"`);
 
-    const message = await this.anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 3000,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const textContent = message.content.find((c) => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new InternalServerErrorException('Claude no devolvió contenido de texto');
-    }
+    const text = await this.ai.generate(prompt, 3000);
 
     try {
-      const raw = textContent.text.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
+      const raw = text
+        .trim()
+        .replace(/^```json\n?/, '')
+        .replace(/\n?```$/, '');
       const parsed = JSON.parse(raw) as Omit<GeneratedModule, 'order'>;
       this.logger.log(`Módulo generado correctamente: "${parsed.title}"`);
       return parsed;
     } catch {
-      this.logger.error('Error al parsear JSON de Claude (módulo):', textContent.text);
+      this.logger.error('Error al parsear JSON de IA (módulo):', text);
       throw new InternalServerErrorException(
         'El agente IA devolvió un formato inválido. Inténtalo de nuevo.',
       );
@@ -772,26 +739,22 @@ ${moduleTitle ? `- Las preguntas deben ser coherentes con el contenido del módu
 - Contenido curricular real relacionado con "${topic}"
 - Solo devuelve JSON puro, sin markdown ni texto adicional`;
 
-    this.logger.log(`Llamando a Claude para generar ${count} preguntas de examen sobre "${topic}" (${courseTitle || 'sin curso'}, ${moduleTitle || 'sin módulo'})`);
+    this.logger.log(
+      `Generando ${count} preguntas de examen sobre "${topic}" (${courseTitle || 'sin curso'}, ${moduleTitle || 'sin módulo'})`,
+    );
 
-    const message = await this.anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const textContent = message.content.find((c) => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new InternalServerErrorException('Claude no devolvió contenido de texto');
-    }
+    const text = await this.ai.generate(prompt, 2000);
 
     try {
-      const raw = textContent.text.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
+      const raw = text
+        .trim()
+        .replace(/^```json\n?/, '')
+        .replace(/\n?```$/, '');
       const parsed = JSON.parse(raw) as GeneratedQuestion[];
       this.logger.log(`${parsed.length} preguntas de examen generadas correctamente`);
       return parsed;
     } catch {
-      this.logger.error('Error al parsear JSON de Claude (preguntas de examen):', textContent.text);
+      this.logger.error('Error al parsear JSON de IA (preguntas de examen):', text);
       throw new InternalServerErrorException(
         'El agente IA devolvió un formato inválido. Inténtalo de nuevo.',
       );
@@ -895,26 +858,20 @@ Reglas:
 - Contenido curricular real y adecuado para ${schoolYearLabel} en España
 - Solo devuelve JSON puro, sin markdown ni texto adicional`;
 
-    this.logger.log(`Llamando a Claude para generar curso: "${name}" (${schoolYearLabel})`);
+    this.logger.log(`Generando curso: "${name}" (${schoolYearLabel})`);
 
-    const message = await this.anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 6000,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const textContent = message.content.find((c) => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new InternalServerErrorException('Claude no devolvió contenido de texto');
-    }
+    const text = await this.ai.generate(prompt, 6000);
 
     try {
-      const raw = textContent.text.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
+      const raw = text
+        .trim()
+        .replace(/^```json\n?/, '')
+        .replace(/\n?```$/, '');
       const parsed = JSON.parse(raw) as GeneratedCourse;
       this.logger.log(`Curso generado correctamente: "${parsed.title}"`);
       return parsed;
     } catch {
-      this.logger.error('Error al parsear JSON de Claude:', textContent.text);
+      this.logger.error('Error al parsear JSON de IA:', text);
       throw new InternalServerErrorException(
         'El agente IA devolvió un formato inválido. Inténtalo de nuevo.',
       );

@@ -22,6 +22,7 @@ import { CertificatesModule } from './certificates/certificates.module';
 import { TutorModule } from './tutor/tutor.module';
 import { AcademiesModule } from './academies/academies.module';
 import { HealthModule } from './health/health.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { HealthModule } from './health/health.module';
     TutorModule,
     AcademiesModule,
     HealthModule,
+    AiModule,
   ],
 })
 export class AppModule {}

@@ -63,8 +63,11 @@ export const envValidationSchema = Joi.object({
   // ── Videollamadas (Daily.co) ───────────────────────────────────────────────
   DAILY_API_KEY: Joi.string().allow('').optional(),
 
-  // ── IA (Anthropic, generación de cursos) ───────────────────────────────────
+  // ── IA (generación de cursos) ───────────────────────────────────────────────
+  // Gemini 2.0 Flash (primary, gratis) + Claude Haiku (fallback, pago)
+  GEMINI_API_KEY: Joi.string().allow('').optional(),
   ANTHROPIC_API_KEY: Joi.string().allow('').optional(),
+  AI_PROVIDER: Joi.string().valid('gemini', 'haiku', 'auto').default('auto'),
 
   // ── Vercel (registro dinámico de dominios para multi-tenancy) ──────────────
   VERCEL_TOKEN: Joi.string().allow('').optional(),
