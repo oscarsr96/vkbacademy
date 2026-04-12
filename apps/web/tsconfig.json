@@ -19,5 +19,6 @@
       "@vkbacademy/shared": ["../../packages/shared/src/index.ts"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"]
 }
