@@ -69,7 +69,8 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
     queryFn: () => api.get(`/academies/by-domain/${domain}`).then((r) => r.data),
     enabled: !!domain,
     staleTime: Infinity,
-    retry: false,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
   });
 
   // Actualizar título y favicon según la academia
