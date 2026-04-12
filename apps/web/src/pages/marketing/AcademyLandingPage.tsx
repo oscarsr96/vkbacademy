@@ -266,8 +266,8 @@ export default function AcademyLandingPage() {
               marginBottom: 20,
             }}
           >
-            Metodología {academy.name.split(' ')[0]} para el{' '}
-            <span style={{ color }}>rendimiento académico</span>
+            Metodología {academy.slug === 'vallekas-basket' ? 'VKB' : academy.name.split(' ')[0]}{' '}
+            para el <span style={{ color }}>rendimiento académico</span>
           </h1>
 
           <p
