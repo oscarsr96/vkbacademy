@@ -20,6 +20,20 @@ export interface RegisterPayload {
   academySlug?: string;
 }
 
+export interface RegisterStudentPayload {
+  name: string;
+  email: string;
+  schoolYearId?: string;
+}
+
+export interface RegisterTutorPayload {
+  name: string;
+  email: string;
+  password: string;
+  academySlug: string;
+  students: RegisterStudentPayload[];
+}
+
 export const authApi = {
   login: (payload: LoginPayload) =>
     api.post<AuthResponse>('/auth/login', payload).then((r) => r.data),
@@ -27,11 +41,12 @@ export const authApi = {
   register: (payload: RegisterPayload) =>
     api.post<AuthResponse>('/auth/register', payload).then((r) => r.data),
 
-  logout: (refreshToken: string) =>
-    api.post('/auth/logout', { refreshToken }).then((r) => r.data),
+  registerTutor: (payload: RegisterTutorPayload) =>
+    api.post<AuthResponse>('/auth/register-tutor', payload).then((r) => r.data),
 
-  getMe: () =>
-    api.get<User>('/users/me').then((r) => r.data),
+  logout: (refreshToken: string) => api.post('/auth/logout', { refreshToken }).then((r) => r.data),
+
+  getMe: () => api.get<User>('/users/me').then((r) => r.data),
 
   forgotPassword: (email: string) =>
     api.post<{ message: string }>('/auth/forgot-password', { email }).then((r) => r.data),

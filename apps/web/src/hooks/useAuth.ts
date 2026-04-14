@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { authApi, type LoginPayload, type RegisterPayload } from '../api/auth.api';
+import {
+  authApi,
+  type LoginPayload,
+  type RegisterPayload,
+  type RegisterTutorPayload,
+} from '../api/auth.api';
 import { useAuthStore } from '../store/auth.store';
 
 export function useMe() {
@@ -36,6 +41,22 @@ export function useRegister() {
 
   return useMutation({
     mutationFn: (payload: RegisterPayload) => authApi.register(payload),
+    onSuccess: ({ accessToken, refreshToken, user }) => {
+      setTokens({ accessToken, refreshToken });
+      setUser(user);
+      queryClient.setQueryData(['me'], user);
+      navigate('/dashboard', { replace: true });
+    },
+  });
+}
+
+export function useRegisterTutor() {
+  const { setTokens, setUser } = useAuthStore();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: (payload: RegisterTutorPayload) => authApi.registerTutor(payload),
     onSuccess: ({ accessToken, refreshToken, user }) => {
       setTokens({ accessToken, refreshToken });
       setUser(user);
