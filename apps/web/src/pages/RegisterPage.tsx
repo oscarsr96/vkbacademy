@@ -6,6 +6,11 @@ import { useSchoolYears } from '../hooks/useCourses';
 import { useAcademyDomain } from '../contexts/AcademyContext';
 import api from '../lib/axios';
 
+/** Valida formato de email: x@y.z */
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 interface PublicAcademy {
   id: string;
   slug: string;
@@ -34,9 +39,11 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [academySlug, setAcademySlug] = useState(preselectedAcademy);
   const [passwordError, setPasswordError] = useState('');
+  const [tutorEmailError, setTutorEmailError] = useState('');
 
   // Paso 2: datos de los alumnos
   const [students, setStudents] = useState<StudentForm[]>([emptyStudent()]);
+  const [studentEmailErrors, setStudentEmailErrors] = useState<string[]>([]);
 
   const { mutate, isPending, error } = useRegisterTutor();
   const { data: schoolYears = [] } = useSchoolYears();
@@ -50,6 +57,12 @@ export default function RegisterPage() {
   function handleStep1(e: FormEvent) {
     e.preventDefault();
     setPasswordError('');
+    setTutorEmailError('');
+
+    if (!isValidEmail(tutorEmail)) {
+      setTutorEmailError('Email inválido — formato requerido: x@y.z');
+      return;
+    }
     if (password.length < 8) {
       setPasswordError('La contraseña debe tener al menos 8 caracteres');
       return;
@@ -75,8 +88,17 @@ export default function RegisterPage() {
 
   function handleStep2(e: FormEvent) {
     e.preventDefault();
-    // Validar que todos los alumnos tengan nombre y email
-    const valid = students.every((s) => s.name.trim() && s.email.trim());
+    // Validar que todos los alumnos tengan nombre y email válido
+    const errors = students.map((s) =>
+      !s.email.trim()
+        ? 'Email requerido'
+        : !isValidEmail(s.email.trim())
+          ? 'Email inválido — formato requerido: x@y.z'
+          : '',
+    );
+    setStudentEmailErrors(errors);
+
+    const valid = students.every((s) => s.name.trim() && isValidEmail(s.email.trim()));
     if (!valid) return;
 
     mutate({
@@ -151,10 +173,16 @@ export default function RegisterPage() {
                 type="email"
                 autoComplete="email"
                 value={tutorEmail}
-                onChange={(e) => setTutorEmail(e.target.value)}
+                onChange={(e) => {
+                  setTutorEmail(e.target.value);
+                  setTutorEmailError('');
+                }}
                 placeholder="tu@email.com"
+                className={tutorEmailError ? 'error' : ''}
+                style={tutorEmailError ? { borderColor: '#dc2626' } : {}}
                 required
               />
+              {tutorEmailError && <span style={s.fieldError}>{tutorEmailError}</span>}
             </div>
 
             <div className="field field-dark">
@@ -233,10 +261,18 @@ export default function RegisterPage() {
                     id={`student-email-${i}`}
                     type="email"
                     value={student.email}
-                    onChange={(e) => updateStudent(i, 'email', e.target.value)}
+                    onChange={(e) => {
+                      updateStudent(i, 'email', e.target.value);
+                      setStudentEmailErrors((prev) => prev.map((err, j) => (j === i ? '' : err)));
+                    }}
                     placeholder="alumno@email.com"
+                    className={studentEmailErrors[i] ? 'error' : ''}
+                    style={studentEmailErrors[i] ? { borderColor: '#dc2626' } : {}}
                     required
                   />
+                  {studentEmailErrors[i] && (
+                    <span style={s.fieldError}>{studentEmailErrors[i]}</span>
+                  )}
                   <span style={s.fieldHint}>
                     Recibirá un email con su contraseña generada automáticamente.
                   </span>
