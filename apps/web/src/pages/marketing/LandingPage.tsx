@@ -558,7 +558,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '50%',
   },
   heroContent: {
-    maxWidth: 800,
+    maxWidth: '100%',
     width: '100%',
     display: 'flex',
     flexDirection: 'column',

@@ -95,7 +95,11 @@ export class NotificationsService {
 
     await Promise.allSettled([
       this.sendEmail(params.tutorEmail, 'Clase confirmada — VKB Academy', html(params.tutorName)),
-      this.sendEmail(params.studentEmail, 'Clase confirmada — VKB Academy', html(params.studentName)),
+      this.sendEmail(
+        params.studentEmail,
+        'Clase confirmada — VKB Academy',
+        html(params.studentName),
+      ),
     ]);
   }
 
@@ -131,6 +135,72 @@ export class NotificationsService {
     );
   }
 
+  /**
+   * Bienvenida al tutor: incluye sus credenciales y enlace de acceso.
+   * Se envía automáticamente al completar el registro de tutor+alumnos.
+   */
+  async sendWelcomeTutor(params: {
+    email: string;
+    name: string;
+    password: string;
+    academyName: string;
+    loginUrl: string;
+  }) {
+    await this.sendEmail(
+      params.email,
+      `Bienvenido a ${params.academyName} — VKB Academy`,
+      `<h2>¡Bienvenido a ${params.academyName}!</h2>
+       <p>Hola <strong>${params.name}</strong>, tu cuenta de tutor ha sido creada correctamente.</p>
+       <p>Aquí tienes tus credenciales de acceso:</p>
+       <table style="border-collapse:collapse;margin:1rem 0">
+         <tr><td style="padding:4px 12px 4px 0;color:#666">Email:</td><td><strong>${params.email}</strong></td></tr>
+         <tr><td style="padding:4px 12px 4px 0;color:#666">Contraseña:</td><td><strong>${params.password}</strong></td></tr>
+       </table>
+       <p style="margin:1.5rem 0">
+         <a href="${params.loginUrl}" style="background:#ea580c;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
+           Acceder a la plataforma
+         </a>
+       </p>
+       <p style="color:#666;font-size:0.875rem">Te recomendamos cambiar tu contraseña tras el primer acceso.</p>`,
+    );
+  }
+
+  /**
+   * Bienvenida al alumno: incluye contraseña generada automáticamente y enlace de acceso.
+   * Se envía automáticamente al completar el registro de tutor+alumnos.
+   *
+   * NOTA SOBRE COSTE DE EMAILS (Resend):
+   * - Plan gratuito: 100 emails/día, 3 000/mes
+   * - Cada registro de tutor envía N+1 emails (1 tutor + N alumnos)
+   * - Estimación: 100 academias × 10 registros/día × 2 emails promedio = ~2 000/día
+   *   → Se supera el plan gratuito; se necesita Resend Pro (~20 $/mes, 50 000/mes)
+   */
+  async sendWelcomeStudent(params: {
+    email: string;
+    name: string;
+    password: string;
+    academyName: string;
+    loginUrl: string;
+  }) {
+    await this.sendEmail(
+      params.email,
+      `Bienvenido a ${params.academyName} — VKB Academy`,
+      `<h2>¡Bienvenido a ${params.academyName}!</h2>
+       <p>Hola <strong>${params.name}</strong>, tu cuenta de alumno ha sido creada por tu tutor.</p>
+       <p>Aquí tienes tus credenciales de acceso:</p>
+       <table style="border-collapse:collapse;margin:1rem 0">
+         <tr><td style="padding:4px 12px 4px 0;color:#666">Email:</td><td><strong>${params.email}</strong></td></tr>
+         <tr><td style="padding:4px 12px 4px 0;color:#666">Contraseña:</td><td><strong>${params.password}</strong></td></tr>
+       </table>
+       <p style="margin:1.5rem 0">
+         <a href="${params.loginUrl}" style="background:#ea580c;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
+           Acceder a la plataforma
+         </a>
+       </p>
+       <p style="color:#666;font-size:0.875rem">Te recomendamos cambiar tu contraseña tras el primer acceso.</p>`,
+    );
+  }
+
   /** Envía el enlace de restablecimiento de contraseña al usuario */
   async sendPasswordReset(params: { email: string; name: string; resetUrl: string }) {
     await this.sendEmail(
@@ -152,7 +222,12 @@ export class NotificationsService {
   // ---------------------------------------------------------------------------
 
   private formatDate(date: Date): string {
-    return date.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    return date.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   }
 
   private formatTime(date: Date): string {

@@ -3,6 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterTutorDto } from './dto/register-tutor.dto';
 import { LoginDto } from './dto/login.dto';
 import type { AuthTokens, JwtPayload } from '@vkbacademy/shared';
 
@@ -23,7 +25,14 @@ export type AuthResponse = AuthTokens & {
     schoolYearId: string | null;
     schoolYear: { id: string; name: string; label: string } | null;
     academyId: string | null;
-    academy: { id: string; slug: string; name: string; logoUrl: string | null; primaryColor: string | null; isActive: boolean } | null;
+    academy: {
+      id: string;
+      slug: string;
+      name: string;
+      logoUrl: string | null;
+      primaryColor: string | null;
+      isActive: boolean;
+    } | null;
   };
 };
 
@@ -46,7 +55,14 @@ export class AuthService {
 
     // Resolver la academia por slug si se proporcionó
     let academyId: string | null = null;
-    let academy: { id: string; slug: string; name: string; logoUrl: string | null; primaryColor: string | null; isActive: boolean } | null = null;
+    let academy: {
+      id: string;
+      slug: string;
+      name: string;
+      logoUrl: string | null;
+      primaryColor: string | null;
+      isActive: boolean;
+    } | null = null;
     if (dto.academySlug) {
       const found = await this.prisma.academy.findUnique({ where: { slug: dto.academySlug } });
       if (found) {
@@ -66,8 +82,130 @@ export class AuthService {
       include: { schoolYear: true },
     });
 
-    const tokens = await this.generateTokens({ sub: user.id, email: user.email, role: user.role, academyId });
+    const tokens = await this.generateTokens({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      academyId,
+    });
     return { ...tokens, user: this.toPublic(user, academyId, academy) };
+  }
+
+  /**
+   * Registro de tutor con alumnos.
+   *
+   * COSTE DE EMAILS (Resend):
+   *   - Plan gratuito: 100 emails/día, 3 000/mes
+   *   - Cada registro envía N+1 emails (1 tutor + N alumnos)
+   *   - Estimación: 100 academias × 10 registros/día × 2 emails promedio ≈ 2 000 emails/día
+   *     → Supera el plan gratuito; se necesita Resend Pro (~20 $/mes, 50 000/mes)
+   *
+   * Todo se ejecuta dentro de una transacción Prisma: si algo falla,
+   * ningún usuario ni membresía queda persistido.
+   */
+  async registerTutor(dto: RegisterTutorDto): Promise<AuthResponse> {
+    // 1. Validar academia
+    const academy = await this.prisma.academy.findUnique({ where: { slug: dto.academySlug } });
+    if (!academy) {
+      throw new NotFoundException(`La academia "${dto.academySlug}" no existe`);
+    }
+    if (!academy.isActive) {
+      throw new BadRequestException(`La academia "${dto.academySlug}" no está activa`);
+    }
+
+    // 2. Verificar que ningún email (tutor + alumnos) está ya registrado
+    const allEmails = [dto.email, ...dto.students.map((s) => s.email)];
+    for (const email of allEmails) {
+      const exists = await this.prisma.user.findUnique({ where: { email } });
+      if (exists) {
+        throw new ConflictException(`El email "${email}" ya está registrado`);
+      }
+    }
+
+    // 3. Crear tutor y alumnos en transacción
+    const tutorPasswordHash = await bcrypt.hash(dto.password, 10);
+
+    // Generar contraseñas aleatorias para cada alumno (8 chars alfanuméricos)
+    const studentPasswords = dto.students.map(() => this.generatePassword());
+    const studentPasswordHashes = await Promise.all(
+      studentPasswords.map((pw) => bcrypt.hash(pw, 10)),
+    );
+
+    const { tutor, students } = await this.prisma.$transaction(async (tx) => {
+      // Crear tutor con rol TUTOR y membresía de academia
+      const createdTutor = await tx.user.create({
+        data: {
+          email: dto.email,
+          passwordHash: tutorPasswordHash,
+          name: dto.name,
+          role: 'TUTOR',
+          academyMembers: { create: { academyId: academy.id } },
+        },
+        include: { schoolYear: true },
+      });
+
+      // Crear cada alumno con rol STUDENT, tutorId y membresía de academia
+      const createdStudents = await Promise.all(
+        dto.students.map((studentDto, index) =>
+          tx.user.create({
+            data: {
+              email: studentDto.email,
+              passwordHash: studentPasswordHashes[index],
+              name: studentDto.name,
+              role: 'STUDENT',
+              tutorId: createdTutor.id,
+              ...(studentDto.schoolYearId ? { schoolYearId: studentDto.schoolYearId } : {}),
+              academyMembers: { create: { academyId: academy.id } },
+            },
+            include: { schoolYear: true },
+          }),
+        ),
+      );
+
+      return { tutor: createdTutor, students: createdStudents };
+    });
+
+    // 4. Enviar emails de bienvenida (fuera de la transacción para no bloquearla)
+    const frontendUrl = this.config
+      .get<string>('FRONTEND_URL', 'http://localhost:5173')
+      .split(',')[0];
+    const loginUrl = `${frontendUrl}/login`;
+
+    void this.notifications.sendWelcomeTutor({
+      email: tutor.email,
+      name: tutor.name,
+      password: dto.password,
+      academyName: academy.name,
+      loginUrl,
+    });
+
+    students.forEach((student, index) => {
+      void this.notifications.sendWelcomeStudent({
+        email: student.email,
+        name: student.name,
+        password: studentPasswords[index],
+        academyName: academy.name,
+        loginUrl,
+      });
+    });
+
+    // 5. Auto-login del tutor: generar tokens y devolver respuesta
+    const tokens = await this.generateTokens({
+      sub: tutor.id,
+      email: tutor.email,
+      role: tutor.role,
+      academyId: academy.id,
+    });
+
+    return { ...tokens, user: this.toPublic(tutor, academy.id, academy) };
+  }
+
+  /** Genera una contraseña aleatoria alfanumérica de 8 caracteres */
+  private generatePassword(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join(
+      '',
+    );
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
@@ -90,7 +228,12 @@ export class AuthService {
     const academyId = membership?.academyId ?? null;
     const academy = membership?.academy ?? null;
 
-    const tokens = await this.generateTokens({ sub: user.id, email: user.email, role: user.role, academyId });
+    const tokens = await this.generateTokens({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      academyId,
+    });
     return { ...tokens, user: this.toPublic(user, academyId, academy) };
   }
 
@@ -137,7 +280,9 @@ export class AuthService {
       { secret: resetSecret, expiresIn: '1h' },
     );
 
-    const frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:5173').split(',')[0];
+    const frontendUrl = this.config
+      .get<string>('FRONTEND_URL', 'http://localhost:5173')
+      .split(',')[0];
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
     void this.notifications.sendPasswordReset({ email: user.email, name: user.name, resetUrl });
@@ -214,7 +359,14 @@ export class AuthService {
       schoolYear?: { id: string; name: string; label: string } | null;
     },
     academyId?: string | null,
-    academy?: { id: string; slug: string; name: string; logoUrl: string | null; primaryColor: string | null; isActive: boolean } | null,
+    academy?: {
+      id: string;
+      slug: string;
+      name: string;
+      logoUrl: string | null;
+      primaryColor: string | null;
+      isActive: boolean;
+    } | null,
   ) {
     return {
       id: user.id,

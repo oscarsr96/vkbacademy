@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
 const ORANGE = '#ea580c';
-const NAVY   = '#0d1b2a';
+const NAVY = '#0d1b2a';
 
 // Merchandising del club
 const MERCH = [
@@ -92,7 +92,9 @@ function FaqItem({ q, a }: { q: string; a: string }) {
         }}
       >
         <span>{q}</span>
-        <span style={{ fontSize: '1rem', color: open ? ORANGE : '#94a3b8', transition: 'color 0.15s' }}>
+        <span
+          style={{ fontSize: '1rem', color: open ? ORANGE : '#94a3b8', transition: 'color 0.15s' }}
+        >
           {open ? '▲' : '▼'}
         </span>
       </button>
@@ -132,9 +134,18 @@ export default function PricingPage() {
 
   return (
     <div style={S.page}>
+      {/* Overrides responsivos — no se pueden aplicar con inline styles */}
+      <style>{`
+        .pricing-hero { padding: 6rem 2rem 5rem; }
+        @media (max-width: 768px) {
+          .pricing-hero { padding: 3rem 1.25rem !important; }
+          .pricing-features-inner { flex-direction: column !important; align-items: center !important; }
+          .pricing-steps-row { flex-direction: column !important; align-items: center !important; }
+        }
+      `}</style>
 
       {/* ════════ HERO ════════ */}
-      <section style={S.hero}>
+      <section className="pricing-hero" style={S.hero}>
         <div style={S.heroGlow} />
         <div style={S.heroGlowSide} />
         <div style={S.heroInner}>
@@ -144,9 +155,9 @@ export default function PricingPage() {
             <span style={S.heroTitleAccent}>la mejor formación del club</span>
           </h1>
           <p style={S.heroSub}>
-            Por solo <strong style={{ color: '#fb923c' }}>15 € al mes</strong>, tu hijo/a
-            accede a todos los cursos, lecciones interactivas y exámenes del club.
-            Tú sigues su progreso en tiempo real.
+            Por solo <strong style={{ color: '#fb923c' }}>15 € al mes</strong>, tu hijo/a accede a
+            todos los cursos, lecciones interactivas y exámenes del club. Tú sigues su progreso en
+            tiempo real.
           </p>
         </div>
       </section>
@@ -154,7 +165,6 @@ export default function PricingPage() {
       {/* ════════ PRECIO ════════ */}
       <section style={S.pricingSection}>
         <div style={S.pricingWrap}>
-
           {/* Tarjeta de precio */}
           <div style={S.planCard}>
             {/* Badge "Más popular" */}
@@ -164,13 +174,23 @@ export default function PricingPage() {
             <div style={S.priceRow}>
               <span style={S.priceCurrency}>€</span>
               <span style={S.priceAmount}>15</span>
-              <span style={S.pricePer}>/ mes<br />por alumno</span>
+              <span style={S.pricePer}>
+                / mes
+                <br />
+                por alumno
+              </span>
             </div>
             <p style={S.planDesc}>
               Acceso completo a toda la plataforma. Sin permanencia, cancela cuando quieras.
             </p>
             <ul style={S.planChecks}>
-              {['Todos los cursos de su nivel', 'Lecciones interactivas y tests', 'Exámenes y certificados PDF', 'Sistema de retos y puntos', 'Reservas de clases particulares'].map((item) => (
+              {[
+                'Todos los cursos de su nivel',
+                'Lecciones interactivas y tests',
+                'Exámenes y certificados PDF',
+                'Sistema de retos y puntos',
+                'Reservas de clases particulares',
+              ].map((item) => (
                 <li key={item} style={S.planCheck}>
                   <span style={S.planCheckmark}>✓</span>
                   {item}
@@ -208,7 +228,8 @@ export default function PricingPage() {
               <div>
                 <p style={S.infoPanelTitle}>Tu rol como tutor</p>
                 <p style={S.infoPanelText}>
-                  Tienes tu propio acceso para ver el progreso de tu hijo/a, reservar clases con los profesores del club y recibir notificaciones de avance.
+                  Tienes tu propio acceso para ver el progreso de tu hijo/a, reservar clases con los
+                  profesores del club y recibir notificaciones de avance.
                 </p>
               </div>
             </div>
@@ -218,7 +239,8 @@ export default function PricingPage() {
               <div>
                 <p style={S.infoPanelTitle}>Contenido del club</p>
                 <p style={S.infoPanelText}>
-                  Todo el contenido lo crean y actualizan los propios profesores de Vallekas Basket. No es material genérico — es la metodología real del club.
+                  Todo el contenido lo crean y actualizan los propios profesores de Vallekas Basket.
+                  No es material genérico — es la metodología real del club.
                 </p>
               </div>
             </div>
@@ -238,8 +260,7 @@ export default function PricingPage() {
 
       {/* ════════ QUÉ OBTIENE ════════ */}
       <section style={S.featuresSection}>
-        <div style={S.featuresInner}>
-
+        <div className="pricing-features-inner" style={S.featuresInner}>
           {/* Columna alumno */}
           <div style={S.featureCol}>
             <div style={S.featureColHeader}>
@@ -265,7 +286,6 @@ export default function PricingPage() {
               ))}
             </ul>
           </div>
-
         </div>
       </section>
 
@@ -276,9 +296,21 @@ export default function PricingPage() {
           <p style={S.sectionSub}>Solo tres pasos y tu hijo/a ya puede aprender.</p>
           <div style={S.stepsRow}>
             {[
-              { n: '1', title: 'Contacta con el club', desc: 'Habla con la administración de Vallekas Basket para que creen la cuenta de tu hijo/a.' },
-              { n: '2', title: 'Recibe tus credenciales', desc: 'El club te facilita el acceso. Tú como tutor también recibes tu propio usuario.' },
-              { n: '3', title: '¡Listo para aprender!', desc: 'Tu hijo/a puede empezar los cursos de inmediato desde cualquier dispositivo.' },
+              {
+                n: '1',
+                title: 'Contacta con el club',
+                desc: 'Habla con la administración de Vallekas Basket para que creen la cuenta de tu hijo/a.',
+              },
+              {
+                n: '2',
+                title: 'Recibe tus credenciales',
+                desc: 'El club te facilita el acceso. Tú como tutor también recibes tu propio usuario.',
+              },
+              {
+                n: '3',
+                title: '¡Listo para aprender!',
+                desc: 'Tu hijo/a puede empezar los cursos de inmediato desde cualquier dispositivo.',
+              },
             ].map(({ n, title, desc }) => (
               <div key={n} style={S.step}>
                 <div style={S.stepNumber}>{n}</div>
@@ -295,7 +327,8 @@ export default function PricingPage() {
         <div style={S.howInner}>
           <h2 style={S.sectionTitle}>🏆 Incluido: sistema de puntos y premios</h2>
           <p style={S.sectionSub}>
-            Tu hijo/a acumula puntos completando lecciones y retos. Los puntos se canjean por merchandising exclusivo del club, sin coste adicional.
+            Tu hijo/a acumula puntos completando lecciones y retos. Los puntos se canjean por
+            merchandising exclusivo del club, sin coste adicional.
           </p>
           <div style={S.merchGrid}>
             {MERCH.map((item) => (
@@ -303,7 +336,8 @@ export default function PricingPage() {
             ))}
           </div>
           <p style={S.merchNote}>
-            El sistema de puntos es una forma de motivar el estudio y premiar la constancia — sin coste adicional para las familias.
+            El sistema de puntos es una forma de motivar el estudio y premiar la constancia — sin
+            coste adicional para las familias.
           </p>
         </div>
       </section>
@@ -391,7 +425,7 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: '50%',
   },
   heroInner: {
-    maxWidth: 720,
+    maxWidth: '100%',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',

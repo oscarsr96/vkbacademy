@@ -30,17 +30,20 @@ const VALUES = [
   {
     icon: '🎯',
     title: 'Excelencia deportiva',
-    description: 'Metodología avalada por técnicos federados, ahora también en formato digital para que tu hijo/a siga aprendiendo en casa.',
+    description:
+      'Metodología avalada por técnicos federados, ahora también en formato digital para que tu hijo/a siga aprendiendo en casa.',
   },
   {
     icon: '🤝',
     title: 'Familia y comunidad',
-    description: 'El barrio como base, la cancha como hogar y los padres como parte del equipo. VKB Academy mantiene ese vínculo.',
+    description:
+      'El barrio como base, la cancha como hogar y los padres como parte del equipo. VKB Academy mantiene ese vínculo.',
   },
   {
     icon: '📚',
     title: 'Formación integral',
-    description: 'Combinamos el deporte con herramientas digitales para que tú, como tutor, tengas siempre una visión completa del progreso.',
+    description:
+      'Combinamos el deporte con herramientas digitales para que tú, como tutor, tengas siempre una visión completa del progreso.',
   },
 ];
 
@@ -65,10 +68,21 @@ export default function AboutPage() {
 
   return (
     <div style={styles.page}>
+      {/* Overrides responsivos — no se pueden aplicar con inline styles */}
+      <style>{`
+        .about-hero { padding: 6rem 2rem 5rem; }
+        .about-story { padding: 6rem 2rem; }
+        @media (max-width: 768px) {
+          .about-hero { padding: 3rem 1.25rem !important; }
+          .about-story { padding: 3rem 1.25rem !important; }
+          .about-features { padding: 3rem 1.25rem !important; }
+        }
+      `}</style>
+
       {/* ════════════════════════════════════════
           SECCIÓN 1 — HERO
       ════════════════════════════════════════ */}
-      <section style={styles.hero}>
+      <section className="about-hero" style={styles.hero}>
         <div style={styles.heroGlow} />
         <div style={styles.heroGlowBottom} />
         <div style={styles.heroContent}>
@@ -78,7 +92,8 @@ export default function AboutPage() {
             <span style={styles.heroTitleAccent}>un club para toda la familia</span>
           </h1>
           <p style={styles.heroSubtitle}>
-            Más de 30 años formando jugadores y personas en Vallecas. VKB Academy es el paso digital para que el aprendizaje no se quede solo en la cancha.
+            Más de 30 años formando jugadores y personas en Vallecas. VKB Academy es el paso digital
+            para que el aprendizaje no se quede solo en la cancha.
           </p>
         </div>
       </section>
@@ -86,37 +101,34 @@ export default function AboutPage() {
       {/* ════════════════════════════════════════
           SECCIÓN 2 — HISTORIA
       ════════════════════════════════════════ */}
-      <section style={styles.storySection}>
+      <section className="about-story" style={styles.storySection}>
         <div style={styles.storyContent}>
           <h2 style={styles.sectionTitle}>Nuestra historia</h2>
 
           <div style={styles.storyDivider} />
 
           <p style={styles.storyParagraph}>
-            Vallekas Basket nació en el corazón del barrio de Vallecas a principios de los
-            años 90, fundado por un grupo de vecinos apasionados por el baloncesto que
-            querían dar a los jóvenes del barrio un espacio donde crecer, tanto dentro como
-            fuera de la cancha. Lo que comenzó con una sola canasta y un puñado de
-            chavales se convirtió en uno de los clubes de formación más activos del sur
-            de Madrid.
+            Vallekas Basket nació en el corazón del barrio de Vallecas a principios de los años 90,
+            fundado por un grupo de vecinos apasionados por el baloncesto que querían dar a los
+            jóvenes del barrio un espacio donde crecer, tanto dentro como fuera de la cancha. Lo que
+            comenzó con una sola canasta y un puñado de chavales se convirtió en uno de los clubes
+            de formación más activos del sur de Madrid.
           </p>
 
           <p style={styles.storyParagraph}>
-            Hoy, el club cuenta con más de veinte equipos que abarcan todas las categorías,
-            desde los más pequeños en benjamín y alevín, pasando por infantil, cadete y
-            junior, hasta el equipo sénior que compite en ligas federadas de la Comunidad
-            de Madrid. Cada año, más de trescientos jugadores y jugadoras se forman con
-            nosotros, guiados por un cuerpo técnico comprometido con su desarrollo
-            personal y deportivo.
+            Hoy, el club cuenta con más de veinte equipos que abarcan todas las categorías, desde
+            los más pequeños en benjamín y alevín, pasando por infantil, cadete y junior, hasta el
+            equipo sénior que compite en ligas federadas de la Comunidad de Madrid. Cada año, más de
+            trescientos jugadores y jugadoras se forman con nosotros, guiados por un cuerpo técnico
+            comprometido con su desarrollo personal y deportivo.
           </p>
 
           <p style={styles.storyParagraph}>
-            Con más de treinta años de historia, hemos aprendido que el deporte es una
-            herramienta poderosa para construir personas íntegras. Y que detrás de cada
-            jugador hay una familia que merece estar informada y sentirse parte del proceso.
-            Por eso creamos VKB Academy: para llevar la metodología del club a cualquier
-            dispositivo y dar a padres y tutores las herramientas para acompañar el
-            crecimiento de sus hijos más allá de la cancha.
+            Con más de treinta años de historia, hemos aprendido que el deporte es una herramienta
+            poderosa para construir personas íntegras. Y que detrás de cada jugador hay una familia
+            que merece estar informada y sentirse parte del proceso. Por eso creamos VKB Academy:
+            para llevar la metodología del club a cualquier dispositivo y dar a padres y tutores las
+            herramientas para acompañar el crecimiento de sus hijos más allá de la cancha.
           </p>
         </div>
       </section>
@@ -161,9 +173,7 @@ export default function AboutPage() {
             <blockquote style={styles.quoteBox}>
               <div style={styles.quoteGlow} />
               <div style={styles.quoteAccent} />
-              <p style={styles.quoteText}>
-                "La tecnología al servicio del baloncesto de base."
-              </p>
+              <p style={styles.quoteText}>"La tecnología al servicio del baloncesto de base."</p>
               <footer style={styles.quoteAuthor}>— Vallekas Basket, 2026</footer>
             </blockquote>
           </div>
@@ -197,7 +207,8 @@ export default function AboutPage() {
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitleCentered}>🏆 El esfuerzo tiene premio</h2>
             <p style={styles.merchSubtitle}>
-              Tu hijo/a acumula puntos completando lecciones y retos. Tú eliges cuándo canjearlos por merchandising exclusivo del club.
+              Tu hijo/a acumula puntos completando lecciones y retos. Tú eliges cuándo canjearlos
+              por merchandising exclusivo del club.
             </p>
           </div>
           <div style={styles.merchGrid}>
@@ -206,7 +217,8 @@ export default function AboutPage() {
             ))}
           </div>
           <p style={styles.merchNote}>
-            Los puntos se obtienen completando lecciones, módulos, exámenes y manteniendo la racha semanal de estudio.
+            Los puntos se obtienen completando lecciones, módulos, exámenes y manteniendo la racha
+            semanal de estudio.
           </p>
         </div>
       </section>
@@ -276,10 +288,16 @@ function FounderCard({
       }}
     >
       {/* Avatar con anillo de gradiente */}
-      <div style={{ padding: 3, borderRadius: '50%', background: `linear-gradient(135deg, ${color} 0%, ${color}99 100%)`, boxShadow: `0 0 20px ${color}55`, marginBottom: '0.5rem' }}>
-        <div style={{ ...founderCardStyle.avatar, background: color }}>
-          {initials}
-        </div>
+      <div
+        style={{
+          padding: 3,
+          borderRadius: '50%',
+          background: `linear-gradient(135deg, ${color} 0%, ${color}99 100%)`,
+          boxShadow: `0 0 20px ${color}55`,
+          marginBottom: '0.5rem',
+        }}
+      >
+        <div style={{ ...founderCardStyle.avatar, background: color }}>{initials}</div>
       </div>
 
       {/* Nombre y rol */}
@@ -539,7 +557,8 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '50%',
   },
   heroContent: {
-    maxWidth: 740,
+    maxWidth: '100%',
+    width: '100%',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',

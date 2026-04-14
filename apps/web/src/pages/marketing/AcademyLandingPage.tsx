@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../lib/axios';
@@ -118,108 +119,67 @@ export default function AcademyLandingPage() {
   const color = academy.primaryColor ?? '#ea580c';
 
   return (
-    <div style={{ background: '#080e1a' }}>
-      {/* ── Navbar simplificada ── */}
-      <header
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          background: 'rgba(8,14,26,0.97)',
-          borderBottom: `1px solid ${color}22`,
-          backdropFilter: 'blur(14px)',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: '0 auto',
-            padding: '0 2rem',
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {academy.logoUrl && (
-              <img
-                src={academy.logoUrl}
-                alt={academy.name}
-                style={{ height: 36, width: 'auto', objectFit: 'contain' }}
-              />
-            )}
-            <span
-              style={{
-                background: `linear-gradient(135deg, ${color}, ${lighten(color)})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontWeight: 800,
-                fontSize: '1.125rem',
-              }}
-            >
-              {academy.name}
-            </span>
-          </div>
-          {/* Nav links */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-            <a
-              href="#features"
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              style={navLinkStyle}
-            >
-              Inicio
-            </a>
-            <a
-              href="/nosotros"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/nosotros');
-              }}
-              style={navLinkStyle}
-            >
-              Sobre nosotros
-            </a>
-            <a
-              href="/precios"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/precios');
-              }}
-              style={navLinkStyle}
-            >
-              Precios
-            </a>
-          </nav>
+    <div style={{ background: '#080e1a', overflowX: 'hidden' }}>
+      {/* Overrides responsivos — media queries para el navbar de la academia */}
+      <style>{`
+        .acad-nav-links { display: flex; align-items: center; gap: 24px; }
+        .acad-nav-actions { display: flex; gap: 12px; }
+        .acad-hamburger { display: none; }
+        .acad-mobile-menu { display: none; }
 
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button
-              onClick={() => navigate('/login')}
-              style={{
-                background: 'transparent',
-                border: `1px solid ${color}66`,
-                color: '#fff',
-                padding: '8px 18px',
-                borderRadius: 8,
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Acceder
-            </button>
-            <button onClick={() => navigate(`/register?academy=${slug}`)} style={btnPrimary(color)}>
-              Registrarse
-            </button>
-          </div>
-        </div>
-      </header>
+        @media (max-width: 768px) {
+          .acad-nav-links { display: none !important; }
+          .acad-nav-actions { display: none !important; }
+          .acad-hamburger {
+            display: flex !important;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.25);
+            color: #fff;
+            font-size: 1.25rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+          }
+          .acad-mobile-menu {
+            display: flex !important;
+            flex-direction: column;
+            background: rgba(8,14,26,0.98);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 0.5rem 0;
+          }
+          .acad-mobile-link {
+            display: block;
+            padding: 0.875rem 1.5rem;
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            cursor: pointer;
+            background: none;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+            text-align: left;
+          }
+          .acad-hero-section { padding: 3.5rem 1.25rem 3rem !important; }
+          .acad-stats-section { padding: 2rem 1.25rem !important; }
+          .acad-features-section { padding: 3rem 1.25rem !important; }
+          .acad-cta-section { padding: 3rem 1.25rem !important; }
+          .acad-footer { padding: 1.5rem 1.25rem !important; }
+        }
+      `}</style>
+
+      {/* ── Navbar de academia ── */}
+      <AcadNavbar academy={academy} color={color} slug={slug} navigate={navigate} />
 
       {/* ── Hero ── */}
       <section
+        className="acad-hero-section"
         style={{
           position: 'relative',
           padding: '100px 2rem 80px',
@@ -314,7 +274,7 @@ export default function AcademyLandingPage() {
       </section>
 
       {/* ── Stats ── */}
-      <section style={{ padding: '40px 2rem 60px' }}>
+      <section className="acad-stats-section" style={{ padding: '40px 2rem 60px' }}>
         <div
           style={{
             maxWidth: 900,
@@ -347,7 +307,11 @@ export default function AcademyLandingPage() {
       </section>
 
       {/* ── Features ── */}
-      <section id="features" style={{ padding: '60px 2rem 80px' }}>
+      <section
+        id="features"
+        className="acad-features-section"
+        style={{ padding: '60px 2rem 80px' }}
+      >
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
           <h2
             style={{
@@ -405,7 +369,10 @@ export default function AcademyLandingPage() {
       </section>
 
       {/* ── CTA final ── */}
-      <section style={{ padding: '60px 2rem 80px', textAlign: 'center' }}>
+      <section
+        className="acad-cta-section"
+        style={{ padding: '60px 2rem 80px', textAlign: 'center' }}
+      >
         <div
           style={{
             maxWidth: 600,
@@ -433,6 +400,7 @@ export default function AcademyLandingPage() {
 
       {/* ── Footer ── */}
       <footer
+        className="acad-footer"
         style={{
           background: '#060b15',
           padding: '2rem',
@@ -448,13 +416,195 @@ export default function AcademyLandingPage() {
   );
 }
 
-const navLinkStyle: React.CSSProperties = {
+// ── Navbar interna de la academia con soporte hamburger en móvil ──
+function AcadNavbar({
+  academy,
+  color,
+  slug,
+  navigate,
+}: {
+  academy: { name: string; logoUrl: string | null };
+  color: string;
+  slug: string;
+  navigate: (path: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <header
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        background: 'rgba(8,14,26,0.97)',
+        borderBottom: `1px solid ${color}22`,
+        backdropFilter: 'blur(14px)',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: '0 auto',
+          padding: '0 1.25rem',
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+        }}
+      >
+        {/* Logo y nombre */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {academy.logoUrl && (
+            <img
+              src={academy.logoUrl}
+              alt={academy.name}
+              style={{ height: 36, width: 'auto', objectFit: 'contain', maxWidth: '100%' }}
+            />
+          )}
+          <span
+            style={{
+              background: `linear-gradient(135deg, ${color}, ${lighten(color)})`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontWeight: 800,
+              fontSize: '1.125rem',
+            }}
+          >
+            {academy.name}
+          </span>
+        </div>
+
+        {/* Nav links — ocultos en móvil vía CSS */}
+        <nav className="acad-nav-links">
+          <a
+            href="#features"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            style={acadNavLinkStyle}
+          >
+            Inicio
+          </a>
+          <a
+            href="/nosotros"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/nosotros');
+            }}
+            style={acadNavLinkStyle}
+          >
+            Sobre nosotros
+          </a>
+          <a
+            href="/precios"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/precios');
+            }}
+            style={acadNavLinkStyle}
+          >
+            Precios
+          </a>
+        </nav>
+
+        {/* Botones de acción — ocultos en móvil vía CSS */}
+        <div className="acad-nav-actions">
+          <button
+            onClick={() => navigate('/login')}
+            style={{
+              background: 'transparent',
+              border: `1px solid ${color}66`,
+              color: '#fff',
+              padding: '8px 18px',
+              borderRadius: 8,
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Acceder
+          </button>
+          <button onClick={() => navigate(`/register?academy=${slug}`)} style={btnPrimary(color)}>
+            Registrarse
+          </button>
+        </div>
+
+        {/* Hamburger — visible solo en móvil vía CSS */}
+        <button
+          className="acad-hamburger"
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
+        >
+          {open ? '✕' : '☰'}
+        </button>
+      </div>
+
+      {/* Menú móvil desplegable */}
+      {open && (
+        <div className="acad-mobile-menu">
+          <button
+            className="acad-mobile-link"
+            onClick={() => {
+              setOpen(false);
+              document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            Inicio
+          </button>
+          <button
+            className="acad-mobile-link"
+            onClick={() => {
+              setOpen(false);
+              navigate('/nosotros');
+            }}
+          >
+            Sobre nosotros
+          </button>
+          <button
+            className="acad-mobile-link"
+            onClick={() => {
+              setOpen(false);
+              navigate('/precios');
+            }}
+          >
+            Precios
+          </button>
+          <button
+            className="acad-mobile-link"
+            onClick={() => {
+              setOpen(false);
+              navigate('/login');
+            }}
+          >
+            Acceder
+          </button>
+          <button
+            className="acad-mobile-link"
+            style={{ color: color, fontWeight: 700 }}
+            onClick={() => {
+              setOpen(false);
+              navigate(`/register?academy=${slug}`);
+            }}
+          >
+            Registrarse gratis
+          </button>
+        </div>
+      )}
+    </header>
+  );
+}
+
+const acadNavLinkStyle: React.CSSProperties = {
   color: '#ffffff',
   textDecoration: 'none',
   fontSize: '0.9375rem',
   fontWeight: 500,
   opacity: 0.8,
   cursor: 'pointer',
+  whiteSpace: 'nowrap',
 };
 
 function btnPrimary(color?: string | null): React.CSSProperties {

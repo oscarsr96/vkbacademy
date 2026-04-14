@@ -8,6 +8,62 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
 
   return (
     <div style={styles.shell}>
+      {/* Overrides responsivos — las clases pub-* no se pueden controlar solo con inline styles */}
+      <style>{`
+        /* Desktop: mostrar nav links y CTA, ocultar hamburger */
+        .pub-nav-links-desktop { display: flex; gap: 2rem; align-items: center; }
+        .pub-cta-desktop { display: flex; }
+        .pub-hamburger { display: none; }
+        .pub-mobile-menu { display: none; }
+
+        /* Móvil: ocultar nav desktop, mostrar hamburger */
+        @media (max-width: 768px) {
+          .pub-nav-links-desktop { display: none !important; }
+          .pub-cta-desktop { display: none !important; }
+          .pub-hamburger {
+            display: flex !important;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.25);
+            color: #fff;
+            font-size: 1.25rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+          }
+          .pub-mobile-menu {
+            display: flex !important;
+            flex-direction: column;
+            gap: 0;
+            background: rgba(8,14,26,0.98);
+            border-top: 1px solid rgba(234,88,12,0.14);
+            padding: 0.5rem 0;
+          }
+          .pub-mobile-link {
+            display: block;
+            padding: 0.875rem 1.5rem;
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+          }
+          .pub-mobile-cta {
+            margin: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+          }
+        }
+      `}</style>
       {/* ── Navbar ── */}
       <header style={styles.navbar}>
         <div style={styles.navInner}>
@@ -74,7 +130,10 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
             </Link>
             <button
               className="pub-mobile-cta"
-              onClick={() => { setMenuOpen(false); navigate('/login'); }}
+              onClick={() => {
+                setMenuOpen(false);
+                navigate('/login');
+              }}
             >
               Acceder →
             </button>
@@ -83,9 +142,7 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
       </header>
 
       {/* ── Contenido de la página ── */}
-      <main style={styles.main}>
-        {children ?? <Outlet />}
-      </main>
+      <main style={styles.main}>{children ?? <Outlet />}</main>
 
       {/* ── Footer ── */}
       <footer style={styles.footer}>
@@ -97,15 +154,19 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
               style={styles.footerLogo}
             />
           </div>
-          <p style={styles.footerText}>
-            © 2026 Vallekas Basket · Formación deportiva y académica
-          </p>
+          <p style={styles.footerText}>© 2026 Vallekas Basket · Formación deportiva y académica</p>
           <div style={styles.footerLinks}>
-            <Link to="/" style={styles.footerLink}>Inicio</Link>
+            <Link to="/" style={styles.footerLink}>
+              Inicio
+            </Link>
             <span style={styles.footerSep}>·</span>
-            <Link to="/nosotros" style={styles.footerLink}>Sobre nosotros</Link>
+            <Link to="/nosotros" style={styles.footerLink}>
+              Sobre nosotros
+            </Link>
             <span style={styles.footerSep}>·</span>
-            <Link to="/precios" style={styles.footerLink}>Precios</Link>
+            <Link to="/precios" style={styles.footerLink}>
+              Precios
+            </Link>
           </div>
         </div>
       </footer>
@@ -192,7 +253,7 @@ const styles: Record<string, React.CSSProperties> = {
     textDecoration: 'none',
     fontSize: '0.9375rem',
     fontWeight: 500,
-    opacity: 0.80,
+    opacity: 0.8,
     transition: 'color 0.18s, opacity 0.18s',
   },
 
@@ -230,6 +291,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
+    flexWrap: 'wrap' as const,
     gap: 12,
   },
   footerBrand: {
