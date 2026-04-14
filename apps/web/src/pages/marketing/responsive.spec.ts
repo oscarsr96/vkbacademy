@@ -267,3 +267,54 @@ describe('Todas las páginas de marketing — verificaciones generales', () => {
     expect(hasAutoWidth).toBeTruthy();
   });
 });
+
+// ─── SplashScreen — responsividad ───────────────────────────────────────────────
+
+describe('SplashScreen — responsividad móvil', () => {
+  const COMPONENTS_DIR = path.resolve(__dirname, '../../components');
+  let src: string;
+
+  beforeAll(() => {
+    src = fs.readFileSync(path.join(COMPONENTS_DIR, 'SplashScreen.tsx'), 'utf-8');
+  });
+
+  test('el contenedor raíz usa overflow hidden', () => {
+    expect(src).toMatch(/overflow.*hidden/);
+  });
+
+  test('los anillos de energía usan unidades responsivas (vmin, vw o min())', () => {
+    // No deben usar width/height fijo en px sin alternativa responsiva
+    expect(src).toMatch(/vmin|min\(/);
+  });
+
+  test('el SVG del balón escala en mobile (usa vmin, vw o min())', () => {
+    // El SVG no debe tener solo width/height fijos de 160px
+    expect(src).toMatch(/width.*min\(.*vmin/);
+  });
+
+  test('la barra de carga usa ancho responsivo', () => {
+    // No debe usar width: 200 fijo
+    expect(src).toMatch(/width.*min\(|width.*vw|width.*clamp/);
+  });
+});
+
+// ─── Prevención de scroll horizontal ────────────────────────────────────────────
+
+describe('Prevención de scroll horizontal', () => {
+  test('index.html o index.css tiene overflow-x hidden en body/html', () => {
+    const indexPath = path.resolve(__dirname, '../../../index.html');
+    const indexSrc = fs.readFileSync(indexPath, 'utf-8');
+    // Puede estar en un <style> inline o referenciado en CSS
+    const cssGlob = path.resolve(__dirname, '../../../src');
+    let hasOverflow = indexSrc.includes('overflow-x') || indexSrc.includes('overflowX');
+    // Buscar en archivos CSS/index.css
+    const cssPath = path.resolve(__dirname, '../../../src/index.css');
+    try {
+      const cssSrc = fs.readFileSync(cssPath, 'utf-8');
+      hasOverflow = hasOverflow || cssSrc.includes('overflow-x');
+    } catch {
+      // Si no hay index.css, debe estar en index.html
+    }
+    expect(hasOverflow).toBeTruthy();
+  });
+});

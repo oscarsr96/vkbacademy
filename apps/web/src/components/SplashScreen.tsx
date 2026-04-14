@@ -102,12 +102,12 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
         />
       ))}
 
-      {/* Anillo de energía expandiéndose */}
+      {/* Anillo de energía expandiéndose — usa vmin para escalar en mobile */}
       <div
         style={{
           position: 'absolute',
-          width: 500,
-          height: 500,
+          width: 'min(500px, 80vmin)',
+          height: 'min(500px, 80vmin)',
           borderRadius: '50%',
           border: '1px solid rgba(234, 88, 12, 0.15)',
           opacity: phase === 'enter' ? 0 : 0.6,
@@ -118,8 +118,8 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
       <div
         style={{
           position: 'absolute',
-          width: 500,
-          height: 500,
+          width: 'min(500px, 80vmin)',
+          height: 'min(500px, 80vmin)',
           borderRadius: '50%',
           border: '1px solid rgba(249, 115, 22, 0.1)',
           opacity: phase === 'enter' ? 0 : 0.4,
@@ -159,7 +159,12 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
           height="160"
           viewBox="0 0 160 160"
           fill="none"
-          style={{ position: 'relative', zIndex: 1 }}
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            width: 'min(160px, 35vmin)',
+            height: 'min(160px, 35vmin)',
+          }}
         >
           {/* Órbitas animadas */}
           {ORBIT_LINES.map((orbit, i) => (
@@ -272,8 +277,8 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
       <div
         style={{
           position: 'absolute',
-          bottom: 60,
-          width: 200,
+          bottom: 'clamp(30px, 8vmin, 60px)',
+          width: 'min(200px, 50vw)',
           height: 3,
           borderRadius: 999,
           background: 'rgba(255,255,255,0.06)',
