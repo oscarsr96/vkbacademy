@@ -21,6 +21,8 @@ interface AcademyContextValue {
   isLoading: boolean;
   /** true si estamos en un dominio de academia (no el principal) */
   isAcademyDomain: boolean;
+  /** true si la resolución de academia falló (API caída, cold start, etc.) */
+  isError: boolean;
 }
 
 const AcademyCtx = createContext<AcademyContextValue>({
@@ -28,6 +30,7 @@ const AcademyCtx = createContext<AcademyContextValue>({
   slug: null,
   isLoading: false,
   isAcademyDomain: false,
+  isError: false,
 });
 
 /**
@@ -64,7 +67,7 @@ function resolveFromHostname(): { slug: string | null; domain: string | null } {
 export function AcademyProvider({ children }: { children: ReactNode }) {
   const { domain } = resolveFromHostname();
 
-  const { data, isLoading } = useQuery<AcademyPublic>({
+  const { data, isLoading, isError } = useQuery<AcademyPublic>({
     queryKey: ['academy-domain', domain],
     queryFn: () => api.get(`/academies/by-domain/${domain}`).then((r) => r.data),
     enabled: !!domain,
@@ -102,6 +105,7 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
     slug: data?.slug ?? null,
     isLoading: !!domain && isLoading,
     isAcademyDomain: !!domain,
+    isError: !!domain && isError,
   };
 
   return <AcademyCtx.Provider value={value}>{children}</AcademyCtx.Provider>;

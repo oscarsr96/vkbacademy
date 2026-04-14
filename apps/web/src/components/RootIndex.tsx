@@ -8,9 +8,61 @@ import LandingPage from '../pages/marketing/LandingPage';
 import AcademyLandingPage from '../pages/marketing/AcademyLandingPage';
 
 /**
+ * Spinner de carga mientras la API resuelve la academia.
+ * Se muestra cuando la API está despertando (cold start de Render ~30s).
+ */
+function LoadingSpinner() {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        background: '#080e1a',
+        zIndex: 9999,
+      }}
+    >
+      <div
+        style={{
+          width: 48,
+          height: 48,
+          border: '4px solid rgba(255,255,255,0.1)',
+          borderTop: '4px solid #ea580c',
+          borderRadius: '50%',
+          animation: 'rootSpin 0.8s linear infinite',
+        }}
+      />
+      <p
+        style={{
+          color: 'rgba(255,255,255,0.4)',
+          marginTop: 20,
+          fontSize: '0.9rem',
+          letterSpacing: '0.05em',
+        }}
+      >
+        Cargando...
+      </p>
+      <style>{`
+        @keyframes rootSpin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/**
  * Ruta raíz: landing pública si no autenticado, dashboard si autenticado.
- * Si estamos en un dominio de academia, muestra la landing de esa academia.
- * Si no, muestra la landing de VKB envuelta en PublicLayout con splash.
+ *
+ * Comportamiento:
+ *  1. Si autenticado → redirige a /dashboard
+ *  2. Si isLoading (API resolviendo academia, cold start) → spinner
+ *  3. Si academia resuelta → AcademyLandingPage
+ *  4. Si error o no es dominio de academia → LandingPage genérica (fallback)
  */
 export default function RootIndex() {
   const isAuthenticated = useAuthStore((s) => !!s.accessToken);
@@ -19,19 +71,36 @@ export default function RootIndex() {
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
-  // El splash es un overlay fijo (z-index 99999) que cubre toda la pantalla.
-  // El contenido se carga detrás y se revela cuando el splash termina.
+  // Splash overlay (se muestra encima del contenido)
+  const splash = showSplash ? <SplashScreen onComplete={() => setShowSplash(false)} /> : null;
+
+  // Mientras la API resuelve la academia, mostrar spinner
+  if (isLoading) {
+    return (
+      <>
+        {splash}
+        <LoadingSpinner />
+      </>
+    );
+  }
+
+  // Academia resuelta → landing específica
+  if (isAcademyDomain && academy) {
+    return (
+      <>
+        {splash}
+        <AcademyLandingPage />
+      </>
+    );
+  }
+
+  // Fallback: landing genérica (dominio principal, o API caída/error)
   return (
     <>
-      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
-      {!isLoading &&
-        (isAcademyDomain && academy ? (
-          <AcademyLandingPage />
-        ) : (
-          <PublicLayout>
-            <LandingPage />
-          </PublicLayout>
-        ))}
+      {splash}
+      <PublicLayout>
+        <LandingPage />
+      </PublicLayout>
     </>
   );
 }
