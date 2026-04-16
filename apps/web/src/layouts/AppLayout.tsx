@@ -64,6 +64,7 @@ function buildNavLinks(role: Role | undefined): NavLink[] {
     ...base,
     { to: '/courses', label: '📚 Cursos' },
     { to: '/bookings', label: '📅 Clases Particulares' },
+    { to: '/exercises', label: '🧮 Ejercicios' },
     { to: '/my-exams', label: '🎓 Exámenes' },
     { to: '/challenges', label: '🏆 Retos' },
     { to: '/certificates', label: '📜 Certificados' },

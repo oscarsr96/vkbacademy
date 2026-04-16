@@ -24,6 +24,7 @@ import BookingsPage from './pages/BookingsPage';
 import TutorStudentsPage from './pages/TutorStudentsPage';
 import ExamPage from './pages/ExamPage';
 import ExamsListPage from './pages/ExamsListPage';
+import ExercisesPage from './pages/ExercisesPage';
 import AdminExamBankPage from './pages/admin/AdminExamBankPage';
 import CertificatesPage from './pages/CertificatesPage';
 import AdminAcademiesPage from './pages/admin/AdminAcademiesPage';
@@ -120,6 +121,9 @@ export default function App() {
         {/* Fase 8 — Exámenes */}
         <Route path="my-exams" element={<ExamsListPage />} />
         <Route path="exam" element={<ExamPage />} />
+
+        {/* Ejercicios generados por IA */}
+        <Route path="exercises" element={<ExercisesPage />} />
 
         {/* Fase 9 — Certificados */}
         <Route path="certificates" element={<CertificatesPage />} />
