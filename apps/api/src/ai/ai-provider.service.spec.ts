@@ -103,6 +103,30 @@ describe('AiProviderService', () => {
     });
   });
 
+  describe('configuración del modelo', () => {
+    it('Gemini usa un modelo soportado actualmente (no "gemini-2.0-flash" deprecado)', async () => {
+      // Lectura del archivo fuente para verificar el modelo configurado
+      const fs = await import('fs');
+      const path = await import('path');
+      const src = fs.readFileSync(path.resolve(__dirname, 'ai-provider.service.ts'), 'utf-8');
+      // gemini-2.0-flash sin sufijo está deprecado a partir de 2026
+      expect(src).not.toMatch(/['"]gemini-2\.0-flash['"]/);
+      // Debe usar uno de los modelos vivos
+      expect(src).toMatch(/gemini-flash-latest|gemini-2\.5-flash|gemini-2\.0-flash-001/);
+    });
+  });
+
+  describe('mode auto (errores combinados)', () => {
+    it('cuando Gemini falla y Haiku no está configurada, lanza error claro mencionando ambos', async () => {
+      mockGeminiGenerateContent.mockRejectedValue(new Error('Gemini quota exceeded'));
+
+      const provider = createProvider({ ANTHROPIC_API_KEY: undefined });
+      await expect(provider.generate('prompt', 512)).rejects.toThrow(
+        /Gemini.*Haiku|both providers|ningún proveedor/i,
+      );
+    });
+  });
+
   describe('sin API keys', () => {
     it('falla si GEMINI_API_KEY no está configurada y mode=gemini', async () => {
       const provider = createProvider({ GEMINI_API_KEY: undefined, AI_PROVIDER: 'gemini' });

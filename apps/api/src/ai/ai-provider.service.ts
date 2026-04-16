@@ -7,7 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
  * Proveedor de IA unificado con fallback automático.
  *
  * Orden de prioridad:
- *  1. Gemini 2.0 Flash (gratis, 15 RPM / 1M TPD)
+ *  1. Gemini Flash latest (gratis, 15 RPM / 1M TPD)
  *  2. Claude Haiku (fallback de pago)
  *
  * El proveedor principal se configura con AI_PROVIDER:
@@ -59,14 +59,22 @@ export class AiProviderService {
     }
 
     // auto: Gemini → Haiku fallback
+    let geminiError: Error | null = null;
     if (this.gemini) {
       try {
         return await this.callGemini(prompt, maxTokens);
       } catch (error) {
-        this.logger.warn(
-          `Gemini falló, cayendo a Haiku: ${error instanceof Error ? error.message : error}`,
-        );
+        geminiError = error instanceof Error ? error : new Error(String(error));
+        this.logger.warn(`Gemini falló, intentando Haiku: ${geminiError.message}`);
       }
+    }
+
+    if (!this.anthropic) {
+      // Ningún proveedor disponible: error claro mencionando ambos
+      const reason = geminiError
+        ? `Gemini falló (${geminiError.message}) y Haiku no está configurada (falta ANTHROPIC_API_KEY)`
+        : 'Ningún proveedor de IA configurado: falta GEMINI_API_KEY y ANTHROPIC_API_KEY';
+      throw new Error(reason);
     }
 
     return this.callHaiku(prompt, maxTokens);
@@ -77,15 +85,18 @@ export class AiProviderService {
       throw new Error('GEMINI_API_KEY no configurada');
     }
 
+    // `gemini-flash-latest` apunta siempre al último modelo Flash estable.
+    // Evita roturas por deprecación de versiones específicas (ej. gemini-2.0-flash
+    // dejó de aceptar nuevos usuarios en 2026).
     const model = this.gemini.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-flash-latest',
       generationConfig: {
         maxOutputTokens: maxTokens,
         responseMimeType: 'application/json',
       },
     });
 
-    this.logger.debug(`Llamando a Gemini 2.0 Flash (maxTokens=${maxTokens})`);
+    this.logger.debug(`Llamando a Gemini Flash latest (maxTokens=${maxTokens})`);
     const result = await model.generateContent(prompt);
     const text = result.response.text();
 
