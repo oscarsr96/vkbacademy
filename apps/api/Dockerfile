@@ -47,6 +47,11 @@ RUN pnpm exec prisma generate
 
 ENV NODE_ENV=production
 
+# Ejecutar como usuario no-root (principio de mínimo privilegio)
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs nestjs
+USER nestjs
+
 # IMPORTANTE: las migraciones NO se ejecutan aquí.
 #
 # Motivo: en Fase B (ECS Fargate con >1 task) varias instancias arrancando

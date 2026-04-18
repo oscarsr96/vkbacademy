@@ -13,6 +13,14 @@ module.exports = {
   },
   collectCoverageFrom: ['**/*.(t|j)s'],
   coverageDirectory: '../coverage',
+  coverageThreshold: {
+    global: {
+      statements: 30,
+      branches: 35,
+      functions: 30,
+      lines: 30,
+    },
+  },
   testEnvironment: 'node',
   moduleNameMapper: {
     // Resolver el paquete compartido del monorepo en contexto de tests

@@ -86,7 +86,9 @@ export class AcademiesService {
     // Generar dominio automáticamente si no se proporciona (o vacío)
     const domain = dto.domain?.trim() || `${dto.slug.replace(/-/g, '')}academy.vercel.app`;
 
-    const passwordHash = await bcrypt.hash('password123', 10);
+    const { randomBytes } = await import('crypto');
+    const tempPassword = randomBytes(20).toString('hex');
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
     const emailSuffix = `${dto.slug.replace(/-/g, '')}.academy`;
 
     const academy = await this.prisma.academy.create({
