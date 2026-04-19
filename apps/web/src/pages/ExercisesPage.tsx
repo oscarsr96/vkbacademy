@@ -32,6 +32,7 @@ export default function ExercisesPage() {
   const [count, setCount] = useState(5);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  const [selected, setSelected] = useState<Record<number, number | null>>({});
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: (payload: GeneratePayload) =>
@@ -39,6 +40,7 @@ export default function ExercisesPage() {
     onSuccess: (data) => {
       setExercises(data.exercises);
       setRevealed({});
+      setSelected({});
     },
   });
 
@@ -50,6 +52,10 @@ export default function ExercisesPage() {
 
   function toggleSolution(index: number) {
     setRevealed((prev) => ({ ...prev, [index]: !prev[index] }));
+  }
+
+  function chooseOption(exerciseIndex: number, optionIndex: number) {
+    setSelected((prev) => ({ ...prev, [exerciseIndex]: optionIndex }));
   }
 
   const apiError = (error as { response?: { data?: { message?: string } } } | null)?.response?.data
@@ -138,6 +144,8 @@ export default function ExercisesPage() {
                 exercise={ex}
                 index={i}
                 revealed={!!revealed[i]}
+                selected={selected[i] ?? null}
+                onChoose={(optIdx) => chooseOption(i, optIdx)}
                 onToggle={() => toggleSolution(i)}
               />
             ))}
@@ -152,13 +160,33 @@ function ExerciseCard({
   exercise,
   index,
   revealed,
+  selected,
+  onChoose,
   onToggle,
 }: {
   exercise: Exercise;
   index: number;
   revealed: boolean;
+  selected: number | null;
+  onChoose: (optionIndex: number) => void;
   onToggle: () => void;
 }) {
+  const hasOptions = exercise.options.length > 0;
+  const correctIndex = hasOptions
+    ? exercise.options.findIndex((o) => o.trim() === exercise.solution.trim())
+    : -1;
+  const canCheck = hasOptions ? selected !== null : true;
+
+  function optionStyle(j: number): React.CSSProperties {
+    if (revealed) {
+      if (j === correctIndex) return { ...s.option, ...s.optionCorrect };
+      if (j === selected) return { ...s.option, ...s.optionWrong };
+      return s.option;
+    }
+    if (j === selected) return { ...s.option, ...s.optionSelected };
+    return s.option;
+  }
+
   return (
     <article style={s.card}>
       <header style={s.cardHeader}>
@@ -168,10 +196,14 @@ function ExerciseCard({
 
       <p style={s.statement}>{exercise.statement}</p>
 
-      {exercise.options.length > 0 && (
+      {hasOptions && (
         <ul style={s.options}>
           {exercise.options.map((opt, j) => (
-            <li key={j} style={s.option}>
+            <li
+              key={j}
+              style={{ ...optionStyle(j), cursor: revealed ? 'default' : 'pointer' }}
+              onClick={revealed ? undefined : () => onChoose(j)}
+            >
               <span style={s.optionLetter}>{String.fromCharCode(65 + j)}.</span>
               {opt}
             </li>
@@ -179,8 +211,12 @@ function ExerciseCard({
         </ul>
       )}
 
-      <button onClick={onToggle} style={s.revealBtn}>
-        {revealed ? '🙈 Ocultar solución' : '💡 Ver solución'}
+      <button
+        onClick={onToggle}
+        style={{ ...s.revealBtn, opacity: !revealed && !canCheck ? 0.5 : 1 }}
+        disabled={!revealed && !canCheck}
+      >
+        {revealed ? '🙈 Ocultar solución' : '✓ Comprobar'}
       </button>
 
       {revealed && (
@@ -311,6 +347,19 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--color-text)',
     display: 'flex',
     gap: 10,
+    transition: 'background 0.15s, border-color 0.15s',
+  },
+  optionSelected: {
+    background: '#fef9c3',
+    border: '1px solid #eab308',
+  },
+  optionCorrect: {
+    background: '#dcfce7',
+    border: '1px solid #16a34a',
+  },
+  optionWrong: {
+    background: '#fee2e2',
+    border: '1px solid #dc2626',
   },
   optionLetter: {
     color: '#f97316',
