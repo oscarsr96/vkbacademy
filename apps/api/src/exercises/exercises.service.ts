@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { GenerateExercisesDto } from './dto/generate-exercises.dto';
+import { EvaluateExerciseDto } from './dto/evaluate-exercise.dto';
 
 export type ExerciseType = 'SINGLE' | 'TRUE_FALSE' | 'OPEN';
 
@@ -22,6 +23,15 @@ export interface GeneratedExercise {
 export interface GenerateExercisesResult {
   exercises: GeneratedExercise[];
 }
+
+export type EvaluationVerdict = 'correct' | 'partial' | 'incorrect';
+
+export interface EvaluationResult {
+  verdict: EvaluationVerdict;
+  feedback: string;
+}
+
+const VALID_VERDICTS: EvaluationVerdict[] = ['correct', 'partial', 'incorrect'];
 
 /**
  * Genera ejercicios de práctica bajo demanda para un alumno matriculado
@@ -91,6 +101,54 @@ export class ExercisesService {
         `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
       );
     }
+  }
+
+  async evaluate(dto: EvaluateExerciseDto): Promise<EvaluationResult> {
+    const prompt = this.buildEvaluationPrompt(dto);
+    this.logger.log(`Evaluando respuesta abierta para enunciado: "${dto.statement.slice(0, 60)}..."`);
+
+    const text = await this.ai.generate(prompt, 400);
+
+    try {
+      const raw = text
+        .trim()
+        .replace(/^```json\n?/, '')
+        .replace(/\n?```$/, '');
+      const parsed = JSON.parse(raw) as Partial<EvaluationResult>;
+      if (!parsed.verdict || !VALID_VERDICTS.includes(parsed.verdict as EvaluationVerdict)) {
+        throw new Error(`Veredicto inválido: "${parsed.verdict}"`);
+      }
+      if (typeof parsed.feedback !== 'string' || parsed.feedback.length === 0) {
+        throw new Error('Feedback ausente o vacío');
+      }
+      return { verdict: parsed.verdict as EvaluationVerdict, feedback: parsed.feedback };
+    } catch (err) {
+      this.logger.error('Error al parsear JSON de IA (evaluación):', text);
+      throw new InternalServerErrorException(
+        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
+      );
+    }
+  }
+
+  private buildEvaluationPrompt(dto: EvaluateExerciseDto): string {
+    return `Evalúa la respuesta de un alumno a un ejercicio de respuesta abierta.
+
+Enunciado: "${dto.statement}"
+Respuesta del alumno: "${dto.studentAnswer}"
+Solución de referencia: "${dto.solution}"
+
+Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, sin texto adicional):
+{
+  "verdict": "correct" | "partial" | "incorrect",
+  "feedback": "explicación breve en español (máx. 2 frases) justificando el veredicto"
+}
+
+Criterios:
+- "correct": la respuesta es equivalente a la solución (diferencias de forma, ortografía menor, orden o notación son aceptables).
+- "partial": la respuesta contiene la idea clave pero le falta rigor, parte del desarrollo, o comete errores menores que no invalidan el núcleo.
+- "incorrect": la respuesta es claramente errónea, vacía o no responde al enunciado.
+
+El feedback debe ser pedagógico, directo y en segunda persona ("Has olvidado simplificar...", "Correcto: has aplicado bien..."). No reveles la solución completa.`;
   }
 
   private buildPrompt(

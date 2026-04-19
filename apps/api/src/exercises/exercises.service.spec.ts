@@ -126,4 +126,55 @@ describe('ExercisesService', () => {
       expect(prompt).toContain('5');
     });
   });
+
+  describe('evaluate', () => {
+    const dto = {
+      statement: '¿Cuánto vale 2+2?',
+      studentAnswer: '4',
+      solution: '4',
+    };
+
+    it('devuelve el veredicto y feedback que la IA produce', async () => {
+      ai.generate.mockResolvedValue(
+        JSON.stringify({ verdict: 'correct', feedback: 'Perfecto, 2+2=4.' }),
+      );
+
+      const result = await service.evaluate(dto);
+
+      expect(result.verdict).toBe('correct');
+      expect(result.feedback).toContain('Perfecto');
+    });
+
+    it('acepta respuesta envuelta en ```json```', async () => {
+      ai.generate.mockResolvedValue(
+        '```json\n{"verdict":"partial","feedback":"Falta una parte"}\n```',
+      );
+      const result = await service.evaluate(dto);
+      expect(result.verdict).toBe('partial');
+    });
+
+    it('incluye statement, studentAnswer y solution en el prompt', async () => {
+      ai.generate.mockResolvedValue('{"verdict":"correct","feedback":"OK"}');
+      await service.evaluate({
+        statement: '¿Capital de Francia?',
+        studentAnswer: 'Paris',
+        solution: 'París',
+      });
+
+      const prompt = ai.generate.mock.calls[0][0] as string;
+      expect(prompt).toContain('Capital de Francia');
+      expect(prompt).toContain('Paris');
+      expect(prompt).toContain('París');
+    });
+
+    it('rechaza veredictos fuera del enum esperado', async () => {
+      ai.generate.mockResolvedValue('{"verdict":"maybe","feedback":"dunno"}');
+      await expect(service.evaluate(dto)).rejects.toThrow();
+    });
+
+    it('lanza error si la IA devuelve JSON inválido', async () => {
+      ai.generate.mockResolvedValue('no es json');
+      await expect(service.evaluate(dto)).rejects.toThrow();
+    });
+  });
 });
