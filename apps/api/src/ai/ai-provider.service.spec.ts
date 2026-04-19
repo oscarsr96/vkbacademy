@@ -3,11 +3,12 @@ import { AiProviderService } from './ai-provider.service';
 
 // Mock de @google/generative-ai
 const mockGeminiGenerateContent = jest.fn();
+const mockGeminiGetGenerativeModel = jest.fn(() => ({
+  generateContent: mockGeminiGenerateContent,
+}));
 jest.mock('@google/generative-ai', () => ({
   GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
-    getGenerativeModel: () => ({
-      generateContent: mockGeminiGenerateContent,
-    }),
+    getGenerativeModel: mockGeminiGetGenerativeModel,
   })),
 }));
 
@@ -100,6 +101,25 @@ describe('AiProviderService', () => {
 
       expect(result).toBe('{"ok":true}');
       expect(mockGeminiGenerateContent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('configuración de thinking mode', () => {
+    it('desactiva thinking en Gemini 2.5 para evitar truncamientos por consumo de budget', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: { text: () => '{"ok":true}' },
+      });
+
+      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+      await provider.generate('prompt', 512);
+
+      expect(mockGeminiGetGenerativeModel).toHaveBeenCalledWith(
+        expect.objectContaining({
+          generationConfig: expect.objectContaining({
+            thinkingConfig: { thinkingBudget: 0 },
+          }),
+        }),
+      );
     });
   });
 
