@@ -48,6 +48,7 @@ export default function ExercisesPage() {
   const [selected, setSelected] = useState<Record<number, number | null>>({});
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [evaluations, setEvaluations] = useState<Record<number, EvaluationResult>>({});
+  const [evalErrors, setEvalErrors] = useState<Record<number, string>>({});
   const [evaluatingIdx, setEvaluatingIdx] = useState<number | null>(null);
 
   const { mutate, isPending, error } = useMutation({
@@ -59,6 +60,7 @@ export default function ExercisesPage() {
       setSelected({});
       setAnswers({});
       setEvaluations({});
+      setEvalErrors({});
     },
   });
 
@@ -70,9 +72,24 @@ export default function ExercisesPage() {
     onSuccess: ({ index, data }) => {
       setEvaluations((prev) => ({ ...prev, [index]: data }));
       setRevealed((prev) => ({ ...prev, [index]: true }));
+      setEvalErrors((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
       setEvaluatingIdx(null);
     },
-    onError: () => setEvaluatingIdx(null),
+    onError: (err, variables) => {
+      const msg =
+        (err as { response?: { data?: { message?: string | string[] } } } | null)?.response?.data
+          ?.message;
+      const text = Array.isArray(msg) ? msg.join(' · ') : msg;
+      setEvalErrors((prev) => ({
+        ...prev,
+        [variables.index]: text ?? 'No se pudo evaluar la respuesta. Inténtalo de nuevo en unos segundos.',
+      }));
+      setEvaluatingIdx(null);
+    },
   });
 
   function handleSubmit(e: FormEvent) {
@@ -194,6 +211,7 @@ export default function ExercisesPage() {
                 selected={selected[i] ?? null}
                 answer={answers[i] ?? ''}
                 evaluation={evaluations[i] ?? null}
+                evaluationError={evalErrors[i] ?? null}
                 evaluating={evaluatingIdx === i}
                 onChoose={(optIdx) => chooseOption(i, optIdx)}
                 onAnswerChange={(value) => updateAnswer(i, value)}
@@ -215,6 +233,7 @@ function ExerciseCard({
   selected,
   answer,
   evaluation,
+  evaluationError,
   evaluating,
   onChoose,
   onAnswerChange,
@@ -227,6 +246,7 @@ function ExerciseCard({
   selected: number | null;
   answer: string;
   evaluation: EvaluationResult | null;
+  evaluationError: string | null;
   evaluating: boolean;
   onChoose: (optionIndex: number) => void;
   onAnswerChange: (value: string) => void;
@@ -312,6 +332,12 @@ function ExerciseCard({
       >
         {buttonLabel}
       </button>
+
+      {evaluationError && !evaluating && (
+        <div style={s.errorBox}>
+          <strong>!</strong> {evaluationError}
+        </div>
+      )}
 
       {revealed && evaluation && (
         <div style={{ ...s.verdictBox, ...s[`verdict_${evaluation.verdict}`] }}>
