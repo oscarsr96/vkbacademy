@@ -88,12 +88,18 @@ export class AiProviderService {
     // `gemini-flash-latest` apunta siempre al último modelo Flash estable.
     // Evita roturas por deprecación de versiones específicas (ej. gemini-2.0-flash
     // dejó de aceptar nuevos usuarios en 2026).
+    // Gemini 2.5 Flash tiene dynamic thinking activado por defecto. Los thinking
+    // tokens se descuentan de maxOutputTokens pero no aparecen en response.text(),
+    // lo que provoca truncamientos erráticos del JSON. Forzamos thinkingBudget=0.
+    // El SDK legacy @google/generative-ai@0.24.x no tipa este campo — se pasa
+    // transparentemente al endpoint REST.
     const model = this.gemini.getGenerativeModel({
       model: 'gemini-flash-latest',
       generationConfig: {
         maxOutputTokens: maxTokens,
         responseMimeType: 'application/json',
-      },
+        thinkingConfig: { thinkingBudget: 0 },
+      } as Record<string, unknown>,
     });
 
     this.logger.debug(`Llamando a Gemini Flash latest (maxTokens=${maxTokens})`);
