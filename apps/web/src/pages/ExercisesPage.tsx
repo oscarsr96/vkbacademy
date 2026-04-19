@@ -23,6 +23,19 @@ interface GeneratePayload {
   count: number;
 }
 
+type Verdict = 'correct' | 'partial' | 'incorrect';
+
+interface EvaluationResult {
+  verdict: Verdict;
+  feedback: string;
+}
+
+interface EvaluatePayload {
+  statement: string;
+  studentAnswer: string;
+  solution: string;
+}
+
 export default function ExercisesPage() {
   const { data: coursesData } = useCourses(1);
   const courses = coursesData?.data ?? [];
@@ -33,6 +46,9 @@ export default function ExercisesPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [selected, setSelected] = useState<Record<number, number | null>>({});
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [evaluations, setEvaluations] = useState<Record<number, EvaluationResult>>({});
+  const [evaluatingIdx, setEvaluatingIdx] = useState<number | null>(null);
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: (payload: GeneratePayload) =>
@@ -41,7 +57,22 @@ export default function ExercisesPage() {
       setExercises(data.exercises);
       setRevealed({});
       setSelected({});
+      setAnswers({});
+      setEvaluations({});
     },
+  });
+
+  const evalMutation = useMutation({
+    mutationFn: ({ index, ...payload }: EvaluatePayload & { index: number }) =>
+      api
+        .post<EvaluationResult>('/exercises/evaluate', payload)
+        .then((r) => ({ index, data: r.data })),
+    onSuccess: ({ index, data }) => {
+      setEvaluations((prev) => ({ ...prev, [index]: data }));
+      setRevealed((prev) => ({ ...prev, [index]: true }));
+      setEvaluatingIdx(null);
+    },
+    onError: () => setEvaluatingIdx(null),
   });
 
   function handleSubmit(e: FormEvent) {
@@ -56,6 +87,22 @@ export default function ExercisesPage() {
 
   function chooseOption(exerciseIndex: number, optionIndex: number) {
     setSelected((prev) => ({ ...prev, [exerciseIndex]: optionIndex }));
+  }
+
+  function updateAnswer(index: number, value: string) {
+    setAnswers((prev) => ({ ...prev, [index]: value }));
+  }
+
+  function evaluateOpen(index: number, ex: Exercise) {
+    const answer = (answers[index] ?? '').trim();
+    if (!answer) return;
+    setEvaluatingIdx(index);
+    evalMutation.mutate({
+      index,
+      statement: ex.statement,
+      studentAnswer: answer,
+      solution: ex.solution,
+    });
   }
 
   const apiError = (error as { response?: { data?: { message?: string } } } | null)?.response?.data
@@ -145,7 +192,12 @@ export default function ExercisesPage() {
                 index={i}
                 revealed={!!revealed[i]}
                 selected={selected[i] ?? null}
+                answer={answers[i] ?? ''}
+                evaluation={evaluations[i] ?? null}
+                evaluating={evaluatingIdx === i}
                 onChoose={(optIdx) => chooseOption(i, optIdx)}
+                onAnswerChange={(value) => updateAnswer(i, value)}
+                onEvaluate={() => evaluateOpen(i, ex)}
                 onToggle={() => toggleSolution(i)}
               />
             ))}
@@ -161,21 +213,31 @@ function ExerciseCard({
   index,
   revealed,
   selected,
+  answer,
+  evaluation,
+  evaluating,
   onChoose,
+  onAnswerChange,
+  onEvaluate,
   onToggle,
 }: {
   exercise: Exercise;
   index: number;
   revealed: boolean;
   selected: number | null;
+  answer: string;
+  evaluation: EvaluationResult | null;
+  evaluating: boolean;
   onChoose: (optionIndex: number) => void;
+  onAnswerChange: (value: string) => void;
+  onEvaluate: () => void;
   onToggle: () => void;
 }) {
   const hasOptions = exercise.options.length > 0;
   const correctIndex = hasOptions
     ? exercise.options.findIndex((o) => o.trim() === exercise.solution.trim())
     : -1;
-  const canCheck = hasOptions ? selected !== null : true;
+  const canCheck = hasOptions ? selected !== null : answer.trim().length > 0;
 
   function optionStyle(j: number): React.CSSProperties {
     if (revealed) {
@@ -186,6 +248,24 @@ function ExerciseCard({
     if (j === selected) return { ...s.option, ...s.optionSelected };
     return s.option;
   }
+
+  function handleCheckClick() {
+    if (revealed) {
+      onToggle();
+      return;
+    }
+    if (hasOptions) {
+      onToggle();
+    } else {
+      onEvaluate();
+    }
+  }
+
+  const buttonLabel = evaluating
+    ? '⏳ Evaluando...'
+    : revealed
+      ? '🙈 Ocultar solución'
+      : '✓ Comprobar';
 
   return (
     <article style={s.card}>
@@ -211,13 +291,34 @@ function ExerciseCard({
         </ul>
       )}
 
+      {!hasOptions && (
+        <textarea
+          value={answer}
+          onChange={(e) => onAnswerChange(e.target.value)}
+          disabled={revealed || evaluating}
+          placeholder="Escribe aquí tu respuesta..."
+          rows={3}
+          style={s.openAnswer}
+        />
+      )}
+
       <button
-        onClick={onToggle}
-        style={{ ...s.revealBtn, opacity: !revealed && !canCheck ? 0.5 : 1 }}
-        disabled={!revealed && !canCheck}
+        onClick={handleCheckClick}
+        style={{
+          ...s.revealBtn,
+          opacity: (!revealed && !canCheck) || evaluating ? 0.5 : 1,
+        }}
+        disabled={(!revealed && !canCheck) || evaluating}
       >
-        {revealed ? '🙈 Ocultar solución' : '✓ Comprobar'}
+        {buttonLabel}
       </button>
+
+      {revealed && evaluation && (
+        <div style={{ ...s.verdictBox, ...s[`verdict_${evaluation.verdict}`] }}>
+          <div style={s.verdictHeader}>{verdictLabel(evaluation.verdict)}</div>
+          <div style={s.verdictFeedback}>{evaluation.feedback}</div>
+        </div>
+      )}
 
       {revealed && (
         <div style={s.solution}>
@@ -233,6 +334,17 @@ function ExerciseCard({
       )}
     </article>
   );
+}
+
+function verdictLabel(verdict: Verdict): string {
+  switch (verdict) {
+    case 'correct':
+      return '✅ Correcto';
+    case 'partial':
+      return '⚠️ Parcialmente correcto';
+    case 'incorrect':
+      return '❌ Incorrecto';
+  }
 }
 
 function labelForType(type: ExerciseType): string {
@@ -390,4 +502,47 @@ const s: Record<string, React.CSSProperties> = {
   },
   solutionLine: { color: 'var(--color-text)' },
   solutionLabel: { color: '#10b981' },
+  openAnswer: {
+    width: '100%',
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 8,
+    color: 'var(--color-text)',
+    padding: '10px 12px',
+    fontSize: '0.95rem',
+    fontFamily: 'inherit',
+    resize: 'vertical' as const,
+    minHeight: 80,
+  },
+  verdictBox: {
+    borderRadius: 8,
+    padding: 14,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 6,
+    fontSize: '0.92rem',
+    lineHeight: 1.5,
+  },
+  verdictHeader: {
+    fontWeight: 700,
+    fontSize: '0.95rem',
+  },
+  verdictFeedback: {
+    color: 'var(--color-text)',
+  },
+  verdict_correct: {
+    background: '#dcfce7',
+    border: '1px solid #16a34a',
+    color: '#166534',
+  },
+  verdict_partial: {
+    background: '#fef9c3',
+    border: '1px solid #eab308',
+    color: '#854d0e',
+  },
+  verdict_incorrect: {
+    background: '#fee2e2',
+    border: '1px solid #dc2626',
+    color: '#991b1b',
+  },
 };
