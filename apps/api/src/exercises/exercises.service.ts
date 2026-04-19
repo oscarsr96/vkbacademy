@@ -85,22 +85,12 @@ export class ExercisesService {
     const maxTokens = Math.min(8000, 200 + dto.count * 250);
     const text = await this.ai.generate(prompt, maxTokens);
 
-    try {
-      const raw = text
-        .trim()
-        .replace(/^```json\n?/, '')
-        .replace(/\n?```$/, '');
-      const parsed = JSON.parse(raw) as GenerateExercisesResult;
-      if (!Array.isArray(parsed.exercises)) {
+    return this.parseAiJson<GenerateExercisesResult>(text, 'ejercicios', (parsed) => {
+      if (!Array.isArray((parsed as GenerateExercisesResult).exercises)) {
         throw new Error('La respuesta no contiene un array `exercises`');
       }
-      return parsed;
-    } catch (err) {
-      this.logger.error('Error al parsear JSON de IA (ejercicios):', text);
-      throw new InternalServerErrorException(
-        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
-      );
-    }
+      return parsed as GenerateExercisesResult;
+    });
   }
 
   async evaluate(dto: EvaluateExerciseDto): Promise<EvaluationResult> {
@@ -109,21 +99,27 @@ export class ExercisesService {
 
     const text = await this.ai.generate(prompt, 400);
 
+    return this.parseAiJson<EvaluationResult>(text, 'evaluación', (parsed) => {
+      const { verdict, feedback } = parsed as Partial<EvaluationResult>;
+      if (!verdict || !VALID_VERDICTS.includes(verdict)) {
+        throw new Error(`Veredicto inválido: "${verdict}"`);
+      }
+      if (typeof feedback !== 'string' || feedback.length === 0) {
+        throw new Error('Feedback ausente o vacío');
+      }
+      return { verdict, feedback };
+    });
+  }
+
+  private parseAiJson<T>(text: string, context: string, validate: (parsed: unknown) => T): T {
     try {
       const raw = text
         .trim()
         .replace(/^```json\n?/, '')
         .replace(/\n?```$/, '');
-      const parsed = JSON.parse(raw) as Partial<EvaluationResult>;
-      if (!parsed.verdict || !VALID_VERDICTS.includes(parsed.verdict as EvaluationVerdict)) {
-        throw new Error(`Veredicto inválido: "${parsed.verdict}"`);
-      }
-      if (typeof parsed.feedback !== 'string' || parsed.feedback.length === 0) {
-        throw new Error('Feedback ausente o vacío');
-      }
-      return { verdict: parsed.verdict as EvaluationVerdict, feedback: parsed.feedback };
+      return validate(JSON.parse(raw));
     } catch (err) {
-      this.logger.error('Error al parsear JSON de IA (evaluación):', text);
+      this.logger.error(`Error al parsear JSON de IA (${context}):`, text);
       throw new InternalServerErrorException(
         `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
       );
