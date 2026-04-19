@@ -49,7 +49,6 @@ export default function ExercisesPage() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [evaluations, setEvaluations] = useState<Record<number, EvaluationResult>>({});
   const [evalErrors, setEvalErrors] = useState<Record<number, string>>({});
-  const [evaluatingIdx, setEvaluatingIdx] = useState<number | null>(null);
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: (payload: GeneratePayload) =>
@@ -77,7 +76,6 @@ export default function ExercisesPage() {
         delete next[index];
         return next;
       });
-      setEvaluatingIdx(null);
     },
     onError: (err, variables) => {
       const msg =
@@ -88,9 +86,11 @@ export default function ExercisesPage() {
         ...prev,
         [variables.index]: text ?? 'No se pudo evaluar la respuesta. Inténtalo de nuevo en unos segundos.',
       }));
-      setEvaluatingIdx(null);
     },
   });
+
+  const evaluatingIdx =
+    evalMutation.isPending && evalMutation.variables ? evalMutation.variables.index : null;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -113,7 +113,6 @@ export default function ExercisesPage() {
   function evaluateOpen(index: number, ex: Exercise) {
     const answer = (answers[index] ?? '').trim();
     if (!answer) return;
-    setEvaluatingIdx(index);
     evalMutation.mutate({
       index,
       statement: ex.statement,
@@ -340,7 +339,7 @@ function ExerciseCard({
       )}
 
       {revealed && evaluation && (
-        <div style={{ ...s.verdictBox, ...s[`verdict_${evaluation.verdict}`] }}>
+        <div style={{ ...s.verdictBox, ...VERDICT_STYLES[evaluation.verdict] }}>
           <div style={s.verdictHeader}>{verdictLabel(evaluation.verdict)}</div>
           <div style={s.verdictFeedback}>{evaluation.feedback}</div>
         </div>
@@ -383,6 +382,16 @@ function labelForType(type: ExerciseType): string {
       return 'Respuesta abierta';
   }
 }
+
+const GREEN = '#16a34a';
+const RED = '#dc2626';
+const YELLOW = '#eab308';
+
+const VERDICT_STYLES: Record<Verdict, React.CSSProperties> = {
+  correct: { background: '#dcfce7', border: `1px solid ${GREEN}`, color: '#166534' },
+  partial: { background: '#fef9c3', border: `1px solid ${YELLOW}`, color: '#854d0e' },
+  incorrect: { background: '#fee2e2', border: `1px solid ${RED}`, color: '#991b1b' },
+};
 
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -489,15 +498,15 @@ const s: Record<string, React.CSSProperties> = {
   },
   optionSelected: {
     background: '#fef9c3',
-    border: '1px solid #eab308',
+    border: `1px solid ${YELLOW}`,
   },
   optionCorrect: {
     background: '#dcfce7',
-    border: '1px solid #16a34a',
+    border: `1px solid ${GREEN}`,
   },
   optionWrong: {
     background: '#fee2e2',
-    border: '1px solid #dc2626',
+    border: `1px solid ${RED}`,
   },
   optionLetter: {
     color: '#f97316',
@@ -555,20 +564,5 @@ const s: Record<string, React.CSSProperties> = {
   },
   verdictFeedback: {
     color: 'var(--color-text)',
-  },
-  verdict_correct: {
-    background: '#dcfce7',
-    border: '1px solid #16a34a',
-    color: '#166534',
-  },
-  verdict_partial: {
-    background: '#fef9c3',
-    border: '1px solid #eab308',
-    color: '#854d0e',
-  },
-  verdict_incorrect: {
-    background: '#fee2e2',
-    border: '1px solid #dc2626',
-    color: '#991b1b',
   },
 };
