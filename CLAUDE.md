@@ -420,6 +420,9 @@ RESEND_API_KEY=""
 EMAIL_FROM="noreply@tuclub.com"
 
 # YouTube Data API v3 (auto-asignación de vídeos en lecciones VIDEO)
+# La key canónica vive en GCP Secret Manager con nombre "YT".
+# Para entornos desplegados se replica en Render (api-pre y api-prod) como
+# variable de entorno YOUTUBE_API_KEY.
 YOUTUBE_API_KEY=""
 
 # App

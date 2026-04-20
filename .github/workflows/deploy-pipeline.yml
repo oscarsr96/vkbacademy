@@ -29,6 +29,15 @@ name: Deploy pipeline (PRE → PROD)
 on:
   push:
     branches: [main]
+    # Evita redeploy completo (Render + Vercel PRE + migraciones + smoke) cuando
+    # el push solo toca documentación. La suite de tests (ci.yml) sí corre para
+    # estos cambios, así que la required status check sigue satisfaciéndose.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.vscode/**'
+      - 'LICENSE'
   workflow_dispatch:
 
 concurrency:
