@@ -116,7 +116,7 @@ export class CourseGeneratorService {
    * sigue — nunca rompe la generación del módulo/curso.
    */
   private async enrichVideoLessonsWithYoutube(
-    lessons: GeneratedLesson[],
+    lessons: Array<Pick<GeneratedLesson, 'title' | 'type'> & { youtubeId?: string | null }>,
     schoolYearLabel: string,
   ): Promise<void> {
     for (const lesson of lessons) {
@@ -203,6 +203,8 @@ export class CourseGeneratorService {
       existingModuleTitles: course.modules.map((m) => m.title),
     });
 
+    await this.enrichVideoLessonsWithYoutube(moduleData.lessons, course.schoolYear?.label ?? '');
+
     const nextOrder =
       course.modules.length > 0 ? Math.max(...course.modules.map((m) => m.order)) + 1 : 1;
 
@@ -249,6 +251,10 @@ export class CourseGeneratorService {
       moduleTitle: module.title,
       existingLessonTitles: module.lessons.map((l) => l.title),
     });
+
+    if (lessonData.type === 'VIDEO') {
+      await this.enrichVideoLessonsWithYoutube([lessonData], module.course.schoolYear?.label ?? '');
+    }
 
     const nextOrder =
       module.lessons.length > 0 ? Math.max(...module.lessons.map((l) => l.order)) + 1 : 1;
