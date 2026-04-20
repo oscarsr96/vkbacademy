@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { AdminModule, AdminLesson, AdminQuestion, AdminAnswer, MatchContent, SortContent, FillBlankContent } from '@vkbacademy/shared';
+import { YoutubeCandidatesModal } from '../../components/admin/YoutubeCandidatesModal';
+import type {
+  AdminModule,
+  AdminLesson,
+  AdminQuestion,
+  AdminAnswer,
+  MatchContent,
+  SortContent,
+  FillBlankContent,
+} from '@vkbacademy/shared';
 import { LessonType, QuestionType } from '@vkbacademy/shared';
 import {
   useAdminCourseDetail,
@@ -97,6 +106,10 @@ export default function AdminCourseDetailPage() {
 
   // Estado: modal YouTube (input de URL manual)
   const [youtubeModal, setYoutubeModal] = useState<{ lessonId: string; url: string } | null>(null);
+  // Estado: modal de búsqueda automática de candidatos YouTube
+  const [ytSearchModal, setYtSearchModal] = useState<{ lessonId: string; title: string } | null>(
+    null,
+  );
 
   // Estado: modal de contenido interactivo (MATCH, SORT, FILL_BLANK)
   const [contentModal, setContentModal] = useState<{
@@ -146,7 +159,10 @@ export default function AdminCourseDetailPage() {
     e.preventDefault();
     if (!editingModule) return;
     try {
-      await updateModuleMut.mutateAsync({ moduleId: editingModule.id, payload: { title: editModuleTitle } });
+      await updateModuleMut.mutateAsync({
+        moduleId: editingModule.id,
+        payload: { title: editModuleTitle },
+      });
       setEditingModule(null);
       showToast('Módulo actualizado');
     } catch {
@@ -373,9 +389,20 @@ export default function AdminCourseDetailPage() {
     if (lesson.content) {
       draft = lesson.content as MatchContent | SortContent | FillBlankContent;
     } else if (type === 'MATCH') {
-      draft = { pairs: [{ left: '', right: '' }, { left: '', right: '' }] } as MatchContent;
+      draft = {
+        pairs: [
+          { left: '', right: '' },
+          { left: '', right: '' },
+        ],
+      } as MatchContent;
     } else if (type === 'SORT') {
-      draft = { prompt: '', items: [{ text: '', correctOrder: 0 }, { text: '', correctOrder: 1 }] } as SortContent;
+      draft = {
+        prompt: '',
+        items: [
+          { text: '', correctOrder: 0 },
+          { text: '', correctOrder: 1 },
+        ],
+      } as SortContent;
     } else {
       draft = { template: '', distractors: [] } as FillBlankContent;
     }
@@ -399,11 +426,19 @@ export default function AdminCourseDetailPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   if (isLoading) {
-    return <div style={s.page}><p style={s.muted}>Cargando curso...</p></div>;
+    return (
+      <div style={s.page}>
+        <p style={s.muted}>Cargando curso...</p>
+      </div>
+    );
   }
 
   if (!course) {
-    return <div style={s.page}><p style={s.muted}>Curso no encontrado.</p></div>;
+    return (
+      <div style={s.page}>
+        <p style={s.muted}>Curso no encontrado.</p>
+      </div>
+    );
   }
 
   const isQuestionModalOpen = !!(newQuestionQuizId || editingQuestion);
@@ -412,24 +447,34 @@ export default function AdminCourseDetailPage() {
     <div style={s.page}>
       {/* Toast */}
       {toast && (
-        <div style={{ ...s.toast, background: toast.type === 'ok' ? 'var(--color-primary)' : 'var(--color-error)' }}>
+        <div
+          style={{
+            ...s.toast,
+            background: toast.type === 'ok' ? 'var(--color-primary)' : 'var(--color-error)',
+          }}
+        >
           {toast.msg}
         </div>
       )}
 
       {/* Hero con breadcrumb */}
       <div className="page-hero animate-in" style={{ marginBottom: 24 }}>
-        <button
-          style={s.btnBack}
-          onClick={() => navigate('/admin/courses')}
-        >
+        <button style={s.btnBack} onClick={() => navigate('/admin/courses')}>
           ← Volver a cursos
         </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const, marginTop: 8 }}>
-          <h1 className="hero-title" style={{ fontSize: '1.6rem' }}>{course.title}</h1>
-          {course.schoolYear && (
-            <span style={s.badgeLevel}>{course.schoolYear.label}</span>
-          )}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap' as const,
+            marginTop: 8,
+          }}
+        >
+          <h1 className="hero-title" style={{ fontSize: '1.6rem' }}>
+            {course.title}
+          </h1>
+          {course.schoolYear && <span style={s.badgeLevel}>{course.schoolYear.label}</span>}
           <span style={course.published ? s.badgeOk : s.badgeDraft}>
             {course.published ? 'Publicado' : 'Borrador'}
           </span>
@@ -478,10 +523,22 @@ export default function AdminCourseDetailPage() {
                   >
                     Sí
                   </button>{' '}
-                  <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.78rem' }} onClick={() => setDeletingModuleId(null)}>No</button>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ padding: '2px 8px', fontSize: '0.78rem' }}
+                    onClick={() => setDeletingModuleId(null)}
+                  >
+                    No
+                  </button>
                 </span>
               ) : (
-                <button style={{ ...s.btnIcon, color: '#ef4444' }} title="Eliminar módulo" onClick={() => setDeletingModuleId(mod.id)}>🗑️</button>
+                <button
+                  style={{ ...s.btnIcon, color: '#ef4444' }}
+                  title="Eliminar módulo"
+                  onClick={() => setDeletingModuleId(mod.id)}
+                >
+                  🗑️
+                </button>
               )}
             </div>
           </div>
@@ -504,10 +561,21 @@ export default function AdminCourseDetailPage() {
                       )}
                       <button
                         style={s.btnActionSm}
-                        title={lesson.youtubeId ? 'Cambiar vídeo de YouTube' : 'Añadir vídeo de YouTube'}
+                        title={
+                          lesson.youtubeId ? 'Cambiar vídeo de YouTube' : 'Añadir vídeo de YouTube'
+                        }
                         onClick={() => setYoutubeModal({ lessonId: lesson.id, url: '' })}
                       >
                         {lesson.youtubeId ? 'Cambiar' : 'Añadir vídeo'}
+                      </button>
+                      <button
+                        style={s.btnActionSm}
+                        title="Buscar vídeo automáticamente con YouTube"
+                        onClick={() =>
+                          setYtSearchModal({ lessonId: lesson.id, title: lesson.title })
+                        }
+                      >
+                        🔍 Buscar
                       </button>
                     </>
                   )}
@@ -520,9 +588,16 @@ export default function AdminCourseDetailPage() {
                       Preguntas
                     </button>
                   )}
-                  {(lesson.type === LessonType.MATCH || lesson.type === LessonType.SORT || lesson.type === LessonType.FILL_BLANK) && (
+                  {(lesson.type === LessonType.MATCH ||
+                    lesson.type === LessonType.SORT ||
+                    lesson.type === LessonType.FILL_BLANK) && (
                     <button
-                      style={{ ...s.btnActionSm, background: 'rgba(234,88,12,0.1)', color: 'var(--color-primary)', borderColor: 'rgba(234,88,12,0.3)' }}
+                      style={{
+                        ...s.btnActionSm,
+                        background: 'rgba(234,88,12,0.1)',
+                        color: 'var(--color-primary)',
+                        borderColor: 'rgba(234,88,12,0.3)',
+                      }}
                       title="Editar contenido de la actividad"
                       onClick={() => openContentModal(lesson)}
                     >
@@ -549,10 +624,22 @@ export default function AdminCourseDetailPage() {
                       >
                         Sí
                       </button>{' '}
-                      <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.78rem' }} onClick={() => setDeletingLessonId(null)}>No</button>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: '2px 8px', fontSize: '0.78rem' }}
+                        onClick={() => setDeletingLessonId(null)}
+                      >
+                        No
+                      </button>
                     </span>
                   ) : (
-                    <button style={{ ...s.btnIcon, color: '#ef4444' }} title="Eliminar lección" onClick={() => setDeletingLessonId(lesson.id)}>🗑️</button>
+                    <button
+                      style={{ ...s.btnIcon, color: '#ef4444' }}
+                      title="Eliminar lección"
+                      onClick={() => setDeletingLessonId(lesson.id)}
+                    >
+                      🗑️
+                    </button>
                   )}
                 </div>
               </div>
@@ -570,7 +657,13 @@ export default function AdminCourseDetailPage() {
                         <span style={s.questionText}>{q.text}</span>
                         <span style={s.questionType}>{q.type}</span>
                         <div style={s.actions}>
-                          <button style={s.btnIcon} title="Editar pregunta" onClick={() => openEditQuestion(q)}>✏️</button>
+                          <button
+                            style={s.btnIcon}
+                            title="Editar pregunta"
+                            onClick={() => openEditQuestion(q)}
+                          >
+                            ✏️
+                          </button>
                           {deletingQuestionId === q.id ? (
                             <span style={s.confirmDelete}>
                               ¿Seguro?{' '}
@@ -581,10 +674,22 @@ export default function AdminCourseDetailPage() {
                               >
                                 Sí
                               </button>{' '}
-                              <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.78rem' }} onClick={() => setDeletingQuestionId(null)}>No</button>
+                              <button
+                                className="btn btn-ghost"
+                                style={{ padding: '2px 8px', fontSize: '0.78rem' }}
+                                onClick={() => setDeletingQuestionId(null)}
+                              >
+                                No
+                              </button>
                             </span>
                           ) : (
-                            <button style={{ ...s.btnIcon, color: '#ef4444' }} title="Eliminar pregunta" onClick={() => setDeletingQuestionId(q.id)}>🗑️</button>
+                            <button
+                              style={{ ...s.btnIcon, color: '#ef4444' }}
+                              title="Eliminar pregunta"
+                              onClick={() => setDeletingQuestionId(q.id)}
+                            >
+                              🗑️
+                            </button>
                           )}
                         </div>
                       </div>
@@ -600,10 +705,7 @@ export default function AdminCourseDetailPage() {
                       </div>
                     </div>
                   ))}
-                  <button
-                    style={s.btnAddSmall}
-                    onClick={() => openNewQuestion(lesson.quiz!.id)}
-                  >
+                  <button style={s.btnAddSmall} onClick={() => openNewQuestion(lesson.quiz!.id)}>
                     + Añadir pregunta
                   </button>
                 </div>
@@ -612,7 +714,10 @@ export default function AdminCourseDetailPage() {
           ))}
 
           {/* Botón añadir lección */}
-          <button style={{ ...s.btnAddSmall, margin: '10px 14px' }} onClick={() => setNewLessonModuleId(mod.id)}>
+          <button
+            style={{ ...s.btnAddSmall, margin: '10px 14px' }}
+            onClick={() => setNewLessonModuleId(mod.id)}
+          >
             + Añadir lección
           </button>
         </div>
@@ -621,7 +726,13 @@ export default function AdminCourseDetailPage() {
       {/* Botón añadir módulo */}
       <button
         className="btn btn-ghost"
-        style={{ marginTop: 16, width: '100%', borderStyle: 'dashed', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}
+        style={{
+          marginTop: 16,
+          width: '100%',
+          borderStyle: 'dashed',
+          color: 'var(--color-text-muted)',
+          fontSize: '0.875rem',
+        }}
         onClick={() => setShowNewModule(true)}
       >
         + Añadir módulo
@@ -633,7 +744,9 @@ export default function AdminCourseDetailPage() {
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h2 style={s.modalTitle}>Nueva lección</h2>
-              <button style={s.closeBtn} onClick={closeLessonModal}>✕</button>
+              <button style={s.closeBtn} onClick={closeLessonModal}>
+                ✕
+              </button>
             </div>
 
             {/* Tabs */}
@@ -708,7 +821,9 @@ export default function AdminCourseDetailPage() {
                   style={{ marginTop: 16 }}
                   disabled={generateLessonMut.isPending}
                 >
-                  {generateLessonMut.isPending ? 'El agente está creando la lección...' : 'Generar con IA'}
+                  {generateLessonMut.isPending
+                    ? 'El agente está creando la lección...'
+                    : 'Generar con IA'}
                 </button>
                 {generateLessonMut.isPending && (
                   <p style={s.hint}>Esto puede tardar unos segundos.</p>
@@ -721,11 +836,29 @@ export default function AdminCourseDetailPage() {
 
       {/* Modal: nuevo módulo (Manual / IA) */}
       {showNewModule && (
-        <div style={s.overlay} onClick={() => { setShowNewModule(false); setNewModuleTitle(''); setIaModuleName(''); setNewModuleTab('manual'); }}>
+        <div
+          style={s.overlay}
+          onClick={() => {
+            setShowNewModule(false);
+            setNewModuleTitle('');
+            setIaModuleName('');
+            setNewModuleTab('manual');
+          }}
+        >
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h2 style={s.modalTitle}>Nuevo módulo</h2>
-              <button style={s.closeBtn} onClick={() => { setShowNewModule(false); setNewModuleTitle(''); setIaModuleName(''); setNewModuleTab('manual'); }}>✕</button>
+              <button
+                style={s.closeBtn}
+                onClick={() => {
+                  setShowNewModule(false);
+                  setNewModuleTitle('');
+                  setIaModuleName('');
+                  setNewModuleTab('manual');
+                }}
+              >
+                ✕
+              </button>
             </div>
 
             {/* Tabs */}
@@ -783,7 +916,9 @@ export default function AdminCourseDetailPage() {
                   style={{ marginTop: 16 }}
                   disabled={generateModuleMut.isPending}
                 >
-                  {generateModuleMut.isPending ? 'El agente está creando el módulo...' : 'Generar con IA'}
+                  {generateModuleMut.isPending
+                    ? 'El agente está creando el módulo...'
+                    : 'Generar con IA'}
                 </button>
                 {generateModuleMut.isPending && (
                   <p style={s.hint}>Esto puede tardar unos segundos.</p>
@@ -800,7 +935,9 @@ export default function AdminCourseDetailPage() {
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h2 style={s.modalTitle}>Renombrar módulo</h2>
-              <button style={s.closeBtn} onClick={() => setEditingModule(null)}>✕</button>
+              <button style={s.closeBtn} onClick={() => setEditingModule(null)}>
+                ✕
+              </button>
             </div>
             <form onSubmit={(e) => void handleUpdateModule(e)} style={s.form}>
               <div className="field">
@@ -831,7 +968,9 @@ export default function AdminCourseDetailPage() {
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h2 style={s.modalTitle}>Editar lección</h2>
-              <button style={s.closeBtn} onClick={() => setEditingLesson(null)}>✕</button>
+              <button style={s.closeBtn} onClick={() => setEditingLesson(null)}>
+                ✕
+              </button>
             </div>
             <form onSubmit={(e) => void handleUpdateLesson(e)} style={s.form}>
               <div className="field">
@@ -857,50 +996,62 @@ export default function AdminCourseDetailPage() {
       )}
 
       {/* Modal: YouTube URL manual */}
-      {youtubeModal && (() => {
-        const previewId = extractYoutubeId(youtubeModal.url.trim());
-        return (
-          <div style={s.overlay} onClick={() => setYoutubeModal(null)}>
-            <div style={{ ...s.modal, maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
-              <div style={s.modalHeader}>
-                <h2 style={s.modalTitle}>Añadir vídeo de YouTube</h2>
-                <button style={s.closeBtn} onClick={() => setYoutubeModal(null)}>✕</button>
-              </div>
-              <div style={s.form}>
-                <div className="field">
-                  <label>URL o ID del vídeo</label>
-                  <input
-                    autoFocus
-                    placeholder="https://www.youtube.com/watch?v=... o el ID directamente"
-                    value={youtubeModal.url}
-                    onChange={(e) => setYoutubeModal((m) => m ? { ...m, url: e.target.value } : m)}
-                  />
+      {youtubeModal &&
+        (() => {
+          const previewId = extractYoutubeId(youtubeModal.url.trim());
+          return (
+            <div style={s.overlay} onClick={() => setYoutubeModal(null)}>
+              <div style={{ ...s.modal, maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+                <div style={s.modalHeader}>
+                  <h2 style={s.modalTitle}>Añadir vídeo de YouTube</h2>
+                  <button style={s.closeBtn} onClick={() => setYoutubeModal(null)}>
+                    ✕
+                  </button>
                 </div>
-                {/* Preview del iframe si la URL es válida */}
-                {previewId && (
-                  <div style={{ aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', marginTop: 8 }}>
-                    <iframe
-                      src={`https://www.youtube-nocookie.com/embed/${previewId}`}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      style={{ width: '100%', height: '100%', border: 'none' }}
-                      title="Preview"
+                <div style={s.form}>
+                  <div className="field">
+                    <label>URL o ID del vídeo</label>
+                    <input
+                      autoFocus
+                      placeholder="https://www.youtube.com/watch?v=... o el ID directamente"
+                      value={youtubeModal.url}
+                      onChange={(e) =>
+                        setYoutubeModal((m) => (m ? { ...m, url: e.target.value } : m))
+                      }
                     />
                   </div>
-                )}
-                <button
-                  className="btn btn-primary btn-full"
-                  style={{ marginTop: 12 }}
-                  disabled={!previewId || updateLessonMut.isPending}
-                  onClick={() => void handleConfirmYoutube()}
-                >
-                  {updateLessonMut.isPending ? 'Guardando...' : 'Confirmar'}
-                </button>
+                  {/* Preview del iframe si la URL es válida */}
+                  {previewId && (
+                    <div
+                      style={{
+                        aspectRatio: '16/9',
+                        borderRadius: 8,
+                        overflow: 'hidden',
+                        marginTop: 8,
+                      }}
+                    >
+                      <iframe
+                        src={`https://www.youtube-nocookie.com/embed/${previewId}`}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                        title="Preview"
+                      />
+                    </div>
+                  )}
+                  <button
+                    className="btn btn-primary btn-full"
+                    style={{ marginTop: 12 }}
+                    disabled={!previewId || updateLessonMut.isPending}
+                    onClick={() => void handleConfirmYoutube()}
+                  >
+                    {updateLessonMut.isPending ? 'Guardando...' : 'Confirmar'}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* Modal: contenido interactivo */}
       {contentModal && (
@@ -912,185 +1063,249 @@ export default function AdminCourseDetailPage() {
                 {contentModal.type === 'SORT' && 'Ordenar — editar items'}
                 {contentModal.type === 'FILL_BLANK' && 'Rellenar huecos — editar contenido'}
               </h2>
-              <button style={s.closeBtn} onClick={() => setContentModal(null)}>✕</button>
+              <button style={s.closeBtn} onClick={() => setContentModal(null)}>
+                ✕
+              </button>
             </div>
 
             {/* MATCH */}
-            {contentModal.type === 'MATCH' && (() => {
-              const draft = contentModal.draft as MatchContent;
-              return (
-                <div style={s.form}>
-                  <p style={s.hint}>Añade entre 3 y 6 pares. Cada par tiene un elemento izquierdo y uno derecho.</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '6px 8px', alignItems: 'center' }}>
-                    <span style={s.label}>Izquierda</span>
-                    <span style={s.label}>Derecha</span>
-                    <span />
-                    {draft.pairs.map((pair, idx) => (
-                      <>
+            {contentModal.type === 'MATCH' &&
+              (() => {
+                const draft = contentModal.draft as MatchContent;
+                return (
+                  <div style={s.form}>
+                    <p style={s.hint}>
+                      Añade entre 3 y 6 pares. Cada par tiene un elemento izquierdo y uno derecho.
+                    </p>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr auto',
+                        gap: '6px 8px',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <span style={s.label}>Izquierda</span>
+                      <span style={s.label}>Derecha</span>
+                      <span />
+                      {draft.pairs.map((pair, idx) => (
+                        <>
+                          <input
+                            key={`l-${idx}`}
+                            style={s.input}
+                            placeholder={`Izq. ${idx + 1}`}
+                            value={pair.left}
+                            onChange={(e) => {
+                              const pairs = draft.pairs.map((p, i) =>
+                                i === idx ? { ...p, left: e.target.value } : p,
+                              );
+                              setContentModal((m) => (m ? { ...m, draft: { pairs } } : m));
+                            }}
+                          />
+                          <input
+                            key={`r-${idx}`}
+                            style={s.input}
+                            placeholder={`Der. ${idx + 1}`}
+                            value={pair.right}
+                            onChange={(e) => {
+                              const pairs = draft.pairs.map((p, i) =>
+                                i === idx ? { ...p, right: e.target.value } : p,
+                              );
+                              setContentModal((m) => (m ? { ...m, draft: { pairs } } : m));
+                            }}
+                          />
+                          <button
+                            key={`d-${idx}`}
+                            style={s.btnIcon}
+                            disabled={draft.pairs.length <= 2}
+                            onClick={() => {
+                              const pairs = draft.pairs.filter((_, i) => i !== idx);
+                              setContentModal((m) => (m ? { ...m, draft: { pairs } } : m));
+                            }}
+                          >
+                            🗑️
+                          </button>
+                        </>
+                      ))}
+                    </div>
+                    {draft.pairs.length < 6 && (
+                      <button
+                        style={s.btnAddSmall}
+                        onClick={() => {
+                          const pairs = [...draft.pairs, { left: '', right: '' }];
+                          setContentModal((m) => (m ? { ...m, draft: { pairs } } : m));
+                        }}
+                      >
+                        + Añadir par
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-primary btn-full"
+                      style={{ marginTop: 16 }}
+                      disabled={updateLessonMut.isPending}
+                      onClick={() => void handleSaveContent()}
+                    >
+                      {updateLessonMut.isPending ? 'Guardando...' : 'Guardar contenido'}
+                    </button>
+                  </div>
+                );
+              })()}
+
+            {/* SORT */}
+            {contentModal.type === 'SORT' &&
+              (() => {
+                const draft = contentModal.draft as SortContent;
+                return (
+                  <div style={s.form}>
+                    <p style={s.hint}>
+                      El orden correcto es el orden en que aparecen los items en la lista (de arriba
+                      a abajo).
+                    </p>
+                    <div className="field">
+                      <label>Instrucción</label>
+                      <input
+                        placeholder="Ej: Ordena los planetas de menor a mayor distancia al Sol"
+                        value={draft.prompt}
+                        onChange={(e) =>
+                          setContentModal((m) =>
+                            m ? { ...m, draft: { ...draft, prompt: e.target.value } } : m,
+                          )
+                        }
+                      />
+                    </div>
+                    <label style={s.label}>Items (en orden correcto)</label>
+                    {draft.items.map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ ...s.label, minWidth: 20 }}>{idx + 1}.</span>
                         <input
-                          key={`l-${idx}`}
-                          style={s.input}
-                          placeholder={`Izq. ${idx + 1}`}
-                          value={pair.left}
+                          style={{ ...s.input, flex: 1 }}
+                          placeholder={`Item ${idx + 1}`}
+                          value={item.text}
                           onChange={(e) => {
-                            const pairs = draft.pairs.map((p, i) => i === idx ? { ...p, left: e.target.value } : p);
-                            setContentModal((m) => m ? { ...m, draft: { pairs } } : m);
-                          }}
-                        />
-                        <input
-                          key={`r-${idx}`}
-                          style={s.input}
-                          placeholder={`Der. ${idx + 1}`}
-                          value={pair.right}
-                          onChange={(e) => {
-                            const pairs = draft.pairs.map((p, i) => i === idx ? { ...p, right: e.target.value } : p);
-                            setContentModal((m) => m ? { ...m, draft: { pairs } } : m);
+                            const items = draft.items.map((it, i) =>
+                              i === idx ? { ...it, text: e.target.value } : it,
+                            );
+                            setContentModal((m) => (m ? { ...m, draft: { ...draft, items } } : m));
                           }}
                         />
                         <button
-                          key={`d-${idx}`}
                           style={s.btnIcon}
-                          disabled={draft.pairs.length <= 2}
+                          disabled={draft.items.length <= 2}
                           onClick={() => {
-                            const pairs = draft.pairs.filter((_, i) => i !== idx);
-                            setContentModal((m) => m ? { ...m, draft: { pairs } } : m);
+                            const items = draft.items
+                              .filter((_, i) => i !== idx)
+                              .map((it, i) => ({ ...it, correctOrder: i }));
+                            setContentModal((m) => (m ? { ...m, draft: { ...draft, items } } : m));
                           }}
-                        >🗑️</button>
-                      </>
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     ))}
-                  </div>
-                  {draft.pairs.length < 6 && (
-                    <button style={s.btnAddSmall} onClick={() => {
-                      const pairs = [...draft.pairs, { left: '', right: '' }];
-                      setContentModal((m) => m ? { ...m, draft: { pairs } } : m);
-                    }}>
-                      + Añadir par
-                    </button>
-                  )}
-                  <button
-                    className="btn btn-primary btn-full"
-                    style={{ marginTop: 16 }}
-                    disabled={updateLessonMut.isPending}
-                    onClick={() => void handleSaveContent()}
-                  >
-                    {updateLessonMut.isPending ? 'Guardando...' : 'Guardar contenido'}
-                  </button>
-                </div>
-              );
-            })()}
-
-            {/* SORT */}
-            {contentModal.type === 'SORT' && (() => {
-              const draft = contentModal.draft as SortContent;
-              return (
-                <div style={s.form}>
-                  <p style={s.hint}>El orden correcto es el orden en que aparecen los items en la lista (de arriba a abajo).</p>
-                  <div className="field">
-                    <label>Instrucción</label>
-                    <input
-                      placeholder="Ej: Ordena los planetas de menor a mayor distancia al Sol"
-                      value={draft.prompt}
-                      onChange={(e) => setContentModal((m) => m ? { ...m, draft: { ...draft, prompt: e.target.value } } : m)}
-                    />
-                  </div>
-                  <label style={s.label}>Items (en orden correcto)</label>
-                  {draft.items.map((item, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <span style={{ ...s.label, minWidth: 20 }}>{idx + 1}.</span>
-                      <input
-                        style={{ ...s.input, flex: 1 }}
-                        placeholder={`Item ${idx + 1}`}
-                        value={item.text}
-                        onChange={(e) => {
-                          const items = draft.items.map((it, i) => i === idx ? { ...it, text: e.target.value } : it);
-                          setContentModal((m) => m ? { ...m, draft: { ...draft, items } } : m);
-                        }}
-                      />
+                    {draft.items.length < 8 && (
                       <button
-                        style={s.btnIcon}
-                        disabled={draft.items.length <= 2}
+                        style={s.btnAddSmall}
                         onClick={() => {
-                          const items = draft.items
-                            .filter((_, i) => i !== idx)
-                            .map((it, i) => ({ ...it, correctOrder: i }));
-                          setContentModal((m) => m ? { ...m, draft: { ...draft, items } } : m);
+                          const items = [
+                            ...draft.items,
+                            { text: '', correctOrder: draft.items.length },
+                          ];
+                          setContentModal((m) => (m ? { ...m, draft: { ...draft, items } } : m));
                         }}
-                      >🗑️</button>
-                    </div>
-                  ))}
-                  {draft.items.length < 8 && (
-                    <button style={s.btnAddSmall} onClick={() => {
-                      const items = [...draft.items, { text: '', correctOrder: draft.items.length }];
-                      setContentModal((m) => m ? { ...m, draft: { ...draft, items } } : m);
-                    }}>
-                      + Añadir item
+                      >
+                        + Añadir item
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-primary btn-full"
+                      style={{ marginTop: 16 }}
+                      disabled={updateLessonMut.isPending}
+                      onClick={() => void handleSaveContent()}
+                    >
+                      {updateLessonMut.isPending ? 'Guardando...' : 'Guardar contenido'}
                     </button>
-                  )}
-                  <button
-                    className="btn btn-primary btn-full"
-                    style={{ marginTop: 16 }}
-                    disabled={updateLessonMut.isPending}
-                    onClick={() => void handleSaveContent()}
-                  >
-                    {updateLessonMut.isPending ? 'Guardando...' : 'Guardar contenido'}
-                  </button>
-                </div>
-              );
-            })()}
+                  </div>
+                );
+              })()}
 
             {/* FILL_BLANK */}
-            {contentModal.type === 'FILL_BLANK' && (() => {
-              const draft = contentModal.draft as FillBlankContent;
-              return (
-                <div style={s.form}>
-                  <div className="field">
-                    <label>Plantilla de texto</label>
-                    <p style={s.hint}>Usa {'{{palabra}}'} para marcar los huecos. Ej: {'"El {{triple}} vale {{3}} puntos."'}</p>
-                    <textarea
-                      style={{ minHeight: 80, resize: 'vertical' as const, fontFamily: 'inherit' }}
-                      placeholder="El {{triple}} vale {{3}} puntos."
-                      value={draft.template}
-                      onChange={(e) => setContentModal((m) => m ? { ...m, draft: { ...draft, template: e.target.value } } : m)}
-                    />
-                  </div>
-                  <label style={s.label}>Distractores (palabras incorrectas para el banco)</label>
-                  {draft.distractors.map((d, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <input
-                        style={{ ...s.input, flex: 1 }}
-                        placeholder={`Distractor ${idx + 1}`}
-                        value={d}
-                        onChange={(e) => {
-                          const distractors = draft.distractors.map((x, i) => i === idx ? e.target.value : x);
-                          setContentModal((m) => m ? { ...m, draft: { ...draft, distractors } } : m);
+            {contentModal.type === 'FILL_BLANK' &&
+              (() => {
+                const draft = contentModal.draft as FillBlankContent;
+                return (
+                  <div style={s.form}>
+                    <div className="field">
+                      <label>Plantilla de texto</label>
+                      <p style={s.hint}>
+                        Usa {'{{palabra}}'} para marcar los huecos. Ej:{' '}
+                        {'"El {{triple}} vale {{3}} puntos."'}
+                      </p>
+                      <textarea
+                        style={{
+                          minHeight: 80,
+                          resize: 'vertical' as const,
+                          fontFamily: 'inherit',
                         }}
+                        placeholder="El {{triple}} vale {{3}} puntos."
+                        value={draft.template}
+                        onChange={(e) =>
+                          setContentModal((m) =>
+                            m ? { ...m, draft: { ...draft, template: e.target.value } } : m,
+                          )
+                        }
                       />
-                      <button
-                        style={s.btnIcon}
-                        onClick={() => {
-                          const distractors = draft.distractors.filter((_, i) => i !== idx);
-                          setContentModal((m) => m ? { ...m, draft: { ...draft, distractors } } : m);
-                        }}
-                      >🗑️</button>
                     </div>
-                  ))}
-                  <button style={s.btnAddSmall} onClick={() => {
-                    const distractors = [...draft.distractors, ''];
-                    setContentModal((m) => m ? { ...m, draft: { ...draft, distractors } } : m);
-                  }}>
-                    + Añadir distractor
-                  </button>
-                  <button
-                    className="btn btn-primary btn-full"
-                    style={{ marginTop: 16 }}
-                    disabled={updateLessonMut.isPending}
-                    onClick={() => void handleSaveContent()}
-                  >
-                    {updateLessonMut.isPending ? 'Guardando...' : 'Guardar contenido'}
-                  </button>
-                </div>
-              );
-            })()}
+                    <label style={s.label}>Distractores (palabras incorrectas para el banco)</label>
+                    {draft.distractors.map((d, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input
+                          style={{ ...s.input, flex: 1 }}
+                          placeholder={`Distractor ${idx + 1}`}
+                          value={d}
+                          onChange={(e) => {
+                            const distractors = draft.distractors.map((x, i) =>
+                              i === idx ? e.target.value : x,
+                            );
+                            setContentModal((m) =>
+                              m ? { ...m, draft: { ...draft, distractors } } : m,
+                            );
+                          }}
+                        />
+                        <button
+                          style={s.btnIcon}
+                          onClick={() => {
+                            const distractors = draft.distractors.filter((_, i) => i !== idx);
+                            setContentModal((m) =>
+                              m ? { ...m, draft: { ...draft, distractors } } : m,
+                            );
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      style={s.btnAddSmall}
+                      onClick={() => {
+                        const distractors = [...draft.distractors, ''];
+                        setContentModal((m) =>
+                          m ? { ...m, draft: { ...draft, distractors } } : m,
+                        );
+                      }}
+                    >
+                      + Añadir distractor
+                    </button>
+                    <button
+                      className="btn btn-primary btn-full"
+                      style={{ marginTop: 16 }}
+                      disabled={updateLessonMut.isPending}
+                      onClick={() => void handleSaveContent()}
+                    >
+                      {updateLessonMut.isPending ? 'Guardando...' : 'Guardar contenido'}
+                    </button>
+                  </div>
+                );
+              })()}
           </div>
         </div>
       )}
@@ -1101,7 +1316,9 @@ export default function AdminCourseDetailPage() {
           <div style={{ ...s.modal, maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h2 style={s.modalTitle}>{editingQuestion ? 'Editar pregunta' : 'Nueva pregunta'}</h2>
-              <button style={s.closeBtn} onClick={closeQuestionModal}>✕</button>
+              <button style={s.closeBtn} onClick={closeQuestionModal}>
+                ✕
+              </button>
             </div>
 
             {/* Tabs — solo al crear, no al editar */}
@@ -1136,7 +1353,8 @@ export default function AdminCourseDetailPage() {
                   />
                 </div>
                 <p style={{ ...s.hint, textAlign: 'left' }}>
-                  El agente generará el enunciado, tipo (SINGLE o TRUE/FALSE) y las respuestas automáticamente.
+                  El agente generará el enunciado, tipo (SINGLE o TRUE/FALSE) y las respuestas
+                  automáticamente.
                 </p>
                 <button
                   type="submit"
@@ -1144,7 +1362,9 @@ export default function AdminCourseDetailPage() {
                   style={{ marginTop: 16 }}
                   disabled={generateQuestionMut.isPending}
                 >
-                  {generateQuestionMut.isPending ? 'El agente está creando la pregunta...' : 'Generar con IA'}
+                  {generateQuestionMut.isPending
+                    ? 'El agente está creando la pregunta...'
+                    : 'Generar con IA'}
                 </button>
                 {generateQuestionMut.isPending && (
                   <p style={s.hint}>Esto puede tardar unos segundos.</p>
@@ -1167,7 +1387,9 @@ export default function AdminCourseDetailPage() {
                   <label>Tipo</label>
                   <select
                     value={questionForm.type}
-                    onChange={(e) => setQuestionForm((f) => ({ ...f, type: e.target.value as QuestionType }))}
+                    onChange={(e) =>
+                      setQuestionForm((f) => ({ ...f, type: e.target.value as QuestionType }))
+                    }
                   >
                     <option value={QuestionType.SINGLE}>SINGLE (una respuesta)</option>
                     <option value={QuestionType.MULTIPLE}>MULTIPLE (varias respuestas)</option>
@@ -1194,7 +1416,9 @@ export default function AdminCourseDetailPage() {
                       ✓
                     </label>
                     {questionForm.answers.length > 2 && (
-                      <button type="button" style={s.btnIcon} onClick={() => removeAnswerRow(idx)}>🗑️</button>
+                      <button type="button" style={s.btnIcon} onClick={() => removeAnswerRow(idx)}>
+                        🗑️
+                      </button>
                     )}
                   </div>
                 ))}
@@ -1208,12 +1432,30 @@ export default function AdminCourseDetailPage() {
                   style={{ marginTop: 16 }}
                   disabled={createQuestionMut.isPending || updateQuestionMut.isPending}
                 >
-                  {(createQuestionMut.isPending || updateQuestionMut.isPending) ? 'Guardando...' : 'Guardar pregunta'}
+                  {createQuestionMut.isPending || updateQuestionMut.isPending
+                    ? 'Guardando...'
+                    : 'Guardar pregunta'}
                 </button>
               </form>
             )}
           </div>
         </div>
+      )}
+
+      {ytSearchModal && (
+        <YoutubeCandidatesModal
+          lessonId={ytSearchModal.lessonId}
+          lessonTitle={ytSearchModal.title}
+          isOpen={!!ytSearchModal}
+          onClose={() => setYtSearchModal(null)}
+          onSelect={(youtubeId) => {
+            updateLessonMut.mutate({
+              lessonId: ytSearchModal.lessonId,
+              payload: { youtubeId },
+            });
+            setYtSearchModal(null);
+          }}
+        />
       )}
     </div>
   );
@@ -1234,7 +1476,9 @@ const s: Record<string, React.CSSProperties> = {
     boxShadow: 'var(--shadow-sm)',
   },
   moduleHeader: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: '12px 16px',
     background: 'linear-gradient(90deg, rgba(234,88,12,0.06) 0%, transparent 100%)',
     borderBottom: '1px solid var(--color-border)',
@@ -1244,13 +1488,19 @@ const s: Record<string, React.CSSProperties> = {
 
   // Lección
   lessonRow: {
-    display: 'flex', alignItems: 'center', gap: 10,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
     padding: '9px 16px 9px 32px',
     borderBottom: '1px solid var(--color-border)',
   },
   lessonBadge: {
-    fontSize: '0.68rem', fontWeight: 700, padding: '2px 7px', borderRadius: 999,
-    background: 'rgba(234,88,12,0.1)', color: 'var(--color-primary)',
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    padding: '2px 7px',
+    borderRadius: 999,
+    background: 'rgba(234,88,12,0.1)',
+    color: 'var(--color-primary)',
     border: '1px solid rgba(234,88,12,0.2)',
     flexShrink: 0,
   },
@@ -1258,17 +1508,29 @@ const s: Record<string, React.CSSProperties> = {
 
   // Preguntas
   questionsSection: {
-    paddingLeft: 52, paddingRight: 16, paddingTop: 10, paddingBottom: 10,
+    paddingLeft: 52,
+    paddingRight: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
     background: 'var(--color-bg)',
     borderBottom: '1px solid var(--color-border)',
   },
   questionRow: { marginBottom: 12 },
   questionHeader: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 },
-  questionNum: { fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-muted)', flexShrink: 0 },
+  questionNum: {
+    fontWeight: 700,
+    fontSize: '0.82rem',
+    color: 'var(--color-text-muted)',
+    flexShrink: 0,
+  },
   questionText: { flex: 1, fontSize: '0.88rem', color: 'var(--color-text)' },
   questionType: {
-    fontSize: '0.68rem', fontWeight: 700, padding: '1px 6px', borderRadius: 999,
-    background: 'var(--color-border)', color: 'var(--color-text-muted)',
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    padding: '1px 6px',
+    borderRadius: 999,
+    background: 'var(--color-border)',
+    color: 'var(--color-text-muted)',
   },
   answerList: { paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 2 },
   answerItem: { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem' },
@@ -1278,109 +1540,202 @@ const s: Record<string, React.CSSProperties> = {
   // Answer form row
   answerFormRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 },
   checkboxLabel: {
-    display: 'flex', alignItems: 'center', gap: 4,
-    fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+    flexShrink: 0,
   },
 
   actions: { display: 'flex', alignItems: 'center', gap: 4 },
   confirmDelete: {
-    fontSize: '0.8rem', color: 'var(--color-text-muted)',
-    display: 'inline-flex', alignItems: 'center', gap: 4,
+    fontSize: '0.8rem',
+    color: 'var(--color-text-muted)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
   },
   muted: { color: 'var(--color-text-muted)', fontSize: '0.875rem', padding: '8px 0' },
 
   // Badges
   badgeLevel: {
-    fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999,
-    background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)', border: '1px solid rgba(255,255,255,0.25)',
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    padding: '2px 8px',
+    borderRadius: 999,
+    background: 'rgba(255,255,255,0.15)',
+    color: 'rgba(255,255,255,0.9)',
+    border: '1px solid rgba(255,255,255,0.25)',
   },
   badgeOk: {
-    display: 'inline-block', fontSize: '0.72rem', fontWeight: 600,
-    padding: '2px 8px', borderRadius: 999,
-    background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)',
+    display: 'inline-block',
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    padding: '2px 8px',
+    borderRadius: 999,
+    background: 'rgba(16,185,129,0.2)',
+    color: '#10b981',
+    border: '1px solid rgba(16,185,129,0.3)',
   },
   badgeDraft: {
-    display: 'inline-block', fontSize: '0.72rem', fontWeight: 600,
-    padding: '2px 8px', borderRadius: 999,
-    background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.65)',
+    display: 'inline-block',
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    padding: '2px 8px',
+    borderRadius: 999,
+    background: 'rgba(255,255,255,0.1)',
+    color: 'rgba(255,255,255,0.65)',
   },
 
   // Botones
   btnDangerSm: {
-    background: '#fef2f2', color: '#ef4444',
-    border: '1px solid #fecaca', borderRadius: 4, padding: '2px 8px',
-    fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
+    background: '#fef2f2',
+    color: '#ef4444',
+    border: '1px solid #fecaca',
+    borderRadius: 4,
+    padding: '2px 8px',
+    fontWeight: 600,
+    fontSize: '0.78rem',
+    cursor: 'pointer',
   },
   btnIcon: {
-    background: 'transparent', border: 'none', cursor: 'pointer',
-    fontSize: '1rem', padding: '2px 4px', borderRadius: 4,
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    padding: '2px 4px',
+    borderRadius: 4,
   },
   btnActionSm: {
-    background: 'transparent', cursor: 'pointer',
-    border: '1px solid var(--color-border)', borderRadius: 6,
-    padding: '3px 10px', fontSize: '0.78rem', fontWeight: 600,
-    color: 'var(--color-text-muted)', flexShrink: 0,
+    background: 'transparent',
+    cursor: 'pointer',
+    border: '1px solid var(--color-border)',
+    borderRadius: 6,
+    padding: '3px 10px',
+    fontSize: '0.78rem',
+    fontWeight: 600,
+    color: 'var(--color-text-muted)',
+    flexShrink: 0,
   },
   btnBack: {
-    background: 'transparent', border: 'none', cursor: 'pointer',
-    color: 'rgba(255,255,255,0.7)', fontWeight: 600, fontSize: '0.875rem',
-    padding: 0, display: 'block',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: 600,
+    fontSize: '0.875rem',
+    padding: 0,
+    display: 'block',
   },
   btnAddSmall: {
-    background: 'transparent', border: '1px dashed var(--color-border)',
-    color: 'var(--color-text-muted)', borderRadius: 6,
-    padding: '5px 12px', cursor: 'pointer', fontSize: '0.82rem',
-    display: 'block', marginTop: 6,
+    background: 'transparent',
+    border: '1px dashed var(--color-border)',
+    color: 'var(--color-text-muted)',
+    borderRadius: 6,
+    padding: '5px 12px',
+    cursor: 'pointer',
+    fontSize: '0.82rem',
+    display: 'block',
+    marginTop: 6,
   },
 
   // Input / select en modales de contenido
   input: {
-    width: '100%', boxSizing: 'border-box' as const,
-    padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    padding: '8px 12px',
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--color-border)',
-    background: 'var(--color-surface)', color: 'var(--color-text)',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
     fontSize: '0.9rem',
   },
   label: { fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)' },
 
   // Modal
   overlay: {
-    position: 'fixed', inset: 0,
+    position: 'fixed',
+    inset: 0,
     background: 'rgba(0,0,0,0.55)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 100,
   },
   modal: {
     background: 'var(--color-surface)',
-    borderRadius: 'var(--radius-md)', padding: 28,
-    width: '100%', maxWidth: 480,
+    borderRadius: 'var(--radius-md)',
+    padding: 28,
+    width: '100%',
+    maxWidth: 480,
     boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
     border: '1.5px solid var(--color-border)',
-    maxHeight: '90vh', overflowY: 'auto',
+    maxHeight: '90vh',
+    overflowY: 'auto',
   },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   modalTitle: { fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 },
-  closeBtn: { background: 'transparent', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--color-text-muted)' },
+  closeBtn: {
+    background: 'transparent',
+    border: 'none',
+    fontSize: '1.1rem',
+    cursor: 'pointer',
+    color: 'var(--color-text-muted)',
+  },
 
   // Tabs
-  tabs: { display: 'flex', gap: 4, marginBottom: 20, background: 'var(--color-border)', borderRadius: 8, padding: 3 },
-  tab: {
-    flex: 1, padding: '7px 0', borderRadius: 6,
-    border: 'none', background: 'transparent',
-    color: 'var(--color-text-muted)', fontWeight: 500,
-    cursor: 'pointer', fontSize: '0.875rem',
+  tabs: {
+    display: 'flex',
+    gap: 4,
+    marginBottom: 20,
+    background: 'var(--color-border)',
+    borderRadius: 8,
+    padding: 3,
   },
-  tabActive: { background: 'var(--color-surface)', color: 'var(--color-text)', fontWeight: 600, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
+  tab: {
+    flex: 1,
+    padding: '7px 0',
+    borderRadius: 6,
+    border: 'none',
+    background: 'transparent',
+    color: 'var(--color-text-muted)',
+    fontWeight: 500,
+    cursor: 'pointer',
+    fontSize: '0.875rem',
+  },
+  tabActive: {
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    fontWeight: 600,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+  },
 
   // Formulario
   form: { display: 'flex', flexDirection: 'column', gap: 12 },
-  hint: { fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center' as const, marginTop: 4 },
+  hint: {
+    fontSize: '0.8rem',
+    color: 'var(--color-text-muted)',
+    textAlign: 'center' as const,
+    marginTop: 4,
+  },
 
   // Toast
   toast: {
-    position: 'fixed', bottom: 24, right: 24,
-    color: '#fff', padding: '10px 20px',
-    borderRadius: 8, fontWeight: 600, fontSize: '0.9rem',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: 200,
+    position: 'fixed',
+    bottom: 24,
+    right: 24,
+    color: '#fff',
+    padding: '10px 20px',
+    borderRadius: 8,
+    fontWeight: 600,
+    fontSize: '0.9rem',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+    zIndex: 200,
   },
 };
