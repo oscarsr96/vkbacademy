@@ -365,11 +365,24 @@ export interface UpdateChallengePayload {
   badgeColor?: string;
 }
 
+export interface YoutubeCandidate {
+  youtubeId: string;
+  title: string;
+  channelTitle: string;
+  channelId: string;
+  durationSeconds: number;
+  viewCount: number;
+  likeCount: number;
+  engagementRatio: number;
+  isWhitelisted: boolean;
+  publishedAt: string;
+  thumbnailUrl: string;
+}
+
 export const adminApi = {
   // ─── Usuarios ──────────────────────────────────────────────────────────────
 
-  getUsers: () =>
-    api.get<AdminUser[]>('/admin/users').then((r) => r.data),
+  getUsers: () => api.get<AdminUser[]>('/admin/users').then((r) => r.data),
 
   updateRole: (userId: string, role: Role) =>
     api.patch<AdminUser>(`/admin/users/${userId}/role`, { role }).then((r) => r.data),
@@ -392,22 +405,23 @@ export const adminApi = {
     api.get<AdminEnrollment[]>(`/admin/users/${userId}/enrollments`).then((r) => r.data),
 
   enroll: (userId: string, courseId: string) =>
-    api.post<AdminEnrollment>(`/admin/users/${userId}/enrollments`, { courseId }).then((r) => r.data),
+    api
+      .post<AdminEnrollment>(`/admin/users/${userId}/enrollments`, { courseId })
+      .then((r) => r.data),
 
   unenroll: (userId: string, courseId: string) =>
-    api.delete<{ message: string }>(`/admin/users/${userId}/enrollments/${courseId}`).then((r) => r.data),
+    api
+      .delete<{ message: string }>(`/admin/users/${userId}/enrollments/${courseId}`)
+      .then((r) => r.data),
 
   // ─── Métricas ──────────────────────────────────────────────────────────────
 
-  getMetrics: () =>
-    api.get<AdminMetrics>('/admin/metrics').then((r) => r.data),
+  getMetrics: () => api.get<AdminMetrics>('/admin/metrics').then((r) => r.data),
 
   // ─── Cursos ────────────────────────────────────────────────────────────────
 
   listCourses: (params?: AdminCoursesParams) =>
-    api
-      .get<PaginatedResponse<Course>>('/admin/courses', { params })
-      .then((r) => r.data),
+    api.get<PaginatedResponse<Course>>('/admin/courses', { params }).then((r) => r.data),
 
   createCourse: (payload: CreateCoursePayload) =>
     api.post<Course>('/courses', payload).then((r) => r.data),
@@ -416,7 +430,9 @@ export const adminApi = {
     api.post<Course>('/admin/courses/generate', payload).then((r) => r.data),
 
   importCourse: (payload: unknown) =>
-    api.post<{ message: string; course: Course }>('/admin/courses/import', payload).then((r) => r.data),
+    api
+      .post<{ message: string; course: Course }>('/admin/courses/import', payload)
+      .then((r) => r.data),
 
   deleteCourse: (id: string) =>
     api.delete<{ message: string }>(`/admin/courses/${id}`).then((r) => r.data),
@@ -424,8 +440,7 @@ export const adminApi = {
   updateCourse: (id: string, payload: UpdateCoursePayload) =>
     api.patch<Course>(`/courses/${id}`, payload).then((r) => r.data),
 
-  listSchoolYears: () =>
-    api.get<SchoolYear[]>('/school-years').then((r) => r.data),
+  listSchoolYears: () => api.get<SchoolYear[]>('/school-years').then((r) => r.data),
 
   // ─── Detalle de curso ──────────────────────────────────────────────────────
 
@@ -464,6 +479,13 @@ export const adminApi = {
   deleteLesson: (lessonId: string) =>
     api.delete<{ message: string }>(`/admin/lessons/${lessonId}`).then((r) => r.data),
 
+  getLessonYoutubeCandidates: (lessonId: string, excludeIds: string[] = []) => {
+    const params = excludeIds.length ? `?exclude=${excludeIds.join(',')}` : '';
+    return api
+      .get<YoutubeCandidate[]>(`/admin/lessons/${lessonId}/youtube-candidates${params}`)
+      .then((r) => r.data);
+  },
+
   // ─── Quiz ──────────────────────────────────────────────────────────────────
 
   initQuiz: (lessonId: string) =>
@@ -500,16 +522,14 @@ export const adminApi = {
 
   // ─── Canjes ────────────────────────────────────────────────────────────────
 
-  listRedemptions: () =>
-    api.get<AdminRedemption[]>('/admin/redemptions').then((r) => r.data),
+  listRedemptions: () => api.get<AdminRedemption[]>('/admin/redemptions').then((r) => r.data),
 
   markRedemptionDelivered: (id: string) =>
     api.patch<AdminRedemption>(`/admin/redemptions/${id}/deliver`).then((r) => r.data),
 
   // ─── Retos ─────────────────────────────────────────────────────────────────
 
-  listChallenges: () =>
-    api.get<AdminChallenge[]>('/admin/challenges').then((r) => r.data),
+  listChallenges: () => api.get<AdminChallenge[]>('/admin/challenges').then((r) => r.data),
 
   createChallenge: (payload: CreateChallengePayload) =>
     api.post<AdminChallenge>('/admin/challenges', payload).then((r) => r.data),
@@ -582,15 +602,12 @@ export const adminApi = {
 
   // ─── Certificados ──────────────────────────────────────────────────────────
 
-  listCertificates: () =>
-    api.get<AdminCertificate[]>('/admin/certificates').then((r) => r.data),
+  listCertificates: () => api.get<AdminCertificate[]>('/admin/certificates').then((r) => r.data),
 
   issueCertificate: (payload: {
     userId: string;
     courseId?: string;
     moduleId?: string;
     type: AdminCertificateType;
-  }) =>
-    api.post<AdminCertificate>('/admin/certificates', payload).then((r) => r.data),
+  }) => api.post<AdminCertificate>('/admin/certificates', payload).then((r) => r.data),
 };
-

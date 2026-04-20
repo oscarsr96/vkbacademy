@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AdminService } from './admin.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { YoutubeService } from '../youtube/youtube.service';
 
 // Mockear bcrypt para evitar el coste de rondas reales en los tests
 jest.mock('bcrypt');
@@ -64,6 +65,7 @@ describe('AdminService', () => {
       providers: [
         AdminService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: YoutubeService, useValue: { findCandidates: jest.fn() } },
       ],
     }).compile();
 
@@ -158,9 +160,9 @@ describe('AdminService', () => {
     it('lanza NotFoundException si el usuario no existe', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.updateUser('no-existe', { name: 'Test' }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.updateUser('no-existe', { name: 'Test' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('lanza BadRequestException si el nuevo email ya está en uso por otro usuario', async () => {
@@ -168,9 +170,9 @@ describe('AdminService', () => {
         .mockResolvedValueOnce(fakeUser) // primer findUnique: el usuario existe
         .mockResolvedValueOnce({ ...fakeUser, id: 'otro-user' }); // segundo: email ya en uso
 
-      await expect(
-        service.updateUser('user-1', { email: 'ocupado@vkb.es' }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.updateUser('user-1', { email: 'ocupado@vkb.es' })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('hashea la contraseña si se actualiza', async () => {

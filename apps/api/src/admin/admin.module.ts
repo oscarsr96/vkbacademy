@@ -4,9 +4,10 @@ import { AdminService } from './admin.service';
 import { CourseGeneratorService } from './course-generator.service';
 import { BillingService } from './billing.service';
 import { CertificatesModule } from '../certificates/certificates.module';
+import { YoutubeModule } from '../youtube/youtube.module';
 
 @Module({
-  imports: [CertificatesModule],
+  imports: [CertificatesModule, YoutubeModule],
   controllers: [AdminController],
   providers: [AdminService, CourseGeneratorService, BillingService],
 })

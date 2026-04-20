@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
+import { YoutubeService } from '../youtube/youtube.service';
 
 // ─── Estructuras generadas por Claude ────────────────────────────────────────
 
@@ -43,6 +44,7 @@ interface GeneratedLesson {
   title: string;
   type: 'VIDEO' | 'QUIZ' | 'MATCH' | 'SORT' | 'FILL_BLANK';
   order: number;
+  youtubeId?: string | null;
   quiz?: { questions: GeneratedQuestion[] };
   content?: GeneratedMatchContent | GeneratedSortContent | GeneratedFillBlankContent;
 }
@@ -70,6 +72,7 @@ function buildNestedLessonData(lesson: GeneratedLesson) {
     title: lesson.title,
     type: lesson.type,
     order: lesson.order,
+    ...(lesson.youtubeId !== undefined ? { youtubeId: lesson.youtubeId } : {}),
     ...(lesson.content ? { content: lesson.content as unknown as Prisma.InputJsonValue } : {}),
     ...(lesson.type === 'QUIZ' && lesson.quiz
       ? {
@@ -104,7 +107,29 @@ export class CourseGeneratorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ai: AiProviderService,
+    private readonly youtube: YoutubeService,
   ) {}
+
+  /**
+   * Enriquece lecciones VIDEO generadas por IA con youtubeId. Es best-effort:
+   * si YoutubeService falla o no hay candidatos, deja youtubeId en null y
+   * sigue — nunca rompe la generación del módulo/curso.
+   */
+  private async enrichVideoLessonsWithYoutube(
+    lessons: Array<Pick<GeneratedLesson, 'title' | 'type'> & { youtubeId?: string | null }>,
+    schoolYearLabel: string,
+  ): Promise<void> {
+    for (const lesson of lessons) {
+      if (lesson.type !== 'VIDEO') continue;
+      try {
+        const candidate = await this.youtube.findBestVideo(lesson.title, schoolYearLabel);
+        lesson.youtubeId = candidate?.youtubeId ?? null;
+      } catch (err) {
+        this.logger.warn(`[youtube] fallo buscando "${lesson.title}": ${(err as Error).message}`);
+        lesson.youtubeId = null;
+      }
+    }
+  }
 
   async generateAndCreate(name: string, schoolYearId: string) {
     const schoolYear = await this.prisma.schoolYear.findUnique({
@@ -116,6 +141,10 @@ export class CourseGeneratorService {
     }
 
     const courseData = await this.callClaude(name, schoolYear.label);
+
+    for (const mod of courseData.modules) {
+      await this.enrichVideoLessonsWithYoutube(mod.lessons, schoolYear.label);
+    }
 
     const course = await this.prisma.course.create({
       data: {
@@ -174,6 +203,8 @@ export class CourseGeneratorService {
       existingModuleTitles: course.modules.map((m) => m.title),
     });
 
+    await this.enrichVideoLessonsWithYoutube(moduleData.lessons, course.schoolYear?.label ?? '');
+
     const nextOrder =
       course.modules.length > 0 ? Math.max(...course.modules.map((m) => m.order)) + 1 : 1;
 
@@ -220,6 +251,10 @@ export class CourseGeneratorService {
       moduleTitle: module.title,
       existingLessonTitles: module.lessons.map((l) => l.title),
     });
+
+    if (lessonData.type === 'VIDEO') {
+      await this.enrichVideoLessonsWithYoutube([lessonData], module.course.schoolYear?.label ?? '');
+    }
 
     const nextOrder =
       module.lessons.length > 0 ? Math.max(...module.lessons.map((l) => l.order)) + 1 : 1;
