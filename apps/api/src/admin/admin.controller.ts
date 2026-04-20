@@ -115,7 +115,10 @@ export class AdminController {
   }
 
   @Patch('billing/config')
-  updateBillingConfig(@Body() dto: UpdateBillingConfigDto, @CurrentAcademy() academyId: string | null) {
+  updateBillingConfig(
+    @Body() dto: UpdateBillingConfigDto,
+    @CurrentAcademy() academyId: string | null,
+  ) {
     return this.billingService.updateConfig(dto, academyId);
   }
 
@@ -206,6 +209,12 @@ export class AdminController {
     return this.adminService.deleteLesson(lessonId);
   }
 
+  @Get('lessons/:lessonId/youtube-candidates')
+  getYoutubeCandidates(@Param('lessonId') lessonId: string, @Query('exclude') exclude?: string) {
+    const excludeIds = exclude ? exclude.split(',').filter(Boolean) : [];
+    return this.adminService.getYoutubeCandidates(lessonId, excludeIds);
+  }
+
   // ─── Quiz ─────────────────────────────────────────────────────────────────
 
   @Post('lessons/:lessonId/quiz')
@@ -278,10 +287,7 @@ export class AdminController {
   // ─── Banco de preguntas de examen ──────────────────────────────────────────
 
   @Get('exam-questions')
-  getExamQuestions(
-    @Query('courseId') courseId?: string,
-    @Query('moduleId') moduleId?: string,
-  ) {
+  getExamQuestions(@Query('courseId') courseId?: string, @Query('moduleId') moduleId?: string) {
     return this.adminService.getExamQuestions(courseId, moduleId);
   }
 
@@ -293,11 +299,10 @@ export class AdminController {
 
   @Post('exam-questions/generate')
   generateExamQuestions(@Body() dto: GenerateExamQuestionsDto) {
-    return this.courseGeneratorService.generateExamQuestions(
-      dto.topic,
-      dto.count ?? 3,
-      { courseId: dto.courseId, moduleId: dto.moduleId },
-    );
+    return this.courseGeneratorService.generateExamQuestions(dto.topic, dto.count ?? 3, {
+      courseId: dto.courseId,
+      moduleId: dto.moduleId,
+    });
   }
 
   @Post('exam-questions')
@@ -316,10 +321,7 @@ export class AdminController {
   }
 
   @Get('exam-attempts')
-  getExamAttempts(
-    @Query('courseId') courseId?: string,
-    @Query('moduleId') moduleId?: string,
-  ) {
+  getExamAttempts(@Query('courseId') courseId?: string, @Query('moduleId') moduleId?: string) {
     return this.adminService.getExamAttempts(courseId, moduleId);
   }
 

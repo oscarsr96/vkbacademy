@@ -14,17 +14,20 @@ import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { CreateExamQuestionDto, UpdateExamQuestionDto } from './dto/create-exam-question.dto';
+import { YoutubeService } from '../youtube/youtube.service';
+import type { YoutubeCandidate } from '../youtube/dto/youtube-candidate.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly youtube: YoutubeService,
+  ) {}
 
   async getUsers(academyId?: string | null) {
     // Si hay academyId, solo devolver miembros de esa academia
-    const where = academyId
-      ? { academyMembers: { some: { academyId } } }
-      : {};
+    const where = academyId ? { academyMembers: { some: { academyId } } } : {};
 
     return this.prisma.user.findMany({
       where,
@@ -59,7 +62,13 @@ export class AdminService {
     return this.prisma.user.update({
       where: { id: studentId },
       data: { tutorId: tutorId ?? null },
-      select: { id: true, name: true, email: true, tutorId: true, tutor: { select: { id: true, name: true } } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        tutorId: true,
+        tutor: { select: { id: true, name: true } },
+      },
     });
   }
 
@@ -87,8 +96,13 @@ export class AdminService {
         ...(academyId ? { academyMembers: { create: { academyId } } } : {}),
       },
       select: {
-        id: true, email: true, name: true, role: true,
-        avatarUrl: true, createdAt: true, tutorId: true,
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        avatarUrl: true,
+        createdAt: true,
+        tutorId: true,
         tutor: { select: { id: true, name: true } },
         _count: { select: { students: true } },
         academyMembers: {
@@ -117,8 +131,13 @@ export class AdminService {
       where: { id: userId },
       data,
       select: {
-        id: true, email: true, name: true, role: true,
-        avatarUrl: true, createdAt: true, tutorId: true,
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        avatarUrl: true,
+        createdAt: true,
+        tutorId: true,
         tutor: { select: { id: true, name: true } },
         _count: { select: { students: true } },
       },
@@ -182,9 +201,7 @@ export class AdminService {
         : Promise.resolve([]),
     ]);
 
-    const syStudentCount = new Map(
-      studentsByLevel.map((r) => [r.schoolYearId!, r._count._all]),
-    );
+    const syStudentCount = new Map(studentsByLevel.map((r) => [r.schoolYearId!, r._count._all]));
 
     // Alumnos de otro nivel matriculados explícitamente en cada curso
     const courseSchoolYear = new Map(items.map((c) => [c.id, c.schoolYearId]));
@@ -344,7 +361,10 @@ export class AdminService {
         ...(dto.type !== undefined ? { type: dto.type } : {}),
         ...(dto.youtubeId !== undefined ? { youtubeId: dto.youtubeId } : {}),
         ...(dto.content !== undefined
-          ? { content: dto.content === null ? Prisma.JsonNull : (dto.content as Prisma.InputJsonValue) }
+          ? {
+              content:
+                dto.content === null ? Prisma.JsonNull : (dto.content as Prisma.InputJsonValue),
+            }
           : {}),
       },
       include: { quiz: { include: { questions: { include: { answers: true } } } } },
@@ -552,7 +572,10 @@ export class AdminService {
       this.prisma.user.count({ where: userWhere }),
       this.prisma.enrollment.count({ where: enrollmentWhere }),
       this.prisma.userProgress.findMany({ where: progressWhere, select: { completedAt: true } }),
-      this.prisma.quizAttempt.findMany({ where: quizWhere, select: { completedAt: true, score: true } }),
+      this.prisma.quizAttempt.findMany({
+        where: quizWhere,
+        select: { completedAt: true, score: true },
+      }),
       this.prisma.booking.count({ where: bookingWhere }),
       this.prisma.booking.count({ where: { ...bookingWhere, status: BookingStatus.CONFIRMED } }),
       this.prisma.booking.count({ where: { ...bookingWhere, status: BookingStatus.CANCELLED } }),
@@ -563,9 +586,8 @@ export class AdminService {
     const completedLessons = progressRecords.length;
     const avgQuizScore =
       quizRecords.length > 0
-        ? Math.round(
-            (quizRecords.reduce((sum, r) => sum + r.score, 0) / quizRecords.length) * 10,
-          ) / 10
+        ? Math.round((quizRecords.reduce((sum, r) => sum + r.score, 0) / quizRecords.length) * 10) /
+          10
         : 0;
 
     // ── Serie temporal ─────────────────────────────────────────────────────
@@ -696,7 +718,14 @@ export class AdminService {
 
     const teacherStatsMap = new Map<
       string,
-      { confirmed: number; pending: number; cancelled: number; minutesTaught: number; online: number; inPerson: number }
+      {
+        confirmed: number;
+        pending: number;
+        cancelled: number;
+        minutesTaught: number;
+        online: number;
+        inPerson: number;
+      }
     >();
 
     for (const booking of teacherBookings) {
@@ -819,7 +848,11 @@ export class AdminService {
     // ── Lecciones con menor tasa de completado ─────────────────────────────────
     const lowCompletionGroups = await this.prisma.userProgress.groupBy({
       by: ['lessonId'],
-      where: { completed: true, completedAt: { gte: dateFrom, lte: dateTo }, ...progressLessonFilter },
+      where: {
+        completed: true,
+        completedAt: { gte: dateFrom, lte: dateTo },
+        ...progressLessonFilter,
+      },
       _count: { userId: true },
       orderBy: { _count: { userId: 'asc' } },
       take: 5,
@@ -893,7 +926,10 @@ export class AdminService {
       topCourses,
       topStudents,
       bookings: {
-        byStatus: bookingsByStatus.map((b) => ({ status: b.status as string, count: b._count.status })),
+        byStatus: bookingsByStatus.map((b) => ({
+          status: b.status as string,
+          count: b._count.status,
+        })),
         byMode: bookingsByMode.map((b) => ({ mode: b.mode as string, count: b._count.mode })),
       },
       teachers: {
@@ -1118,7 +1154,12 @@ export class AdminService {
     ]);
 
     return {
-      users: { total: totalUsers, students: totalStudents, tutors: totalTutors, teachers: totalTeachers },
+      users: {
+        total: totalUsers,
+        students: totalStudents,
+        tutors: totalTutors,
+        teachers: totalTeachers,
+      },
       courses: { total: totalCourses, published: publishedCourses },
       bookings: { total: totalBookings, confirmed: confirmedBookings, pending: pendingBookings },
       enrollments: totalEnrollments,
@@ -1315,5 +1356,34 @@ export class AdminService {
       message: `Curso "${dto.name}" importado correctamente`,
       course,
     };
+  }
+
+  /**
+   * Devuelve los top candidatos de YouTube para una lección VIDEO.
+   * El admin usa esto desde el modal de búsqueda manual.
+   */
+  async getYoutubeCandidates(lessonId: string, excludeIds: string[]): Promise<YoutubeCandidate[]> {
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id: lessonId },
+      include: {
+        module: {
+          include: { course: { include: { schoolYear: true } } },
+        },
+      },
+    });
+
+    if (!lesson) {
+      throw new NotFoundException(`Lección "${lessonId}" no encontrada`);
+    }
+
+    if (lesson.type !== 'VIDEO') {
+      throw new BadRequestException('Solo se puede buscar vídeo para lecciones de tipo VIDEO');
+    }
+
+    const schoolYearLabel = lesson.module.course.schoolYear?.label ?? '';
+    return this.youtube.findCandidates(lesson.title, schoolYearLabel, {
+      limit: 5,
+      excludeIds,
+    });
   }
 }
