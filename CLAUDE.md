@@ -419,6 +419,9 @@ AWS_SIGNED_URL_EXPIRES=3600
 RESEND_API_KEY=""
 EMAIL_FROM="noreply@tuclub.com"
 
+# YouTube Data API v3 (auto-asignación de vídeos en lecciones VIDEO)
+YOUTUBE_API_KEY=""
+
 # App
 PORT=3001
 FRONTEND_URL="http://localhost:5173"
@@ -487,6 +490,7 @@ pnpm --filter mobile build    # EAS Build
 | 9    | Deployment parcial (Vercel + Railway)                           | ✅ Completado |
 | 10   | Multi-tenancy (N academias)                                     | ✅ Completado |
 | 10.5 | Entorno PRE + pipeline progresivo (Issue #11)                   | ✅ Completado |
+| 10.6 | Auto-asignación de vídeos YouTube (Issue #22)                   | ✅ Completado |
 | 11   | App móvil                                                       | ⬜ Pendiente  |
 | 12   | Testing                                                         | ⬜ Pendiente  |
 | 13   | Deployment completo                                             | ⬜ Pendiente  |
