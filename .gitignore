@@ -52,3 +52,6 @@ android/
 *.orig.*
 web-build/
 .vercel
+
+# Git worktrees locales (skill superpowers:using-git-worktrees)
+.worktrees/
