@@ -1,9 +1,13 @@
 import { ConfigService } from '@nestjs/config';
 import { YoutubeService } from './youtube.service';
-import searchList from './__fixtures__/search-list-20-results.json';
-import videosListMixed from './__fixtures__/videos-list-mixed.json';
-import videosListAllLong from './__fixtures__/videos-list-all-long.json';
-import videosListWithWhitelisted from './__fixtures__/videos-list-with-whitelisted.json';
+
+// Usamos require en lugar de `import ... from '.../x.json'` porque ts-jest
+// en modo CommonJS sin esModuleInterop devuelve undefined al hacer default
+// import de JSON. require() siempre devuelve el objeto JSON parseado.
+const searchList = require('./__fixtures__/search-list-20-results.json');
+const videosListMixed = require('./__fixtures__/videos-list-mixed.json');
+const videosListAllLong = require('./__fixtures__/videos-list-all-long.json');
+const videosListWithWhitelisted = require('./__fixtures__/videos-list-with-whitelisted.json');
 
 function mockFetchOnce(body: unknown, ok = true, status = 200) {
   (global.fetch as jest.Mock).mockResolvedValueOnce({
