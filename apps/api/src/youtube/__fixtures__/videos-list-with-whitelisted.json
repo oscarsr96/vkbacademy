@@ -1,0 +1,29 @@
+{
+  "kind": "youtube#videoListResponse",
+  "items": [
+    {
+      "id": "vidWL",
+      "snippet": {
+        "title": "Vídeo whitelist con ratio bajo",
+        "channelId": "UCR9zNNl1_T3dcmuCnBpOoNg",
+        "channelTitle": "Unicoos",
+        "publishedAt": "2020-01-01T00:00:00Z",
+        "thumbnails": { "medium": { "url": "https://i.ytimg.com/vi/vidWL/mqdefault.jpg" } }
+      },
+      "contentDetails": { "duration": "PT10M0S" },
+      "statistics": { "viewCount": "1000000", "likeCount": "10000" }
+    },
+    {
+      "id": "vidNoWL",
+      "snippet": {
+        "title": "Vídeo no-whitelist con ratio alto",
+        "channelId": "UCotherChannel",
+        "channelTitle": "Otro",
+        "publishedAt": "2020-01-01T00:00:00Z",
+        "thumbnails": { "medium": { "url": "https://i.ytimg.com/vi/vidNoWL/mqdefault.jpg" } }
+      },
+      "contentDetails": { "duration": "PT10M0S" },
+      "statistics": { "viewCount": "10000", "likeCount": "300" }
+    }
+  ]
+}

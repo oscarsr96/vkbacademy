@@ -1,0 +1,68 @@
+{
+  "kind": "youtube#videoListResponse",
+  "items": [
+    {
+      "id": "vid001",
+      "snippet": {
+        "title": "Propiedades de logaritmos — Unicoos",
+        "channelId": "UCR9zNNl1_T3dcmuCnBpOoNg",
+        "channelTitle": "Unicoos",
+        "publishedAt": "2020-01-15T10:00:00Z",
+        "thumbnails": { "medium": { "url": "https://i.ytimg.com/vi/vid001/mqdefault.jpg" } }
+      },
+      "contentDetails": { "duration": "PT12M30S" },
+      "statistics": { "viewCount": "500000", "likeCount": "15000" }
+    },
+    {
+      "id": "vid002",
+      "snippet": {
+        "title": "Logaritmos bien explicados",
+        "channelId": "UCrandomOther",
+        "channelTitle": "Profe Random",
+        "publishedAt": "2022-06-10T14:00:00Z",
+        "thumbnails": { "medium": { "url": "https://i.ytimg.com/vi/vid002/mqdefault.jpg" } }
+      },
+      "contentDetails": { "duration": "PT8M0S" },
+      "statistics": { "viewCount": "1000000", "likeCount": "50000" }
+    },
+    {
+      "id": "vid003",
+      "snippet": {
+        "title": "Clase magistral 1 hora de logaritmos",
+        "channelId": "UCanother",
+        "channelTitle": "Universidad X",
+        "publishedAt": "2018-03-01T10:00:00Z",
+        "thumbnails": { "medium": { "url": "https://i.ytimg.com/vi/vid003/mqdefault.jpg" } }
+      },
+      "contentDetails": { "duration": "PT1H5M0S" },
+      "statistics": { "viewCount": "200000", "likeCount": "5000" }
+    },
+    {
+      "id": "vid004",
+      "snippet": {
+        "title": "Vídeo con stats ocultas",
+        "channelId": "UChidden",
+        "channelTitle": "Canal Privado",
+        "publishedAt": "2023-01-01T00:00:00Z",
+        "thumbnails": { "medium": { "url": "https://i.ytimg.com/vi/vid004/mqdefault.jpg" } }
+      },
+      "contentDetails": { "duration": "PT10M0S" },
+      "statistics": {}
+    },
+    {
+      "id": "vid005",
+      "snippet": {
+        "title": "Vídeo edad restringida",
+        "channelId": "UCrestricted",
+        "channelTitle": "Canal Restringido",
+        "publishedAt": "2023-01-01T00:00:00Z",
+        "thumbnails": { "medium": { "url": "https://i.ytimg.com/vi/vid005/mqdefault.jpg" } }
+      },
+      "contentDetails": {
+        "duration": "PT5M0S",
+        "contentRating": { "ytRating": "ytAgeRestricted" }
+      },
+      "statistics": { "viewCount": "100000", "likeCount": "2000" }
+    }
+  ]
+}

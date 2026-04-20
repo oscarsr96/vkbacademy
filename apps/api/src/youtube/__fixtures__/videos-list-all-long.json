@@ -1,0 +1,17 @@
+{
+  "kind": "youtube#videoListResponse",
+  "items": [
+    {
+      "id": "vid001",
+      "snippet": {
+        "title": "Clase 1h",
+        "channelId": "UCx",
+        "channelTitle": "X",
+        "publishedAt": "2020-01-01T00:00:00Z",
+        "thumbnails": { "medium": { "url": "https://i.ytimg.com/vi/vid001/mqdefault.jpg" } }
+      },
+      "contentDetails": { "duration": "PT1H0M0S" },
+      "statistics": { "viewCount": "100", "likeCount": "10" }
+    }
+  ]
+}

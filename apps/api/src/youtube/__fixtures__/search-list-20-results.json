@@ -1,0 +1,10 @@
+{
+  "kind": "youtube#searchListResponse",
+  "items": [
+    { "id": { "videoId": "vid001" } },
+    { "id": { "videoId": "vid002" } },
+    { "id": { "videoId": "vid003" } },
+    { "id": { "videoId": "vid004" } },
+    { "id": { "videoId": "vid005" } }
+  ]
+}
