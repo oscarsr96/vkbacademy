@@ -243,8 +243,6 @@ const baseStyles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     padding: '24px 14px',
     gap: 6,
-    position: 'sticky',
-    top: 0,
     height: '100vh',
   },
   brand: {
