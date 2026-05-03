@@ -49,8 +49,6 @@ const FEATURES = [
 
 const STATS = [
   { value: '6', label: 'Niveles: 1º ESO a 2º Bachillerato' },
-  { value: '+50', label: 'Cursos disponibles' },
-  { value: '+500', label: 'Lecciones interactivas' },
   { value: '24/7', label: 'Disponible siempre' },
 ];
 

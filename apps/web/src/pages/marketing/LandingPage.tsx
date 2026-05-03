@@ -12,33 +12,34 @@ const MERCH = [
 // Datos de las tarjetas de características — enfocadas en el padre/tutor
 const FEATURES = [
   {
-    icon: '📹',
-    title: 'Lecciones en vídeo',
-    description: 'Contenido actualizado con los mejores vídeos de cada una de las temáticas.',
+    icon: '🎯',
+    title: 'Ejercicios bajo demanda',
+    description:
+      'Tu hijo/a genera ejercicios al instante de cualquier tema: polinomios, sintaxis, el Renacimiento… La IA crea actividades a su medida, justo cuando las necesita.',
   },
   {
     icon: '✏️',
     title: 'Aprende jugando',
     description:
-      'Lecciones interactivas con ejercicios de emparejamiento, ordenación y rellenar huecos. Más entretenido que un libro.',
+      'Cada ejercicio es interactivo: emparejar, ordenar, rellenar huecos o test. Más entretenido que un libro y mil veces más rápido que una ficha.',
+  },
+  {
+    icon: '📹',
+    title: 'Vídeos curados automáticamente',
+    description:
+      'Cada práctica se acompaña de los mejores vídeos sobre el tema, seleccionados por la IA. Sin perder horas buscando en YouTube.',
   },
   {
     icon: '🧠',
-    title: 'Tests con corrección automática',
+    title: 'Corrección automática',
     description:
-      'Tu hijo/a comprueba lo que ha aprendido en el momento, sin esperar a la próxima clase.',
+      'Tu hijo/a comprueba lo que ha aprendido en el momento, con explicación al fallar. Sin esperar a la próxima clase.',
   },
   {
     icon: '🎓',
     title: 'Exámenes y certificados',
     description:
       'Al superar los exámenes del club, recibe un certificado digital descargable en PDF que acredita su progreso.',
-  },
-  {
-    icon: '🎯',
-    title: 'Practica lo que quieras',
-    description:
-      'Tu hijo/a puede generar ejercicios de cualquier tema: polinomios, sintaxis, el Renacimiento… La IA crea actividades personalizadas al instante.',
   },
   {
     icon: '📅',
@@ -50,13 +51,11 @@ const FEATURES = [
     icon: '📊',
     title: 'Tú siempre al tanto',
     description:
-      'Como tutor, ves en tiempo real qué lecciones ha completado, sus resultados y los certificados que ha obtenido.',
+      'Como tutor, ves en tiempo real qué ejercicios ha completado, sus resultados y los certificados que ha obtenido.',
   },
 ];
 
 const STATS = [
-  { value: '+50', label: 'Cursos disponibles' },
-  { value: '+500', label: 'Lecciones interactivas' },
   { value: '6', label: 'Niveles educativos' },
   { value: '24/7', label: 'Disponible siempre' },
 ];
@@ -136,8 +135,8 @@ export default function LandingPage() {
 
           {/* Subtítulo */}
           <p style={styles.heroSubtitle}>
-            La metodología real de Vallekas Basket en formato digital. Cursos, lecciones
-            interactivas, exámenes con certificado y clases particulares — todo en un solo lugar,
+            La metodología real de Vallekas Basket en formato digital. Ejercicios personalizados de
+            cualquier tema, exámenes con certificado y clases particulares — todo en un solo lugar,
             supervisado por ti.
           </p>
 
