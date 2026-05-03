@@ -25,6 +25,8 @@ import TutorStudentsPage from './pages/TutorStudentsPage';
 import ExamPage from './pages/ExamPage';
 import ExamsListPage from './pages/ExamsListPage';
 import ExercisesPage from './pages/ExercisesPage';
+import TheoryPage from './pages/TheoryPage';
+import TheoryModulePage from './pages/TheoryModulePage';
 import AdminExamBankPage from './pages/admin/AdminExamBankPage';
 import CertificatesPage from './pages/CertificatesPage';
 import AdminAcademiesPage from './pages/admin/AdminAcademiesPage';
@@ -124,6 +126,10 @@ export default function App() {
 
         {/* Ejercicios generados por IA */}
         <Route path="exercises" element={<ExercisesPage />} />
+
+        {/* Teoría bajo demanda — módulos generados por IA */}
+        <Route path="theory" element={<TheoryPage />} />
+        <Route path="theory/:id" element={<TheoryModulePage />} />
 
         {/* Fase 9 — Certificados */}
         <Route path="certificates" element={<CertificatesPage />} />

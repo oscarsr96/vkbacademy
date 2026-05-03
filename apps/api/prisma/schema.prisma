@@ -14,7 +14,7 @@ datasource db {
 model SchoolYear {
   id    String @id @default(cuid())
   name  String @unique // "1eso", "2eso", "3eso", "4eso", "1bach", "2bach"
-  label String          // "1º ESO", "2º ESO", ...
+  label String // "1º ESO", "2º ESO", ...
 
   users   User[]
   courses Course[]
@@ -26,11 +26,11 @@ model SchoolYear {
 
 model Academy {
   id           String   @id @default(cuid())
-  slug         String   @unique   // "vallekas-basket", "cb-oscar"
-  name         String              // "Vallekas Basket Academy"
+  slug         String   @unique // "vallekas-basket", "cb-oscar"
+  name         String // "Vallekas Basket Academy"
   logoUrl      String?
   primaryColor String?  @default("#6366f1")
-  domain       String?  @unique   // dominio personalizado (opcional)
+  domain       String?  @unique // dominio personalizado (opcional)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -89,24 +89,25 @@ model User {
   students User[]  @relation("TutorStudents")
 
   // Gamificación — racha y puntos
-  currentStreak  Int     @default(0)   // semanas consecutivas con actividad
+  currentStreak  Int     @default(0) // semanas consecutivas con actividad
   longestStreak  Int     @default(0)
-  lastActiveWeek String?               // "2026-W07" (ISO week)
-  totalPoints    Int     @default(0)   // puntos acumulados (denormalizado para performance)
+  lastActiveWeek String? // "2026-W07" (ISO week)
+  totalPoints    Int     @default(0) // puntos acumulados (denormalizado para performance)
 
   // Relaciones
-  progress         UserProgress[]
-  quizAttempts     QuizAttempt[]
-  bookingsAsStudent Booking[]      @relation("StudentBookings")
-  teacherProfile   TeacherProfile?
-  refreshTokens    RefreshToken[]
-  enrollments      Enrollment[]
-  userChallenges   UserChallenge[]
-  redemptions      Redemption[]
-  examAttempts     ExamAttempt[]
-  certificates     Certificate[]
-  tutorMessages    TutorMessage[]
-  academyMembers   AcademyMember[]
+  progress          UserProgress[]
+  quizAttempts      QuizAttempt[]
+  bookingsAsStudent Booking[]       @relation("StudentBookings")
+  teacherProfile    TeacherProfile?
+  refreshTokens     RefreshToken[]
+  enrollments       Enrollment[]
+  userChallenges    UserChallenge[]
+  redemptions       Redemption[]
+  examAttempts      ExamAttempt[]
+  certificates      Certificate[]
+  tutorMessages     TutorMessage[]
+  academyMembers    AcademyMember[]
+  theoryModules     TheoryModule[]
 }
 
 model RefreshToken {
@@ -146,6 +147,7 @@ model Course {
   examAttempts  ExamAttempt[]  @relation("CourseExamAttempts")
   certificates  Certificate[]  @relation("CourseCertificates")
   tutorMessages TutorMessage[] @relation("TutorMessageCourse")
+  theoryModules TheoryModule[] @relation("CourseTheoryModules")
 }
 
 // ─────────────────────────────────────────────────────────
@@ -255,7 +257,7 @@ model QuizAttempt {
   id          String   @id @default(cuid())
   userId      String
   quizId      String
-  score       Float    // 0.0 - 100.0
+  score       Float // 0.0 - 100.0
   /// [{questionId, answerId}]
   answers     Json
   completedAt DateTime @default(now())
@@ -298,9 +300,9 @@ model TeacherProfile {
 }
 
 model AvailabilitySlot {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   teacherId   String
-  dayOfWeek   Int    // 0=Dom, 1=Lun, ..., 6=Sáb
+  dayOfWeek   Int // 0=Dom, 1=Lun, ..., 6=Sáb
   startTime   String // "09:00"
   endTime     String // "10:00"
   isRecurring Boolean @default(true)
@@ -322,20 +324,20 @@ enum BookingMode {
 }
 
 model Booking {
-  id        String        @id @default(cuid())
-  studentId String
-  teacherId String
-  startAt   DateTime
-  endAt     DateTime
-  status    BookingStatus @default(PENDING)
-  mode      BookingMode   @default(IN_PERSON)
+  id         String        @id @default(cuid())
+  studentId  String
+  teacherId  String
+  startAt    DateTime
+  endAt      DateTime
+  status     BookingStatus @default(PENDING)
+  mode       BookingMode   @default(IN_PERSON)
   notes      String?
   courseId   String?
   academyId  String?
   /// URL de sala Daily.co — solo presente cuando mode=ONLINE y status=CONFIRMED
   meetingUrl String?
-  createdAt  DateTime     @default(now())
-  updatedAt DateTime      @updatedAt
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 
   student User           @relation("StudentBookings", fields: [studentId], references: [id])
   teacher TeacherProfile @relation(fields: [teacherId], references: [id])
@@ -375,13 +377,13 @@ model Redemption {
 // ─────────────────────────────────────────────────────────
 
 enum ChallengeType {
-  LESSON_COMPLETED   // completa N lecciones en total
-  MODULE_COMPLETED   // completa N módulos enteros
-  COURSE_COMPLETED   // completa N cursos completos
-  QUIZ_SCORE         // consigue ≥ N% en cualquier quiz
-  BOOKING_ATTENDED   // asiste a N clases confirmadas (endAt < now)
-  STREAK_WEEKLY      // racha activa de N semanas consecutivas
-  TOTAL_HOURS        // acumula N horas (bookings + lecciones VIDEO × 20min)
+  LESSON_COMPLETED // completa N lecciones en total
+  MODULE_COMPLETED // completa N módulos enteros
+  COURSE_COMPLETED // completa N cursos completos
+  QUIZ_SCORE // consigue ≥ N% en cualquier quiz
+  BOOKING_ATTENDED // asiste a N clases confirmadas (endAt < now)
+  STREAK_WEEKLY // racha activa de N semanas consecutivas
+  TOTAL_HOURS // acumula N horas (bookings + lecciones VIDEO × 20min)
 }
 
 model Challenge {
@@ -389,8 +391,8 @@ model Challenge {
   title       String
   description String
   type        ChallengeType
-  target      Int           // umbral numérico (ej: 5, 80, 3)
-  points      Int           // puntos al completarse
+  target      Int // umbral numérico (ej: 5, 80, 3)
+  points      Int // puntos al completarse
   badgeIcon   String        @default("🏅")
   badgeColor  String        @default("#6366f1")
   isActive    Boolean       @default(true)
@@ -424,16 +426,16 @@ model UserChallenge {
 // ─────────────────────────────────────────────────────────
 
 model BillingConfig {
-  id                       String   @id @default("default")
-  academyId                String?  @unique
-  studentMonthlyPrice      Float    @default(15.00)
-  classOnlineRatePerHour   Float    @default(15.00)
-  classInPersonRatePerHour Float    @default(18.00)
-  clubCommissionRate       Float    @default(0.10)
-  infrastructureMonthlyCost Float   @default(25.00)
-  s3MonthlyCost            Float    @default(2.00)
-  anthropicMonthlyCost     Float    @default(5.00)
-  updatedAt                DateTime @updatedAt
+  id                        String   @id @default("default")
+  academyId                 String?  @unique
+  studentMonthlyPrice       Float    @default(15.00)
+  classOnlineRatePerHour    Float    @default(15.00)
+  classInPersonRatePerHour  Float    @default(18.00)
+  clubCommissionRate        Float    @default(0.10)
+  infrastructureMonthlyCost Float    @default(25.00)
+  s3MonthlyCost             Float    @default(2.00)
+  anthropicMonthlyCost      Float    @default(5.00)
+  updatedAt                 DateTime @updatedAt
 
   academy Academy? @relation(fields: [academyId], references: [id])
 }
@@ -443,20 +445,20 @@ model BillingConfig {
 // ─────────────────────────────────────────────────────────
 
 enum CertificateType {
-  MODULE_COMPLETION   // completó todas las lecciones del módulo
-  COURSE_COMPLETION   // completó todas las lecciones del curso
-  MODULE_EXAM         // aprobó el examen del módulo (≥ 50%)
-  COURSE_EXAM         // aprobó el examen del curso (≥ 50%)
+  MODULE_COMPLETION // completó todas las lecciones del módulo
+  COURSE_COMPLETION // completó todas las lecciones del curso
+  MODULE_EXAM // aprobó el examen del módulo (≥ 50%)
+  COURSE_EXAM // aprobó el examen del curso (≥ 50%)
 }
 
 model Certificate {
   id         String          @id @default(cuid())
   userId     String
-  courseId   String?         // null si es certificado de módulo
-  moduleId   String?         // null si es certificado de curso
+  courseId   String? // null si es certificado de módulo
+  moduleId   String? // null si es certificado de curso
   type       CertificateType
   verifyCode String          @unique @default(cuid())
-  examScore  Float?          // solo para MODULE_EXAM / COURSE_EXAM
+  examScore  Float? // solo para MODULE_EXAM / COURSE_EXAM
   issuedAt   DateTime        @default(now())
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -477,8 +479,8 @@ model ExamQuestion {
   text     String
   type     QuestionType // reutiliza el enum existente (SINGLE, MULTIPLE, TRUE_FALSE)
   order    Int          @default(0)
-  courseId String?      // null si es de módulo
-  moduleId String?      // null si es de curso
+  courseId String? // null si es de módulo
+  moduleId String? // null si es de curso
 
   course  Course?      @relation("CourseExamQuestions", fields: [courseId], references: [id], onDelete: Cascade)
   module  Module?      @relation("ModuleExamQuestions", fields: [moduleId], references: [id], onDelete: Cascade)
@@ -489,10 +491,10 @@ model ExamQuestion {
 }
 
 model ExamAnswer {
-  id         String      @id @default(cuid())
+  id         String  @id @default(cuid())
   text       String
   /// NUNCA exponer isCorrect en respuestas del endpoint de inicio de examen
-  isCorrect  Boolean     @default(false)
+  isCorrect  Boolean @default(false)
   questionId String
 
   question ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
@@ -504,10 +506,10 @@ model ExamAttempt {
   courseId          String?
   moduleId          String?
   numQuestions      Int
-  timeLimit         Int?      // segundos; null = sin límite
+  timeLimit         Int? // segundos; null = sin límite
   onlyOnce          Boolean   @default(false)
-  score             Float?    // null hasta submit
-  questionsSnapshot Json      // snapshot con isCorrect para corrección server-side
+  score             Float? // null hasta submit
+  questionsSnapshot Json // snapshot con isCorrect para corrección server-side
   answers           Json      @default("[]") // [{questionId, answerId}]
   startedAt         DateTime  @default(now())
   submittedAt       DateTime?
@@ -528,7 +530,7 @@ model ExamAttempt {
 model TutorMessage {
   id        String   @id @default(cuid())
   userId    String
-  role      String   // 'user' | 'assistant'
+  role      String // 'user' | 'assistant'
   content   String   @db.Text
   courseId  String?
   lessonId  String?
@@ -539,4 +541,49 @@ model TutorMessage {
   lesson Lesson? @relation("TutorMessageLesson", fields: [lessonId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────
+// TEORÍA BAJO DEMANDA
+// ─────────────────────────────────────────────────────────
+// Módulos generados por IA en tiempo de ejecución, scoped al alumno
+// (privacidad por construcción vía userId). Estructura paralela a
+// Module/Lesson para no polucionar el contenido global del curso.
+
+enum TheoryLessonKind {
+  INTRO
+  CONTENT
+  EXAMPLE
+  VIDEO
+}
+
+model TheoryModule {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  topic     String // lo que pidió el alumno (input crudo)
+  title     String // título limpio generado por la IA
+  summary   String   @db.Text
+  createdAt DateTime @default(now())
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course  Course         @relation("CourseTheoryModules", fields: [courseId], references: [id], onDelete: Cascade)
+  lessons TheoryLesson[]
+
+  @@index([userId, courseId])
+  @@index([userId, createdAt])
+}
+
+model TheoryLesson {
+  id        String           @id @default(cuid())
+  moduleId  String
+  order     Int
+  kind      TheoryLessonKind
+  heading   String
+  body      String?          @db.Text // markdown; null cuando kind=VIDEO
+  youtubeId String? // solo cuando kind=VIDEO
+
+  module TheoryModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([moduleId, order])
 }

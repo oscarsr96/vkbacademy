@@ -25,6 +25,7 @@ import { AcademiesModule } from './academies/academies.module';
 import { HealthModule } from './health/health.module';
 import { AiModule } from './ai/ai.module';
 import { ExercisesModule } from './exercises/exercises.module';
+import { TheoryModule } from './theory/theory.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { ExercisesModule } from './exercises/exercises.module';
     HealthModule,
     AiModule,
     ExercisesModule,
+    TheoryModule,
   ],
   providers: [
     // Rate limiting global (100 req/min por defecto)
