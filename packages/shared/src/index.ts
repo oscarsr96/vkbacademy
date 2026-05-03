@@ -19,6 +19,9 @@ export * from './types/certificate.types';
 // Tipos del tutor virtual
 export * from './types/tutor.types';
 
+// Tipos de teoría bajo demanda
+export * from './types/theory.types';
+
 // Utilidades de API
 export * from './types/pagination.types';
 export * from './types/api.types';
