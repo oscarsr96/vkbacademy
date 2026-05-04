@@ -94,11 +94,9 @@ export class AuthService {
   /**
    * Registro de tutor con alumnos.
    *
-   * COSTE DE EMAILS (Resend):
-   *   - Plan gratuito: 100 emails/día, 3 000/mes
-   *   - Cada registro envía N+1 emails (1 tutor + N alumnos)
-   *   - Estimación: 100 academias × 10 registros/día × 2 emails promedio ≈ 2 000 emails/día
-   *     → Supera el plan gratuito; se necesita Resend Pro (~20 $/mes, 50 000/mes)
+   * Los alumnos no aportan email — se autogenera del nombre (slug + dominio
+   * fijo) y la contraseña se genera aleatoriamente. Todas las credenciales
+   * (las del tutor y las de cada alumno) se envían en un único email al tutor.
    *
    * Todo se ejecuta dentro de una transacción Prisma: si algo falla,
    * ningún usuario ni membresía queda persistido.
@@ -113,26 +111,24 @@ export class AuthService {
       throw new BadRequestException(`La academia "${dto.academySlug}" no está activa`);
     }
 
-    // 2. Verificar que ningún email (tutor + alumnos) está ya registrado
-    const allEmails = [dto.email, ...dto.students.map((s) => s.email)];
-    for (const email of allEmails) {
-      const exists = await this.prisma.user.findUnique({ where: { email } });
-      if (exists) {
-        throw new ConflictException(`El email "${email}" ya está registrado`);
-      }
+    // 2. Verificar que el email del tutor no está ya registrado
+    const tutorExists = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (tutorExists) {
+      throw new ConflictException(`El email "${dto.email}" ya está registrado`);
     }
 
-    // 3. Crear tutor y alumnos en transacción
-    const tutorPasswordHash = await bcrypt.hash(dto.password, 10);
+    // 3. Generar email único para cada alumno (slug del nombre + sufijo si colisiona)
+    const studentEmails = await this.allocateStudentEmails(dto.students.map((s) => s.name));
 
-    // Generar contraseñas aleatorias para cada alumno (8 chars alfanuméricos)
+    // 4. Hashes de contraseñas
+    const tutorPasswordHash = await bcrypt.hash(dto.password, 10);
     const studentPasswords = dto.students.map(() => this.generatePassword());
     const studentPasswordHashes = await Promise.all(
       studentPasswords.map((pw) => bcrypt.hash(pw, 10)),
     );
 
+    // 5. Crear tutor y alumnos en transacción
     const { tutor, students } = await this.prisma.$transaction(async (tx) => {
-      // Crear tutor con rol TUTOR y membresía de academia
       const createdTutor = await tx.user.create({
         data: {
           email: dto.email,
@@ -144,12 +140,11 @@ export class AuthService {
         include: { schoolYear: true },
       });
 
-      // Crear cada alumno con rol STUDENT, tutorId y membresía de academia
       const createdStudents = await Promise.all(
         dto.students.map((studentDto, index) =>
           tx.user.create({
             data: {
-              email: studentDto.email,
+              email: studentEmails[index],
               passwordHash: studentPasswordHashes[index],
               name: studentDto.name,
               role: 'STUDENT',
@@ -165,31 +160,26 @@ export class AuthService {
       return { tutor: createdTutor, students: createdStudents };
     });
 
-    // 4. Enviar emails de bienvenida (fuera de la transacción para no bloquearla)
+    // 6. Enviar UN email consolidado al tutor con todas las credenciales
     const frontendUrl = this.config
       .get<string>('FRONTEND_URL', 'http://localhost:5173')
       .split(',')[0];
     const loginUrl = `${frontendUrl}/login`;
 
-    void this.notifications.sendWelcomeTutor({
-      email: tutor.email,
-      name: tutor.name,
-      password: dto.password,
+    void this.notifications.sendTutorWelcomeWithStudents({
+      tutorEmail: tutor.email,
+      tutorName: tutor.name,
+      tutorPassword: dto.password,
+      students: students.map((student, index) => ({
+        name: student.name,
+        email: student.email,
+        password: studentPasswords[index],
+      })),
       academyName: academy.name,
       loginUrl,
     });
 
-    students.forEach((student, index) => {
-      void this.notifications.sendWelcomeStudent({
-        email: student.email,
-        name: student.name,
-        password: studentPasswords[index],
-        academyName: academy.name,
-        loginUrl,
-      });
-    });
-
-    // 5. Auto-login del tutor: generar tokens y devolver respuesta
+    // 7. Auto-login del tutor: generar tokens y devolver respuesta
     const tokens = await this.generateTokens({
       sub: tutor.id,
       email: tutor.email,
@@ -206,6 +196,54 @@ export class AuthService {
     return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join(
       '',
     );
+  }
+
+  /**
+   * Convierte un nombre en slug ASCII apto para email.
+   * "María Pérez García" → "maria-perez-garcia".
+   */
+  private slugifyName(name: string): string {
+    return (
+      name
+        .normalize('NFD')
+        // Marca de diacríticos: U+0300 a U+036F (tildes, virgulillas, etc.)
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+    );
+  }
+
+  /**
+   * Genera un email único @vkbacademy.com para cada nombre de alumno.
+   * Resuelve colisiones con sufijo incremental (-2, -3, ...).
+   */
+  private async allocateStudentEmails(names: string[]): Promise<string[]> {
+    const STUDENT_EMAIL_DOMAIN = 'vkbacademy.com';
+    const used = new Set<string>();
+    const result: string[] = [];
+
+    for (const name of names) {
+      const base = this.slugifyName(name) || 'alumno';
+      let candidate = `${base}@${STUDENT_EMAIL_DOMAIN}`;
+      let suffix = 1;
+
+      while (
+        used.has(candidate) ||
+        (await this.prisma.user.findUnique({ where: { email: candidate } }))
+      ) {
+        suffix++;
+        candidate = `${base}-${suffix}@${STUDENT_EMAIL_DOMAIN}`;
+      }
+
+      used.add(candidate);
+      result.push(candidate);
+    }
+
+    return result;
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {

@@ -136,68 +136,65 @@ export class NotificationsService {
   }
 
   /**
-   * Bienvenida al tutor: incluye sus credenciales y enlace de acceso.
-   * Se envía automáticamente al completar el registro de tutor+alumnos.
+   * Email único al tutor con TODAS las credenciales: las suyas + las de cada
+   * alumno (email autogenerado + contraseña aleatoria). Los alumnos no
+   * reciben email propio porque a esta edad no suelen tener cuenta personal.
    */
-  async sendWelcomeTutor(params: {
-    email: string;
-    name: string;
-    password: string;
+  async sendTutorWelcomeWithStudents(params: {
+    tutorEmail: string;
+    tutorName: string;
+    tutorPassword: string;
+    students: Array<{ name: string; email: string; password: string }>;
     academyName: string;
     loginUrl: string;
   }) {
-    await this.sendEmail(
-      params.email,
-      `Bienvenido a ${params.academyName} — VKB Academy`,
-      `<h2>¡Bienvenido a ${params.academyName}!</h2>
-       <p>Hola <strong>${params.name}</strong>, tu cuenta de tutor ha sido creada correctamente.</p>
-       <p>Aquí tienes tus credenciales de acceso:</p>
-       <table style="border-collapse:collapse;margin:1rem 0">
-         <tr><td style="padding:4px 12px 4px 0;color:#666">Email:</td><td><strong>${params.email}</strong></td></tr>
-         <tr><td style="padding:4px 12px 4px 0;color:#666">Contraseña:</td><td><strong>${params.password}</strong></td></tr>
-       </table>
-       <p style="margin:1.5rem 0">
-         <a href="${params.loginUrl}" style="background:#ea580c;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
-           Acceder a la plataforma
-         </a>
-       </p>
-       <p style="color:#666;font-size:0.875rem">Te recomendamos cambiar tu contraseña tras el primer acceso.</p>`,
-    );
-  }
+    const studentRows = params.students
+      .map(
+        (s) => `
+         <tr>
+           <td style="padding:8px 14px;border-bottom:1px solid #eee">${s.name}</td>
+           <td style="padding:8px 14px;border-bottom:1px solid #eee"><code>${s.email}</code></td>
+           <td style="padding:8px 14px;border-bottom:1px solid #eee"><code>${s.password}</code></td>
+         </tr>`,
+      )
+      .join('');
 
-  /**
-   * Bienvenida al alumno: incluye contraseña generada automáticamente y enlace de acceso.
-   * Se envía automáticamente al completar el registro de tutor+alumnos.
-   *
-   * NOTA SOBRE COSTE DE EMAILS (Resend):
-   * - Plan gratuito: 100 emails/día, 3 000/mes
-   * - Cada registro de tutor envía N+1 emails (1 tutor + N alumnos)
-   * - Estimación: 100 academias × 10 registros/día × 2 emails promedio = ~2 000/día
-   *   → Se supera el plan gratuito; se necesita Resend Pro (~20 $/mes, 50 000/mes)
-   */
-  async sendWelcomeStudent(params: {
-    email: string;
-    name: string;
-    password: string;
-    academyName: string;
-    loginUrl: string;
-  }) {
+    const studentsBlock =
+      params.students.length > 0
+        ? `<h3 style="margin-top:2rem">Credenciales de tus alumnos</h3>
+       <p>Cada alumno entra con su propio usuario y contraseña — guárdalas o compártelas con ellos:</p>
+       <table style="border-collapse:collapse;margin:1rem 0;width:100%;max-width:560px">
+         <thead>
+           <tr style="background:#f8fafc">
+             <th style="padding:10px 14px;text-align:left;color:#475569;font-size:0.85rem">Alumno</th>
+             <th style="padding:10px 14px;text-align:left;color:#475569;font-size:0.85rem">Usuario</th>
+             <th style="padding:10px 14px;text-align:left;color:#475569;font-size:0.85rem">Contraseña</th>
+           </tr>
+         </thead>
+         <tbody>${studentRows}</tbody>
+       </table>`
+        : '';
+
     await this.sendEmail(
-      params.email,
+      params.tutorEmail,
       `Bienvenido a ${params.academyName} — VKB Academy`,
       `<h2>¡Bienvenido a ${params.academyName}!</h2>
-       <p>Hola <strong>${params.name}</strong>, tu cuenta de alumno ha sido creada por tu tutor.</p>
-       <p>Aquí tienes tus credenciales de acceso:</p>
+       <p>Hola <strong>${params.tutorName}</strong>, tu cuenta de tutor y la de tus alumnos se han creado correctamente.</p>
+
+       <h3>Tus credenciales</h3>
        <table style="border-collapse:collapse;margin:1rem 0">
-         <tr><td style="padding:4px 12px 4px 0;color:#666">Email:</td><td><strong>${params.email}</strong></td></tr>
-         <tr><td style="padding:4px 12px 4px 0;color:#666">Contraseña:</td><td><strong>${params.password}</strong></td></tr>
+         <tr><td style="padding:4px 12px 4px 0;color:#666">Email:</td><td><strong>${params.tutorEmail}</strong></td></tr>
+         <tr><td style="padding:4px 12px 4px 0;color:#666">Contraseña:</td><td><strong>${params.tutorPassword}</strong></td></tr>
        </table>
+
+       ${studentsBlock}
+
        <p style="margin:1.5rem 0">
          <a href="${params.loginUrl}" style="background:#ea580c;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
            Acceder a la plataforma
          </a>
        </p>
-       <p style="color:#666;font-size:0.875rem">Te recomendamos cambiar tu contraseña tras el primer acceso.</p>`,
+       <p style="color:#666;font-size:0.875rem">Os recomendamos cambiar las contraseñas tras el primer acceso.</p>`,
     );
   }
 

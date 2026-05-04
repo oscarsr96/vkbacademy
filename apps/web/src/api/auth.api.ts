@@ -22,7 +22,6 @@ export interface RegisterPayload {
 
 export interface RegisterStudentPayload {
   name: string;
-  email: string;
   schoolYearId?: string;
 }
 
