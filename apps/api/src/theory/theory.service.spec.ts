@@ -1,5 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { TheoryLessonKind } from '@prisma/client';
+import { Prisma, TheoryLessonKind } from '@prisma/client';
 import { TheoryService } from './theory.service';
 
 describe('TheoryService', () => {
@@ -14,7 +14,7 @@ describe('TheoryService', () => {
     };
   };
   let ai: { generate: jest.Mock };
-  let youtube: { findBestVideo: jest.Mock };
+  let youtube: { findCandidates: jest.Mock };
   let service: TheoryService;
 
   const baseCourse = {
@@ -62,7 +62,7 @@ describe('TheoryService', () => {
       },
     };
     ai = { generate: jest.fn() };
-    youtube = { findBestVideo: jest.fn() };
+    youtube = { findCandidates: jest.fn() };
     service = new TheoryService(prisma as never, ai as never, youtube as never);
   });
 
@@ -71,7 +71,14 @@ describe('TheoryService', () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
       prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
-      youtube.findBestVideo.mockResolvedValue({ youtubeId: 'abc123' });
+      const five = Array.from({ length: 5 }, (_, i) => ({
+        youtubeId: `vid${i}`,
+        title: `Vídeo ${i}`,
+        channelTitle: 'Canal X',
+        thumbnailUrl: `https://img/${i}.jpg`,
+        durationSeconds: 600,
+      }));
+      youtube.findCandidates.mockResolvedValue(five);
       prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
 
       await service.generate('user-1', {
@@ -89,6 +96,7 @@ describe('TheoryService', () => {
         kind: TheoryLessonKind;
         body: string | null;
         youtubeId: string | null;
+        videoCandidates: unknown;
       }>;
       expect(created).toHaveLength(4);
       expect(created.map((l) => l.kind)).toEqual([
@@ -98,16 +106,31 @@ describe('TheoryService', () => {
         TheoryLessonKind.VIDEO,
       ]);
       expect(created[0].order).toBe(0);
-      expect(created[3].youtubeId).toBe('abc123');
+      expect(created[3].youtubeId).toBe('vid0');
+      expect(created[3].videoCandidates).toEqual(five);
       expect(created[3].body).toBeNull();
       expect(created[0].body).toContain('logaritmo');
     });
 
-    it('persiste lección VIDEO con youtubeId=null si YouTube no encuentra resultados', async () => {
+    it('pide 5 candidatos a YoutubeService para la lección VIDEO', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
       prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
-      youtube.findBestVideo.mockResolvedValue(null);
+      youtube.findCandidates.mockResolvedValue([]);
+      prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
+
+      await service.generate('user-1', { courseId: 'course-1', topic: 't' });
+
+      expect(youtube.findCandidates).toHaveBeenCalledWith(expect.any(String), '3º ESO', {
+        limit: 5,
+      });
+    });
+
+    it('persiste lección VIDEO con candidates=null y youtubeId=null si YouTube no encuentra resultados', async () => {
+      prisma.course.findUnique.mockResolvedValue(baseCourse);
+      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
+      ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
+      youtube.findCandidates.mockResolvedValue([]);
       prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
 
       await service.generate('user-1', { courseId: 'course-1', topic: 't' });
@@ -115,6 +138,7 @@ describe('TheoryService', () => {
       const created = prisma.theoryModule.create.mock.calls[0][0].data.lessons.create;
       expect(created[3].kind).toBe(TheoryLessonKind.VIDEO);
       expect(created[3].youtubeId).toBeNull();
+      expect(created[3].videoCandidates).toBe(Prisma.DbNull);
     });
 
     it('lanza NotFoundException si el curso no existe', async () => {
@@ -138,7 +162,7 @@ describe('TheoryService', () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
       prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(`\`\`\`json\n${JSON.stringify(validAiPayload)}\n\`\`\``);
-      youtube.findBestVideo.mockResolvedValue({ youtubeId: 'xyz' });
+      youtube.findCandidates.mockResolvedValue([{ youtubeId: 'xyz' }]);
       prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
 
       await service.generate('user-1', { courseId: 'course-1', topic: 't' });
@@ -185,7 +209,7 @@ describe('TheoryService', () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
       prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
-      youtube.findBestVideo.mockResolvedValue(null);
+      youtube.findCandidates.mockResolvedValue([]);
       prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
 
       await service.generate('user-1', {

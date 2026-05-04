@@ -3,6 +3,20 @@
 
 export type TheoryLessonKind = 'INTRO' | 'CONTENT' | 'EXAMPLE' | 'VIDEO';
 
+export interface TheoryVideoCandidate {
+  youtubeId: string;
+  title: string;
+  channelTitle: string;
+  channelId?: string;
+  durationSeconds: number;
+  viewCount?: number;
+  likeCount?: number;
+  engagementRatio?: number;
+  isWhitelisted?: boolean;
+  publishedAt?: string;
+  thumbnailUrl: string;
+}
+
 export interface TheoryLesson {
   id: string;
   moduleId: string;
@@ -11,6 +25,7 @@ export interface TheoryLesson {
   heading: string;
   body: string | null;
   youtubeId: string | null;
+  videoCandidates: TheoryVideoCandidate[] | null;
 }
 
 export interface TheoryModuleSummary {
