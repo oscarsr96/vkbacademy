@@ -215,7 +215,8 @@ Reglas:
 - Estructura recomendada: 1 INTRO + 1-3 CONTENT + 1 EXAMPLE + 1 VIDEO (último).
 - INTRO/CONTENT/EXAMPLE: campo "body" obligatorio en markdown. NO incluir "ytQuery".
 - VIDEO: campo "ytQuery" obligatorio. NO incluir "body".
-- El markdown puede usar **negritas**, *cursivas*, listas con guiones, encabezados con ##, fórmulas LaTeX inline con $...$.
+- El markdown puede usar **negritas**, *cursivas*, listas con guiones, encabezados con ##.
+- Para fórmulas matemáticas USA SIEMPRE LaTeX: inline con $...$ (ej. $\\log_a b = c$) y bloques con $$...$$ para derivaciones o ecuaciones destacadas. NO escribas fórmulas en texto plano (NUNCA "log_a b = c"; SIEMPRE "$\\log_a b = c$").
 - Contenido curricular real y riguroso, adaptado al nivel ${schoolYearLabel || 'del curso'}.
 - "ytQuery" debe ser una búsqueda específica y descriptiva (ej. "demostración propiedades logaritmos bachillerato").
 - Solo devuelve JSON puro, sin markdown alrededor del JSON.`;

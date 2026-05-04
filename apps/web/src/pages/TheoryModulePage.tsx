@@ -2,6 +2,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { theoryApi } from '../api/theory.api';
 import type { TheoryLesson, TheoryLessonKind } from '@vkbacademy/shared';
 
@@ -107,7 +110,9 @@ function LessonSection({ lesson }: { lesson: TheoryLesson }) {
         )
       ) : (
         <div style={s.markdown}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{lesson.body ?? ''}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+            {lesson.body ?? ''}
+          </ReactMarkdown>
         </div>
       )}
     </section>
