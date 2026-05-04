@@ -233,6 +233,12 @@ Reglas:
 - VIDEO: campo "ytQuery" obligatorio. NO incluir "body".
 - El markdown puede usar **negritas**, *cursivas*, listas con guiones, encabezados con ##.
 - Para fórmulas matemáticas USA SIEMPRE LaTeX: inline con $...$ (ej. $\\log_a b = c$) y bloques con $$...$$ para derivaciones o ecuaciones destacadas. NO escribas fórmulas en texto plano (NUNCA "log_a b = c"; SIEMPRE "$\\log_a b = c$").
+- **DIDÁCTICA — incluye callouts pedagógicos** intercalados en el body para hacer la lectura más activa. Formato OBLIGATORIO con blockquote markdown, emoji al inicio, etiqueta en negrita:
+  - \`> 💡 **Tip:** consejo práctico que ayude a recordar o aplicar el concepto.\`
+  - \`> 🧠 **Recuerda:** dato/fórmula/regla clave que el alumno debe memorizar.\`
+  - \`> ⚠️ **Cuidado:** error común a evitar o trampa habitual del tema.\`
+  - \`> ❓ **Pregunta:** pregunta retórica para que el alumno se pare a pensar antes de seguir.\`
+  Mete entre 2 y 4 callouts en CADA lección INTRO/CONTENT/EXAMPLE, mezclando tipos. Cada callout en su propio párrafo (separado por línea en blanco). NO los pongas todos juntos al final — repártelos donde encajen pedagógicamente.
 - Contenido curricular real y riguroso, adaptado al nivel ${schoolYearLabel || 'del curso'}.
 - "ytQuery" debe ser una búsqueda específica y descriptiva (ej. "demostración propiedades logaritmos bachillerato").
 - Solo devuelve JSON puro, sin markdown alrededor del JSON.`;
