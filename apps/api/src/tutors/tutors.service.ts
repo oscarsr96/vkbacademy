@@ -1,9 +1,24 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class TutorsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Verifica que el alumno pertenece al tutor y devuelve sus campos básicos.
+   * Lanza ForbiddenException si no existe o no es del tutor.
+   */
+  private async getStudentForTutor(tutorId: string, studentId: string) {
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { id: true, tutorId: true, schoolYearId: true },
+    });
+    if (!student || student.tutorId !== tutorId) {
+      throw new ForbiddenException('No tienes acceso a este alumno');
+    }
+    return student;
+  }
 
   /** Devuelve la lista de alumnos asignados a un tutor */
   async getMyStudents(tutorId: string) {
@@ -38,7 +53,11 @@ export class TutorsService {
       where: { userId: studentId },
       select: {
         course: {
-          select: { id: true, title: true, schoolYear: { select: { id: true, name: true, label: true } } },
+          select: {
+            id: true,
+            title: true,
+            schoolYear: { select: { id: true, name: true, label: true } },
+          },
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -52,12 +71,7 @@ export class TutorsService {
    * `from` y `to` filtran el período de las métricas de actividad.
    * Los datos de gamificación (puntos, racha) son siempre all-time.
    */
-  async getStudentStats(
-    tutorId: string,
-    studentId: string,
-    from?: Date,
-    to?: Date,
-  ) {
+  async getStudentStats(tutorId: string, studentId: string, from?: Date, to?: Date) {
     // 1. Verificar que el alumno pertenece al tutor
     const student = await this.prisma.user.findUnique({
       where: { id: studentId },
@@ -299,5 +313,87 @@ export class TutorsService {
       courses,
       activity,
     };
+  }
+
+  // ─── Matrículas gestionadas por el tutor ───────────────────────────────────
+
+  /**
+   * Cursos disponibles para matricular a un alumno: publicados y del mismo
+   * nivel (schoolYearId) que el alumno. Cada item incluye `enrolled`.
+   */
+  async getAvailableCoursesForStudent(tutorId: string, studentId: string) {
+    const student = await this.getStudentForTutor(tutorId, studentId);
+
+    if (!student.schoolYearId) {
+      return [];
+    }
+
+    const [courses, enrollments] = await Promise.all([
+      this.prisma.course.findMany({
+        where: { published: true, schoolYearId: student.schoolYearId },
+        select: {
+          id: true,
+          title: true,
+          subject: true,
+          coverUrl: true,
+          schoolYear: { select: { id: true, name: true, label: true } },
+        },
+        orderBy: [{ subject: 'asc' }, { title: 'asc' }],
+      }),
+      this.prisma.enrollment.findMany({
+        where: { userId: studentId },
+        select: { courseId: true },
+      }),
+    ]);
+
+    const enrolledIds = new Set(enrollments.map((e) => e.courseId));
+
+    return courses.map((c) => ({ ...c, enrolled: enrolledIds.has(c.id) }));
+  }
+
+  /** Matricula al alumno en un curso. Idempotente. Valida nivel coincidente. */
+  async enrollStudent(tutorId: string, studentId: string, courseId: string) {
+    const student = await this.getStudentForTutor(tutorId, studentId);
+
+    if (!student.schoolYearId) {
+      throw new BadRequestException('El alumno no tiene nivel asignado');
+    }
+
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true, schoolYearId: true, published: true },
+    });
+    if (!course) {
+      throw new BadRequestException('Curso no encontrado');
+    }
+    if (course.schoolYearId !== student.schoolYearId) {
+      throw new ForbiddenException('El curso no corresponde al nivel del alumno');
+    }
+
+    return this.prisma.enrollment.upsert({
+      where: { userId_courseId: { userId: studentId, courseId } },
+      update: {},
+      create: { userId: studentId, courseId },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            subject: true,
+            coverUrl: true,
+            schoolYear: { select: { id: true, name: true, label: true } },
+          },
+        },
+      },
+    });
+  }
+
+  /** Desmatricula al alumno de un curso. Idempotente. */
+  async unenrollStudent(tutorId: string, studentId: string, courseId: string) {
+    await this.getStudentForTutor(tutorId, studentId);
+    await this.prisma.enrollment.deleteMany({
+      where: { userId: studentId, courseId },
+    });
+    return { message: 'Matrícula eliminada' };
   }
 }

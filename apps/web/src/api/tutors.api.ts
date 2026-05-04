@@ -78,9 +78,17 @@ export interface StudentStats {
   activity: ActivityDay[];
 }
 
+export interface AvailableCourse {
+  id: string;
+  title: string;
+  subject: string | null;
+  coverUrl: string | null;
+  schoolYear: { id: string; name: string; label: string } | null;
+  enrolled: boolean;
+}
+
 export const tutorsApi = {
-  getMyStudents: () =>
-    api.get<StudentSummary[]>('/tutors/my-students').then((r) => r.data),
+  getMyStudents: () => api.get<StudentSummary[]>('/tutors/my-students').then((r) => r.data),
 
   getStudentCourses: (studentId: string) =>
     api.get<EnrolledCourse[]>(`/tutors/my-students/${studentId}/courses`).then((r) => r.data),
@@ -91,4 +99,15 @@ export const tutorsApi = {
         params: { ...(from ? { from } : {}), ...(to ? { to } : {}) },
       })
       .then((r) => r.data),
+
+  getAvailableCourses: (studentId: string) =>
+    api
+      .get<AvailableCourse[]>(`/tutors/my-students/${studentId}/available-courses`)
+      .then((r) => r.data),
+
+  enroll: (studentId: string, courseId: string) =>
+    api.post(`/tutors/my-students/${studentId}/enrollments`, { courseId }).then((r) => r.data),
+
+  unenroll: (studentId: string, courseId: string) =>
+    api.delete(`/tutors/my-students/${studentId}/enrollments/${courseId}`).then((r) => r.data),
 };

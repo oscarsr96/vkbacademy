@@ -1,9 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { Role } from '@vkbacademy/shared';
-import { useRecentLessons } from '../hooks/useCourses';
 import { useChallengeSummary } from '../hooks/useChallenges';
-import { LessonType } from '@vkbacademy/shared';
 
 const ROLE_LABELS: Record<string, string> = {
   [Role.STUDENT]: 'Estudiante',
@@ -12,7 +10,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_DESCRIPTION: Record<string, string> = {
-  [Role.STUDENT]: 'Accede a tus cursos, completa tests y reserva clases con los profesores.',
+  [Role.STUDENT]: 'Practica con teoría y ejercicios bajo demanda, y reserva clases particulares.',
   [Role.TEACHER]: 'Gestiona tus cursos, sube contenido y consulta las reservas de tus alumnos.',
   [Role.ADMIN]: 'Administra usuarios, cursos y visualiza las métricas globales de la plataforma.',
 };
@@ -21,7 +19,6 @@ export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const isStudent = user?.role === Role.STUDENT;
-  const { data: recentLessons = [] } = useRecentLessons();
   const { data: summary } = useChallengeSummary();
 
   if (!user) return null;
@@ -29,8 +26,19 @@ export default function DashboardPage() {
   const quickActions =
     user.role === Role.STUDENT
       ? [
-          { emoji: '📚', label: 'Mis cursos', desc: 'Continúa donde lo dejaste', to: '/courses' },
-          { emoji: '📅', label: 'Reservar clase', desc: 'Elige horario con un profesor', to: '/bookings' },
+          { emoji: '📖', label: 'Teoría', desc: 'Genera un temario a tu medida', to: '/theory' },
+          {
+            emoji: '🧮',
+            label: 'Ejercicios',
+            desc: 'Practica con ejercicios al instante',
+            to: '/exercises',
+          },
+          {
+            emoji: '📅',
+            label: 'Reservar clase',
+            desc: 'Elige horario con un profesor',
+            to: '/bookings',
+          },
         ]
       : user.role === Role.TEACHER
         ? [
@@ -56,15 +64,14 @@ export default function DashboardPage() {
       <div className="page-hero animate-in">
         <div style={S.heroInner}>
           {/* Avatar */}
-          <div style={S.avatar}>
-            {user.name.charAt(0).toUpperCase()}
-          </div>
+          <div style={S.avatar}>{user.name.charAt(0).toUpperCase()}</div>
           <div style={S.heroText}>
-            <h1 className="hero-title">
-              ¡Hola, {user.name.split(' ')[0]}! 👋
-            </h1>
+            <h1 className="hero-title">¡Hola, {user.name.split(' ')[0]}! 👋</h1>
             <p className="hero-subtitle" style={{ marginTop: 6 }}>
-              <span className={`role-badge ${user.role}`} style={{ marginRight: 8, verticalAlign: 'middle' }}>
+              <span
+                className={`role-badge ${user.role}`}
+                style={{ marginRight: 8, verticalAlign: 'middle' }}
+              >
                 {ROLE_LABELS[user.role]}
               </span>
               {ROLE_DESCRIPTION[user.role]}
@@ -86,11 +93,6 @@ export default function DashboardPage() {
             <p style={S.statValue}>{summary?.currentStreak ?? '—'}</p>
             <p style={S.statLabel}>Racha (semanas)</p>
           </div>
-          <div className="stat-card" style={S.statCardInner}>
-            <span style={S.statEmoji}>✅</span>
-            <p style={S.statValue}>{summary?.completedCount ?? '—'}</p>
-            <p style={S.statLabel}>Lecciones completadas</p>
-          </div>
         </div>
       )}
 
@@ -99,12 +101,7 @@ export default function DashboardPage() {
         <h2 style={S.sectionTitle}>Accesos rápidos</h2>
         <div style={S.grid}>
           {quickActions.map(({ emoji, label, desc, to }) => (
-            <div
-              key={label}
-              className="vkb-card"
-              style={S.quickCard}
-              onClick={() => navigate(to)}
-            >
+            <div key={label} className="vkb-card" style={S.quickCard} onClick={() => navigate(to)}>
               <span style={S.cardEmoji}>{emoji}</span>
               <p style={S.cardLabel}>{label}</p>
               <p style={S.cardDesc}>{desc}</p>
@@ -128,75 +125,29 @@ export default function DashboardPage() {
     </>
   );
 
-  return (
-    <div style={isStudent ? S.layout : S.page}>
-      <div style={isStudent ? S.main : undefined}>
-        {mainContent}
-      </div>
-
-      {/* Sidebar de lecciones recientes — solo para STUDENT */}
-      {isStudent && (
-        <aside style={S.sidebar}>
-          <h2 style={S.sectionTitle}>Últimas lecciones</h2>
-          {recentLessons.length === 0 ? (
-            <p style={S.emptyMsg}>Aún no has completado ninguna lección.</p>
-          ) : (
-            <div style={S.recentList}>
-              {recentLessons.map((item) => (
-                <div
-                  key={item.lessonId}
-                  className="vkb-card"
-                  style={S.recentCard}
-                  onClick={() => navigate(`/courses/${item.courseId}`)}
-                >
-                  <span style={S.recentTypeIcon}>
-                    {item.lessonType === LessonType.VIDEO ? '🎬' : item.lessonType === LessonType.QUIZ ? '📝' : '💪'}
-                  </span>
-                  <div style={S.recentInfo}>
-                    <p style={S.recentTitle}>{item.lessonTitle}</p>
-                    <p style={S.recentMeta}>{item.courseTitle}</p>
-                    {item.completedAt && (
-                      <p style={S.recentDate}>
-                        {new Date(item.completedAt).toLocaleDateString('es-ES', {
-                          day: 'numeric', month: 'short',
-                        })}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </aside>
-      )}
-    </div>
-  );
+  return <div style={S.page}>{mainContent}</div>;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      padding: '14px 0',
-      borderBottom: '1px solid var(--color-border)',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '14px 0',
+        borderBottom: '1px solid var(--color-border)',
+      }}
+    >
       <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{label}</span>
-      <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-text)' }}>{value}</span>
+      <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-text)' }}>
+        {value}
+      </span>
     </div>
   );
 }
 
 const S: Record<string, React.CSSProperties> = {
-  // Layout de dos columnas (student) vs columna única (otros roles)
-  layout: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 280px',
-    gap: 32,
-    alignItems: 'start',
-  },
   page: { display: 'flex', flexDirection: 'column', gap: 32, maxWidth: 820 },
-  main: { display: 'flex', flexDirection: 'column', gap: 32 },
 
   // Hero interior
   heroInner: {
@@ -235,7 +186,7 @@ const S: Record<string, React.CSSProperties> = {
   // Stats grid
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateColumns: 'repeat(2, 1fr)',
     gap: 16,
   },
   statCardInner: {
@@ -288,48 +239,4 @@ const S: Record<string, React.CSSProperties> = {
   cardEmoji: { fontSize: '2.5rem', lineHeight: 1, marginBottom: 4 },
   cardLabel: { fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text)', margin: 0 },
   cardDesc: { fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 },
-
-  // Sidebar
-  sidebar: { display: 'flex', flexDirection: 'column', gap: 0 },
-  recentList: { display: 'flex', flexDirection: 'column', gap: 10 },
-  recentCard: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: 12,
-    padding: '14px 16px',
-    cursor: 'pointer',
-  },
-  recentTypeIcon: { fontSize: 22, flexShrink: 0, marginTop: 1 },
-  recentInfo: { flex: 1, minWidth: 0 },
-  recentTitle: {
-    fontWeight: 600,
-    fontSize: '0.875rem',
-    color: 'var(--color-text)',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    margin: 0,
-  },
-  recentMeta: {
-    fontSize: '0.78rem',
-    color: 'var(--color-text-muted)',
-    marginTop: 2,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    marginBottom: 0,
-  },
-  recentDate: {
-    fontSize: '0.72rem',
-    color: 'var(--color-primary)',
-    marginTop: 4,
-    fontWeight: 700,
-    margin: 0,
-  },
-  emptyMsg: {
-    fontSize: '0.875rem',
-    color: 'var(--color-text-muted)',
-    padding: '16px 0',
-    margin: 0,
-  },
 };

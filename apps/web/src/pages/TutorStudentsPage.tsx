@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { tutorsApi, type StudentSummary, type StudentStats, type ActivityDay } from '../api/tutors.api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  tutorsApi,
+  type StudentSummary,
+  type StudentStats,
+  type ActivityDay,
+} from '../api/tutors.api';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
@@ -208,7 +213,13 @@ const S: Record<string, React.CSSProperties> = {
     gap: 10,
     marginTop: 6,
   },
-  progressPct: { fontSize: '0.75rem', fontWeight: 700, color: '#475569', minWidth: 32, textAlign: 'right' as const },
+  progressPct: {
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: '#475569',
+    minWidth: 32,
+    textAlign: 'right' as const,
+  },
 };
 
 // ─── Mini gráfico de actividad (SVG) ──────────────────────────────────────────
@@ -227,7 +238,10 @@ function ActivityChart({ activity, days }: { activity: ActivityDay[]; days: numb
   }
 
   const actMap = new Map(activity.map((a) => [a.date, a]));
-  const maxVal = Math.max(...dateRange.map((d) => (actMap.get(d)?.lessons ?? 0) + (actMap.get(d)?.quizzes ?? 0)), 1);
+  const maxVal = Math.max(
+    ...dateRange.map((d) => (actMap.get(d)?.lessons ?? 0) + (actMap.get(d)?.quizzes ?? 0)),
+    1,
+  );
 
   const W = 580;
   const H = 80;
@@ -236,10 +250,24 @@ function ActivityChart({ activity, days }: { activity: ActivityDay[]; days: numb
 
   return (
     <div className="vkb-card">
-      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
+      <div
+        style={{
+          fontSize: '0.72rem',
+          fontWeight: 700,
+          color: '#94a3b8',
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          marginBottom: 12,
+        }}
+      >
         Actividad diaria (lecciones + quizzes)
       </div>
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block' }}>
+      <svg
+        width="100%"
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        style={{ display: 'block' }}
+      >
         {dateRange.map((date, i) => {
           const entry = actMap.get(date);
           const lessons = entry?.lessons ?? 0;
@@ -254,7 +282,15 @@ function ActivityChart({ activity, days }: { activity: ActivityDay[]; days: numb
           return (
             <g key={date}>
               {quizH > 0 && (
-                <rect x={x} y={H - barH} width={barW} height={quizH} rx={1} fill="#fbbf24" opacity={0.8} />
+                <rect
+                  x={x}
+                  y={H - barH}
+                  width={barW}
+                  height={quizH}
+                  rx={1}
+                  fill="#fbbf24"
+                  opacity={0.8}
+                />
               )}
               {lessonH > 0 && (
                 <rect x={x} y={H - lessonH} width={barW} height={lessonH} rx={1} fill={ORANGE} />
@@ -263,13 +299,31 @@ function ActivityChart({ activity, days }: { activity: ActivityDay[]; days: numb
           );
         })}
       </svg>
-      <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: '0.72rem', color: '#64748b' }}>
+      <div
+        style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: '0.72rem', color: '#64748b' }}
+      >
         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: ORANGE, display: 'inline-block' }} />
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: 2,
+              background: ORANGE,
+              display: 'inline-block',
+            }}
+          />
           Lecciones
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#fbbf24', display: 'inline-block' }} />
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: 2,
+              background: '#fbbf24',
+              display: 'inline-block',
+            }}
+          />
           Quizzes
         </span>
       </div>
@@ -298,16 +352,23 @@ function useStudentStats(studentId: string | null, from?: string, to?: string) {
 
 function StudentDetail({ student, periodDays }: { student: StudentSummary; periodDays: number }) {
   const now = new Date();
-  const from = periodDays > 0
-    ? new Date(now.getTime() - periodDays * 86400000).toISOString()
-    : undefined;
+  const from =
+    periodDays > 0 ? new Date(now.getTime() - periodDays * 86400000).toISOString() : undefined;
   const to = periodDays > 0 ? now.toISOString() : undefined;
 
   const { data: stats, isLoading, isError } = useStudentStats(student.id, from, to);
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#94a3b8' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: 200,
+          color: '#94a3b8',
+        }}
+      >
         Cargando métricas...
       </div>
     );
@@ -315,7 +376,16 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
 
   if (isError) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#dc2626', fontSize: '0.9rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: 200,
+          color: '#dc2626',
+          fontSize: '0.9rem',
+        }}
+      >
         Error al cargar las métricas. Inténtalo de nuevo.
       </div>
     );
@@ -325,7 +395,9 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
 
   const { lessons, quizzes, exams, certificates, sessions } = stats;
   const memberSince = new Date(stats.student.createdAt).toLocaleDateString('es-ES', {
-    day: 'numeric', month: 'long', year: 'numeric',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
   });
 
   return (
@@ -344,9 +416,25 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
             {` · Miembro desde ${memberSince}`}
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', position: 'relative', zIndex: 1 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            alignItems: 'flex-end',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
           <span style={S.streakBadge}>🔥 {stats.student.currentStreak} sem. racha</span>
-          <span style={{ ...S.streakBadge, background: 'rgba(99,102,241,0.2)', borderColor: 'rgba(99,102,241,0.4)', color: '#a5b4fc' }}>
+          <span
+            style={{
+              ...S.streakBadge,
+              background: 'rgba(99,102,241,0.2)',
+              borderColor: 'rgba(99,102,241,0.4)',
+              color: '#a5b4fc',
+            }}
+          >
             🏆 {stats.student.totalPoints} pts
           </span>
         </div>
@@ -354,7 +442,12 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
 
       {/* KPI Grid */}
       <div style={S.kpiGrid}>
-        <KpiCard emoji="📚" value={lessons.completedInPeriod} label="Lecciones" sub={`${lessons.completedAllTime} en total`} />
+        <KpiCard
+          emoji="📚"
+          value={lessons.completedInPeriod}
+          label="Lecciones"
+          sub={`${lessons.completedAllTime} en total`}
+        />
         <KpiCard emoji="📅" value={lessons.activeDays} label="Días activos" sub="en el período" />
         <KpiCard
           emoji="🎯"
@@ -368,10 +461,38 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
           label="Exámenes aprobados"
           sub={`de ${exams.attempts} · media ${exams.avgScore ?? '—'}%`}
         />
-        <KpiCard emoji="📜" value={certificates.total} label="Certificados" sub={certsByTypeSummary(certificates.byType)} />
-        <KpiCard emoji="🏆" value={stats.student.totalPoints} label="Puntos totales" sub={`Racha más larga: ${stats.student.longestStreak} sem.`} />
-        <KpiCard emoji="📅" value={sessions.confirmed} label="Clases confirmadas" sub={`${sessions.totalHours}h en total`} />
-        <KpiCard emoji="🔥" value={stats.student.currentStreak} label="Racha actual" sub="semanas consecutivas" />
+        <KpiCard
+          emoji="📜"
+          value={certificates.total}
+          label="Certificados"
+          sub={certsByTypeSummary(certificates.byType)}
+        />
+        <KpiCard
+          emoji="🏆"
+          value={stats.student.totalPoints}
+          label="Puntos totales"
+          sub={`Racha más larga: ${stats.student.longestStreak} sem.`}
+        />
+        <KpiCard
+          emoji="📅"
+          value={sessions.confirmed}
+          label="Clases confirmadas"
+          sub={`${sessions.totalHours}h en total`}
+        />
+        <KpiCard
+          emoji="🔥"
+          value={stats.student.currentStreak}
+          label="Racha actual"
+          sub="semanas consecutivas"
+        />
+      </div>
+
+      {/* Gestión de matrículas — el tutor matricula/desmatricula al alumno */}
+      <div style={S.section}>
+        <div style={S.sectionTitle}>
+          Matrículas {stats.student.schoolYear ? `· ${stats.student.schoolYear.label}` : ''}
+        </div>
+        <EnrollmentsSection studentId={student.id} hasLevel={!!stats.student.schoolYear} />
       </div>
 
       {/* Gráfico de actividad */}
@@ -380,7 +501,10 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
           <ActivityChart activity={stats.activity} days={periodDays} />
         </div>
       ) : (
-        <div className="vkb-card" style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+        <div
+          className="vkb-card"
+          style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1.25rem' }}
+        >
           Sin actividad registrada en el período seleccionado.
         </div>
       )}
@@ -391,10 +515,18 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
           <div style={S.sectionTitle}>Certificados obtenidos</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {Object.entries(certificates.byType).map(([type, count]) => (
-              <span key={type} style={{
-                background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0',
-                borderRadius: 8, padding: '4px 12px', fontSize: '0.78rem', fontWeight: 600,
-              }}>
+              <span
+                key={type}
+                style={{
+                  background: '#f0fdf4',
+                  color: '#166534',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: 8,
+                  padding: '4px 12px',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                }}
+              >
                 {CERT_LABELS[type] ?? type} ×{count}
               </span>
             ))}
@@ -418,13 +550,33 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
 // ─── Sub-componentes ───────────────────────────────────────────────────────────
 
 function KpiCard({
-  emoji, value, label, sub,
-}: { emoji: string; value: string | number; label: string; sub?: string }) {
+  emoji,
+  value,
+  label,
+  sub,
+}: {
+  emoji: string;
+  value: string | number;
+  label: string;
+  sub?: string;
+}) {
   return (
     <div className="stat-card" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div style={{ fontSize: '1.4rem', lineHeight: 1 }}>{emoji}</div>
-      <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+      <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
+        {value}
+      </div>
+      <div
+        style={{
+          fontSize: '0.72rem',
+          fontWeight: 600,
+          color: '#64748b',
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+        }}
+      >
+        {label}
+      </div>
       {sub && <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 2 }}>{sub}</div>}
     </div>
   );
@@ -438,21 +590,31 @@ function CourseProgressCard({ course }: { course: StudentStats['courses'][0] }) 
   return (
     <div className="vkb-card" style={{ marginBottom: 8 }}>
       <div
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: course.modules.length > 0 ? 'pointer' : 'default' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: course.modules.length > 0 ? 'pointer' : 'default',
+        }}
         onClick={() => course.modules.length > 0 && setExpanded((e) => !e)}
       >
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>
             {course.title}
             {course.schoolYear && (
-              <span style={{ marginLeft: 8, fontSize: '0.7rem', color: '#64748b', fontWeight: 500 }}>
+              <span
+                style={{ marginLeft: 8, fontSize: '0.7rem', color: '#64748b', fontWeight: 500 }}
+              >
                 {course.schoolYear.label}
               </span>
             )}
           </div>
           <div style={S.progressBarWrap}>
             <div className="progress-bar" style={{ flex: 1 }}>
-              <div className="progress-fill" style={{ width: `${pct}%`, background: fill === '#16a34a' ? fill : undefined }} />
+              <div
+                className="progress-fill"
+                style={{ width: `${pct}%`, background: fill === '#16a34a' ? fill : undefined }}
+              />
             </div>
             <span style={S.progressPct}>{pct}%</span>
             <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
@@ -468,21 +630,36 @@ function CourseProgressCard({ course }: { course: StudentStats['courses'][0] }) 
       </div>
 
       {expanded && (
-        <div style={{ marginTop: 12, borderTop: '1px solid #f1f5f9', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div
+          style={{
+            marginTop: 12,
+            borderTop: '1px solid #f1f5f9',
+            paddingTop: 12,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}
+        >
           {course.modules.map((mod) => {
-            const mPct = mod.totalLessons > 0
-              ? Math.round((mod.completedLessons / mod.totalLessons) * 100)
-              : 0;
+            const mPct =
+              mod.totalLessons > 0
+                ? Math.round((mod.completedLessons / mod.totalLessons) * 100)
+                : 0;
             return (
               <div key={mod.id}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 500 }}>{mod.title}</span>
+                  <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 500 }}>
+                    {mod.title}
+                  </span>
                   <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
                     {mod.completedLessons}/{mod.totalLessons}
                   </span>
                 </div>
                 <div className="progress-bar" style={{ height: 5 }}>
-                  <div className="progress-fill" style={{ width: `${mPct}%`, background: mPct === 100 ? '#16a34a' : undefined }} />
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${mPct}%`, background: mPct === 100 ? '#16a34a' : undefined }}
+                  />
                 </div>
               </div>
             );
@@ -490,6 +667,146 @@ function CourseProgressCard({ course }: { course: StudentStats['courses'][0] }) 
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Sección: gestión de matrículas del alumno ─────────────────────────────────
+
+function EnrollmentsSection({ studentId, hasLevel }: { studentId: string; hasLevel: boolean }) {
+  const qc = useQueryClient();
+
+  const {
+    data: courses,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['tutor', 'available-courses', studentId],
+    queryFn: () => tutorsApi.getAvailableCourses(studentId),
+    enabled: hasLevel,
+  });
+
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ['tutor', 'available-courses', studentId] });
+    void qc.invalidateQueries({ queryKey: ['tutor', 'stats', studentId] });
+    void qc.invalidateQueries({ queryKey: ['tutor', 'students'] });
+  };
+
+  const enrollMut = useMutation({
+    mutationFn: (courseId: string) => tutorsApi.enroll(studentId, courseId),
+    onSuccess: invalidate,
+  });
+
+  const unenrollMut = useMutation({
+    mutationFn: (courseId: string) => tutorsApi.unenroll(studentId, courseId),
+    onSuccess: invalidate,
+  });
+
+  if (!hasLevel) {
+    return (
+      <div className="vkb-card" style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+        Asigna un nivel educativo al alumno para gestionar sus matrículas.
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="vkb-card" style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+        Cargando asignaturas…
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="vkb-card" style={{ color: '#dc2626', fontSize: '0.875rem' }}>
+        Error al cargar las asignaturas.
+      </div>
+    );
+  }
+
+  if (!courses || courses.length === 0) {
+    return (
+      <div className="vkb-card" style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+        No hay asignaturas disponibles para el nivel de este alumno.
+      </div>
+    );
+  }
+
+  const isPending = enrollMut.isPending || unenrollMut.isPending;
+  const enrolledCount = courses.filter((c) => c.enrolled).length;
+
+  return (
+    <>
+      <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: 8 }}>
+        {enrolledCount} de {courses.length} asignaturas matriculadas
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {courses.map((c) => (
+          <div
+            key={c.id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '12px 14px',
+              borderRadius: 12,
+              border: `1.5px solid ${c.enrolled ? 'rgba(234,88,12,0.3)' : 'var(--color-border)'}`,
+              background: c.enrolled ? 'rgba(234,88,12,0.06)' : '#fff',
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+              {c.subject && (
+                <span
+                  style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    color: ORANGE,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {c.subject}
+                </span>
+              )}
+              <span
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  color: '#0f172a',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {c.title}
+              </span>
+            </div>
+            <button
+              onClick={() => (c.enrolled ? unenrollMut.mutate(c.id) : enrollMut.mutate(c.id))}
+              disabled={isPending}
+              style={{
+                flexShrink: 0,
+                padding: '6px 14px',
+                borderRadius: 8,
+                border: 'none',
+                cursor: isPending ? 'wait' : 'pointer',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                color: '#fff',
+                background: c.enrolled
+                  ? '#ef4444'
+                  : 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+                opacity: isPending ? 0.7 : 1,
+              }}
+            >
+              {c.enrolled ? 'Quitar' : 'Matricular'}
+            </button>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -521,7 +838,9 @@ export default function TutorStudentsPage() {
 
         <div style={S.studentList}>
           {!isLoading && students?.length === 0 && (
-            <div style={{ padding: '1.25rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)' }}>
+            <div
+              style={{ padding: '1.25rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)' }}
+            >
               Aún no tienes alumnos asignados.
             </div>
           )}
@@ -547,10 +866,10 @@ export default function TutorStudentsPage() {
               <div style={S.studentAvatar}>{st.name.charAt(0).toUpperCase()}</div>
               <div style={{ minWidth: 0 }}>
                 <div style={S.studentName}>{st.name}</div>
-                <div style={S.studentLevel}>
-                  {st.schoolYear?.label ?? 'Sin nivel'}
+                <div style={S.studentLevel}>{st.schoolYear?.label ?? 'Sin nivel'}</div>
+                <div style={S.studentPts}>
+                  🏆 {st.totalPoints} pts · 🔥 {st.currentStreak}sem
                 </div>
-                <div style={S.studentPts}>🏆 {st.totalPoints} pts · 🔥 {st.currentStreak}sem</div>
               </div>
             </div>
           ))}
@@ -573,9 +892,10 @@ export default function TutorStudentsPage() {
                 key={p.label}
                 style={{
                   ...S.periodBtn,
-                  background: i === periodIdx
-                    ? 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)'
-                    : '#f1f5f9',
+                  background:
+                    i === periodIdx
+                      ? 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)'
+                      : '#f1f5f9',
                   color: i === periodIdx ? '#fff' : '#475569',
                   boxShadow: i === periodIdx ? '0 4px 12px rgba(234,88,12,0.3)' : 'none',
                 }}
@@ -586,7 +906,11 @@ export default function TutorStudentsPage() {
             ))}
           </div>
 
-          <StudentDetail key={`${selected.id}-${period.days}`} student={selected} periodDays={period.days} />
+          <StudentDetail
+            key={`${selected.id}-${period.days}`}
+            student={selected}
+            periodDays={period.days}
+          />
         </div>
       )}
     </div>
