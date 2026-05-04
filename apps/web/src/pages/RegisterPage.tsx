@@ -1,58 +1,44 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { useRegisterTutor } from '../hooks/useAuth';
 import { useSchoolYears } from '../hooks/useCourses';
 import { useAcademyDomain } from '../contexts/AcademyContext';
-import api from '../lib/axios';
 
 /** Valida formato de email: x@y.z */
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-interface PublicAcademy {
-  id: string;
-  slug: string;
-  name: string;
-  logoUrl: string | null;
-  primaryColor: string | null;
-}
+/** Academia por defecto cuando no estamos en un dominio de academia específica. */
+const DEFAULT_ACADEMY_SLUG = 'vallekas-basket';
 
 interface StudentForm {
   name: string;
-  email: string;
   schoolYearId: string;
 }
 
-const emptyStudent = (): StudentForm => ({ name: '', email: '', schoolYearId: '' });
+const emptyStudent = (): StudentForm => ({ name: '', schoolYearId: '' });
 
 export default function RegisterPage() {
   const [searchParams] = useSearchParams();
   const { academy: domainAcademy } = useAcademyDomain();
-  const preselectedAcademy = domainAcademy?.slug ?? searchParams.get('academy') ?? '';
+  // El slug se resuelve sin pedirlo al usuario: dominio de academia → query
+  // string → default fijo (Vallekas Basket Academy).
+  const academySlug = domainAcademy?.slug ?? searchParams.get('academy') ?? DEFAULT_ACADEMY_SLUG;
 
   // Paso 1: datos del tutor
   const [step, setStep] = useState<1 | 2>(1);
   const [tutorName, setTutorName] = useState('');
   const [tutorEmail, setTutorEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [academySlug, setAcademySlug] = useState(preselectedAcademy);
   const [passwordError, setPasswordError] = useState('');
   const [tutorEmailError, setTutorEmailError] = useState('');
 
   // Paso 2: datos de los alumnos
   const [students, setStudents] = useState<StudentForm[]>([emptyStudent()]);
-  const [studentEmailErrors, setStudentEmailErrors] = useState<string[]>([]);
 
   const { mutate, isPending, error } = useRegisterTutor();
   const { data: schoolYears = [] } = useSchoolYears();
-  const { data: academies = [] } = useQuery<PublicAcademy[]>({
-    queryKey: ['academies-public'],
-    queryFn: () => api.get('/academies/public').then((r) => r.data),
-  });
-
-  const selectedAcademy = academies.find((a) => a.slug === academySlug);
 
   function handleStep1(e: FormEvent) {
     e.preventDefault();
@@ -65,9 +51,6 @@ export default function RegisterPage() {
     }
     if (password.length < 8) {
       setPasswordError('La contraseña debe tener al menos 8 caracteres');
-      return;
-    }
-    if (!academySlug) {
       return;
     }
     setStep(2);
@@ -88,17 +71,7 @@ export default function RegisterPage() {
 
   function handleStep2(e: FormEvent) {
     e.preventDefault();
-    // Validar que todos los alumnos tengan nombre y email válido
-    const errors = students.map((s) =>
-      !s.email.trim()
-        ? 'Email requerido'
-        : !isValidEmail(s.email.trim())
-          ? 'Email inválido — formato requerido: x@y.z'
-          : '',
-    );
-    setStudentEmailErrors(errors);
-
-    const valid = students.every((s) => s.name.trim() && isValidEmail(s.email.trim()));
+    const valid = students.every((s) => s.name.trim().length > 0);
     if (!valid) return;
 
     mutate({
@@ -108,7 +81,6 @@ export default function RegisterPage() {
       academySlug,
       students: students.map((s) => ({
         name: s.name.trim(),
-        email: s.email.trim(),
         ...(s.schoolYearId ? { schoolYearId: s.schoolYearId } : {}),
       })),
     });
@@ -130,10 +102,10 @@ export default function RegisterPage() {
           <h1 style={s.title}>{step === 1 ? 'Crear cuenta de tutor' : 'Añadir alumnos'}</h1>
           <p style={s.subtitle}>
             {step === 1
-              ? selectedAcademy
-                ? `Regístrate como tutor en ${selectedAcademy.name}`
-                : 'Regístrate como tutor de la academia'
-              : `Añade los datos de tus alumnos (mínimo 1)`}
+              ? domainAcademy
+                ? `Regístrate como tutor en ${domainAcademy.name}`
+                : 'Regístrate como tutor'
+              : 'Añade los datos de tus alumnos (mínimo 1)'}
           </p>
           {/* Indicador de paso */}
           <div style={s.steps}>
@@ -200,25 +172,6 @@ export default function RegisterPage() {
               {passwordError && <span style={s.fieldError}>{passwordError}</span>}
             </div>
 
-            {academies.length > 0 && (
-              <div className="field field-dark">
-                <label htmlFor="academy">Academia</label>
-                <select
-                  id="academy"
-                  value={academySlug}
-                  onChange={(e) => setAcademySlug(e.target.value)}
-                  required
-                >
-                  <option value="">Selecciona tu academia</option>
-                  {academies.map((a) => (
-                    <option key={a.id} value={a.slug}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             <button
               type="submit"
               className="btn btn-primary btn-full"
@@ -253,28 +206,8 @@ export default function RegisterPage() {
                     placeholder="Juan García"
                     required
                   />
-                </div>
-
-                <div className="field field-dark">
-                  <label htmlFor={`student-email-${i}`}>Email del alumno</label>
-                  <input
-                    id={`student-email-${i}`}
-                    type="email"
-                    value={student.email}
-                    onChange={(e) => {
-                      updateStudent(i, 'email', e.target.value);
-                      setStudentEmailErrors((prev) => prev.map((err, j) => (j === i ? '' : err)));
-                    }}
-                    placeholder="alumno@email.com"
-                    className={studentEmailErrors[i] ? 'error' : ''}
-                    style={studentEmailErrors[i] ? { borderColor: '#dc2626' } : {}}
-                    required
-                  />
-                  {studentEmailErrors[i] && (
-                    <span style={s.fieldError}>{studentEmailErrors[i]}</span>
-                  )}
                   <span style={s.fieldHint}>
-                    Recibirá un email con su contraseña generada automáticamente.
+                    Le crearemos un usuario y contraseña automáticos. Te llegarán por email.
                   </span>
                 </div>
 

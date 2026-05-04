@@ -16,9 +16,6 @@ export class RegisterStudentDto {
   @MaxLength(100)
   name: string;
 
-  @IsEmail({}, { message: 'Email del alumno inválido' })
-  email: string;
-
   @IsOptional()
   @IsString()
   schoolYearId?: string;
