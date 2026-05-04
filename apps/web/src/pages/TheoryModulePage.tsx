@@ -75,6 +75,14 @@ export default function TheoryModulePage() {
       <footer style={s.footer}>
         <button
           type="button"
+          onClick={() => navigate('/theory')}
+          className="btn btn-primary"
+          style={s.newBtn}
+        >
+          ✨ Nuevo temario
+        </button>
+        <button
+          type="button"
           onClick={() => {
             if (window.confirm('¿Borrar este temario de tu biblioteca?')) remove.mutate();
           }}
@@ -298,7 +306,12 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '0.7rem',
     color: 'var(--color-text-muted)',
   },
-  footer: { display: 'flex', justifyContent: 'flex-end' },
+  footer: { display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
+  newBtn: {
+    padding: '10px 18px',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+  },
   deleteBtn: {
     background: 'transparent',
     border: '1px solid rgba(220,38,38,0.4)',
