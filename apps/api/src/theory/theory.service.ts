@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { TheoryLessonKind, type TheoryModule, type TheoryLesson } from '@prisma/client';
+import { Prisma, TheoryLessonKind, type TheoryModule, type TheoryLesson } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { YoutubeService } from '../youtube/youtube.service';
@@ -74,13 +74,22 @@ export class TheoryService {
     const text = await this.ai.generate(prompt, 4000);
     const payload = this.parseAi(text);
 
-    // Resolver vídeo de YouTube para lecciones VIDEO (puede haber varias o ninguna)
+    // Resolver vídeo de YouTube para lecciones VIDEO. Para cada VIDEO pedimos
+    // hasta 5 candidatos (ordenados por engagement+whitelist) y los guardamos
+    // todos para que el alumno pueda elegir; el primero es el que se embebe
+    // por defecto (y se persiste también en youtubeId por compat).
     const lessonsWithVideo = await Promise.all(
       payload.lessons.map(async (lesson) => {
-        if (lesson.kind !== TheoryLessonKind.VIDEO) return { ...lesson, youtubeId: null };
+        if (lesson.kind !== TheoryLessonKind.VIDEO) {
+          return { ...lesson, youtubeId: null, videoCandidates: null };
+        }
         const query = lesson.ytQuery ?? `${dto.topic} ${course.title}`;
-        const candidate = await this.youtube.findBestVideo(query, schoolYearLabel);
-        return { ...lesson, youtubeId: candidate?.youtubeId ?? null };
+        const candidates = await this.youtube.findCandidates(query, schoolYearLabel, { limit: 5 });
+        return {
+          ...lesson,
+          youtubeId: candidates[0]?.youtubeId ?? null,
+          videoCandidates: candidates.length > 0 ? candidates : null,
+        };
       }),
     );
 
@@ -92,13 +101,20 @@ export class TheoryService {
         title: payload.title,
         summary: payload.summary,
         lessons: {
-          create: lessonsWithVideo.map((lesson, idx) => ({
-            order: idx,
-            kind: lesson.kind,
-            heading: lesson.heading,
-            body: lesson.kind === TheoryLessonKind.VIDEO ? null : (lesson.body ?? ''),
-            youtubeId: lesson.kind === TheoryLessonKind.VIDEO ? lesson.youtubeId : null,
-          })),
+          create: lessonsWithVideo.map((lesson, idx) => {
+            const isVideo = lesson.kind === TheoryLessonKind.VIDEO;
+            return {
+              order: idx,
+              kind: lesson.kind,
+              heading: lesson.heading,
+              body: isVideo ? null : (lesson.body ?? ''),
+              youtubeId: isVideo ? lesson.youtubeId : null,
+              videoCandidates:
+                isVideo && lesson.videoCandidates
+                  ? (lesson.videoCandidates as unknown as Prisma.InputJsonValue)
+                  : Prisma.DbNull,
+            };
+          }),
         },
       },
       include: { lessons: { orderBy: { order: 'asc' } } },
@@ -215,7 +231,8 @@ Reglas:
 - Estructura recomendada: 1 INTRO + 1-3 CONTENT + 1 EXAMPLE + 1 VIDEO (último).
 - INTRO/CONTENT/EXAMPLE: campo "body" obligatorio en markdown. NO incluir "ytQuery".
 - VIDEO: campo "ytQuery" obligatorio. NO incluir "body".
-- El markdown puede usar **negritas**, *cursivas*, listas con guiones, encabezados con ##, fórmulas LaTeX inline con $...$.
+- El markdown puede usar **negritas**, *cursivas*, listas con guiones, encabezados con ##.
+- Para fórmulas matemáticas USA SIEMPRE LaTeX: inline con $...$ (ej. $\\log_a b = c$) y bloques con $$...$$ para derivaciones o ecuaciones destacadas. NO escribas fórmulas en texto plano (NUNCA "log_a b = c"; SIEMPRE "$\\log_a b = c$").
 - Contenido curricular real y riguroso, adaptado al nivel ${schoolYearLabel || 'del curso'}.
 - "ytQuery" debe ser una búsqueda específica y descriptiva (ej. "demostración propiedades logaritmos bachillerato").
 - Solo devuelve JSON puro, sin markdown alrededor del JSON.`;

@@ -581,7 +581,10 @@ model TheoryLesson {
   kind      TheoryLessonKind
   heading   String
   body      String?          @db.Text // markdown; null cuando kind=VIDEO
-  youtubeId String? // solo cuando kind=VIDEO
+  youtubeId String? // primario / fallback para registros antiguos (kind=VIDEO)
+  /// Lista de candidatos de YouTube cuando kind=VIDEO. Estructura:
+  /// [{ youtubeId, title, channelTitle, thumbnailUrl, durationSeconds, viewCount, ... }]
+  videoCandidates Json?
 
   module TheoryModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 

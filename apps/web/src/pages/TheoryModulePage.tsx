@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { theoryApi } from '../api/theory.api';
-import type { TheoryLesson, TheoryLessonKind } from '@vkbacademy/shared';
+import type { TheoryLesson, TheoryLessonKind, TheoryVideoCandidate } from '@vkbacademy/shared';
 
 const KIND_ICON: Record<TheoryLessonKind, string> = {
   INTRO: '🧭',
@@ -92,26 +96,96 @@ function LessonSection({ lesson }: { lesson: TheoryLesson }) {
       </h2>
 
       {lesson.kind === 'VIDEO' ? (
-        lesson.youtubeId ? (
-          <div style={s.videoWrapper}>
-            <iframe
-              style={s.videoIframe}
-              src={`https://www.youtube.com/embed/${lesson.youtubeId}`}
-              title={lesson.heading}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        ) : (
-          <p style={s.muted}>No se encontró un vídeo adecuado para este tema.</p>
-        )
+        <VideoLesson lesson={lesson} />
       ) : (
         <div style={s.markdown}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{lesson.body ?? ''}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+            {lesson.body ?? ''}
+          </ReactMarkdown>
         </div>
       )}
     </section>
   );
+}
+
+function VideoLesson({ lesson }: { lesson: TheoryLesson }) {
+  // Compat: si la lección es de antes de añadir candidates, solo tiene youtubeId.
+  const candidates: TheoryVideoCandidate[] =
+    lesson.videoCandidates && lesson.videoCandidates.length > 0
+      ? lesson.videoCandidates
+      : lesson.youtubeId
+        ? [
+            {
+              youtubeId: lesson.youtubeId,
+              title: lesson.heading,
+              channelTitle: '',
+              durationSeconds: 0,
+              thumbnailUrl: `https://img.youtube.com/vi/${lesson.youtubeId}/mqdefault.jpg`,
+            },
+          ]
+        : [];
+
+  const [selected, setSelected] = useState(0);
+
+  if (candidates.length === 0) {
+    return <p style={s.muted}>No se encontró un vídeo adecuado para este tema.</p>;
+  }
+
+  const current = candidates[Math.min(selected, candidates.length - 1)];
+
+  return (
+    <div style={s.videoBlock}>
+      <div style={s.videoWrapper}>
+        <iframe
+          key={current.youtubeId}
+          style={s.videoIframe}
+          src={`https://www.youtube.com/embed/${current.youtubeId}`}
+          title={current.title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+
+      {candidates.length > 1 && (
+        <>
+          <p style={s.candidatesLabel}>{candidates.length} vídeos sugeridos — pulsa para cambiar</p>
+          <ul style={s.candidatesList}>
+            {candidates.map((c, idx) => {
+              const isActive = idx === selected;
+              return (
+                <li key={c.youtubeId}>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(idx)}
+                    style={{
+                      ...s.candidate,
+                      ...(isActive ? s.candidateActive : {}),
+                    }}
+                    aria-pressed={isActive}
+                  >
+                    <img src={c.thumbnailUrl} alt="" style={s.candidateThumb} loading="lazy" />
+                    <span style={s.candidateMeta}>
+                      <span style={s.candidateTitle}>{c.title}</span>
+                      <span style={s.candidateChannel}>
+                        {c.channelTitle}
+                        {c.durationSeconds > 0 && ` · ${formatDuration(c.durationSeconds)}`}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 const s: Record<string, React.CSSProperties> = {
@@ -171,6 +245,59 @@ const s: Record<string, React.CSSProperties> = {
     border: 0,
   },
   muted: { color: 'var(--color-text-muted)', fontSize: '0.95rem', margin: 0 },
+  videoBlock: { display: 'flex', flexDirection: 'column', gap: 12 },
+  candidatesLabel: {
+    fontSize: '0.8rem',
+    color: 'var(--color-text-muted)',
+    margin: '4px 0 0',
+  },
+  candidatesList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+    gap: 10,
+  },
+  candidate: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    padding: 8,
+    background: 'var(--color-bg)',
+    border: '1.5px solid var(--color-border)',
+    borderRadius: 10,
+    cursor: 'pointer',
+    textAlign: 'left',
+    width: '100%',
+    color: 'var(--color-text)',
+    transition: 'border-color 0.15s, transform 0.15s',
+  },
+  candidateActive: {
+    borderColor: '#f97316',
+    background: 'rgba(234,88,12,0.08)',
+  },
+  candidateThumb: {
+    width: '100%',
+    aspectRatio: '16 / 9',
+    objectFit: 'cover',
+    borderRadius: 6,
+    background: '#000',
+  },
+  candidateMeta: { display: 'flex', flexDirection: 'column', gap: 2 },
+  candidateTitle: {
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    lineHeight: 1.3,
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+  },
+  candidateChannel: {
+    fontSize: '0.7rem',
+    color: 'var(--color-text-muted)',
+  },
   footer: { display: 'flex', justifyContent: 'flex-end' },
   deleteBtn: {
     background: 'transparent',
