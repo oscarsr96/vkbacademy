@@ -10,7 +10,7 @@ export class NotificationsService {
 
   constructor(private readonly config: ConfigService) {
     const apiKey = config.get<string>('RESEND_API_KEY');
-    this.from = config.get<string>('EMAIL_FROM', 'noreply@tuclub.com');
+    this.from = config.get<string>('EMAIL_FROM', 'VKB Academy <info@vallekasbasket.com>');
 
     if (apiKey) {
       this.resend = new Resend(apiKey);
@@ -190,7 +190,7 @@ export class NotificationsService {
        ${studentsBlock}
 
        <p style="margin:1.5rem 0">
-         <a href="${params.loginUrl}" style="background:#ea580c;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
+         <a href="${params.loginUrl}" style="background:#f5911e;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
            Acceder a la plataforma
          </a>
        </p>
@@ -206,7 +206,7 @@ export class NotificationsService {
       `<h2>Restablecer contraseña</h2>
        <p>Hola <strong>${params.name}</strong>, hemos recibido una solicitud para restablecer tu contraseña.</p>
        <p style="margin:1.5rem 0">
-         <a href="${params.resetUrl}" style="background:#ea580c;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
+         <a href="${params.resetUrl}" style="background:#f5911e;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
            Restablecer contraseña
          </a>
        </p>

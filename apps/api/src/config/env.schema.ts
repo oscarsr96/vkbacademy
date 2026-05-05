@@ -58,7 +58,10 @@ export const envValidationSchema = Joi.object({
 
   // ── Email (Resend) ─────────────────────────────────────────────────────────
   RESEND_API_KEY: Joi.string().allow('').optional(),
-  EMAIL_FROM: Joi.string().email().default('noreply@tuclub.com'),
+  // Acepta tanto "user@dominio" plano como "Display Name <user@dominio>" (Resend soporta ambos).
+  EMAIL_FROM: Joi.string()
+    .pattern(/^(?:[^<>]+\s*<[^@<>\s]+@[^@<>\s]+>|[^@<>\s]+@[^@<>\s]+)$/)
+    .default('VKB Academy <info@vallekasbasket.com>'),
 
   // ── Videollamadas (Daily.co) ───────────────────────────────────────────────
   DAILY_API_KEY: Joi.string().allow('').optional(),
