@@ -1,5 +1,34 @@
 import { useNavigate } from 'react-router-dom';
 
+// Paleta oficial Vallekas Basket — naranja primario, cyan como acento puntual
+const C = {
+  orange: '#f5911e',
+  orangeLight: '#fbb04a',
+  orangeDeep: '#e07b06',
+  cyan: '#13aff0',
+  cyanLight: '#46d4fe',
+  red: '#cb2027',
+  navy: '#0a1628',
+  navyMid: '#0d1b2a',
+  navyDeep: '#080e1a',
+};
+
+// Gradientes reutilizables
+const G = {
+  primary: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeLight} 100%)`,
+  primaryDeep: `linear-gradient(135deg, ${C.orangeDeep} 0%, ${C.orange} 100%)`,
+  // Multicolor "firma" del club — naranja domina, cyan toque final
+  signature: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeLight} 55%, ${C.cyan} 100%)`,
+  hero: `linear-gradient(135deg, ${C.navyDeep} 0%, ${C.navyMid} 55%, ${C.navy} 100%)`,
+};
+
+// Tipografía
+const F = {
+  display: "'Bebas Neue', 'Unbounded', Impact, sans-serif",
+  brand: "'Unbounded', 'Inter', sans-serif",
+  body: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+};
+
 // Merchandising del club
 const MERCH = [
   { icon: '🎨', name: 'Pack de stickers VKB', pts: 100 },
@@ -92,15 +121,46 @@ export default function LandingPage() {
 
   return (
     <div style={styles.page}>
-      {/* Responsive overrides — no se pueden hacer con inline styles */}
+      {/* Animaciones + responsive overrides — no se pueden hacer con inline styles */}
       <style>{`
+        @keyframes lp-glow-pulse {
+          0%, 100% { opacity: 0.65; transform: translate(-50%, 0) scale(1); }
+          50%      { opacity: 1;    transform: translate(-50%, 0) scale(1.06); }
+        }
+        @keyframes lp-glow-pulse-side {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50%      { opacity: 0.9;  transform: scale(1.08); }
+        }
+        @keyframes lp-shimmer {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
+        }
+        .lp-shimmer-text {
+          background: linear-gradient(
+            90deg,
+            ${C.orange} 0%,
+            ${C.orangeLight} 25%,
+            ${C.cyan} 50%,
+            ${C.orangeLight} 75%,
+            ${C.orange} 100%
+          );
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
+          animation: lp-shimmer 6s linear infinite;
+        }
+        .lp-glow-center { animation: lp-glow-pulse 7s ease-in-out infinite; }
+        .lp-glow-side   { animation: lp-glow-pulse-side 9s ease-in-out infinite; }
+
         @media (max-width: 768px) {
           .lp-hero { min-height: auto !important; padding: 3rem 1.25rem !important; }
           .lp-pricing-hl { padding: 3rem 1.25rem !important; }
           .lp-pricing-cards { flex-direction: column !important; align-items: center !important; }
           .lp-pricing-card { width: 100% !important; max-width: 360px !important; }
           .lp-stats-inner { gap: 1.5rem !important; padding: 1.75rem 1.25rem !important; }
-          .lp-stat-value { font-size: 1.75rem !important; }
+          .lp-stat-value { font-size: 2.75rem !important; }
           .lp-features { padding: 3.5rem 1.25rem !important; }
           .lp-features-grid { grid-template-columns: 1fr !important; }
           .lp-merch { padding: 3.5rem 1.25rem !important; }
@@ -118,19 +178,57 @@ export default function LandingPage() {
           SECCIÓN 1 — HERO
       ════════════════════════════════════════ */}
       <section className="lp-hero" style={styles.hero}>
-        {/* Glow central grande */}
-        <div style={styles.heroGlowCenter} />
-        {/* Glow lateral */}
-        <div style={styles.heroGlowSide} />
+        {/* Líneas de cancha decorativas (SVG) */}
+        <svg style={styles.heroCourt} viewBox="0 0 1200 800" preserveAspectRatio="none" aria-hidden>
+          <defs>
+            <linearGradient id="court-line" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={C.orange} stopOpacity="0" />
+              <stop offset="50%" stopColor={C.orange} stopOpacity="0.55" />
+              <stop offset="100%" stopColor={C.orange} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <line x1="0" y1="400" x2="1200" y2="400" stroke="url(#court-line)" strokeWidth="1" />
+          <circle
+            cx="600"
+            cy="400"
+            r="120"
+            fill="none"
+            stroke={C.orange}
+            strokeOpacity="0.22"
+            strokeWidth="1.2"
+          />
+          <circle
+            cx="600"
+            cy="400"
+            r="40"
+            fill="none"
+            stroke={C.cyan}
+            strokeOpacity="0.20"
+            strokeWidth="1"
+          />
+        </svg>
+
+        {/* Glow central naranja grande */}
+        <div className="lp-glow-center" style={styles.heroGlowCenter} />
+        {/* Glow lateral naranja secundario */}
+        <div className="lp-glow-side" style={styles.heroGlowSide} />
+        {/* Glow esquina superior izquierda — cyan acento */}
+        <div className="lp-glow-side" style={styles.heroGlowTopLeft} />
 
         <div style={styles.heroContent}>
           {/* Badge naranja */}
-          <span style={styles.heroBadge}>🏀 Para familias de Vallekas Basket</span>
+          <span style={styles.heroBadge}>
+            <span style={styles.heroBadgeDot} />
+            Para familias de Vallekas Basket
+          </span>
 
-          {/* Titular principal */}
+          {/* Titular principal en Bebas Neue */}
           <h1 style={styles.heroHeadline}>
-            Metodología VKB para el{' '}
-            <span style={styles.heroHeadlineAccent}>rendimiento académico</span>
+            METODOLOGÍA VKB
+            <br />
+            <span className="lp-shimmer-text" style={styles.heroHeadlineAccent}>
+              PARA EL RENDIMIENTO ACADÉMICO
+            </span>
           </h1>
 
           {/* Subtítulo */}
@@ -148,13 +246,13 @@ export default function LandingPage() {
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLButtonElement;
                 el.style.transform = 'translateY(-3px)';
-                el.style.boxShadow = '0 12px 40px rgba(234,88,12,0.55)';
+                el.style.boxShadow = `0 16px 48px rgba(245,145,30,0.60), 0 0 24px rgba(19,175,240,0.22)`;
                 el.style.filter = 'brightness(1.08)';
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLButtonElement;
                 el.style.transform = 'translateY(0)';
-                el.style.boxShadow = '0 8px 32px rgba(234,88,12,0.4)';
+                el.style.boxShadow = `0 8px 32px rgba(245,145,30,0.50)`;
                 el.style.filter = 'none';
               }}
             >
@@ -166,12 +264,14 @@ export default function LandingPage() {
               onClick={handleScrollToFeatures}
               style={styles.ctaSecondary}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,0.12)';
-                (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.55)';
+                (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(245,145,30,0.14)';
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(251,176,74,0.7)';
+                (e.currentTarget as HTMLAnchorElement).style.color = C.orangeLight;
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
                 (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.35)';
+                (e.currentTarget as HTMLAnchorElement).style.color = '#ffffff';
               }}
             >
               Qué incluye ↓
@@ -187,7 +287,8 @@ export default function LandingPage() {
           SECCIÓN 1b — PRICING HIGHLIGHT
       ════════════════════════════════════════ */}
       <section className="lp-pricing-hl" style={styles.pricingHighlight}>
-        <div style={styles.pricingGlow} />
+        <div style={styles.pricingGlowMain} />
+        <div style={styles.pricingGlowAccent} />
         <div style={styles.pricingInner}>
           <p style={styles.pricingEyebrow}>Menos de lo que cuesta una clase particular</p>
           <h2 style={styles.pricingHeadline}>
@@ -205,8 +306,8 @@ export default function LandingPage() {
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
                 el.style.transform = 'translateY(-6px)';
-                el.style.boxShadow = '0 20px 50px rgba(234,88,12,0.2)';
-                el.style.borderColor = 'rgba(234,88,12,0.4)';
+                el.style.boxShadow = `0 20px 50px rgba(245,145,30,0.25)`;
+                el.style.borderColor = 'rgba(245,145,30,0.5)';
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
@@ -236,12 +337,12 @@ export default function LandingPage() {
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
                 el.style.transform = 'translateY(-6px) scale(1.02)';
-                el.style.boxShadow = '0 24px 60px rgba(234,88,12,0.35)';
+                el.style.boxShadow = `0 24px 60px rgba(245,145,30,0.50), 0 0 24px rgba(19,175,240,0.18)`;
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
                 el.style.transform = 'translateY(0) scale(1)';
-                el.style.boxShadow = '0 8px 40px rgba(234,88,12,0.25)';
+                el.style.boxShadow = `0 12px 40px rgba(245,145,30,0.35)`;
               }}
             >
               <span style={styles.pricingCardBadge}>Popular</span>
@@ -262,8 +363,8 @@ export default function LandingPage() {
 
           <p style={styles.pricingCompare}>
             Una clase particular = 20-30 €/hora. Aquí tu hijo/a tiene{' '}
-            <strong style={{ color: '#fb923c' }}>acceso ilimitado todo el mes</strong> por menos que
-            eso.
+            <strong style={{ color: C.orangeLight }}>acceso ilimitado todo el mes</strong> por menos
+            que eso.
           </p>
         </div>
       </section>
@@ -272,6 +373,8 @@ export default function LandingPage() {
           SECCIÓN 2 — BARRA DE ESTADÍSTICAS
       ════════════════════════════════════════ */}
       <section style={styles.statsBar}>
+        {/* Banda multicolor naranja-dominante */}
+        <div style={styles.statsAccentLine} />
         <div className="lp-stats-inner" style={styles.statsInner}>
           {STATS.map((stat, idx) => (
             <div key={idx} style={styles.statItem}>
@@ -290,7 +393,11 @@ export default function LandingPage() {
       <section id="features" className="lp-features" style={styles.features}>
         <div style={styles.sectionContainer}>
           <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Todo lo que tu hijo/a necesita para mejorar</h2>
+            <span style={styles.sectionEyebrow}>Plataforma</span>
+            <h2 style={styles.sectionTitle}>
+              TODO LO QUE TU HIJO/A NECESITA{' '}
+              <span style={styles.sectionTitleAccent}>PARA MEJORAR</span>
+            </h2>
             <p style={styles.sectionSubtitle}>
               Una plataforma pensada para optimizar el rendimiento escolar, con acceso y seguimiento
               para padres y tutores
@@ -299,7 +406,7 @@ export default function LandingPage() {
 
           <div className="lp-features-grid" style={styles.featuresGrid}>
             {FEATURES.map((feat, idx) => (
-              <FeatureCard key={idx} {...feat} />
+              <FeatureCard key={idx} {...feat} index={idx} />
             ))}
           </div>
         </div>
@@ -311,7 +418,10 @@ export default function LandingPage() {
       <section className="lp-merch" style={styles.merchSection}>
         <div style={styles.sectionContainer}>
           <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>🏆 El esfuerzo tiene premio</h2>
+            <span style={styles.sectionEyebrow}>Recompensas</span>
+            <h2 style={styles.sectionTitle}>
+              🏆 EL ESFUERZO <span style={styles.sectionTitleAccent}>TIENE PREMIO</span>
+            </h2>
             <p style={styles.sectionSubtitle}>
               Tu hijo/a gana puntos completando lecciones y retos. Canjéalos por merchandising
               exclusivo de Vallekas Basket.
@@ -335,13 +445,18 @@ export default function LandingPage() {
       <section className="lp-how" style={styles.howItWorks}>
         <div style={styles.sectionContainer}>
           <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>¿Cómo funciona?</h2>
+            <span style={styles.sectionEyebrow}>Proceso</span>
+            <h2 style={styles.sectionTitle}>
+              ¿CÓMO <span style={styles.sectionTitleAccent}>FUNCIONA?</span>
+            </h2>
           </div>
 
           <div className="lp-steps-row" style={styles.stepsRow}>
             {STEPS.map((step, idx) => (
               <div key={idx} className="lp-step-wrapper" style={styles.stepWrapper}>
-                <div style={styles.stepCircle}>{step.number}</div>
+                <div style={styles.stepCircle}>
+                  <span style={styles.stepCircleNumber}>{step.number}</span>
+                </div>
 
                 {idx < STEPS.length - 1 && (
                   <div className="lp-step-connector" style={styles.stepConnector} />
@@ -361,9 +476,16 @@ export default function LandingPage() {
           SECCIÓN 5 — CTA FINAL
       ════════════════════════════════════════ */}
       <section className="lp-cta-bottom" style={styles.ctaBottom}>
-        <div style={styles.ctaBottomGlow} />
+        <div className="lp-glow-center" style={styles.ctaBottomGlow} />
+        <div className="lp-glow-side" style={styles.ctaBottomGlowAccent} />
         <div style={styles.ctaBottomContent}>
-          <h2 style={styles.ctaBottomTitle}>¿Tu hijo/a ya es de Vallekas Basket?</h2>
+          <h2 style={styles.ctaBottomTitle}>
+            ¿TU HIJO/A YA ES DE{' '}
+            <span className="lp-shimmer-text" style={styles.ctaBottomTitleAccent}>
+              VALLEKAS BASKET
+            </span>
+            ?
+          </h2>
           <p style={styles.ctaBottomSubtitle}>
             Entra con las credenciales que te ha facilitado el club y empieza hoy.
           </p>
@@ -373,13 +495,13 @@ export default function LandingPage() {
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLButtonElement;
               el.style.transform = 'translateY(-3px)';
-              el.style.boxShadow = '0 16px 48px rgba(234,88,12,0.55)';
+              el.style.boxShadow = `0 20px 56px rgba(245,145,30,0.65), 0 0 32px rgba(19,175,240,0.22)`;
               el.style.filter = 'brightness(1.08)';
             }}
             onMouseLeave={(e) => {
               const el = e.currentTarget as HTMLButtonElement;
               el.style.transform = 'translateY(0)';
-              el.style.boxShadow = '0 8px 32px rgba(234,88,12,0.4)';
+              el.style.boxShadow = `0 8px 32px rgba(245,145,30,0.50)`;
               el.style.filter = 'none';
             }}
           >
@@ -396,19 +518,30 @@ function FeatureCard({
   icon,
   title,
   description,
+  index,
 }: {
   icon: string;
   title: string;
   description: string;
+  index: number;
 }) {
+  // Naranja domina; cyan aparece como 1 de cada 3 para variedad visual
+  const useCyan = index % 3 === 1;
+  const accent = useCyan ? C.cyan : C.orange;
+  const accentRgb = useCyan ? '19,175,240' : '245,145,30';
+
   return (
     <div
-      style={featureCardStyle.card}
+      style={{
+        ...featureCardStyle.card,
+        // Borde superior con color de acento
+        borderTop: `3px solid ${accent}`,
+      }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.transform = 'translateY(-6px)';
-        el.style.boxShadow = '0 16px 48px rgba(234,88,12,0.18)';
-        el.style.borderColor = 'rgba(234,88,12,0.3)';
+        el.style.boxShadow = `0 18px 48px rgba(${accentRgb},0.24)`;
+        el.style.borderColor = `rgba(${accentRgb},0.40)`;
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement;
@@ -433,8 +566,8 @@ function MerchCard({ item }: { item: { icon: string; name: string; pts: number }
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.transform = 'translateY(-5px)';
-        el.style.boxShadow = '0 12px 32px rgba(234,88,12,0.18)';
-        el.style.borderColor = 'rgba(234,88,12,0.3)';
+        el.style.boxShadow = `0 12px 32px rgba(245,145,30,0.24)`;
+        el.style.borderColor = 'rgba(245,145,30,0.45)';
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement;
@@ -470,14 +603,16 @@ const featureCardStyle: Record<string, React.CSSProperties> = {
   title: {
     fontSize: '1.0625rem',
     fontWeight: 700,
-    color: '#0d1b2a',
+    color: C.navy,
     margin: 0,
+    fontFamily: F.body,
   },
   description: {
     fontSize: '0.9rem',
     color: '#64748b',
     lineHeight: 1.6,
     margin: 0,
+    fontFamily: F.body,
   },
 };
 
@@ -504,30 +639,33 @@ const merchCardStyle: Record<string, React.CSSProperties> = {
   name: {
     fontSize: '0.825rem',
     fontWeight: 600,
-    color: '#0d1b2a',
+    color: C.navy,
     lineHeight: 1.3,
+    fontFamily: F.body,
   },
   pts: {
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    color: '#ea580c',
-    background: 'rgba(234,88,12,0.10)',
-    padding: '3px 12px',
+    fontSize: '0.78rem',
+    fontWeight: 800,
+    color: '#ffffff',
+    background: G.signature,
+    padding: '4px 14px',
     borderRadius: 999,
+    letterSpacing: '0.04em',
+    fontFamily: F.brand,
   },
 };
 
 // ── Estilos principales ──
 const styles: Record<string, React.CSSProperties> = {
   page: {
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontFamily: F.body,
     overflowX: 'hidden',
   },
 
   // Hero
   hero: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+    background: G.hero,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -535,24 +673,43 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'relative',
     overflow: 'hidden',
   },
+  heroCourt: {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    pointerEvents: 'none',
+    opacity: 0.55,
+  },
   heroGlowCenter: {
     position: 'absolute',
     top: '15%',
     left: '50%',
     transform: 'translateX(-50%)',
-    width: 800,
-    height: 800,
-    background: 'radial-gradient(circle, rgba(234,88,12,0.14) 0%, transparent 65%)',
+    width: 900,
+    height: 900,
+    background: `radial-gradient(circle, rgba(245,145,30,0.22) 0%, transparent 60%)`,
     pointerEvents: 'none',
     borderRadius: '50%',
+    filter: 'blur(8px)',
   },
   heroGlowSide: {
     position: 'absolute',
-    bottom: '-100px',
-    right: '-100px',
-    width: 500,
-    height: 500,
-    background: 'radial-gradient(circle, rgba(234,88,12,0.08) 0%, transparent 70%)',
+    bottom: '-120px',
+    right: '-120px',
+    width: 520,
+    height: 520,
+    background: `radial-gradient(circle, rgba(245,145,30,0.18) 0%, transparent 70%)`,
+    pointerEvents: 'none',
+    borderRadius: '50%',
+  },
+  heroGlowTopLeft: {
+    position: 'absolute',
+    top: '-160px',
+    left: '-160px',
+    width: 460,
+    height: 460,
+    background: `radial-gradient(circle, rgba(19,175,240,0.13) 0%, transparent 70%)`,
     pointerEvents: 'none',
     borderRadius: '50%',
   },
@@ -568,56 +725,70 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1,
   },
   heroBadge: {
-    display: 'inline-block',
-    background: 'rgba(234,88,12,0.16)',
-    border: '1px solid rgba(234,88,12,0.45)',
-    color: '#fb923c',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    background: 'rgba(245,145,30,0.16)',
+    border: '1px solid rgba(245,145,30,0.50)',
+    color: C.orangeLight,
     borderRadius: 999,
     padding: '0.45rem 1.2rem',
     fontSize: '0.875rem',
     fontWeight: 600,
     letterSpacing: '0.02em',
+    fontFamily: F.body,
+    backdropFilter: 'blur(6px)',
+  },
+  heroBadgeDot: {
+    display: 'inline-block',
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    background: C.orange,
+    boxShadow: `0 0 12px ${C.orange}`,
   },
   heroHeadline: {
-    fontSize: 'clamp(2.5rem, 5vw, 4.25rem)',
-    fontWeight: 900,
+    fontFamily: F.display,
+    fontSize: 'clamp(3rem, 7.5vw, 6.25rem)',
+    fontWeight: 400,
     color: '#ffffff',
-    letterSpacing: '-0.035em',
-    lineHeight: 1.08,
+    letterSpacing: '0.005em',
+    lineHeight: 0.92,
     margin: 0,
+    textTransform: 'uppercase',
   },
   heroHeadlineAccent: {
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
+    fontFamily: F.display,
+    display: 'inline-block',
   },
   heroSubtitle: {
-    color: 'rgba(255,255,255,0.62)',
+    color: 'rgba(255,255,255,0.68)',
     fontSize: '1.125rem',
     lineHeight: 1.7,
-    maxWidth: 580,
-    margin: 0,
+    maxWidth: 600,
+    margin: '0.5rem 0 0',
+    fontFamily: F.body,
   },
   heroCtas: {
     display: 'flex',
     gap: '1rem',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginTop: '0.5rem',
+    marginTop: '0.75rem',
   },
   ctaPrimary: {
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    background: G.primary,
     color: '#ffffff',
     border: 'none',
     borderRadius: 12,
-    padding: '15px 32px',
+    padding: '15px 34px',
     fontSize: '1.0625rem',
     fontWeight: 700,
     cursor: 'pointer',
     transition: 'transform 0.2s, box-shadow 0.2s, filter 0.2s',
-    boxShadow: '0 8px 32px rgba(234,88,12,0.4)',
-    letterSpacing: '-0.01em',
+    boxShadow: `0 8px 32px rgba(245,145,30,0.50)`,
+    letterSpacing: '0.005em',
+    fontFamily: F.body,
   },
   ctaSecondary: {
     background: 'transparent',
@@ -628,34 +799,47 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '1.0625rem',
     fontWeight: 600,
     cursor: 'pointer',
-    transition: 'background 0.2s, border-color 0.2s',
+    transition: 'background 0.2s, border-color 0.2s, color 0.2s',
     textDecoration: 'none',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
+    fontFamily: F.body,
   },
   heroFootnote: {
-    color: 'rgba(255,255,255,0.32)',
+    color: 'rgba(255,255,255,0.38)',
     fontSize: '0.8rem',
     margin: 0,
     letterSpacing: '0.01em',
+    fontFamily: F.body,
   },
 
   // Pricing highlight
   pricingHighlight: {
-    background: 'linear-gradient(180deg, #0d1b2a 0%, #111d2e 100%)',
+    background: `linear-gradient(180deg, ${C.navyMid} 0%, ${C.navy} 100%)`,
     padding: '5rem 2rem',
     position: 'relative',
     overflow: 'hidden',
   },
-  pricingGlow: {
+  pricingGlowMain: {
     position: 'absolute',
     top: '50%',
-    left: '50%',
+    left: '40%',
     transform: 'translate(-50%, -50%)',
-    width: 700,
-    height: 700,
-    background: 'radial-gradient(circle, rgba(234,88,12,0.08) 0%, transparent 65%)',
+    width: 720,
+    height: 720,
+    background: `radial-gradient(circle, rgba(245,145,30,0.14) 0%, transparent 65%)`,
+    pointerEvents: 'none',
+    borderRadius: '50%',
+  },
+  pricingGlowAccent: {
+    position: 'absolute',
+    top: '50%',
+    right: '-100px',
+    transform: 'translateY(-50%)',
+    width: 460,
+    height: 460,
+    background: `radial-gradient(circle, rgba(19,175,240,0.10) 0%, transparent 65%)`,
     pointerEvents: 'none',
     borderRadius: '50%',
   },
@@ -671,30 +855,34 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1,
   },
   pricingEyebrow: {
-    color: '#fb923c',
-    fontSize: '0.9rem',
-    fontWeight: 600,
+    color: C.orangeLight,
+    fontSize: '0.85rem',
+    fontWeight: 700,
     textTransform: 'uppercase',
-    letterSpacing: '0.1em',
+    letterSpacing: '0.18em',
     margin: 0,
+    fontFamily: F.brand,
   },
   pricingHeadline: {
-    fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)',
-    fontWeight: 900,
+    fontFamily: F.display,
+    fontSize: 'clamp(2rem, 4.5vw, 3.25rem)',
+    fontWeight: 400,
     color: '#ffffff',
-    letterSpacing: '-0.03em',
-    lineHeight: 1.15,
+    letterSpacing: '0.005em',
+    lineHeight: 1.05,
     margin: 0,
+    textTransform: 'uppercase',
   },
   pricingAmount: {
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    fontFamily: F.display,
+    background: G.signature,
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
   },
   pricingPeriod: {
-    fontSize: '0.5em',
-    fontWeight: 600,
+    fontSize: '0.55em',
+    fontWeight: 400,
   },
   pricingCards: {
     display: 'flex',
@@ -718,35 +906,39 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'relative',
   },
   pricingCardFeatured: {
-    background: 'linear-gradient(135deg, rgba(234,88,12,0.12) 0%, rgba(249,115,22,0.06) 100%)',
-    border: '2px solid rgba(234,88,12,0.4)',
-    boxShadow: '0 8px 40px rgba(234,88,12,0.25)',
+    background: `linear-gradient(135deg, rgba(245,145,30,0.18) 0%, rgba(19,175,240,0.06) 100%)`,
+    border: '2px solid rgba(245,145,30,0.55)',
+    boxShadow: `0 12px 40px rgba(245,145,30,0.35)`,
   },
   pricingCardBadge: {
     position: 'absolute',
     top: -12,
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    background: G.signature,
     color: '#fff',
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    padding: '4px 16px',
+    fontSize: '0.72rem',
+    fontWeight: 800,
+    padding: '5px 18px',
     borderRadius: 999,
-    letterSpacing: '0.04em',
+    letterSpacing: '0.12em',
     textTransform: 'uppercase',
+    fontFamily: F.brand,
+    boxShadow: `0 4px 16px rgba(245,145,30,0.50)`,
   },
   pricingCardLabel: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: '0.85rem',
-    fontWeight: 600,
+    fontWeight: 700,
     textTransform: 'uppercase',
-    letterSpacing: '0.08em',
+    letterSpacing: '0.14em',
+    fontFamily: F.brand,
   },
   pricingCardLabelFeatured: {
-    color: '#fb923c',
+    color: C.orangeLight,
     fontSize: '0.85rem',
-    fontWeight: 600,
+    fontWeight: 700,
     textTransform: 'uppercase',
-    letterSpacing: '0.08em',
+    letterSpacing: '0.14em',
+    fontFamily: F.brand,
   },
   pricingCardPrice: {
     display: 'flex',
@@ -754,15 +946,18 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '2px',
   },
   pricingCardAmount: {
-    fontSize: '3rem',
-    fontWeight: 900,
+    fontFamily: F.display,
+    fontSize: '3.75rem',
+    fontWeight: 400,
     color: '#ffffff',
     lineHeight: 1,
+    letterSpacing: '0.005em',
   },
   pricingCardPeriod: {
     fontSize: '1rem',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.55)',
     fontWeight: 600,
+    fontFamily: F.body,
   },
   pricingCardList: {
     listStyle: 'none',
@@ -773,53 +968,62 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '0.6rem',
     textAlign: 'left',
     fontSize: '0.9rem',
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.78)',
     lineHeight: 1.5,
+    fontFamily: F.body,
   },
   pricingCompare: {
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(255,255,255,0.5)',
     fontSize: '0.95rem',
     margin: 0,
     maxWidth: 520,
     lineHeight: 1.6,
+    fontFamily: F.body,
   },
 
   // Stats bar
   statsBar: {
     background: '#ffffff',
     borderBottom: '1px solid #e2e8f0',
-    borderTop: '1px solid #e2e8f0',
+    position: 'relative',
+  },
+  statsAccentLine: {
+    height: 4,
+    background: `linear-gradient(90deg, ${C.orange} 0%, ${C.orangeLight} 30%, ${C.red} 65%, ${C.cyan} 100%)`,
   },
   statsInner: {
     maxWidth: 900,
     margin: '0 auto',
-    padding: '2.5rem 2rem',
+    padding: '3rem 2rem',
     display: 'flex',
     justifyContent: 'center',
-    gap: '3rem',
+    gap: '4rem',
     flexWrap: 'wrap',
   },
   statItem: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '0.3rem',
+    gap: '0.4rem',
   },
   statValue: {
-    fontSize: '2.25rem',
-    fontWeight: 900,
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    fontFamily: F.display,
+    fontSize: '4rem',
+    fontWeight: 400,
+    background: G.signature,
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
     lineHeight: 1,
+    letterSpacing: '0.005em',
   },
   statLabel: {
-    fontSize: '0.75rem',
+    fontSize: '0.78rem',
     color: '#64748b',
     textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    fontWeight: 600,
+    letterSpacing: '0.14em',
+    fontWeight: 700,
+    fontFamily: F.brand,
   },
 
   // Features section
@@ -839,20 +1043,40 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: '0.75rem',
+    alignItems: 'center',
+  },
+  sectionEyebrow: {
+    color: C.orange,
+    fontSize: '0.78rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.18em',
+    fontFamily: F.brand,
   },
   sectionTitle: {
-    fontSize: 'clamp(1.65rem, 3vw, 2.4rem)',
-    fontWeight: 800,
-    color: '#0d1b2a',
-    letterSpacing: '-0.025em',
+    fontFamily: F.display,
+    fontSize: 'clamp(2rem, 4.5vw, 3.5rem)',
+    fontWeight: 400,
+    color: C.navy,
+    letterSpacing: '0.005em',
+    lineHeight: 1.0,
     margin: 0,
+    textTransform: 'uppercase',
+  },
+  sectionTitleAccent: {
+    fontFamily: F.display,
+    background: G.signature,
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
   },
   sectionSubtitle: {
     fontSize: '1rem',
     color: '#64748b',
-    maxWidth: 560,
-    margin: '0 auto',
+    maxWidth: 580,
+    margin: '0.25rem auto 0',
     lineHeight: 1.6,
+    fontFamily: F.body,
   },
   featuresGrid: {
     display: 'grid',
@@ -878,6 +1102,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '0.5rem auto 0',
     maxWidth: 480,
     lineHeight: 1.5,
+    fontFamily: F.body,
   },
 
   // How it works section
@@ -904,29 +1129,35 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0 1.5rem',
   },
   stepCircle: {
-    width: 60,
-    height: 60,
+    width: 68,
+    height: 68,
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
-    color: '#ffffff',
-    fontSize: '1.5rem',
-    fontWeight: 900,
+    background: G.primary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: '1.25rem',
     flexShrink: 0,
-    boxShadow: '0 6px 20px rgba(234,88,12,0.38)',
+    boxShadow: `0 8px 24px rgba(245,145,30,0.55), inset 0 0 0 2px rgba(255,255,255,0.18)`,
     position: 'relative',
     zIndex: 1,
   },
+  stepCircleNumber: {
+    fontFamily: F.display,
+    color: '#ffffff',
+    fontSize: '1.85rem',
+    fontWeight: 400,
+    letterSpacing: '0.005em',
+    lineHeight: 1,
+  },
   stepConnector: {
     position: 'absolute',
-    top: 30,
-    left: 'calc(50% + 30px)',
-    right: 'calc(-50% + 30px)',
+    top: 34,
+    left: 'calc(50% + 34px)',
+    right: 'calc(-50% + 34px)',
     height: 2,
-    borderTop: '2px dashed rgba(234,88,12,0.25)',
+    borderTop: `2px dashed ${C.orange}`,
+    opacity: 0.4,
     zIndex: 0,
   },
   stepContent: {
@@ -937,19 +1168,21 @@ const styles: Record<string, React.CSSProperties> = {
   stepTitle: {
     fontSize: '1.0625rem',
     fontWeight: 700,
-    color: '#0d1b2a',
+    color: C.navy,
     margin: 0,
+    fontFamily: F.body,
   },
   stepDescription: {
     fontSize: '0.9rem',
     color: '#64748b',
     lineHeight: 1.6,
     margin: 0,
+    fontFamily: F.body,
   },
 
   // CTA final
   ctaBottom: {
-    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+    background: G.hero,
     padding: '7rem 2rem',
     display: 'flex',
     justifyContent: 'center',
@@ -962,14 +1195,24 @@ const styles: Record<string, React.CSSProperties> = {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 600,
-    height: 600,
-    background: 'radial-gradient(circle, rgba(234,88,12,0.14) 0%, transparent 65%)',
+    width: 720,
+    height: 720,
+    background: `radial-gradient(circle, rgba(245,145,30,0.22) 0%, transparent 65%)`,
+    pointerEvents: 'none',
+    borderRadius: '50%',
+  },
+  ctaBottomGlowAccent: {
+    position: 'absolute',
+    bottom: '-100px',
+    left: '-100px',
+    width: 440,
+    height: 440,
+    background: `radial-gradient(circle, rgba(19,175,240,0.14) 0%, transparent 70%)`,
     pointerEvents: 'none',
     borderRadius: '50%',
   },
   ctaBottomContent: {
-    maxWidth: 640,
+    maxWidth: 720,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -979,30 +1222,37 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1,
   },
   ctaBottomTitle: {
-    fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
-    fontWeight: 900,
+    fontFamily: F.display,
+    fontSize: 'clamp(2.25rem, 5vw, 4rem)',
+    fontWeight: 400,
     color: '#ffffff',
-    letterSpacing: '-0.025em',
+    letterSpacing: '0.005em',
     margin: 0,
-    lineHeight: 1.12,
+    lineHeight: 1.0,
+    textTransform: 'uppercase',
+  },
+  ctaBottomTitleAccent: {
+    fontFamily: F.display,
   },
   ctaBottomSubtitle: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.65)',
     fontSize: '1.0625rem',
     margin: 0,
     lineHeight: 1.6,
+    fontFamily: F.body,
   },
   ctaBottomButton: {
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    background: G.primary,
     color: '#ffffff',
     border: 'none',
     borderRadius: 12,
-    padding: '17px 40px',
+    padding: '17px 42px',
     fontSize: '1.0625rem',
     fontWeight: 700,
     cursor: 'pointer',
     transition: 'transform 0.2s, box-shadow 0.2s, filter 0.2s',
-    boxShadow: '0 8px 32px rgba(234,88,12,0.4)',
-    letterSpacing: '-0.01em',
+    boxShadow: `0 8px 32px rgba(245,145,30,0.50)`,
+    letterSpacing: '0.01em',
+    fontFamily: F.body,
   },
 };

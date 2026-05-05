@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 
+// Logo oficial Vallekas Basket (versión 2026)
+const VKB_LOGO = 'https://vallekasbasket.com/wp-content/uploads/2026/04/logotipo-vkb-368.webp';
+
 // Navbar fija con glassmorphism para las páginas públicas de marketing
 export default function PublicLayout({ children }: { children?: React.ReactNode }) {
   const navigate = useNavigate();
@@ -23,8 +26,8 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
           .pub-hamburger {
             display: flex !important;
             background: transparent;
-            border: 1px solid rgba(255,255,255,0.25);
-            color: #fff;
+            border: 1px solid rgba(245,145,30,0.40);
+            color: #fbb04a;
             font-size: 1.25rem;
             width: 40px;
             height: 40px;
@@ -38,7 +41,7 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
             flex-direction: column;
             gap: 0;
             background: rgba(8,14,26,0.98);
-            border-top: 1px solid rgba(234,88,12,0.14);
+            border-top: 1px solid rgba(245,145,30,0.20);
             padding: 0.5rem 0;
           }
           .pub-mobile-link {
@@ -52,7 +55,7 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
           }
           .pub-mobile-cta {
             margin: 0.75rem 1.5rem;
-            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+            background: linear-gradient(135deg, #f5911e 0%, #fbb04a 100%);
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -61,19 +64,19 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
             font-weight: 700;
             cursor: pointer;
             text-align: center;
+            box-shadow: 0 4px 18px rgba(245,145,30,0.50);
           }
         }
       `}</style>
       {/* ── Navbar ── */}
       <header style={styles.navbar}>
+        {/* Línea de acento superior (naranja dominante, cyan como toque) */}
+        <div style={styles.navAccentLine} />
+
         <div style={styles.navInner}>
           {/* Logo izquierda */}
           <Link to="/" style={styles.brand}>
-            <img
-              src="https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png"
-              alt="Vallekas Basket"
-              style={styles.brandLogo}
-            />
+            <img src={VKB_LOGO} alt="Vallekas Basket" style={styles.brandLogo} />
             <span style={styles.brandText}>VKB Academy</span>
           </Link>
 
@@ -91,13 +94,14 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
               style={styles.ctaButton}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLButtonElement;
-                el.style.boxShadow = '0 0 28px rgba(234,88,12,0.55)';
+                el.style.boxShadow =
+                  '0 0 28px rgba(245,145,30,0.65), 0 4px 18px rgba(19,175,240,0.25)';
                 el.style.transform = 'translateY(-1px)';
                 el.style.filter = 'brightness(1.08)';
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLButtonElement;
-                el.style.boxShadow = '0 4px 18px rgba(234,88,12,0.35)';
+                el.style.boxShadow = '0 4px 18px rgba(245,145,30,0.50)';
                 el.style.transform = 'translateY(0)';
                 el.style.filter = 'none';
               }}
@@ -146,13 +150,12 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
 
       {/* ── Footer ── */}
       <footer style={styles.footer}>
+        {/* Banda superior: naranja dominante con toque cyan */}
+        <div style={styles.footerStripe} />
         <div style={styles.footerInner}>
           <div style={styles.footerBrand}>
-            <img
-              src="https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png"
-              alt="Vallekas Basket"
-              style={styles.footerLogo}
-            />
+            <img src={VKB_LOGO} alt="Vallekas Basket" style={styles.footerLogo} />
+            <span style={styles.footerWordmark}>VKB Academy</span>
           </div>
           <p style={styles.footerText}>© 2026 Vallekas Basket · Formación deportiva y académica</p>
           <div style={styles.footerLinks}>
@@ -181,7 +184,7 @@ function NavItem({ to, label }: { to: string; label: string }) {
       style={styles.navLink}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLAnchorElement;
-        el.style.color = '#f97316';
+        el.style.color = '#fbb04a';
         el.style.opacity = '1';
       }}
       onMouseLeave={(e) => {
@@ -207,10 +210,16 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'sticky',
     top: 0,
     zIndex: 100,
-    background: 'linear-gradient(180deg, rgba(8,14,26,0.97) 0%, rgba(13,27,42,0.95) 100%)',
-    borderBottom: '1px solid rgba(234,88,12,0.14)',
+    background: 'linear-gradient(180deg, rgba(8,14,26,0.97) 0%, rgba(10,22,40,0.95) 100%)',
+    borderBottom: '1px solid rgba(245,145,30,0.20)',
     backdropFilter: 'blur(14px)',
     WebkitBackdropFilter: 'blur(14px)',
+  },
+  navAccentLine: {
+    height: 2,
+    background:
+      'linear-gradient(90deg, transparent 0%, #f5911e 30%, #fbb04a 50%, #13aff0 80%, transparent 100%)',
+    opacity: 0.75,
   },
   navInner: {
     width: '100%',
@@ -228,22 +237,24 @@ const styles: Record<string, React.CSSProperties> = {
   brand: {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.625rem',
+    gap: '0.7rem',
     textDecoration: 'none',
     flexShrink: 0,
   },
   brandLogo: {
-    height: 36,
+    height: 38,
     width: 'auto',
     objectFit: 'contain' as const,
+    filter: 'drop-shadow(0 0 8px rgba(245,145,30,0.40))',
   },
   brandText: {
-    background: 'linear-gradient(135deg, #ea580c, #f97316)',
+    fontFamily: "'Unbounded', 'Inter', sans-serif",
+    background: 'linear-gradient(135deg, #f5911e 0%, #fbb04a 50%, #13aff0 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
     fontWeight: 800,
-    fontSize: '1.125rem',
+    fontSize: '1.0625rem',
     letterSpacing: '-0.01em',
   },
 
@@ -255,23 +266,25 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     opacity: 0.8,
     transition: 'color 0.18s, opacity 0.18s',
+    fontFamily: "'Inter', sans-serif",
   },
 
   // CTA button
   ctaButton: {
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    background: 'linear-gradient(135deg, #f5911e 0%, #fbb04a 100%)',
     color: '#ffffff',
     border: 'none',
-    borderRadius: 8,
-    padding: '9px 22px',
+    borderRadius: 10,
+    padding: '10px 22px',
     fontSize: '0.9375rem',
     fontWeight: 700,
     cursor: 'pointer',
     transition: 'box-shadow 0.18s, transform 0.18s, filter 0.18s',
     flexShrink: 0,
     whiteSpace: 'nowrap',
-    boxShadow: '0 4px 18px rgba(234,88,12,0.35)',
+    boxShadow: '0 4px 18px rgba(245,145,30,0.50)',
     letterSpacing: '0.01em',
+    fontFamily: "'Inter', sans-serif",
   },
 
   // Main content
@@ -281,9 +294,18 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Footer mejorado
   footer: {
-    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 100%)',
-    padding: '2.5rem 2rem',
-    borderTop: '1px solid rgba(234,88,12,0.10)',
+    background: 'linear-gradient(135deg, #080e1a 0%, #0a1628 100%)',
+    padding: '3rem 2rem 2.5rem',
+    borderTop: '1px solid rgba(245,145,30,0.16)',
+    position: 'relative',
+  },
+  footerStripe: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    background: 'linear-gradient(90deg, #f5911e 0%, #fbb04a 35%, #cb2027 65%, #13aff0 100%)',
   },
   footerInner: {
     maxWidth: 1200,
@@ -292,24 +314,35 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     flexWrap: 'wrap' as const,
-    gap: 12,
+    gap: 14,
   },
   footerBrand: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 12,
   },
   footerLogo: {
-    height: 52,
+    height: 56,
     width: 'auto',
     objectFit: 'contain' as const,
-    opacity: 0.85,
+    filter: 'drop-shadow(0 0 10px rgba(245,145,30,0.35))',
+  },
+  footerWordmark: {
+    fontFamily: "'Unbounded', 'Inter', sans-serif",
+    fontWeight: 800,
+    fontSize: '1.125rem',
+    background: 'linear-gradient(135deg, #f5911e 0%, #fbb04a 60%, #13aff0 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    letterSpacing: '-0.01em',
   },
   footerText: {
-    color: 'rgba(255,255,255,0.40)',
+    color: 'rgba(255,255,255,0.45)',
     fontSize: '0.8125rem',
     margin: 0,
+    fontFamily: "'Inter', sans-serif",
   },
   footerLinks: {
     display: 'flex',
@@ -317,13 +350,14 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
   },
   footerLink: {
-    color: 'rgba(255,255,255,0.50)',
+    color: 'rgba(255,255,255,0.55)',
     textDecoration: 'none',
     fontSize: '0.8125rem',
     transition: 'color 0.15s',
+    fontFamily: "'Inter', sans-serif",
   },
   footerSep: {
-    color: 'rgba(255,255,255,0.20)',
+    color: 'rgba(245,145,30,0.45)',
     fontSize: '0.75rem',
   },
 };
