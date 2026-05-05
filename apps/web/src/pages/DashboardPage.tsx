@@ -33,12 +33,6 @@ export default function DashboardPage() {
             desc: 'Practica con ejercicios al instante',
             to: '/exercises',
           },
-          {
-            emoji: '📅',
-            label: 'Reservar clase',
-            desc: 'Elige horario con un profesor',
-            to: '/bookings',
-          },
         ]
       : user.role === Role.TEACHER
         ? [
