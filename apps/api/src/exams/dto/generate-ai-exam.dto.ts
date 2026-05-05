@@ -1,4 +1,14 @@
-import { IsIn, IsInt, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class GenerateAiExamDto {
   @IsString()
@@ -17,4 +27,16 @@ export class GenerateAiExamDto {
   @IsInt()
   @IsIn([5, 10], { message: 'numQuestions debe ser 5 o 10' })
   numQuestions: 5 | 10;
+
+  /// Límite de tiempo en segundos (60–10800). Omitir = sin límite.
+  @IsInt()
+  @Min(60, { message: 'El tiempo mínimo es 60 segundos' })
+  @Max(10800, { message: 'El tiempo máximo es 10800 segundos (3 h)' })
+  @IsOptional()
+  timeLimit?: number;
+
+  /// Si true, solo se permite un intento entregado por banco.
+  @IsBoolean()
+  @IsOptional()
+  onlyOnce?: boolean;
 }

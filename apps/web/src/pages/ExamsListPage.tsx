@@ -180,6 +180,18 @@ function AiBankCard({
   isDeleting: boolean;
   isStarting: boolean;
 }) {
+  const lockedByOnce = bank.onlyOnce && bank.submittedAttemptCount > 0;
+  const startDisabled = isStarting || lockedByOnce;
+  const startLabel = lockedByOnce
+    ? 'Completado'
+    : isStarting
+      ? 'Iniciando...'
+      : bank.attemptCount > 0
+        ? 'Repetir'
+        : 'Empezar';
+
+  const timeMinutes = bank.timeLimit ? Math.round(bank.timeLimit / 60) : null;
+
   return (
     <div
       className="vkb-card animate-in"
@@ -241,6 +253,37 @@ function AiBankCard({
             <span>📋</span>
             <span>{bank.questionCount} preguntas</span>
           </span>
+          {timeMinutes !== null && (
+            <span
+              style={{
+                fontSize: '0.78rem',
+                color: 'var(--color-text-muted)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+              title="Límite de tiempo"
+            >
+              <span>⏱</span>
+              <span>{timeMinutes} min</span>
+            </span>
+          )}
+          {bank.onlyOnce && (
+            <span
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                padding: '2px 10px',
+                borderRadius: 999,
+                background: 'rgba(234,88,12,0.08)',
+                border: '1px solid rgba(234,88,12,0.18)',
+                color: 'var(--color-primary)',
+              }}
+              title="Solo un intento permitido"
+            >
+              🔒 1 intento
+            </span>
+          )}
           {bank.attemptCount > 0 && (
             <span
               style={{
@@ -266,11 +309,19 @@ function AiBankCard({
         </button>
         <button
           className="btn btn-primary"
-          style={{ padding: '9px 20px', fontSize: '0.875rem' }}
+          style={{
+            padding: '9px 20px',
+            fontSize: '0.875rem',
+            opacity: lockedByOnce ? 0.55 : 1,
+            cursor: startDisabled ? 'not-allowed' : 'pointer',
+          }}
           onClick={onStart}
-          disabled={isStarting}
+          disabled={startDisabled}
+          title={
+            lockedByOnce ? 'Examen marcado como un solo intento. Ya lo completaste.' : undefined
+          }
         >
-          {isStarting ? 'Iniciando...' : bank.attemptCount > 0 ? 'Repetir' : 'Empezar'}
+          {startLabel}
         </button>
       </div>
     </div>
@@ -285,6 +336,9 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   const [moduleId, setModuleId] = useState('');
   const [topic, setTopic] = useState('');
   const [numQuestions, setNumQuestions] = useState<5 | 10>(5);
+  const [useTimer, setUseTimer] = useState(false);
+  const [timerMins, setTimerMins] = useState(15);
+  const [onlyOnce, setOnlyOnce] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const { data: courseDetail } = useCourse(courseId);
@@ -303,6 +357,8 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
         moduleId: moduleId || undefined,
         topic: topic.trim(),
         numQuestions,
+        timeLimit: useTimer ? Math.round(timerMins * 60) : undefined,
+        onlyOnce,
       });
       onSuccess();
     } catch (err) {
@@ -442,7 +498,7 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
         </div>
 
         {/* Nº preguntas: 5 o 10 */}
-        <div style={{ marginBottom: 22 }}>
+        <div style={{ marginBottom: 18 }}>
           <label style={labelStyle}>Número de preguntas</label>
           <div style={{ display: 'flex', gap: 10 }}>
             {([5, 10] as const).map((n) => {
@@ -473,6 +529,77 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
             })}
           </div>
         </div>
+
+        {/* Toggle: límite de tiempo */}
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 0',
+            borderTop: '1px solid var(--color-border)',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            color: 'var(--color-text)',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={useTimer}
+            onChange={(e) => setUseTimer(e.target.checked)}
+            style={{ accentColor: 'var(--color-primary)', width: 16, height: 16 }}
+          />
+          <span style={{ fontWeight: 500 }}>⏱ Límite de tiempo</span>
+        </label>
+        {useTimer && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '4px 0 12px 26px',
+            }}
+          >
+            <input
+              type="number"
+              min={1}
+              max={180}
+              value={timerMins}
+              onChange={(e) =>
+                setTimerMins(Math.min(180, Math.max(1, Number(e.target.value) || 1)))
+              }
+              style={{ ...inputStyle, width: 90 }}
+            />
+            <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>minutos</span>
+          </div>
+        )}
+
+        {/* Toggle: solo un intento */}
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 0',
+            borderTop: '1px solid var(--color-border)',
+            borderBottom: '1px solid var(--color-border)',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            color: 'var(--color-text)',
+            marginBottom: 18,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={onlyOnce}
+            onChange={(e) => setOnlyOnce(e.target.checked)}
+            style={{ accentColor: 'var(--color-primary)', width: 16, height: 16 }}
+          />
+          <span style={{ fontWeight: 500 }}>🔒 Solo un intento</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+            (no podrás repetirlo)
+          </span>
+        </label>
 
         {submitError && (
           <div

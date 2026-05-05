@@ -74,11 +74,14 @@ export interface AiExamBankSummary {
   title: string;
   topic: string;
   numQuestions: 5 | 10;
+  timeLimit: number | null;
+  onlyOnce: boolean;
   createdAt: string;
   course: { id: string; title: string };
   module: { id: string; title: string } | null;
   questionCount: number;
   attemptCount: number;
+  submittedAttemptCount: number;
 }
 
 export interface AiExamBankDetail {
@@ -86,6 +89,8 @@ export interface AiExamBankDetail {
   title: string;
   topic: string;
   numQuestions: 5 | 10;
+  timeLimit: number | null;
+  onlyOnce: boolean;
   createdAt: string;
   course: { id: string; title: string };
   module: { id: string; title: string } | null;
@@ -104,6 +109,8 @@ export interface GenerateAiExamPayload {
   moduleId?: string;
   topic: string;
   numQuestions: 5 | 10;
+  timeLimit?: number; // segundos
+  onlyOnce?: boolean;
 }
 
 export const examsApi = {

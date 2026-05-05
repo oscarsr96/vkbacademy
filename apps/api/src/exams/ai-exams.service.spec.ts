@@ -140,6 +140,8 @@ describe('AiExamsService', () => {
         title: 'Examen de prueba',
         topic: 'Logaritmos',
         numQuestions: 5,
+        timeLimit: null,
+        onlyOnce: false,
         createdAt: new Date('2026-05-05T12:00:00Z'),
         course: { id: 'c1', title: 'Mate' },
         module: null,
@@ -170,6 +172,52 @@ describe('AiExamsService', () => {
       const resultStr = JSON.stringify(result);
       expect(resultStr).not.toContain('isCorrect');
     });
+
+    it('persiste timeLimit y onlyOnce cuando vienen en el DTO', async () => {
+      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Mate', schoolYear: null });
+      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
+      mockAi.generate.mockResolvedValue(JSON.stringify(validPayload(5)));
+      mockPrisma.aiExamBank.create.mockResolvedValue({
+        id: 'bank1',
+        title: 't',
+        topic: 't',
+        numQuestions: 5,
+        timeLimit: 600,
+        onlyOnce: true,
+        createdAt: new Date(),
+        course: { id: 'c1', title: 'Mate' },
+        module: null,
+        questions: [],
+      });
+
+      await service.generate('user1', { ...dto, timeLimit: 600, onlyOnce: true });
+
+      const callArgs = mockPrisma.aiExamBank.create.mock.calls[0][0];
+      expect(callArgs.data.timeLimit).toBe(600);
+      expect(callArgs.data.onlyOnce).toBe(true);
+    });
+
+    it('rechaza si la IA devuelve todas las preguntas del mismo tipo (N>=3)', async () => {
+      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Mate', schoolYear: null });
+      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
+      // Payload con 5 preguntas, todas SINGLE
+      const allSingle = {
+        title: 'Examen mono-tipo',
+        questions: Array.from({ length: 5 }, () => ({
+          text: '¿Cuál es la capital de España?',
+          type: 'SINGLE',
+          answers: [
+            { text: 'Madrid', isCorrect: true },
+            { text: 'Barcelona', isCorrect: false },
+          ],
+          explanation: 'expl',
+        })),
+      };
+      mockAi.generate.mockResolvedValue(JSON.stringify(allSingle));
+
+      await expect(service.generate('user1', dto)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.generate('user1', dto)).rejects.toThrow(/variedad de tipos/i);
+    });
   });
 
   // ─── listMyBanks ─────────────────────────────────────────────────────────
@@ -182,10 +230,13 @@ describe('AiExamsService', () => {
           title: 'Examen 1',
           topic: 'Tema',
           numQuestions: 5,
+          timeLimit: null,
+          onlyOnce: false,
           createdAt: new Date('2026-05-05T12:00:00Z'),
           course: { id: 'c1', title: 'Mate' },
           module: null,
           _count: { attempts: 2, questions: 5 },
+          attempts: [{ id: 'att1' }],
         },
       ]);
 
@@ -193,6 +244,7 @@ describe('AiExamsService', () => {
       expect(result).toHaveLength(1);
       expect(result[0].attemptCount).toBe(2);
       expect(result[0].questionCount).toBe(5);
+      expect(result[0].submittedAttemptCount).toBe(1);
     });
   });
 
@@ -226,6 +278,8 @@ describe('AiExamsService', () => {
         title: 't',
         topic: 't',
         numQuestions: 5,
+        timeLimit: null,
+        onlyOnce: false,
         createdAt: new Date(),
         course: { id: 'c1', title: 'Mate' },
         module: null,
@@ -270,8 +324,8 @@ describe('AiExamsService', () => {
   // ─── startAttempt ────────────────────────────────────────────────────────
 
   describe('startAttempt', () => {
-    it('snapshotiza preguntas y NO expone isCorrect', async () => {
-      mockPrisma.aiExamBank.findUnique.mockResolvedValue({
+    function bankFixture(overrides: Partial<{ onlyOnce: boolean; timeLimit: number | null }> = {}) {
+      return {
         id: 'bank1',
         userId: 'user1',
         courseId: 'c1',
@@ -279,6 +333,8 @@ describe('AiExamsService', () => {
         title: 't',
         topic: 't',
         numQuestions: 5,
+        timeLimit: null,
+        onlyOnce: false,
         createdAt: new Date(),
         course: { id: 'c1', title: 'Mate' },
         module: null,
@@ -295,7 +351,12 @@ describe('AiExamsService', () => {
             ],
           },
         ],
-      });
+        ...overrides,
+      };
+    }
+
+    it('snapshotiza preguntas y NO expone isCorrect', async () => {
+      mockPrisma.aiExamBank.findUnique.mockResolvedValue(bankFixture());
       mockPrisma.examAttempt.create.mockResolvedValue({
         id: 'att1',
         startedAt: new Date('2026-05-05T12:00:00Z'),
@@ -313,6 +374,37 @@ describe('AiExamsService', () => {
       const createCall = mockPrisma.examAttempt.create.mock.calls[0][0];
       expect(createCall.data.aiExamBankId).toBe('bank1');
       expect(createCall.data.questionsSnapshot[0].answers[0].isCorrect).toBeDefined();
+    });
+
+    it('propaga timeLimit y onlyOnce del banco al ExamAttempt', async () => {
+      mockPrisma.aiExamBank.findUnique.mockResolvedValue(
+        bankFixture({ onlyOnce: true, timeLimit: 600 }),
+      );
+      mockPrisma.examAttempt.count.mockResolvedValue(0); // sin intentos previos
+      mockPrisma.examAttempt.create.mockResolvedValue({ id: 'att1', startedAt: new Date() });
+
+      await service.startAttempt('user1', 'bank1');
+
+      const createCall = mockPrisma.examAttempt.create.mock.calls[0][0];
+      expect(createCall.data.timeLimit).toBe(600);
+      expect(createCall.data.onlyOnce).toBe(true);
+    });
+
+    it('rechaza repetir un banco onlyOnce con un intento ya entregado', async () => {
+      mockPrisma.aiExamBank.findUnique.mockResolvedValue(bankFixture({ onlyOnce: true }));
+      mockPrisma.examAttempt.count.mockResolvedValue(1);
+
+      await expect(service.startAttempt('user1', 'bank1')).rejects.toThrow(ForbiddenException);
+      expect(mockPrisma.examAttempt.create).not.toHaveBeenCalled();
+    });
+
+    it('permite iniciar un banco onlyOnce si todavía no hay intento entregado', async () => {
+      mockPrisma.aiExamBank.findUnique.mockResolvedValue(bankFixture({ onlyOnce: true }));
+      mockPrisma.examAttempt.count.mockResolvedValue(0);
+      mockPrisma.examAttempt.create.mockResolvedValue({ id: 'att1', startedAt: new Date() });
+
+      await expect(service.startAttempt('user1', 'bank1')).resolves.toBeDefined();
+      expect(mockPrisma.examAttempt.create).toHaveBeenCalledTimes(1);
     });
   });
 });

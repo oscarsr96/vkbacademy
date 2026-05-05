@@ -613,6 +613,8 @@ model AiExamBank {
   topic        String // input crudo del alumno
   title        String // título limpio generado por la IA
   numQuestions Int // 5 o 10 (validado en DTO)
+  timeLimit    Int? // segundos; null = sin límite
+  onlyOnce     Boolean  @default(false) // si true, solo se permite un intento entregado por banco
   createdAt    DateTime @default(now())
 
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)

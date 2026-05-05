@@ -119,6 +119,8 @@ export class AiExamsService {
         topic: dto.topic,
         title: payload.title.trim().slice(0, 200) || dto.topic,
         numQuestions: dto.numQuestions,
+        timeLimit: dto.timeLimit ?? null,
+        onlyOnce: dto.onlyOnce ?? false,
         questions: {
           create: payload.questions.map((q, qIdx) => ({
             text: q.text,
@@ -151,6 +153,11 @@ export class AiExamsService {
         course: { select: { id: true, title: true } },
         module: { select: { id: true, title: true } },
         _count: { select: { attempts: true, questions: true } },
+        // Cuenta de intentos entregados (para gating onlyOnce)
+        attempts: {
+          where: { submittedAt: { not: null } },
+          select: { id: true },
+        },
       },
     });
 
@@ -159,11 +166,14 @@ export class AiExamsService {
       title: b.title,
       topic: b.topic,
       numQuestions: b.numQuestions,
+      timeLimit: b.timeLimit,
+      onlyOnce: b.onlyOnce,
       createdAt: b.createdAt.toISOString(),
       course: { id: b.course.id, title: b.course.title },
       module: b.module ? { id: b.module.id, title: b.module.title } : null,
       questionCount: b._count.questions,
       attemptCount: b._count.attempts,
+      submittedAttemptCount: b.attempts.length,
     }));
   }
 
@@ -208,6 +218,18 @@ export class AiExamsService {
     if (!bank) throw new NotFoundException('Banco no encontrado');
     if (bank.userId !== userId) throw new ForbiddenException('No autorizado');
 
+    // Si el banco es de "un solo intento", bloquear si ya hay uno entregado
+    if (bank.onlyOnce) {
+      const submittedCount = await this.prisma.examAttempt.count({
+        where: { aiExamBankId: bankId, userId, submittedAt: { not: null } },
+      });
+      if (submittedCount > 0) {
+        throw new ForbiddenException(
+          'Este examen está marcado como "solo un intento" y ya lo has completado',
+        );
+      }
+    }
+
     // Snapshot con respuestas barajadas dentro de cada pregunta
     const questionsSnapshot: QuestionSnapshot[] = bank.questions.map((q) => ({
       id: q.id,
@@ -223,6 +245,8 @@ export class AiExamsService {
         moduleId: bank.moduleId,
         aiExamBankId: bank.id,
         numQuestions: bank.numQuestions,
+        timeLimit: bank.timeLimit,
+        onlyOnce: bank.onlyOnce,
         questionsSnapshot: questionsSnapshot as object[],
         answers: [],
       },
@@ -239,8 +263,8 @@ export class AiExamsService {
         answers: q.answers.map((a) => ({ id: a.id, text: a.text })),
       })),
       numQuestions: bank.numQuestions,
-      timeLimit: null,
-      onlyOnce: false,
+      timeLimit: bank.timeLimit,
+      onlyOnce: bank.onlyOnce,
       startedAt: attempt.startedAt.toISOString(),
     };
   }
@@ -266,6 +290,8 @@ export class AiExamsService {
       title: string;
       topic: string;
       numQuestions: number;
+      timeLimit: number | null;
+      onlyOnce: boolean;
       createdAt: Date;
       course: { id: string; title: string };
       module: { id: string; title: string } | null;
@@ -285,6 +311,8 @@ export class AiExamsService {
       title: bank.title,
       topic: bank.topic,
       numQuestions: bank.numQuestions,
+      timeLimit: bank.timeLimit,
+      onlyOnce: bank.onlyOnce,
       createdAt: bank.createdAt.toISOString(),
       course: bank.course,
       module: bank.module,
@@ -373,7 +401,36 @@ export class AiExamsService {
       }
     }
 
+    // Variedad obligatoria cuando N >= 3: deben aparecer los 3 tipos.
+    if (expectedCount >= 3) {
+      const typesSeen = new Set(p.questions.map((q) => q.type));
+      const missing = validTypes.filter((t) => !typesSeen.has(t));
+      if (missing.length > 0) {
+        throw new InternalServerErrorException(
+          `La IA no respetó la variedad de tipos: faltan ${missing.join(', ')}. Vuelve a intentarlo.`,
+        );
+      }
+    }
+
     return p as AiExamPayload;
+  }
+
+  /**
+   * Distribución obligatoria por tipo según número de preguntas.
+   * Garantiza variedad sin sobrecargar el prompt.
+   */
+  private getTypeDistribution(count: number): {
+    single: number;
+    multiple: number;
+    trueFalse: number;
+  } {
+    if (count === 5) return { single: 3, multiple: 1, trueFalse: 1 };
+    if (count === 10) return { single: 5, multiple: 3, trueFalse: 2 };
+    // Fallback genérico: ~60% SINGLE, ~25% MULTIPLE, resto TRUE_FALSE
+    const single = Math.max(1, Math.round(count * 0.6));
+    const multiple = Math.max(1, Math.round(count * 0.25));
+    const trueFalse = Math.max(1, count - single - multiple);
+    return { single, multiple, trueFalse };
   }
 
   private buildPrompt(
@@ -383,12 +440,21 @@ export class AiExamsService {
     topic: string,
     count: number,
   ): string {
+    const dist = this.getTypeDistribution(count);
     return `Genera un examen en español sobre el tema "${topic}".
 
 Curso: "${courseTitle}"
 ${schoolYearLabel ? `Nivel educativo: "${schoolYearLabel}" (sistema educativo español)` : ''}
 ${moduleTitle ? `Módulo: "${moduleTitle}"` : ''}
-Número de preguntas: ${count}
+Número total de preguntas: ${count}
+
+⚠️ DISTRIBUCIÓN POR TIPO — OBLIGATORIA, NO NEGOCIABLE:
+- ${dist.single} preguntas de tipo "SINGLE" (una sola respuesta correcta entre 3-4 opciones)
+- ${dist.multiple} preguntas de tipo "MULTIPLE" (varias respuestas correctas, entre 4 opciones)
+- ${dist.trueFalse} preguntas de tipo "TRUE_FALSE" (verdadero/falso)
+
+Si devuelves todas las preguntas del mismo tipo, la respuesta será RECHAZADA.
+Si no respetas el reparto exacto, la respuesta será RECHAZADA.
 
 Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, sin explicaciones adicionales fuera del JSON):
 {
@@ -406,7 +472,7 @@ Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, si
       "explanation": "Por qué la opción correcta es la correcta (1-2 frases pedagógicas)"
     },
     {
-      "text": "Enunciado de pregunta de respuesta múltiple",
+      "text": "Enunciado de pregunta de respuesta múltiple — usa fórmulas como 'selecciona TODAS las que apliquen' o '¿cuáles de las siguientes...?'",
       "type": "MULTIPLE",
       "answers": [
         { "text": "opción A", "isCorrect": true },
@@ -430,9 +496,10 @@ Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, si
 
 Reglas estrictas:
 - Devuelve EXACTAMENTE ${count} preguntas — ni una más, ni una menos.
-- Mezcla los tres tipos (SINGLE, MULTIPLE, TRUE_FALSE) cuando el tema lo permita; SINGLE debería ser mayoritario.
+- Respeta exactamente el reparto: ${dist.single} SINGLE + ${dist.multiple} MULTIPLE + ${dist.trueFalse} TRUE_FALSE.
+- Mezcla los tipos en orden variado (no agrupar todas las SINGLE juntas).
 - SINGLE: 3 o 4 opciones, exactamente 1 con isCorrect=true.
-- MULTIPLE: 4 opciones, 2 o 3 con isCorrect=true.
+- MULTIPLE: 4 opciones, 2 o 3 con isCorrect=true. El enunciado debe dejar claro que hay varias correctas.
 - TRUE_FALSE: exactamente 2 opciones ["Verdadero", "Falso"], solo una con isCorrect=true.
 - Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}.
 - Contenido curricular real relacionado con "${topic}".
