@@ -1,9 +1,5 @@
 import api from '../lib/axios';
-import type {
-  ExamBankInfo,
-  ExamAttemptStarted,
-  ExamAttemptResult,
-} from '@vkbacademy/shared';
+import type { ExamBankInfo, ExamAttemptStarted, ExamAttemptResult } from '@vkbacademy/shared';
 
 export interface StartExamPayload {
   courseId?: string;
@@ -71,9 +67,47 @@ export interface AvailableExams {
   modules: AvailableExamModule[];
 }
 
+// ─── Exámenes generados por IA (alumno) ──────────────────────────────────────
+
+export interface AiExamBankSummary {
+  id: string;
+  title: string;
+  topic: string;
+  numQuestions: 5 | 10;
+  createdAt: string;
+  course: { id: string; title: string };
+  module: { id: string; title: string } | null;
+  questionCount: number;
+  attemptCount: number;
+}
+
+export interface AiExamBankDetail {
+  id: string;
+  title: string;
+  topic: string;
+  numQuestions: 5 | 10;
+  createdAt: string;
+  course: { id: string; title: string };
+  module: { id: string; title: string } | null;
+  attemptCount: number;
+  questions: {
+    id: string;
+    text: string;
+    type: 'SINGLE' | 'MULTIPLE' | 'TRUE_FALSE';
+    order: number;
+    answers: { id: string; text: string; order: number }[];
+  }[];
+}
+
+export interface GenerateAiExamPayload {
+  courseId: string;
+  moduleId?: string;
+  topic: string;
+  numQuestions: 5 | 10;
+}
+
 export const examsApi = {
-  getAvailable: () =>
-    api.get<AvailableExams>('/exams/available').then((r) => r.data),
+  getAvailable: () => api.get<AvailableExams>('/exams/available').then((r) => r.data),
 
   getBankInfo: (params: { courseId?: string; moduleId?: string }) =>
     api.get<ExamBankInfo>('/exams/info', { params }).then((r) => r.data),
@@ -86,4 +120,19 @@ export const examsApi = {
 
   getHistory: (params: { courseId?: string; moduleId?: string }) =>
     api.get<ExamAttemptHistoryItem[]>('/exams/history', { params }).then((r) => r.data),
+
+  // ── IA ──
+  generateAiExam: (payload: GenerateAiExamPayload) =>
+    api.post<AiExamBankDetail>('/exams/ai/generate', payload).then((r) => r.data),
+
+  listMyAiBanks: () => api.get<AiExamBankSummary[]>('/exams/ai/my-banks').then((r) => r.data),
+
+  getAiBank: (bankId: string) =>
+    api.get<AiExamBankDetail>(`/exams/ai/${bankId}`).then((r) => r.data),
+
+  deleteAiBank: (bankId: string) =>
+    api.delete<{ ok: true }>(`/exams/ai/${bankId}`).then((r) => r.data),
+
+  startAiAttempt: (bankId: string) =>
+    api.post<ExamAttemptStarted>(`/exams/ai/${bankId}/start`).then((r) => r.data),
 };

@@ -1,6 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useExamBankInfo, useStartExam, useSubmitExam, useExamHistory } from '../hooks/useExams';
+import {
+  useExamBankInfo,
+  useStartExam,
+  useSubmitExam,
+  useExamHistory,
+  useStartAiAttempt,
+} from '../hooks/useExams';
 import { useMyCertificates } from '../hooks/useCertificates';
 import { downloadCertificatePdf } from '../utils/certificatePdf';
 import type { ExamAttemptStarted, ExamAttemptResult, ExamQuestionPublic } from '@vkbacademy/shared';
@@ -69,19 +75,30 @@ function ConfigStep({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 20 }}>
-
       {/* Card de configuracion */}
-      <div
-        className="vkb-card"
-        style={{ padding: '28px' }}
-      >
-        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: 20 }}>
+      <div className="vkb-card" style={{ padding: '28px' }}>
+        <h3
+          style={{
+            fontSize: '1rem',
+            fontWeight: 700,
+            color: 'var(--color-text)',
+            marginBottom: 20,
+          }}
+        >
           {scopeTitle}
         </h3>
 
         {/* Numero de preguntas */}
         <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 8 }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              color: 'var(--color-text-muted)',
+              marginBottom: 8,
+            }}
+          >
             Numero de preguntas (maximo: {maxQuestions})
           </label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -96,7 +113,14 @@ function ConfigStep({
             <div className="progress-bar" style={{ flex: 1 }}>
               <div className="progress-fill" style={{ width: `${(numQ / maxQuestions) * 100}%` }} />
             </div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, whiteSpace: 'nowrap' as const }}>
+            <span
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--color-text-muted)',
+                fontWeight: 600,
+                whiteSpace: 'nowrap' as const,
+              }}
+            >
               {numQ}/{maxQuestions}
             </span>
           </div>
@@ -114,7 +138,9 @@ function ConfigStep({
           <span style={{ fontWeight: 500 }}>Limite de tiempo</span>
         </label>
         {useTimer && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 12px 26px' }}>
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 12px 26px' }}
+          >
             <input
               type="number"
               min={1}
@@ -152,7 +178,14 @@ function ConfigStep({
       {/* Historial reciente */}
       {recentAttempts.length > 0 && (
         <div className="vkb-card" style={{ padding: '24px' }}>
-          <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: 16 }}>
+          <h4
+            style={{
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              color: 'var(--color-text)',
+              marginBottom: 16,
+            }}
+          >
             Intentos recientes
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
@@ -203,9 +236,7 @@ function InProgressStep({
   isLoading: boolean;
 }) {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(
-    attempt.timeLimit ?? null,
-  );
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(attempt.timeLimit ?? null);
 
   const handleSubmit = useCallback(() => {
     const answers = Object.entries(selectedAnswers).map(([questionId, answerId]) => ({
@@ -300,12 +331,16 @@ function InProgressStep({
       {attempt.questions.map((q, idx) => {
         const chosen = selectedAnswers[q.id];
         return (
-          <div
-            key={q.id}
-            className="vkb-card"
-            style={{ padding: '22px 24px', marginBottom: 16 }}
-          >
-            <div style={{ fontWeight: 700, marginBottom: 16, color: 'var(--color-text)', fontSize: '0.975rem', lineHeight: 1.4 }}>
+          <div key={q.id} className="vkb-card" style={{ padding: '22px 24px', marginBottom: 16 }}>
+            <div
+              style={{
+                fontWeight: 700,
+                marginBottom: 16,
+                color: 'var(--color-text)',
+                fontSize: '0.975rem',
+                lineHeight: 1.4,
+              }}
+            >
               <span style={{ color: 'var(--color-primary)', marginRight: 8, fontWeight: 900 }}>
                 {idx + 1}.
               </span>
@@ -331,9 +366,7 @@ function InProgressStep({
                       border: isSelected
                         ? '1.5px solid var(--color-primary)'
                         : '1.5px solid rgba(234,88,12,0.20)',
-                      background: isSelected
-                        ? 'rgba(234,88,12,0.12)'
-                        : 'var(--color-bg)',
+                      background: isSelected ? 'rgba(234,88,12,0.12)' : 'var(--color-bg)',
                       color: isSelected ? 'var(--color-primary)' : 'var(--color-text)',
                       cursor: locked && !isSelected ? 'not-allowed' : 'pointer',
                       opacity: locked && !isSelected ? 0.5 : 1,
@@ -343,14 +376,17 @@ function InProgressStep({
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected && !(locked && !isSelected)) {
-                        (e.currentTarget as HTMLButtonElement).style.background = 'rgba(234,88,12,0.06)';
-                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(234,88,12,0.40)';
+                        (e.currentTarget as HTMLButtonElement).style.background =
+                          'rgba(234,88,12,0.06)';
+                        (e.currentTarget as HTMLButtonElement).style.borderColor =
+                          'rgba(234,88,12,0.40)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) {
                         (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg)';
-                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(234,88,12,0.20)';
+                        (e.currentTarget as HTMLButtonElement).style.borderColor =
+                          'rgba(234,88,12,0.20)';
                       }
                     }}
                   >
@@ -400,14 +436,17 @@ function ResultsStep({
   moduleId?: string;
   onRepeat: () => void;
   onBack: () => void;
-  historyItems: { attemptId: string; score: number | null; numQuestions: number; submittedAt: string | null }[];
+  historyItems: {
+    attemptId: string;
+    score: number | null;
+    numQuestions: number;
+    submittedAt: string | null;
+  }[];
 }) {
   const { data: certs } = useMyCertificates();
   const examCertType = courseId ? 'COURSE_EXAM' : 'MODULE_EXAM';
   const examScopeId = courseId ?? moduleId;
-  const examCert = certs?.find(
-    (c) => c.scopeId === examScopeId && c.type === examCertType,
-  );
+  const examCert = certs?.find((c) => c.scopeId === examScopeId && c.type === examCertType);
 
   const passed = result.score >= 50;
 
@@ -480,7 +519,14 @@ function ResultsStep({
 
       {/* Correcciones */}
       <div className="vkb-card" style={{ padding: '24px', marginBottom: 20 }}>
-        <h3 style={{ fontWeight: 700, marginBottom: 16, fontSize: '0.95rem', color: 'var(--color-text)' }}>
+        <h3
+          style={{
+            fontWeight: 700,
+            marginBottom: 16,
+            fontSize: '0.95rem',
+            color: 'var(--color-text)',
+          }}
+        >
           Correcciones
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
@@ -496,7 +542,15 @@ function ResultsStep({
                 borderLeftWidth: 4,
               }}
             >
-              <div style={{ fontWeight: 600, marginBottom: 6, fontSize: '0.9rem', color: 'var(--color-text)', lineHeight: 1.4 }}>
+              <div
+                style={{
+                  fontWeight: 600,
+                  marginBottom: 6,
+                  fontSize: '0.9rem',
+                  color: 'var(--color-text)',
+                  lineHeight: 1.4,
+                }}
+              >
                 <span style={{ marginRight: 6, fontSize: '0.85rem' }}>
                   {c.isCorrect ? '✓' : '✗'}
                 </span>
@@ -504,15 +558,25 @@ function ResultsStep({
               </div>
 
               {c.selectedAnswerText ? (
-                <div style={{ fontSize: '0.82rem', color: c.isCorrect ? 'var(--color-text-muted)' : '#dc2626', marginBottom: c.isCorrect ? 0 : 4 }}>
+                <div
+                  style={{
+                    fontSize: '0.82rem',
+                    color: c.isCorrect ? 'var(--color-text-muted)' : '#dc2626',
+                    marginBottom: c.isCorrect ? 0 : 4,
+                  }}
+                >
                   Tu respuesta: {c.selectedAnswerText}
                 </div>
               ) : (
-                <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>Sin respuesta</div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                  Sin respuesta
+                </div>
               )}
 
               {!c.isCorrect && c.correctAnswerText && (
-                <div style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 600, marginTop: 4 }}>
+                <div
+                  style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 600, marginTop: 4 }}
+                >
                   Respuesta correcta: {c.correctAnswerText}
                 </div>
               )}
@@ -524,7 +588,14 @@ function ResultsStep({
       {/* Historial */}
       {historyItems.filter((h) => h.submittedAt).length > 1 && (
         <div className="vkb-card" style={{ padding: '24px', marginBottom: 24 }}>
-          <h4 style={{ fontWeight: 700, marginBottom: 14, fontSize: '0.9rem', color: 'var(--color-text)' }}>
+          <h4
+            style={{
+              fontWeight: 700,
+              marginBottom: 14,
+              fontSize: '0.9rem',
+              color: 'var(--color-text)',
+            }}
+          >
             Historial de intentos
           </h4>
           {historyItems
@@ -567,10 +638,7 @@ function ResultsStep({
         <button className="btn btn-primary" onClick={onRepeat}>
           Repetir examen
         </button>
-        <button
-          className="btn btn-ghost"
-          onClick={() => downloadExamPdf(result, scopeTitle)}
-        >
+        <button className="btn btn-ghost" onClick={() => downloadExamPdf(result, scopeTitle)}>
           Descargar PDF examen
         </button>
         {examCert && (
@@ -599,23 +667,53 @@ export default function ExamPage() {
 
   const courseId = searchParams.get('courseId') ?? undefined;
   const moduleId = searchParams.get('moduleId') ?? undefined;
+  const aiBankId = searchParams.get('aiBankId') ?? undefined;
+  const isAiMode = !!aiBankId;
 
-  const [examState, setExamState] = useState<ExamState>('config');
+  const [examState, setExamState] = useState<ExamState>(isAiMode ? 'in-progress' : 'config');
   const [currentAttempt, setCurrentAttempt] = useState<ExamAttemptStarted | null>(null);
   const [result, setResult] = useState<ExamAttemptResult | null>(null);
+  const [aiStartError, setAiStartError] = useState<string | null>(null);
+  const aiStartedRef = useRef(false);
 
-  const { data: bankInfo, isLoading: bankLoading, isError: bankError } = useExamBankInfo(courseId, moduleId);
+  const {
+    data: bankInfo,
+    isLoading: bankLoading,
+    isError: bankError,
+  } = useExamBankInfo(isAiMode ? undefined : courseId, isAiMode ? undefined : moduleId);
   const { data: history } = useExamHistory(courseId, moduleId);
 
   const startMut = useStartExam();
-  const submitMut = useSubmitExam(
-    currentAttempt?.attemptId ?? '',
-    courseId,
-    moduleId,
-  );
+  const startAiMut = useStartAiAttempt();
+  const submitMut = useSubmitExam(currentAttempt?.attemptId ?? '', courseId, moduleId);
+
+  // ── Auto-arranque del examen IA: lanza el primer intento al montar ──
+  useEffect(() => {
+    if (!isAiMode || aiStartedRef.current) return;
+    aiStartedRef.current = true;
+    (async () => {
+      try {
+        const attempt = await startAiMut.mutateAsync(aiBankId!);
+        setCurrentAttempt(attempt);
+      } catch (err) {
+        const message =
+          err && typeof err === 'object' && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'No se pudo iniciar el examen';
+        setAiStartError(message);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiBankId, isAiMode]);
 
   const handleStart = async (numQuestions: number, timeLimit?: number, onlyOnce?: boolean) => {
-    const attempt = await startMut.mutateAsync({ courseId, moduleId, numQuestions, timeLimit, onlyOnce });
+    const attempt = await startMut.mutateAsync({
+      courseId,
+      moduleId,
+      numQuestions,
+      timeLimit,
+      onlyOnce,
+    });
     setCurrentAttempt(attempt);
     setExamState('in-progress');
   };
@@ -627,16 +725,110 @@ export default function ExamPage() {
     setExamState('results');
   };
 
-  const handleRepeat = () => {
+  const handleRepeat = async () => {
+    if (isAiMode) {
+      setResult(null);
+      setCurrentAttempt(null);
+      setExamState('in-progress');
+      try {
+        const attempt = await startAiMut.mutateAsync(aiBankId!);
+        setCurrentAttempt(attempt);
+      } catch (err) {
+        const message =
+          err && typeof err === 'object' && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'No se pudo iniciar el examen';
+        setAiStartError(message);
+      }
+      return;
+    }
     setCurrentAttempt(null);
     setResult(null);
     setExamState('config');
   };
 
   const handleBack = () => {
+    if (isAiMode) {
+      navigate('/my-exams');
+      return;
+    }
     if (courseId) navigate(`/courses/${courseId}`);
     else navigate('/courses');
   };
+
+  // ── Camino IA: no carga bankInfo, renderiza in-progress / results directos ──
+  if (isAiMode) {
+    return (
+      <div style={{ maxWidth: 780, margin: '0 auto' }}>
+        <div className="page-hero animate-in">
+          {examState !== 'in-progress' && (
+            <button
+              onClick={handleBack}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.50)',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                padding: 0,
+                marginBottom: 14,
+              }}
+            >
+              Volver a mis exámenes
+            </button>
+          )}
+          <h1 className="hero-title" style={{ fontSize: '1.6rem' }}>
+            Examen IA
+          </h1>
+          <p className="hero-subtitle">
+            {currentAttempt ? 'Examen generado por IA' : 'Preparando preguntas...'}
+          </p>
+        </div>
+
+        {aiStartError && (
+          <div
+            className="vkb-card"
+            style={{ padding: '24px', borderColor: 'var(--color-error, #dc2626)' }}
+          >
+            <p style={{ color: 'var(--color-error, #dc2626)', margin: 0 }}>{aiStartError}</p>
+            <button
+              className="btn btn-ghost"
+              style={{ marginTop: 14 }}
+              onClick={() => navigate('/my-exams')}
+            >
+              Volver a mis exámenes
+            </button>
+          </div>
+        )}
+
+        {!aiStartError && examState === 'in-progress' && !currentAttempt && (
+          <div className="vkb-card" style={{ padding: '24px' }}>
+            <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>Cargando preguntas...</p>
+          </div>
+        )}
+
+        {examState === 'in-progress' && currentAttempt && (
+          <InProgressStep
+            attempt={currentAttempt}
+            onSubmit={handleSubmit}
+            isLoading={submitMut.isPending}
+          />
+        )}
+
+        {examState === 'results' && result && (
+          <ResultsStep
+            result={result}
+            scopeTitle="Examen IA"
+            courseId={undefined}
+            moduleId={undefined}
+            onRepeat={handleRepeat}
+            onBack={handleBack}
+            historyItems={[]}
+          />
+        )}
+      </div>
+    );
+  }
 
   // ── Estados de carga y error ──
 
@@ -696,17 +888,17 @@ export default function ExamPage() {
 
   // ── Estado del examen: label del paso activo ──
 
-  const stepLabel = examState === 'config'
-    ? 'Configuracion'
-    : examState === 'in-progress'
-    ? 'En progreso'
-    : 'Resultados';
+  const stepLabel =
+    examState === 'config'
+      ? 'Configuracion'
+      : examState === 'in-progress'
+        ? 'En progreso'
+        : 'Resultados';
 
   const stepIndex = examState === 'config' ? 0 : examState === 'in-progress' ? 1 : 2;
 
   return (
     <div style={{ maxWidth: 780, margin: '0 auto' }}>
-
       {/* Hero */}
       <div className="page-hero animate-in">
         {examState !== 'in-progress' && (
@@ -729,7 +921,15 @@ export default function ExamPage() {
           </button>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' as const }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            flexWrap: 'wrap' as const,
+          }}
+        >
           <div>
             <h1 className="hero-title" style={{ fontSize: '1.6rem' }}>
               Examen
@@ -749,11 +949,12 @@ export default function ExamPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: idx === stepIndex
-                      ? 'var(--gradient-orange)'
-                      : idx < stepIndex
-                      ? 'rgba(234,88,12,0.35)'
-                      : 'rgba(255,255,255,0.10)',
+                    background:
+                      idx === stepIndex
+                        ? 'var(--gradient-orange)'
+                        : idx < stepIndex
+                          ? 'rgba(234,88,12,0.35)'
+                          : 'rgba(255,255,255,0.10)',
                     fontSize: '0.7rem',
                     fontWeight: 800,
                     color: idx <= stepIndex ? '#fff' : 'rgba(255,255,255,0.40)',
@@ -767,7 +968,8 @@ export default function ExamPage() {
                     style={{
                       width: 24,
                       height: 2,
-                      background: idx < stepIndex ? 'rgba(234,88,12,0.50)' : 'rgba(255,255,255,0.12)',
+                      background:
+                        idx < stepIndex ? 'rgba(234,88,12,0.50)' : 'rgba(255,255,255,0.12)',
                       borderRadius: 1,
                     }}
                   />
