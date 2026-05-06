@@ -427,7 +427,7 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
           <h3
             style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-text)' }}
           >
-            🤖 Crear examen con IA
+            🤖 Crear examen
           </h3>
           <button
             onClick={onClose}
@@ -679,40 +679,14 @@ export default function ExamsListPage() {
   const hasAiBanks = (aiBanks?.length ?? 0) > 0;
   const isEmpty = !hasCourses && !hasModules && !hasAiBanks;
 
-  const totalBanks = (data?.courses?.length ?? 0) + (data?.modules?.length ?? 0);
-
   return (
     <div style={{ maxWidth: 820, margin: '0 auto' }}>
       {/* Hero */}
       <div className="page-hero animate-in">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
           <span style={{ fontSize: '2.4rem' }}>🎓</span>
-          {!isLoading && totalBanks > 0 && (
-            <div
-              className="stat-card"
-              style={{ padding: '8px 18px', display: 'inline-flex', gap: 6, alignItems: 'center' }}
-            >
-              <span
-                style={{
-                  fontSize: '1.4rem',
-                  fontWeight: 900,
-                  background: 'var(--gradient-orange)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                {totalBanks}
-              </span>
-              <span
-                style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500 }}
-              >
-                {totalBanks === 1 ? 'banco disponible' : 'bancos disponibles'}
-              </span>
-            </div>
-          )}
         </div>
-        <h1 className="hero-title">Examenes Disponibles</h1>
+        <h1 className="hero-title">Exámenes</h1>
         <p className="hero-subtitle">
           Pon a prueba tus conocimientos. Configura el numero de preguntas y el tiempo limite.
         </p>
@@ -737,7 +711,7 @@ export default function ExamsListPage() {
             style={{ padding: '8px 16px', fontSize: '0.85rem' }}
             onClick={() => setShowCreateModal(true)}
           >
-            + Crear examen con IA
+            + Crear examen
           </button>
         </div>
 
