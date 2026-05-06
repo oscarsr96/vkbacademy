@@ -10,7 +10,11 @@ export interface StartExamPayload {
 }
 
 export interface SubmitExamPayload {
-  answers: { questionId: string; answerId: string }[];
+  answers: {
+    questionId: string;
+    /** Para SINGLE/TRUE_FALSE: array de 1 elemento. Para MULTIPLE: varios. */
+    answerIds: string[];
+  }[];
 }
 
 export interface ExamAttemptHistoryItem {

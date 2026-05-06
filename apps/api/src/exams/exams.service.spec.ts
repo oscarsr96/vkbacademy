@@ -77,9 +77,9 @@ describe('ExamsService', () => {
       mockPrisma.examAttempt.findMany.mockResolvedValue([]);
       mockPrisma.course.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.getBankInfo({ courseId: 'nonexistent' }, 'user1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getBankInfo({ courseId: 'nonexistent' }, 'user1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('lanza NotFoundException si el módulo no existe', async () => {
@@ -87,9 +87,9 @@ describe('ExamsService', () => {
       mockPrisma.examAttempt.findMany.mockResolvedValue([]);
       mockPrisma.module.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.getBankInfo({ moduleId: 'nonexistent' }, 'user1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getBankInfo({ moduleId: 'nonexistent' }, 'user1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('devuelve la info del banco para un curso con intentos previos', async () => {
@@ -98,7 +98,10 @@ describe('ExamsService', () => {
       mockPrisma.examAttempt.findMany.mockResolvedValue([
         { id: 'attempt1', score: 85.0, numQuestions: 10, submittedAt: now },
       ]);
-      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Fundamentos de Baloncesto' });
+      mockPrisma.course.findUnique.mockResolvedValue({
+        id: 'c1',
+        title: 'Fundamentos de Baloncesto',
+      });
 
       const result = await service.getBankInfo({ courseId: 'c1' }, 'user1');
 
@@ -142,9 +145,9 @@ describe('ExamsService', () => {
 
   describe('startExam', () => {
     it('lanza BadRequestException si no se especifica courseId ni moduleId', async () => {
-      await expect(
-        service.startExam('user1', { numQuestions: 10 } as never),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.startExam('user1', { numQuestions: 10 } as never)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('lanza BadRequestException si se especifican courseId y moduleId simultáneamente', async () => {
@@ -277,9 +280,9 @@ describe('ExamsService', () => {
     it('lanza NotFoundException si el intento no existe', async () => {
       mockPrisma.examAttempt.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.submitExam('attempt1', 'user1', { answers: [] }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.submitExam('attempt1', 'user1', { answers: [] })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('lanza ForbiddenException si el intento pertenece a otro usuario', async () => {
@@ -288,9 +291,9 @@ describe('ExamsService', () => {
         userId: 'otherUser',
       });
 
-      await expect(
-        service.submitExam('attempt1', 'user1', { answers: [] }),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.submitExam('attempt1', 'user1', { answers: [] })).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('lanza BadRequestException si el examen ya fue entregado', async () => {
@@ -299,9 +302,9 @@ describe('ExamsService', () => {
         submittedAt: new Date(),
       });
 
-      await expect(
-        service.submitExam('attempt1', 'user1', { answers: [] }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.submitExam('attempt1', 'user1', { answers: [] })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('calcula score 100 cuando todas las respuestas son correctas', async () => {
@@ -415,11 +418,7 @@ describe('ExamsService', () => {
         ],
       });
 
-      expect(mockCertificates.issueExamCertificate).toHaveBeenCalledWith(
-        'user1',
-        'attempt1',
-        100,
-      );
+      expect(mockCertificates.issueExamCertificate).toHaveBeenCalledWith('user1', 'attempt1', 100);
     });
 
     it('llama a issueExamCertificate incluso con score 0 — el servicio decide si emitir', async () => {
@@ -428,11 +427,7 @@ describe('ExamsService', () => {
 
       await service.submitExam('attempt1', 'user1', { answers: [] }); // sin respuestas → score 0
 
-      expect(mockCertificates.issueExamCertificate).toHaveBeenCalledWith(
-        'user1',
-        'attempt1',
-        0,
-      );
+      expect(mockCertificates.issueExamCertificate).toHaveBeenCalledWith('user1', 'attempt1', 0);
     });
 
     it('no bloquea la respuesta esperando a issueExamCertificate — patrón void', async () => {
@@ -441,13 +436,112 @@ describe('ExamsService', () => {
 
       let resolveCert!: () => void;
       mockCertificates.issueExamCertificate.mockReturnValue(
-        new Promise<void>((resolve) => { resolveCert = resolve; }),
+        new Promise<void>((resolve) => {
+          resolveCert = resolve;
+        }),
       );
 
       const result = await service.submitExam('attempt1', 'user1', { answers: [] });
 
       expect(result).toBeDefined(); // retorna sin esperar al certificado
       resolveCert();
+    });
+
+    // ─── MULTIPLE: grading por igualdad de conjuntos ──────────────────────
+
+    describe('MULTIPLE grading', () => {
+      const multiSnapshot = [
+        {
+          id: 'qm',
+          text: 'Selecciona los planetas rocosos',
+          type: 'MULTIPLE',
+          answers: [
+            { id: 'm1', text: 'Mercurio', isCorrect: true },
+            { id: 'm2', text: 'Venus', isCorrect: true },
+            { id: 'm3', text: 'Júpiter', isCorrect: false },
+            { id: 'm4', text: 'Saturno', isCorrect: false },
+          ],
+        },
+      ];
+      const multiAttempt = {
+        id: 'attempt1',
+        userId: 'user1',
+        submittedAt: null,
+        questionsSnapshot: multiSnapshot,
+      };
+
+      it('marca correcto cuando se seleccionan TODOS los correctos y NINGUNO incorrecto', async () => {
+        mockPrisma.examAttempt.findUnique.mockResolvedValue(multiAttempt);
+        mockPrisma.examAttempt.update.mockResolvedValue({});
+
+        const result = await service.submitExam('attempt1', 'user1', {
+          answers: [{ questionId: 'qm', answerIds: ['m1', 'm2'] }],
+        });
+
+        expect(result.score).toBe(100);
+        expect(result.corrections[0].isCorrect).toBe(true);
+        expect(result.corrections[0].selectedAnswerTexts).toEqual(['Mercurio', 'Venus']);
+        expect(result.corrections[0].correctAnswerTexts).toEqual(['Mercurio', 'Venus']);
+      });
+
+      it('marca incorrecto cuando se selecciona solo PARTE de los correctos', async () => {
+        mockPrisma.examAttempt.findUnique.mockResolvedValue(multiAttempt);
+        mockPrisma.examAttempt.update.mockResolvedValue({});
+
+        const result = await service.submitExam('attempt1', 'user1', {
+          answers: [{ questionId: 'qm', answerIds: ['m1'] }],
+        });
+
+        expect(result.corrections[0].isCorrect).toBe(false);
+      });
+
+      it('marca incorrecto si se incluye una respuesta INCORRECTA junto con todas las correctas', async () => {
+        mockPrisma.examAttempt.findUnique.mockResolvedValue(multiAttempt);
+        mockPrisma.examAttempt.update.mockResolvedValue({});
+
+        const result = await service.submitExam('attempt1', 'user1', {
+          answers: [{ questionId: 'qm', answerIds: ['m1', 'm2', 'm3'] }],
+        });
+
+        expect(result.corrections[0].isCorrect).toBe(false);
+      });
+
+      it('marca incorrecto si se selecciona solo una respuesta incorrecta', async () => {
+        mockPrisma.examAttempt.findUnique.mockResolvedValue(multiAttempt);
+        mockPrisma.examAttempt.update.mockResolvedValue({});
+
+        const result = await service.submitExam('attempt1', 'user1', {
+          answers: [{ questionId: 'qm', answerIds: ['m3'] }],
+        });
+
+        expect(result.corrections[0].isCorrect).toBe(false);
+      });
+
+      it('persiste answers en formato normalizado answerIds[]', async () => {
+        mockPrisma.examAttempt.findUnique.mockResolvedValue(multiAttempt);
+        mockPrisma.examAttempt.update.mockResolvedValue({});
+
+        await service.submitExam('attempt1', 'user1', {
+          answers: [{ questionId: 'qm', answerIds: ['m1', 'm2'] }],
+        });
+
+        const updateCall = mockPrisma.examAttempt.update.mock.calls[0][0];
+        expect(updateCall.data.answers[0].answerIds).toEqual(['m1', 'm2']);
+      });
+
+      it('acepta el payload legacy { answerId } y lo normaliza a [answerId]', async () => {
+        mockPrisma.examAttempt.findUnique.mockResolvedValue(multiAttempt);
+        mockPrisma.examAttempt.update.mockResolvedValue({});
+
+        // Legacy: solo un answerId — para MULTIPLE será insuficiente, se marca incorrecto
+        const result = await service.submitExam('attempt1', 'user1', {
+          answers: [{ questionId: 'qm', answerId: 'm1' }],
+        });
+
+        expect(result.corrections[0].isCorrect).toBe(false);
+        const updateCall = mockPrisma.examAttempt.update.mock.calls[0][0];
+        expect(updateCall.data.answers[0].answerIds).toEqual(['m1']);
+      });
     });
   });
 

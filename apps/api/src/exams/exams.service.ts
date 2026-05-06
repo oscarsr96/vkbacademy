@@ -58,8 +58,14 @@ export class ExamsService {
         },
       }),
       courseId
-        ? this.prisma.course.findUnique({ where: { id: courseId }, select: { id: true, title: true } })
-        : this.prisma.module.findUnique({ where: { id: moduleId }, select: { id: true, title: true } }),
+        ? this.prisma.course.findUnique({
+            where: { id: courseId },
+            select: { id: true, title: true },
+          })
+        : this.prisma.module.findUnique({
+            where: { id: moduleId },
+            select: { id: true, title: true },
+          }),
     ]);
 
     if (!scope) {
@@ -164,25 +170,57 @@ export class ExamsService {
     if (attempt.submittedAt) throw new BadRequestException('Este examen ya fue entregado');
 
     const snapshot = attempt.questionsSnapshot as unknown as QuestionSnapshot[];
-    const answers = dto.answers;
+
+    // Normaliza el input al formato { questionId, answerIds }: acepta tanto el
+    // payload nuevo (answerIds[]) como el legacy (answerId único).
+    const normalized = dto.answers.map((a) => ({
+      questionId: a.questionId,
+      answerIds:
+        a.answerIds && a.answerIds.length > 0
+          ? Array.from(new Set(a.answerIds))
+          : a.answerId
+            ? [a.answerId]
+            : [],
+    }));
 
     // Calcular correcciones
     let correctCount = 0;
     const corrections = snapshot.map((q) => {
-      const userAnswer = answers.find((a) => a.questionId === q.id);
-      const correctAnswer = q.answers.find((a) => a.isCorrect);
-      const selectedAnswer = userAnswer
-        ? q.answers.find((a) => a.id === userAnswer.answerId)
-        : null;
-      const isCorrect = !!userAnswer && userAnswer.answerId === correctAnswer?.id;
+      const userAnswer = normalized.find((a) => a.questionId === q.id);
+      const selectedIds = userAnswer?.answerIds ?? [];
+      const selectedSet = new Set(selectedIds);
+
+      const correctAnswers = q.answers.filter((a) => a.isCorrect);
+      const correctIds = correctAnswers.map((a) => a.id);
+      const correctSet = new Set(correctIds);
+
+      const selectedAnswers = q.answers.filter((a) => selectedSet.has(a.id));
+
+      let isCorrect: boolean;
+      if (q.type === 'MULTIPLE') {
+        // Set equality: todos los correctos seleccionados, ningún incorrecto.
+        isCorrect =
+          selectedSet.size === correctSet.size &&
+          [...correctSet].every((id) => selectedSet.has(id));
+      } else {
+        // SINGLE / TRUE_FALSE: exactamente uno seleccionado y coincide.
+        isCorrect = selectedIds.length === 1 && correctSet.has(selectedIds[0]);
+      }
       if (isCorrect) correctCount++;
+
       return {
         questionId: q.id,
         questionText: q.text,
-        selectedAnswerId: userAnswer?.answerId ?? null,
-        selectedAnswerText: selectedAnswer?.text ?? null,
-        correctAnswerId: correctAnswer?.id ?? '',
-        correctAnswerText: correctAnswer?.text ?? '',
+        // Compatibilidad: primer seleccionado/correcto en los campos antiguos.
+        selectedAnswerId: selectedIds[0] ?? null,
+        selectedAnswerText: selectedAnswers[0]?.text ?? null,
+        correctAnswerId: correctIds[0] ?? '',
+        correctAnswerText: correctAnswers[0]?.text ?? '',
+        // Nuevo: arrays completos para soportar MULTIPLE.
+        selectedAnswerIds: selectedIds,
+        selectedAnswerTexts: selectedAnswers.map((a) => a.text),
+        correctAnswerIds: correctIds,
+        correctAnswerTexts: correctAnswers.map((a) => a.text),
         isCorrect,
       };
     });
@@ -194,7 +232,8 @@ export class ExamsService {
       where: { id: attemptId },
       data: {
         score,
-        answers: answers as object[],
+        // Persistimos la forma normalizada (answerIds) para futuras consultas.
+        answers: normalized as object[],
         submittedAt: now,
       },
     });
@@ -312,7 +351,9 @@ export class ExamsService {
     const moduleCountMap = new Map(modulesWithBank.map((m) => [m.moduleId!, m._count.id]));
 
     return {
-      courses: (courseData as { id: string; title: string; schoolYear: { label: string } | null }[]).map((c) => {
+      courses: (
+        courseData as { id: string; title: string; schoolYear: { label: string } | null }[]
+      ).map((c) => {
         const last = lastCourseAttemptMap.get(c.id);
         return {
           courseId: c.id,
@@ -324,7 +365,9 @@ export class ExamsService {
             : null,
         };
       }),
-      modules: (moduleData as { id: string; title: string; course: { id: string; title: string } }[]).map((m) => {
+      modules: (
+        moduleData as { id: string; title: string; course: { id: string; title: string } }[]
+      ).map((m) => {
         const last = lastModuleAttemptMap.get(m.id);
         return {
           moduleId: m.id,

@@ -232,17 +232,18 @@ function InProgressStep({
   isLoading,
 }: {
   attempt: ExamAttemptStarted;
-  onSubmit: (answers: { questionId: string; answerId: string }[]) => void;
+  onSubmit: (answers: { questionId: string; answerIds: string[] }[]) => void;
   isLoading: boolean;
 }) {
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  // Mapa pregunta → ids seleccionados. Para SINGLE/TRUE_FALSE el array tiene
+  // siempre 1 elemento; para MULTIPLE puede tener varios.
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string[]>>({});
   const [secondsLeft, setSecondsLeft] = useState<number | null>(attempt.timeLimit ?? null);
 
   const handleSubmit = useCallback(() => {
-    const answers = Object.entries(selectedAnswers).map(([questionId, answerId]) => ({
-      questionId,
-      answerId,
-    }));
+    const answers = Object.entries(selectedAnswers)
+      .filter(([, ids]) => ids.length > 0)
+      .map(([questionId, answerIds]) => ({ questionId, answerIds }));
     onSubmit(answers);
   }, [selectedAnswers, onSubmit]);
 
@@ -257,7 +258,7 @@ function InProgressStep({
     return () => clearTimeout(timer);
   }, [secondsLeft, handleSubmit]);
 
-  const answeredCount = Object.keys(selectedAnswers).length;
+  const answeredCount = Object.values(selectedAnswers).filter((ids) => ids.length > 0).length;
   const totalCount = attempt.questions.length;
   const progressPct = (answeredCount / totalCount) * 100;
 
@@ -269,9 +270,21 @@ function InProgressStep({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const selectAnswer = (question: ExamQuestionPublic, answerId: string) => {
-    if (attempt.onlyOnce && selectedAnswers[question.id]) return;
-    setSelectedAnswers((prev) => ({ ...prev, [question.id]: answerId }));
+  const toggleAnswer = (question: ExamQuestionPublic, answerId: string) => {
+    const isMultiple = question.type === 'MULTIPLE';
+    setSelectedAnswers((prev) => {
+      const current = prev[question.id] ?? [];
+      // Bloqueo onlyOnce: si ya hay selección y no es la misma respuesta en MULTIPLE, no permitir cambios.
+      if (attempt.onlyOnce && current.length > 0 && !isMultiple) return prev;
+
+      if (isMultiple) {
+        const exists = current.includes(answerId);
+        const next = exists ? current.filter((id) => id !== answerId) : [...current, answerId];
+        return { ...prev, [question.id]: next };
+      }
+      // SINGLE / TRUE_FALSE: reemplazo
+      return { ...prev, [question.id]: [answerId] };
+    });
   };
 
   return (
@@ -329,13 +342,14 @@ function InProgressStep({
 
       {/* Preguntas */}
       {attempt.questions.map((q, idx) => {
-        const chosen = selectedAnswers[q.id];
+        const chosen = selectedAnswers[q.id] ?? [];
+        const isMultiple = q.type === 'MULTIPLE';
         return (
           <div key={q.id} className="vkb-card" style={{ padding: '22px 24px', marginBottom: 16 }}>
             <div
               style={{
                 fontWeight: 700,
-                marginBottom: 16,
+                marginBottom: 6,
                 color: 'var(--color-text)',
                 fontSize: '0.975rem',
                 lineHeight: 1.4,
@@ -347,18 +361,38 @@ function InProgressStep({
               {q.text}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+            {/* Hint para MULTIPLE */}
+            {isMultiple && (
+              <div
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: 'var(--color-primary)',
+                  marginBottom: 12,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase' as const,
+                }}
+              >
+                ☑ Selecciona todas las correctas
+              </div>
+            )}
+
+            <div
+              style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginTop: 10 }}
+            >
               {q.answers.map((a) => {
-                const isSelected = chosen === a.id;
-                const locked = attempt.onlyOnce && !!chosen;
+                const isSelected = chosen.includes(a.id);
+                const locked = attempt.onlyOnce && chosen.length > 0 && !isMultiple;
 
                 return (
                   <button
                     key={a.id}
                     disabled={locked && !isSelected}
-                    onClick={() => selectAnswer(q, a.id)}
+                    onClick={() => toggleAnswer(q, a.id)}
                     style={{
-                      display: 'block',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
                       width: '100%',
                       textAlign: 'left' as const,
                       padding: '11px 16px',
@@ -390,7 +424,30 @@ function InProgressStep({
                       }
                     }}
                   >
-                    {a.text}
+                    {/* Marcador: ☑ en MULTIPLE, ◉ en SINGLE/TRUE_FALSE */}
+                    <span
+                      aria-hidden
+                      style={{
+                        flexShrink: 0,
+                        width: 18,
+                        height: 18,
+                        borderRadius: isMultiple ? 4 : '50%',
+                        border: isSelected
+                          ? '2px solid var(--color-primary)'
+                          : '2px solid rgba(234,88,12,0.30)',
+                        background: isSelected ? 'var(--color-primary)' : 'transparent',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '0.7rem',
+                        fontWeight: 900,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {isSelected ? (isMultiple ? '✓' : '●') : ''}
+                    </span>
+                    <span>{a.text}</span>
                   </button>
                 );
               })}
@@ -557,29 +614,56 @@ function ResultsStep({
                 {i + 1}. {c.questionText}
               </div>
 
-              {c.selectedAnswerText ? (
-                <div
-                  style={{
-                    fontSize: '0.82rem',
-                    color: c.isCorrect ? 'var(--color-text-muted)' : '#dc2626',
-                    marginBottom: c.isCorrect ? 0 : 4,
-                  }}
-                >
-                  Tu respuesta: {c.selectedAnswerText}
-                </div>
-              ) : (
-                <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
-                  Sin respuesta
-                </div>
-              )}
+              {(() => {
+                // Para MULTIPLE muestra todas las seleccionadas/correctas; para
+                // SINGLE/TRUE_FALSE cae en los campos legacy con un único valor.
+                const selectedTexts =
+                  c.selectedAnswerTexts && c.selectedAnswerTexts.length > 0
+                    ? c.selectedAnswerTexts
+                    : c.selectedAnswerText
+                      ? [c.selectedAnswerText]
+                      : [];
+                const correctTexts =
+                  c.correctAnswerTexts && c.correctAnswerTexts.length > 0
+                    ? c.correctAnswerTexts
+                    : c.correctAnswerText
+                      ? [c.correctAnswerText]
+                      : [];
+                return (
+                  <>
+                    {selectedTexts.length > 0 ? (
+                      <div
+                        style={{
+                          fontSize: '0.82rem',
+                          color: c.isCorrect ? 'var(--color-text-muted)' : '#dc2626',
+                          marginBottom: c.isCorrect ? 0 : 4,
+                        }}
+                      >
+                        {selectedTexts.length === 1 ? 'Tu respuesta' : 'Tus respuestas'}:{' '}
+                        {selectedTexts.join(' · ')}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                        Sin respuesta
+                      </div>
+                    )}
 
-              {!c.isCorrect && c.correctAnswerText && (
-                <div
-                  style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 600, marginTop: 4 }}
-                >
-                  Respuesta correcta: {c.correctAnswerText}
-                </div>
-              )}
+                    {!c.isCorrect && correctTexts.length > 0 && (
+                      <div
+                        style={{
+                          fontSize: '0.82rem',
+                          color: '#16a34a',
+                          fontWeight: 600,
+                          marginTop: 4,
+                        }}
+                      >
+                        {correctTexts.length === 1 ? 'Respuesta correcta' : 'Respuestas correctas'}:{' '}
+                        {correctTexts.join(' · ')}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>
@@ -718,7 +802,7 @@ export default function ExamPage() {
     setExamState('in-progress');
   };
 
-  const handleSubmit = async (answers: { questionId: string; answerId: string }[]) => {
+  const handleSubmit = async (answers: { questionId: string; answerIds: string[] }[]) => {
     if (!currentAttempt) return;
     const res = await submitMut.mutateAsync({ answers });
     setResult(res);

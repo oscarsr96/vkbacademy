@@ -23,10 +23,16 @@ export interface ExamAttemptStarted {
 export interface ExamCorrection {
   questionId: string;
   questionText: string;
+  // Compatibilidad: primera respuesta seleccionada/correcta.
   selectedAnswerId: string | null;
   selectedAnswerText: string | null;
   correctAnswerId: string;
   correctAnswerText: string;
+  // Soporte MULTIPLE: arrays con todas las seleccionadas/correctas.
+  selectedAnswerIds?: string[];
+  selectedAnswerTexts?: string[];
+  correctAnswerIds?: string[];
+  correctAnswerTexts?: string[];
   isCorrect: boolean;
 }
 
