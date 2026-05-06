@@ -2,11 +2,11 @@ import jsPDF from 'jspdf';
 import type { ExamAttemptResult } from '@vkbacademy/shared';
 
 // Paleta del club
-const PURPLE = { r: 99, g: 102, b: 241 } as const;  // #6366f1 — color primario
-const DARK   = { r: 30,  g: 27,  b: 24  } as const;
-const MUTED  = { r: 120, g: 113, b: 108 } as const;
-const GREEN  = { r: 5,   g: 150, b: 105 } as const;
-const RED    = { r: 220, g: 38,  b: 38  } as const;
+const PURPLE = { r: 99, g: 102, b: 241 } as const; // #6366f1 — color primario
+const DARK = { r: 30, g: 27, b: 24 } as const;
+const MUTED = { r: 120, g: 113, b: 108 } as const;
+const GREEN = { r: 5, g: 150, b: 105 } as const;
+const RED = { r: 220, g: 38, b: 38 } as const;
 const PAGE_W = 210;
 const PAGE_H = 297;
 
@@ -20,10 +20,7 @@ function setColor(
   else doc.setFillColor(color.r, color.g, color.b);
 }
 
-export function downloadExamPdf(
-  result: ExamAttemptResult,
-  scopeTitle: string,
-) {
+export function downloadExamPdf(result: ExamAttemptResult, scopeTitle: string) {
   const doc = new jsPDF();
   const margin = 20;
   const contentW = PAGE_W - margin * 2;
@@ -69,7 +66,7 @@ export function downloadExamPdf(
   const isPass = result.score >= 50;
   const scoreColor = isPass ? GREEN : RED;
   const scoreBg = isPass
-    ? { r: 209, g: 250, b: 229 }  // verde muy claro
+    ? { r: 209, g: 250, b: 229 } // verde muy claro
     : { r: 254, g: 226, b: 226 }; // rojo muy claro
 
   setColor(doc, 'fill', scoreBg);
@@ -135,9 +132,7 @@ export function downloadExamPdf(
     }
 
     // Fondo del bloque
-    const bgColor = c.isCorrect
-      ? { r: 240, g: 253, b: 244 }
-      : { r: 255, g: 241, b: 242 };
+    const bgColor = c.isCorrect ? { r: 240, g: 253, b: 244 } : { r: 255, g: 241, b: 242 };
     setColor(doc, 'fill', bgColor);
     doc.roundedRect(margin, y - 4, contentW, blockH, 3, 3, 'F');
 
@@ -158,27 +153,57 @@ export function downloadExamPdf(
     doc.text(questionLines, margin + 14, y + 2);
     y += questionLines.length * 6 + 3;
 
-    // Tu respuesta
+    // Helpers: para MULTIPLE muestra todas; para SINGLE/TRUE_FALSE el campo legacy.
+    const selectedTexts =
+      c.selectedAnswerTexts && c.selectedAnswerTexts.length > 0
+        ? c.selectedAnswerTexts
+        : c.selectedAnswerText
+          ? [c.selectedAnswerText]
+          : [];
+    const correctTexts =
+      c.correctAnswerTexts && c.correctAnswerTexts.length > 0
+        ? c.correctAnswerTexts
+        : c.correctAnswerText
+          ? [c.correctAnswerText]
+          : [];
+
+    // Tu respuesta / tus respuestas
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     setColor(doc, 'text', MUTED);
-    const selectedText = c.selectedAnswerText ?? '(sin respuesta)';
-    doc.text(`Tu respuesta: "${selectedText}"`, margin + 14, y);
-    y += 5.5;
+    if (selectedTexts.length === 0) {
+      doc.text('Tu respuesta: "(sin respuesta)"', margin + 14, y);
+      y += 5.5;
+    } else {
+      const label = selectedTexts.length === 1 ? 'Tu respuesta' : 'Tus respuestas';
+      const wrapped = doc.splitTextToSize(
+        `${label}: ${selectedTexts.map((t) => `"${t}"`).join(' · ')}`,
+        PAGE_W - margin * 2 - 14,
+      );
+      doc.text(wrapped, margin + 14, y);
+      y += wrapped.length * 5.5;
+    }
 
     // Respuesta correcta (solo si falló)
-    if (!c.isCorrect) {
+    if (!c.isCorrect && correctTexts.length > 0) {
       setColor(doc, 'text', GREEN);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Correcta: "${c.correctAnswerText}"`, margin + 14, y);
-      y += 5.5;
+      const label = correctTexts.length === 1 ? 'Correcta' : 'Correctas';
+      const wrapped = doc.splitTextToSize(
+        `${label}: ${correctTexts.map((t) => `"${t}"`).join(' · ')}`,
+        PAGE_W - margin * 2 - 14,
+      );
+      doc.text(wrapped, margin + 14, y);
+      y += wrapped.length * 5.5;
     }
 
     y += 7;
   });
 
   // ── Pie de página ──────────────────────────────────────────────────────────
-  const totalPages = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
+  const totalPages = (
+    doc as unknown as { internal: { getNumberOfPages: () => number } }
+  ).internal.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
     setColor(doc, 'fill', { r: 245, g: 245, b: 244 });
@@ -190,6 +215,9 @@ export function downloadExamPdf(
     doc.text(`Página ${p} de ${totalPages}`, PAGE_W - margin, PAGE_H - 4.5, { align: 'right' });
   }
 
-  const filename = `examen-${scopeTitle.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '')}-${completedAt.toISOString().slice(0, 10)}.pdf`;
+  const filename = `examen-${scopeTitle
+    .replace(/\s+/g, '-')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '')}-${completedAt.toISOString().slice(0, 10)}.pdf`;
   doc.save(filename);
 }
