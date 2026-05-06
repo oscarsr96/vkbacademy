@@ -78,13 +78,13 @@ export default function ExercisesPage() {
       });
     },
     onError: (err, variables) => {
-      const msg =
-        (err as { response?: { data?: { message?: string | string[] } } } | null)?.response?.data
-          ?.message;
+      const msg = (err as { response?: { data?: { message?: string | string[] } } } | null)
+        ?.response?.data?.message;
       const text = Array.isArray(msg) ? msg.join(' · ') : msg;
       setEvalErrors((prev) => ({
         ...prev,
-        [variables.index]: text ?? 'No se pudo evaluar la respuesta. Inténtalo de nuevo en unos segundos.',
+        [variables.index]:
+          text ?? 'No se pudo evaluar la respuesta. Inténtalo de nuevo en unos segundos.',
       }));
     },
   });
@@ -129,8 +129,8 @@ export default function ExercisesPage() {
       <header style={s.header}>
         <h1 style={s.title}>🧮 Ejercicios</h1>
         <p style={s.subtitle}>
-          Pide ejercicios de práctica sobre cualquier tema de tus cursos. La IA te generará el
-          número que indiques con su solución y explicación.
+          Pide ejercicios de práctica sobre cualquier tema de tus cursos. Se generarán el número que
+          indiques con su solución y explicación.
         </p>
       </header>
 
