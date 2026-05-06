@@ -692,7 +692,7 @@ export default function ExamsListPage() {
         </p>
       </div>
 
-      {/* Sección: Mis exámenes IA */}
+      {/* Sección: Mis Exámenes */}
       <div style={{ marginTop: 28 }}>
         <div
           style={{
@@ -703,7 +703,7 @@ export default function ExamsListPage() {
           }}
         >
           <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text)' }}>
-            🤖 Mis exámenes IA
+            🤖 Mis Exámenes
           </span>
           <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
           <button
