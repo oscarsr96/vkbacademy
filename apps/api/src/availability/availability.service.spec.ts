@@ -6,9 +6,13 @@ import { PrismaService } from '../prisma/prisma.service';
 // ─── Mock manual de PrismaService ────────────────────────────────────────────
 
 const mockPrisma = {
+  user: {
+    findUnique: jest.fn(),
+  },
   teacherProfile: {
     findMany: jest.fn(),
     findUnique: jest.fn(),
+    create: jest.fn(),
   },
   availabilitySlot: {
     findMany: jest.fn(),
@@ -29,10 +33,7 @@ describe('AvailabilityService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AvailabilityService,
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
+      providers: [AvailabilityService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
 
     service = module.get<AvailabilityService>(AvailabilityService);
@@ -203,13 +204,32 @@ describe('AvailabilityService', () => {
   describe('addSlot', () => {
     const dto = { dayOfWeek: 1, startTime: '10:00', endTime: '11:00' };
 
-    it('lanza NotFoundException cuando el usuario no tiene perfil de profesor', async () => {
+    it('lanza NotFoundException cuando el usuario no es profesor', async () => {
       mockPrisma.teacherProfile.findUnique.mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-x', role: 'STUDENT' });
 
-      await expect(service.addSlot('user-sin-perfil', dto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.addSlot('user-x', dto)).rejects.toThrow(NotFoundException);
+      expect(mockPrisma.teacherProfile.create).not.toHaveBeenCalled();
       expect(mockPrisma.availabilitySlot.create).not.toHaveBeenCalled();
+    });
+
+    it('auto-crea TeacherProfile cuando el usuario es TEACHER pero no tiene perfil (self-heal)', async () => {
+      const created = { id: 'slot-nuevo', teacherId: 'prof-nuevo', ...dto };
+      mockPrisma.teacherProfile.findUnique.mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1', role: 'TEACHER' });
+      mockPrisma.teacherProfile.create.mockResolvedValue({ id: 'prof-nuevo', userId: 'user-1' });
+      mockPrisma.availabilitySlot.findFirst.mockResolvedValue(null);
+      mockPrisma.availabilitySlot.create.mockResolvedValue(created);
+
+      const result = await service.addSlot('user-1', dto);
+
+      expect(mockPrisma.teacherProfile.create).toHaveBeenCalledWith({
+        data: { userId: 'user-1' },
+      });
+      expect(mockPrisma.availabilitySlot.create).toHaveBeenCalledWith({
+        data: { teacherId: 'prof-nuevo', ...dto },
+      });
+      expect(result).toEqual(created);
     });
 
     it('lanza ConflictException cuando ya existe un slot en ese día y hora', async () => {
@@ -255,9 +275,7 @@ describe('AvailabilityService', () => {
         teacher: { userId: 'otro-user' },
       });
 
-      await expect(service.removeSlot('slot-1', 'user-1')).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(service.removeSlot('slot-1', 'user-1')).rejects.toThrow(ForbiddenException);
       expect(mockPrisma.availabilitySlot.delete).not.toHaveBeenCalled();
     });
 

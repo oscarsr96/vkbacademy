@@ -1,4 +1,9 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAvailabilitySlotDto } from './dto/create-availability-slot.dto';
 
@@ -55,9 +60,7 @@ export class AvailabilityService {
         if (startAt <= new Date()) continue;
 
         // Verificar si hay conflicto con reservas existentes
-        const hasConflict = existingBookings.some(
-          (b) => b.startAt < endAt && b.endAt > startAt,
-        );
+        const hasConflict = existingBookings.some((b) => b.startAt < endAt && b.endAt > startAt);
 
         if (!hasConflict) {
           freeSlots.push({ teacherId, startAt, endAt });
@@ -82,8 +85,14 @@ export class AvailabilityService {
 
   /** Añade un slot de disponibilidad al profesor autenticado */
   async addSlot(userId: string, dto: CreateAvailabilitySlotDto) {
-    const profile = await this.prisma.teacherProfile.findUnique({ where: { userId } });
-    if (!profile) throw new NotFoundException('Perfil de profesor no encontrado');
+    let profile = await this.prisma.teacherProfile.findUnique({ where: { userId } });
+    if (!profile) {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (user?.role !== 'TEACHER') {
+        throw new NotFoundException('Perfil de profesor no encontrado');
+      }
+      profile = await this.prisma.teacherProfile.create({ data: { userId } });
+    }
 
     // Evitar duplicados: mismo día y hora de inicio
     const existing = await this.prisma.availabilitySlot.findFirst({

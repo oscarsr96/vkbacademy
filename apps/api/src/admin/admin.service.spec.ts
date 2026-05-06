@@ -140,6 +140,41 @@ describe('AdminService', () => {
         }),
       );
     });
+
+    it('crea TeacherProfile asociado cuando el rol es TEACHER', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({ ...fakeUser, role: 'TEACHER' });
+
+      await service.createUser({
+        email: 'profe@vkbacademy.es',
+        name: 'Profe Test',
+        password: 'pass1234',
+        role: 'TEACHER' as never,
+      });
+
+      const createArgs = mockPrisma.user.create.mock.calls[0][0];
+      expect(createArgs.data).toEqual(
+        expect.objectContaining({
+          role: 'TEACHER',
+          teacherProfile: { create: {} },
+        }),
+      );
+    });
+
+    it('NO crea TeacherProfile cuando el rol no es TEACHER', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue(fakeUser);
+
+      await service.createUser({
+        email: 'alumno@vkbacademy.es',
+        name: 'Alumno',
+        password: 'pass1234',
+        role: 'STUDENT' as never,
+      });
+
+      const createArgs = mockPrisma.user.create.mock.calls[0][0];
+      expect(createArgs.data).not.toHaveProperty('teacherProfile');
+    });
   });
 
   // ─── updateUser ────────────────────────────────────────────────────────────
