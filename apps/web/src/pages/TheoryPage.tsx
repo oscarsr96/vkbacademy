@@ -56,7 +56,7 @@ export default function TheoryPage() {
       <header style={s.header}>
         <h1 style={s.title}>📖 Teoría</h1>
         <p style={s.subtitle}>
-          Pide un temario sobre cualquier tema de tus cursos. La IA generará un módulo con
+          Pide un temario sobre cualquier tema de tus cursos. Se generará un módulo con
           explicaciones y un vídeo de YouTube, y se guardará en tu biblioteca.
         </p>
       </header>
