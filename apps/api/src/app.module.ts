@@ -26,6 +26,7 @@ import { HealthModule } from './health/health.module';
 import { AiModule } from './ai/ai.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { TheoryModule } from './theory/theory.module';
+import { CryptoModule } from './crypto/crypto.module';
 
 @Module({
   imports: [
@@ -49,6 +50,9 @@ import { TheoryModule } from './theory/theory.module';
 
     // Base de datos
     PrismaModule,
+
+    // Cifrado simétrico (AES-256-GCM) — disponible globalmente
+    CryptoModule,
 
     // Módulos de dominio
     AuthModule,

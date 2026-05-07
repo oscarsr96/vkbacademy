@@ -24,6 +24,12 @@ export class TutorsController {
     return this.tutorsService.getMyStudents(user.id);
   }
 
+  @Get('my-students/credentials')
+  @Roles(Role.TUTOR, Role.ADMIN)
+  getMyStudentsCredentials(@CurrentUser() user: User) {
+    return this.tutorsService.getStudentsCredentials(user.id);
+  }
+
   @Get('my-students/:studentId/courses')
   @Roles(Role.TUTOR, Role.ADMIN)
   getStudentCourses(@Param('studentId') studentId: string, @CurrentUser() user: User) {

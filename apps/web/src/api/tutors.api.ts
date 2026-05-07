@@ -87,8 +87,18 @@ export interface AvailableCourse {
   enrolled: boolean;
 }
 
+export interface StudentCredential {
+  id: string;
+  name: string;
+  email: string;
+  password: string | null;
+}
+
 export const tutorsApi = {
   getMyStudents: () => api.get<StudentSummary[]>('/tutors/my-students').then((r) => r.data),
+
+  getStudentsCredentials: () =>
+    api.get<StudentCredential[]>('/tutors/my-students/credentials').then((r) => r.data),
 
   getStudentCourses: (studentId: string) =>
     api.get<EnrolledCourse[]>(`/tutors/my-students/${studentId}/courses`).then((r) => r.data),

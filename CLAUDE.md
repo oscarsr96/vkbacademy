@@ -228,6 +228,7 @@ AWS_REGION / AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_S3_BUCKET
 AWS_SIGNED_URL_EXPIRES=3600
 RESEND_API_KEY / EMAIL_FROM
 YOUTUBE_API_KEY                          # secret "YT" en GCP Secret Manager
+STUDENT_PASSWORD_ENC_KEY                 # 32 bytes hex; cifra contraseñas visibles para tutor
 PORT=3001
 FRONTEND_URL="http://localhost:5173"     # acepta múltiples separados por coma
 NODE_ENV=development
