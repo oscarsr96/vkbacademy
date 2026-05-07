@@ -37,6 +37,7 @@ export function StudentCredentialsTable() {
         borderRadius: 12,
         padding: 20,
         boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+        color: '#0f172a',
       }}
     >
       <h2
@@ -53,21 +54,32 @@ export function StudentCredentialsTable() {
       <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0, marginBottom: 16 }}>
         Estas credenciales son privadas. No las compartas en sitios públicos.
       </p>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '0.9rem',
+          color: '#0f172a',
+        }}
+      >
         <thead>
           <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-            <th style={{ padding: '8px 4px', fontWeight: 600 }}>Nombre</th>
-            <th style={{ padding: '8px 4px', fontWeight: 600 }}>Email</th>
-            <th style={{ padding: '8px 4px', fontWeight: 600 }}>Contraseña</th>
-            <th style={{ padding: '8px 4px', fontWeight: 600, width: 140 }}>Acciones</th>
+            <th style={{ padding: '8px 4px', fontWeight: 600, color: '#334155' }}>Nombre</th>
+            <th style={{ padding: '8px 4px', fontWeight: 600, color: '#334155' }}>Email</th>
+            <th style={{ padding: '8px 4px', fontWeight: 600, color: '#334155' }}>Contraseña</th>
+            <th style={{ padding: '8px 4px', fontWeight: 600, width: 140, color: '#334155' }}>
+              Acciones
+            </th>
           </tr>
         </thead>
         <tbody>
           {data.map((item) => (
             <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-              <td style={{ padding: '8px 4px' }}>{item.name}</td>
-              <td style={{ padding: '8px 4px', fontFamily: 'monospace' }}>{item.email}</td>
-              <td style={{ padding: '8px 4px', fontFamily: 'monospace' }}>
+              <td style={{ padding: '8px 4px', color: '#0f172a' }}>{item.name}</td>
+              <td style={{ padding: '8px 4px', fontFamily: 'monospace', color: '#0f172a' }}>
+                {item.email}
+              </td>
+              <td style={{ padding: '8px 4px', fontFamily: 'monospace', color: '#0f172a' }}>
                 {item.password ? (
                   <>
                     {item.password}
