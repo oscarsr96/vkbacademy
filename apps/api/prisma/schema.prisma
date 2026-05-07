@@ -73,6 +73,7 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   passwordHash String
+  viewablePassword String?  // AES-256-GCM (iv:tag:ciphertext). Solo poblado para STUDENT con tutorId.
   role         Role     @default(STUDENT)
   name         String
   avatarUrl    String?
