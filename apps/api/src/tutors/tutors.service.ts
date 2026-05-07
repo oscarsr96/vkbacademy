@@ -1,9 +1,15 @@
-import { Injectable, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CryptoService } from '../crypto/crypto.service';
 
 @Injectable()
 export class TutorsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(TutorsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly crypto: CryptoService,
+  ) {}
 
   /**
    * Verifica que el alumno pertenece al tutor y devuelve sus campos básicos.
@@ -36,6 +42,36 @@ export class TutorsService {
         },
       },
       orderBy: { name: 'asc' },
+    });
+  }
+
+  /**
+   * Devuelve credenciales (email + contraseña descifrada) de cada alumno del tutor.
+   * Si `viewablePassword` es null o el descifrado falla, devuelve `password: null`.
+   */
+  async getStudentsCredentials(tutorId: string) {
+    const students = await this.prisma.user.findMany({
+      where: { tutorId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        viewablePassword: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return students.map((s) => {
+      if (!s.viewablePassword) {
+        return { id: s.id, name: s.name, email: s.email, password: null };
+      }
+      try {
+        const password = this.crypto.decrypt(s.viewablePassword);
+        return { id: s.id, name: s.name, email: s.email, password };
+      } catch {
+        this.logger.warn(`No se pudo descifrar viewablePassword del alumno ${s.id}`);
+        return { id: s.id, name: s.name, email: s.email, password: null };
+      }
     });
   }
 

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 import { TutorsService } from './tutors.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CryptoService } from '../crypto/crypto.service';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -26,6 +27,11 @@ const mockStudent = {
 // ---------------------------------------------------------------------------
 // Mock de PrismaService
 // ---------------------------------------------------------------------------
+
+const mockCrypto = {
+  encrypt: jest.fn(),
+  decrypt: jest.fn((cipher: string) => cipher.replace(/^enc\(|\)$/g, '')),
+};
 
 const mockPrisma = {
   user: {
@@ -76,11 +82,13 @@ describe('TutorsService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockCrypto.decrypt.mockImplementation((cipher: string) => cipher.replace(/^enc\(|\)$/g, ''));
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TutorsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: CryptoService, useValue: mockCrypto },
       ],
     }).compile();
 
@@ -94,7 +102,15 @@ describe('TutorsService', () => {
   describe('getMyStudents', () => {
     it('devuelve la lista de alumnos del tutor', async () => {
       const students = [
-        { id: STUDENT_ID, name: 'Alumno', email: 'a@b.com', avatarUrl: null, totalPoints: 50, currentStreak: 3, schoolYear: { id: 'sy1', name: '1eso', label: '1º ESO' } },
+        {
+          id: STUDENT_ID,
+          name: 'Alumno',
+          email: 'a@b.com',
+          avatarUrl: null,
+          totalPoints: 50,
+          currentStreak: 3,
+          schoolYear: { id: 'sy1', name: '1eso', label: '1º ESO' },
+        },
       ];
       mockPrisma.user.findMany.mockResolvedValue(students);
 
@@ -139,8 +155,15 @@ describe('TutorsService', () => {
     it('devuelve los cursos en los que está matriculado el alumno', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ tutorId: TUTOR_ID });
 
-      const course = { id: 'c1', title: 'Curso 1', schoolYear: { id: 'sy1', name: '1eso', label: '1º ESO' } };
-      mockPrisma.enrollment.findMany.mockResolvedValue([{ course }, { course: { id: 'c2', title: 'Curso 2', schoolYear: null } }]);
+      const course = {
+        id: 'c1',
+        title: 'Curso 1',
+        schoolYear: { id: 'sy1', name: '1eso', label: '1º ESO' },
+      };
+      mockPrisma.enrollment.findMany.mockResolvedValue([
+        { course },
+        { course: { id: 'c2', title: 'Curso 2', schoolYear: null } },
+      ]);
 
       const result = await service.getStudentCourses(TUTOR_ID, STUDENT_ID);
 
@@ -182,7 +205,11 @@ describe('TutorsService', () => {
       expect(result).toMatchObject({
         student: expect.objectContaining({ id: STUDENT_ID, name: 'Alumno' }),
         period: { from: null, to: null },
-        lessons: expect.objectContaining({ completedInPeriod: 0, completedAllTime: 0, activeDays: 0 }),
+        lessons: expect.objectContaining({
+          completedInPeriod: 0,
+          completedAllTime: 0,
+          activeDays: 0,
+        }),
         quizzes: expect.objectContaining({ attempts: 0, avgScore: null, bestScore: null }),
         exams: expect.objectContaining({ attempts: 0, avgScore: null, bestScore: null, passed: 0 }),
         certificates: { total: 0, byType: {} },
@@ -409,6 +436,69 @@ describe('TutorsService', () => {
 
       const dates = result.activity.map((a) => a.date);
       expect(dates).toEqual([...dates].sort());
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getStudentsCredentials
+  // -------------------------------------------------------------------------
+
+  describe('getStudentsCredentials', () => {
+    it('devuelve credenciales descifradas solo de alumnos del tutor', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 's1', name: 'Pepe', email: 'pepe@x.com', viewablePassword: 'enc(aB3xY7Q9)' },
+        { id: 's2', name: 'Ana', email: 'ana@x.com', viewablePassword: 'enc(M9pQrS2t)' },
+      ]);
+
+      const result = await service.getStudentsCredentials(TUTOR_ID);
+
+      expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { tutorId: TUTOR_ID },
+          select: expect.objectContaining({
+            id: true,
+            name: true,
+            email: true,
+            viewablePassword: true,
+          }),
+        }),
+      );
+      expect(result).toEqual([
+        { id: 's1', name: 'Pepe', email: 'pepe@x.com', password: 'aB3xY7Q9' },
+        { id: 's2', name: 'Ana', email: 'ana@x.com', password: 'M9pQrS2t' },
+      ]);
+    });
+
+    it('devuelve password=null cuando viewablePassword es null (alumno preexistente)', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 's3', name: 'Old', email: 'old@x.com', viewablePassword: null },
+      ]);
+
+      const result = await service.getStudentsCredentials(TUTOR_ID);
+
+      expect(mockCrypto.decrypt).not.toHaveBeenCalled();
+      expect(result).toEqual([{ id: 's3', name: 'Old', email: 'old@x.com', password: null }]);
+    });
+
+    it('devuelve password=null si descifrar falla', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 's4', name: 'Corrupt', email: 'c@x.com', viewablePassword: 'broken' },
+      ]);
+      mockCrypto.decrypt.mockImplementationOnce(() => {
+        throw new Error('bad tag');
+      });
+
+      const result = await service.getStudentsCredentials(TUTOR_ID);
+
+      expect(result).toEqual([{ id: 's4', name: 'Corrupt', email: 'c@x.com', password: null }]);
+    });
+
+    it('devuelve [] cuando el tutor no tiene alumnos', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([]);
+
+      const result = await service.getStudentsCredentials(TUTOR_ID);
+
+      expect(result).toEqual([]);
     });
   });
 });
