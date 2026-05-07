@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { StudentCredentialsTable } from '../components/tutor/StudentCredentialsTable';
 import {
   tutorsApi,
   type StudentSummary,
@@ -878,9 +879,14 @@ export default function TutorStudentsPage() {
 
       {/* ── Panel de detalle ── */}
       {!selected ? (
-        <div style={S.empty}>
-          <span style={{ fontSize: '3rem' }}>👈</span>
-          <p style={S.emptyText}>Selecciona un alumno para ver sus métricas</p>
+        <div style={{ ...S.empty, display: 'block', padding: '2rem' }}>
+          <StudentCredentialsTable />
+          <div style={{ textAlign: 'center', marginTop: '2rem', color: '#94a3b8' }}>
+            <span style={{ fontSize: '2rem' }}>👈</span>
+            <p style={{ ...S.emptyText, marginTop: '0.5rem' }}>
+              Selecciona un alumno para ver sus métricas
+            </p>
+          </div>
         </div>
       ) : (
         <div style={S.detail}>
