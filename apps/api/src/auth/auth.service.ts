@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CryptoService } from '../crypto/crypto.service';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterTutorDto } from './dto/register-tutor.dto';
 import { LoginDto } from './dto/login.dto';
@@ -43,6 +44,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly notifications: NotificationsService,
+    private readonly crypto: CryptoService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
@@ -126,6 +128,9 @@ export class AuthService {
     const studentPasswordHashes = await Promise.all(
       studentPasswords.map((pw) => bcrypt.hash(pw, 10)),
     );
+    // Cifrado reversible (AES-256-GCM) para que el tutor pueda consultar la
+    // contraseña del alumno en el panel — el hash bcrypt es irreversible.
+    const studentViewable = studentPasswords.map((pw) => this.crypto.encrypt(pw));
 
     // 5. Crear tutor y alumnos en transacción
     const { tutor, students } = await this.prisma.$transaction(async (tx) => {
@@ -146,6 +151,7 @@ export class AuthService {
             data: {
               email: studentEmails[index],
               passwordHash: studentPasswordHashes[index],
+              viewablePassword: studentViewable[index],
               name: studentDto.name,
               role: 'STUDENT',
               tutorId: createdTutor.id,

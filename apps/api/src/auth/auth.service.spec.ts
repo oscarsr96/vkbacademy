@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CryptoService } from '../crypto/crypto.service';
 
 // Mockear bcrypt para evitar el coste de rondas reales en los tests
 jest.mock('bcrypt');
@@ -68,6 +69,13 @@ describe('AuthService', () => {
         {
           provide: NotificationsService,
           useValue: { sendPasswordReset: jest.fn().mockResolvedValue(undefined) },
+        },
+        {
+          provide: CryptoService,
+          useValue: {
+            encrypt: jest.fn((plain: string) => `enc(${plain})`),
+            decrypt: jest.fn((cipher: string) => cipher.replace(/^enc\(|\)$/g, '')),
+          },
         },
       ],
     }).compile();
