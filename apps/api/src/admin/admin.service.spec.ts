@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { AdminService } from './admin.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { YoutubeService } from '../youtube/youtube.service';
+import { CryptoService } from '../crypto/crypto.service';
 
 // Mockear bcrypt para evitar el coste de rondas reales en los tests
 jest.mock('bcrypt');
@@ -25,6 +26,7 @@ describe('AdminService', () => {
       deleteMany: jest.Mock;
     };
   };
+  let mockCrypto: { encrypt: jest.Mock; decrypt: jest.Mock };
 
   const fakeUser = {
     id: 'user-1',
@@ -61,11 +63,17 @@ describe('AdminService', () => {
       },
     };
 
+    mockCrypto = {
+      encrypt: jest.fn((plain: string) => `enc(${plain})`),
+      decrypt: jest.fn((cipher: string) => cipher.replace(/^enc\(|\)$/g, '')),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: YoutubeService, useValue: { findCandidates: jest.fn() } },
+        { provide: CryptoService, useValue: mockCrypto },
       ],
     }).compile();
 
@@ -220,6 +228,56 @@ describe('AdminService', () => {
       const updateData = mockPrisma.user.update.mock.calls[0][0].data;
       expect(updateData).toHaveProperty('passwordHash');
       expect(updateData).not.toHaveProperty('password');
+    });
+
+    // ─── viewablePassword sync ─────────────────────────────────────────────
+
+    it('actualiza viewablePassword cuando target es STUDENT con tutor y dto trae password', async () => {
+      const student = { ...fakeUser, role: 'STUDENT', tutorId: 'tut1' };
+      mockPrisma.user.findUnique.mockResolvedValue(student);
+      mockPrisma.user.update.mockResolvedValue(student);
+
+      await service.updateUser('user-1', { password: 'secret' });
+
+      expect(mockCrypto.encrypt).toHaveBeenCalledWith('secret');
+      const updateData = mockPrisma.user.update.mock.calls[0][0].data;
+      expect(updateData).toHaveProperty('viewablePassword', 'enc(secret)');
+    });
+
+    it('NO toca viewablePassword cuando target NO es STUDENT', async () => {
+      const teacher = { ...fakeUser, role: 'TEACHER', tutorId: null };
+      mockPrisma.user.findUnique.mockResolvedValue(teacher);
+      mockPrisma.user.update.mockResolvedValue(teacher);
+
+      await service.updateUser('user-1', { password: 'secret' });
+
+      expect(mockCrypto.encrypt).not.toHaveBeenCalled();
+      const updateData = mockPrisma.user.update.mock.calls[0][0].data;
+      expect(updateData).not.toHaveProperty('viewablePassword');
+    });
+
+    it('NO toca viewablePassword cuando target es STUDENT sin tutor', async () => {
+      const orphan = { ...fakeUser, role: 'STUDENT', tutorId: null };
+      mockPrisma.user.findUnique.mockResolvedValue(orphan);
+      mockPrisma.user.update.mockResolvedValue(orphan);
+
+      await service.updateUser('user-1', { password: 'secret' });
+
+      expect(mockCrypto.encrypt).not.toHaveBeenCalled();
+      const updateData = mockPrisma.user.update.mock.calls[0][0].data;
+      expect(updateData).not.toHaveProperty('viewablePassword');
+    });
+
+    it('NO toca viewablePassword cuando dto NO trae password', async () => {
+      const student = { ...fakeUser, role: 'STUDENT', tutorId: 'tut1' };
+      mockPrisma.user.findUnique.mockResolvedValue(student);
+      mockPrisma.user.update.mockResolvedValue(student);
+
+      await service.updateUser('user-1', { name: 'Otro Nombre' });
+
+      expect(mockCrypto.encrypt).not.toHaveBeenCalled();
+      const updateData = mockPrisma.user.update.mock.calls[0][0].data;
+      expect(updateData).not.toHaveProperty('viewablePassword');
     });
   });
 
