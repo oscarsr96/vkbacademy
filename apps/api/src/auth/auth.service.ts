@@ -360,7 +360,13 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+
+    const data: { passwordHash: string; viewablePassword?: string } = { passwordHash };
+    if (user.role === 'STUDENT' && user.tutorId) {
+      data.viewablePassword = this.crypto.encrypt(newPassword);
+    }
+
+    await this.prisma.user.update({ where: { id: user.id }, data });
 
     return { message: 'Contraseña actualizada correctamente' };
   }

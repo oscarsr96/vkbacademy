@@ -18,6 +18,7 @@ describe('AuthService', () => {
     user: {
       findUnique: jest.Mock;
       create: jest.Mock;
+      update: jest.Mock;
       findUniqueOrThrow: jest.Mock;
     };
     refreshToken: {
@@ -27,8 +28,9 @@ describe('AuthService', () => {
       updateMany: jest.Mock;
     };
   };
-  let mockJwt: { sign: jest.Mock };
+  let mockJwt: { sign: jest.Mock; decode: jest.Mock; verify: jest.Mock };
   let mockConfig: { get: jest.Mock };
+  let mockCrypto: { encrypt: jest.Mock; decrypt: jest.Mock };
 
   // Usuario de ejemplo con todos los campos necesarios
   const fakeUser = {
@@ -48,6 +50,7 @@ describe('AuthService', () => {
       user: {
         findUnique: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
         findUniqueOrThrow: jest.fn(),
       },
       refreshToken: {
@@ -57,8 +60,16 @@ describe('AuthService', () => {
         updateMany: jest.fn(),
       },
     };
-    mockJwt = { sign: jest.fn().mockReturnValue('mocked_access_token') };
+    mockJwt = {
+      sign: jest.fn().mockReturnValue('mocked_access_token'),
+      decode: jest.fn(),
+      verify: jest.fn(),
+    };
     mockConfig = { get: jest.fn() };
+    mockCrypto = {
+      encrypt: jest.fn((plain: string) => `enc(${plain})`),
+      decrypt: jest.fn((cipher: string) => cipher.replace(/^enc\(|\)$/g, '')),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -70,13 +81,7 @@ describe('AuthService', () => {
           provide: NotificationsService,
           useValue: { sendPasswordReset: jest.fn().mockResolvedValue(undefined) },
         },
-        {
-          provide: CryptoService,
-          useValue: {
-            encrypt: jest.fn((plain: string) => `enc(${plain})`),
-            decrypt: jest.fn((cipher: string) => cipher.replace(/^enc\(|\)$/g, '')),
-          },
-        },
+        { provide: CryptoService, useValue: mockCrypto },
       ],
     }).compile();
 
@@ -86,6 +91,7 @@ describe('AuthService', () => {
     // Valores por defecto para las dependencias
     mockJwt.sign.mockReturnValue('mocked_token');
     mockConfig.get.mockImplementation((key: string, fallback?: string) => {
+      if (key === 'JWT_SECRET') return 'test_secret';
       if (key === 'JWT_REFRESH_SECRET') return 'test_refresh_secret';
       if (key === 'JWT_REFRESH_EXPIRES_IN') return fallback ?? '7d';
       return undefined;
@@ -381,6 +387,88 @@ describe('AuthService', () => {
       const result = await service.logout('token');
 
       expect(result.message).toContain('cerrada');
+    });
+  });
+
+  // ─── resetPassword: sincronización viewablePassword ─────────────────────────
+
+  describe('resetPassword viewablePassword sync', () => {
+    beforeEach(() => {
+      mockedBcrypt.hash.mockResolvedValue('newhash' as never);
+      mockJwt.verify.mockReturnValue({ sub: 'u1', purpose: 'reset' });
+    });
+
+    it('actualiza viewablePassword cuando user es STUDENT con tutorId', async () => {
+      mockJwt.decode.mockReturnValue({ sub: 'st1', purpose: 'reset' });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'st1',
+        role: 'STUDENT',
+        tutorId: 'tut1',
+        passwordHash: 'oldhash',
+      });
+      mockPrisma.user.update.mockResolvedValue({ id: 'st1' });
+
+      await service.resetPassword('any-token', 'newSecret');
+
+      expect(mockCrypto.encrypt).toHaveBeenCalledWith('newSecret');
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'st1' },
+        data: {
+          passwordHash: 'newhash',
+          viewablePassword: 'enc(newSecret)',
+        },
+      });
+    });
+
+    it('NO toca viewablePassword cuando user es TUTOR', async () => {
+      mockJwt.decode.mockReturnValue({ sub: 'tut1', purpose: 'reset' });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'tut1',
+        role: 'TUTOR',
+        tutorId: null,
+        passwordHash: 'oldhash',
+      });
+      mockPrisma.user.update.mockResolvedValue({ id: 'tut1' });
+
+      await service.resetPassword('any-token', 'newSecret');
+
+      expect(mockCrypto.encrypt).not.toHaveBeenCalled();
+      const updateArg = mockPrisma.user.update.mock.calls[0][0];
+      expect(updateArg.data).not.toHaveProperty('viewablePassword');
+    });
+
+    it('NO toca viewablePassword cuando user es STUDENT sin tutorId', async () => {
+      mockJwt.decode.mockReturnValue({ sub: 's2', purpose: 'reset' });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 's2',
+        role: 'STUDENT',
+        tutorId: null,
+        passwordHash: 'oldhash',
+      });
+      mockPrisma.user.update.mockResolvedValue({ id: 's2' });
+
+      await service.resetPassword('any-token', 'newSecret');
+
+      expect(mockCrypto.encrypt).not.toHaveBeenCalled();
+      const updateArg = mockPrisma.user.update.mock.calls[0][0];
+      expect(updateArg.data).not.toHaveProperty('viewablePassword');
+    });
+
+    it('NO toca viewablePassword cuando user es TEACHER', async () => {
+      mockJwt.decode.mockReturnValue({ sub: 'tch1', purpose: 'reset' });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'tch1',
+        role: 'TEACHER',
+        tutorId: null,
+        passwordHash: 'oldhash',
+      });
+      mockPrisma.user.update.mockResolvedValue({ id: 'tch1' });
+
+      await service.resetPassword('any-token', 'newSecret');
+
+      expect(mockCrypto.encrypt).not.toHaveBeenCalled();
+      const updateArg = mockPrisma.user.update.mock.calls[0][0];
+      expect(updateArg.data).not.toHaveProperty('viewablePassword');
     });
   });
 });
