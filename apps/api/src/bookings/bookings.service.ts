@@ -5,11 +5,10 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { Role, BookingStatus, BookingMode, ChallengeType } from '@prisma/client';
+import { Role, BookingStatus, BookingMode } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DailyService } from '../daily/daily.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { ChallengesService } from '../challenges/challenges.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
 @Injectable()
@@ -20,7 +19,6 @@ export class BookingsService {
     private readonly prisma: PrismaService,
     private readonly daily: DailyService,
     private readonly notifications: NotificationsService,
-    private readonly challenges: ChallengesService,
   ) {}
 
   async getMyBookings(userId: string, role: Role, academyId?: string | null) {
@@ -75,7 +73,12 @@ export class BookingsService {
     });
   }
 
-  async create(dto: CreateBookingDto, creatorId: string, creatorRole: Role, academyId?: string | null) {
+  async create(
+    dto: CreateBookingDto,
+    creatorId: string,
+    creatorRole: Role,
+    academyId?: string | null,
+  ) {
     // Si es TUTOR, verificar que el studentId pertenece a sus alumnos
     if (creatorRole === Role.TUTOR) {
       const student = await this.prisma.user.findUnique({
@@ -105,7 +108,8 @@ export class BookingsService {
     const startAt = new Date(dto.startAt);
     const endAt = new Date(dto.endAt);
 
-    if (startAt >= endAt) throw new BadRequestException('La fecha de inicio debe ser anterior a la de fin');
+    if (startAt >= endAt)
+      throw new BadRequestException('La fecha de inicio debe ser anterior a la de fin');
     if (startAt < new Date()) throw new BadRequestException('No se puede reservar en el pasado');
 
     // Verificar conflicto
@@ -189,7 +193,10 @@ export class BookingsService {
         })
       : null;
     const course = booking.courseId
-      ? await this.prisma.course.findUnique({ where: { id: booking.courseId }, select: { title: true } })
+      ? await this.prisma.course.findUnique({
+          where: { id: booking.courseId },
+          select: { title: true },
+        })
       : null;
 
     if (student) {
@@ -206,15 +213,10 @@ export class BookingsService {
           meetingUrl,
           courseName: course?.title,
         })
-        .catch((err) => this.logger.error('Error enviando notificación de reserva confirmada', err));
+        .catch((err) =>
+          this.logger.error('Error enviando notificación de reserva confirmada', err),
+        );
     }
-
-    // Disparar evaluación de retos en segundo plano para el alumno
-    void this.challenges.checkAndAward(
-      booking.studentId,
-      ChallengeType.BOOKING_ATTENDED,
-      ChallengeType.TOTAL_HOURS,
-    );
 
     return confirmed;
   }
@@ -272,8 +274,10 @@ export class BookingsService {
 
     // Notificar solo a las partes que no cancelaron
     const notifyEmails: Array<{ email: string; name: string }> = [];
-    if (!isTeacher && teacher) notifyEmails.push({ email: teacher.user.email, name: teacher.user.name });
-    if (!isTutor && !isStudent && tutor) notifyEmails.push({ email: tutor.email, name: tutor.name });
+    if (!isTeacher && teacher)
+      notifyEmails.push({ email: teacher.user.email, name: teacher.user.name });
+    if (!isTutor && !isStudent && tutor)
+      notifyEmails.push({ email: tutor.email, name: tutor.name });
     if (!isStudent && student) notifyEmails.push({ email: student.email, name: student.name });
 
     if (notifyEmails.length > 0 && student && teacher) {

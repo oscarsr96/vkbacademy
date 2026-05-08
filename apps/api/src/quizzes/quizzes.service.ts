@@ -81,7 +81,7 @@ export class QuizzesService {
     });
 
     // Disparar evaluación de retos en segundo plano (sin bloquear la respuesta)
-    void this.challenges.checkAndAward(userId, ChallengeType.QUIZ_SCORE);
+    void this.challenges.checkAndAward(userId, ChallengeType.EXERCISE_SCORE);
 
     return {
       score,

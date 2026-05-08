@@ -5,10 +5,17 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, TheoryLessonKind, type TheoryModule, type TheoryLesson } from '@prisma/client';
+import {
+  ChallengeType,
+  Prisma,
+  TheoryLessonKind,
+  type TheoryModule,
+  type TheoryLesson,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { YoutubeService } from '../youtube/youtube.service';
+import { ChallengesService } from '../challenges/challenges.service';
 import { GenerateTheoryDto } from './dto/generate-theory.dto';
 
 interface GeneratedTheoryLesson {
@@ -46,6 +53,7 @@ export class TheoryService {
     private readonly prisma: PrismaService,
     private readonly ai: AiProviderService,
     private readonly youtube: YoutubeService,
+    private readonly challenges: ChallengesService,
   ) {}
 
   async generate(userId: string, dto: GenerateTheoryDto): Promise<TheoryModuleWithLessons> {
@@ -93,7 +101,7 @@ export class TheoryService {
       }),
     );
 
-    return this.prisma.theoryModule.create({
+    const created = await this.prisma.theoryModule.create({
       data: {
         userId,
         courseId: dto.courseId,
@@ -119,6 +127,15 @@ export class TheoryService {
       },
       include: { lessons: { orderBy: { order: 'asc' } } },
     });
+
+    // Disparar evaluación de retos en segundo plano (sin bloquear la respuesta)
+    void this.challenges.checkAndAward(
+      userId,
+      ChallengeType.THEORY_COMPLETED,
+      ChallengeType.TOTAL_HOURS_THEORY,
+    );
+
+    return created;
   }
 
   listMine(userId: string, courseId?: string): Promise<TheoryModule[]> {

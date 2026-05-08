@@ -15,6 +15,7 @@ describe('TheoryService', () => {
   };
   let ai: { generate: jest.Mock };
   let youtube: { findCandidates: jest.Mock };
+  let challenges: { checkAndAward: jest.Mock };
   let service: TheoryService;
 
   const baseCourse = {
@@ -63,7 +64,13 @@ describe('TheoryService', () => {
     };
     ai = { generate: jest.fn() };
     youtube = { findCandidates: jest.fn() };
-    service = new TheoryService(prisma as never, ai as never, youtube as never);
+    challenges = { checkAndAward: jest.fn().mockResolvedValue(undefined) };
+    service = new TheoryService(
+      prisma as never,
+      ai as never,
+      youtube as never,
+      challenges as never,
+    );
   });
 
   describe('generate', () => {

@@ -322,13 +322,15 @@ export interface AdminRedemption {
 // ─── Challenges (Admin) ───────────────────────────────────────────────────────
 
 export type AdminChallengeType =
-  | 'LESSON_COMPLETED'
-  | 'MODULE_COMPLETED'
-  | 'COURSE_COMPLETED'
-  | 'QUIZ_SCORE'
-  | 'BOOKING_ATTENDED'
+  | 'EXERCISE_COMPLETED'
+  | 'EXERCISE_SCORE'
+  | 'THEORY_COMPLETED'
+  | 'EXAM_COMPLETED'
+  | 'EXAM_SCORE'
   | 'STREAK_WEEKLY'
-  | 'TOTAL_HOURS';
+  | 'TOTAL_HOURS_EXERCISE'
+  | 'TOTAL_HOURS_THEORY'
+  | 'TOTAL_HOURS_EXAM';
 
 export interface AdminChallenge {
   id: string;

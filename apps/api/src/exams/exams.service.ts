@@ -4,8 +4,10 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { ChallengeType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CertificatesService } from '../certificates/certificates.service';
+import { ChallengesService } from '../challenges/challenges.service';
 import { StartExamDto } from './dto/start-exam.dto';
 import { SubmitExamDto } from './dto/submit-exam.dto';
 
@@ -32,6 +34,7 @@ export class ExamsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly certificates: CertificatesService,
+    private readonly challenges: ChallengesService,
   ) {}
 
   // ─── Info del banco de preguntas ──────────────────────────────────────────
@@ -240,6 +243,14 @@ export class ExamsService {
 
     // Emitir certificado de examen en segundo plano si el score supera el mínimo
     void this.certificates.issueExamCertificate(userId, attemptId, score);
+
+    // Disparar evaluación de retos en segundo plano (sin bloquear la respuesta)
+    void this.challenges.checkAndAward(
+      userId,
+      ChallengeType.EXAM_COMPLETED,
+      ChallengeType.EXAM_SCORE,
+      ChallengeType.TOTAL_HOURS_EXAM,
+    );
 
     return {
       attemptId,
