@@ -331,7 +331,7 @@ describe('AuthService.registerTutor', () => {
           email: 'tutor@test.es',
           password: 'password123',
           academySlug: 'academia-inexistente',
-          students: [{ name: 'Alumno' }],
+          students: [{ name: 'Alumno', schoolYearId: 'sy1' }],
         }),
       ).rejects.toThrow(NotFoundException);
     });
@@ -345,7 +345,7 @@ describe('AuthService.registerTutor', () => {
           email: 'tutor@test.es',
           password: 'password123',
           academySlug: 'vallekas-basket',
-          students: [{ name: 'Alumno' }],
+          students: [{ name: 'Alumno', schoolYearId: 'sy1' }],
         }),
       ).rejects.toThrow(BadRequestException);
     });
@@ -360,7 +360,7 @@ describe('AuthService.registerTutor', () => {
           email: 'tutor@vkbacademy.es',
           password: 'password123',
           academySlug: 'vallekas-basket',
-          students: [{ name: 'Alumno' }],
+          students: [{ name: 'Alumno', schoolYearId: 'sy1' }],
         }),
       ).rejects.toThrow(ConflictException);
     });
@@ -374,7 +374,7 @@ describe('AuthService.registerTutor', () => {
           email: 'tutor@test.es',
           password: 'password123',
           academySlug: 'inexistente',
-          students: [{ name: 'Alumno' }],
+          students: [{ name: 'Alumno', schoolYearId: 'sy1' }],
         });
       } catch {
         // esperado
@@ -402,7 +402,7 @@ describe('AuthService.registerTutor', () => {
         email: 'tutor@test.es',
         password: 'password123',
         academySlug: 'vallekas-basket',
-        students: [{ name: 'María Pérez García' }],
+        students: [{ name: 'María Pérez García', schoolYearId: 'sy1' }],
       });
 
       const studentCreateCall = mockPrisma.user.create.mock.calls[1][0];
@@ -426,7 +426,7 @@ describe('AuthService.registerTutor', () => {
         email: 'tutor@test.es',
         password: 'password123',
         academySlug: 'vallekas-basket',
-        students: [{ name: 'Juan García' }],
+        students: [{ name: 'Juan García', schoolYearId: 'sy1' }],
       });
 
       const studentCreateCall = mockPrisma.user.create.mock.calls[1][0];
@@ -444,7 +444,7 @@ describe('AuthService.registerTutor', () => {
         email: 'tutor@test.es',
         password: 'password123',
         academySlug: 'vallekas-basket',
-        students: [{ name: 'Juan García' }, { name: 'Juan García' }],
+        students: [{ name: 'Juan García', schoolYearId: 'sy1' }, { name: 'Juan García', schoolYearId: 'sy1' }],
       });
 
       expect(mockPrisma.user.create.mock.calls[1][0].data.email).toBe('juan-garcia@vkbacademy.com');
@@ -504,7 +504,7 @@ describe('AuthService.registerTutor', () => {
         email: 'tutor@test.es',
         password: 'password123',
         academySlug: 'vallekas-basket',
-        students: [{ name: 'Alumno Uno' }, { name: 'Alumno Dos' }],
+        students: [{ name: 'Alumno Uno', schoolYearId: 'sy1' }, { name: 'Alumno Dos', schoolYearId: 'sy1' }],
       });
 
       expect(mockCrypto.encrypt).toHaveBeenCalledTimes(2);
@@ -525,7 +525,7 @@ describe('AuthService.registerTutor', () => {
         email: 'tutor@test.es',
         password: 'password123',
         academySlug: 'vallekas-basket',
-        students: [{ name: 'Alumno Uno' }, { name: 'Alumno Dos' }],
+        students: [{ name: 'Alumno Uno', schoolYearId: 'sy1' }, { name: 'Alumno Dos', schoolYearId: 'sy1' }],
       });
 
       const studentCreateCalls = mockPrisma.user.create.mock.calls.filter(
@@ -545,7 +545,7 @@ describe('AuthService.registerTutor', () => {
         email: 'tutor@test.es',
         password: 'password123',
         academySlug: 'vallekas-basket',
-        students: [{ name: 'Alumno' }],
+        students: [{ name: 'Alumno', schoolYearId: 'sy1' }],
       });
 
       const tutorCreateCall = mockPrisma.user.create.mock.calls[0][0];

@@ -59,8 +59,7 @@ export function useCompleteLesson(courseId: string) {
 export function useSubmitQuiz(quizId: string, lessonId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (answers: QuizAnswerSubmission[]) =>
-      coursesApi.submitQuiz(quizId, answers),
+    mutationFn: (answers: QuizAnswerSubmission[]) => coursesApi.submitQuiz(quizId, answers),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['lessons', lessonId] });
       void queryClient.invalidateQueries({ queryKey: ['quizzes', quizId, 'attempts'] });
@@ -85,10 +84,44 @@ export function useRecentLessons() {
   });
 }
 
-export function useStudentCourseProgress(courseId: string | null | undefined, studentId: string | null | undefined) {
+export function useStudentCourseProgress(
+  courseId: string | null | undefined,
+  studentId: string | null | undefined,
+) {
   return useQuery({
     queryKey: ['courses', courseId, 'student-progress', studentId],
     queryFn: () => coursesApi.getStudentProgress(courseId!, studentId!),
     enabled: !!courseId && !!studentId,
+  });
+}
+
+// ── Asignaturas: auto-matriculación del alumno ───────────────────────────
+
+export function useSubjects() {
+  return useQuery({
+    queryKey: ['courses', 'subjects'],
+    queryFn: () => coursesApi.listSubjects(),
+  });
+}
+
+export function useEnrollSelf() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (courseId: string) => coursesApi.enrollSelf(courseId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['courses', 'subjects'] });
+      void queryClient.invalidateQueries({ queryKey: ['courses', 'list'] });
+    },
+  });
+}
+
+export function useUnenrollSelf() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (courseId: string) => coursesApi.unenrollSelf(courseId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['courses', 'subjects'] });
+      void queryClient.invalidateQueries({ queryKey: ['courses', 'list'] });
+    },
   });
 }

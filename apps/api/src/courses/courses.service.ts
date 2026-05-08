@@ -37,10 +37,7 @@ export class CoursesService {
 
       if (enrolledIds.length > 0) {
         // Ver cursos de su nivel + los enrolados explícitamente (pueden ser de otro nivel)
-        where.OR = [
-          { schoolYearId: schoolYearId ?? '__none__' },
-          { id: { in: enrolledIds } },
-        ];
+        where.OR = [{ schoolYearId: schoolYearId ?? '__none__' }, { id: { in: enrolledIds } }];
       } else if (schoolYearId) {
         where.schoolYearId = schoolYearId;
       } else {
@@ -135,9 +132,7 @@ export class CoursesService {
       totalLessons: lessonIds.length,
       completedLessons: completedLessonIds.length,
       percentageComplete:
-        lessonIds.length > 0
-          ? Math.round((completedLessonIds.length / lessonIds.length) * 100)
-          : 0,
+        lessonIds.length > 0 ? Math.round((completedLessonIds.length / lessonIds.length) * 100) : 0,
       completedLessonIds,
     };
   }
@@ -184,9 +179,7 @@ export class CoursesService {
       totalLessons: lessonIds.length,
       completedLessons: completedSet.size,
       percentageComplete:
-        lessonIds.length > 0
-          ? Math.round((completedSet.size / lessonIds.length) * 100)
-          : 0,
+        lessonIds.length > 0 ? Math.round((completedSet.size / lessonIds.length) * 100) : 0,
       modules,
     };
   }
@@ -198,5 +191,60 @@ export class CoursesService {
   async update(id: string, dto: UpdateCourseDto) {
     await this.findOne(id);
     return this.prisma.course.update({ where: { id }, data: dto });
+  }
+
+  /**
+   * Lista las asignaturas disponibles para auto-matricularse: todos los cursos
+   * publicados, marcando si el alumno ya está matriculado.
+   */
+  async listAvailableSubjects(userId: string) {
+    const [courses, enrollments] = await Promise.all([
+      this.prisma.course.findMany({
+        where: { published: true },
+        orderBy: [{ subject: 'asc' }, { title: 'asc' }],
+        include: {
+          schoolYear: { select: { id: true, label: true } },
+        },
+      }),
+      this.prisma.enrollment.findMany({
+        where: { userId },
+        select: { courseId: true },
+      }),
+    ]);
+
+    const enrolledIds = new Set(enrollments.map((e) => e.courseId));
+
+    return courses.map((c) => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      subject: c.subject,
+      schoolYear: c.schoolYear,
+      isEnrolled: enrolledIds.has(c.id),
+    }));
+  }
+
+  /** Auto-matriculación del alumno en un curso publicado. */
+  async enrollSelf(userId: string, courseId: string, academyId: string | null) {
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true, published: true },
+    });
+    if (!course) throw new NotFoundException('Curso no encontrado');
+    if (!course.published) {
+      throw new ForbiddenException('Este curso no está disponible para matriculación');
+    }
+
+    return this.prisma.enrollment.upsert({
+      where: { userId_courseId: { userId, courseId } },
+      create: { userId, courseId, academyId: academyId ?? undefined },
+      update: {},
+    });
+  }
+
+  /** Auto-baja del alumno en un curso. */
+  async unenrollSelf(userId: string, courseId: string) {
+    await this.prisma.enrollment.deleteMany({ where: { userId, courseId } });
+    return { success: true };
   }
 }
