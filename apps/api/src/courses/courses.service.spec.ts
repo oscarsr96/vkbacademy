@@ -40,6 +40,8 @@ const mockPrisma = {
   },
   enrollment: {
     findMany: jest.fn(),
+    upsert: jest.fn(),
+    deleteMany: jest.fn(),
   },
   userProgress: {
     findMany: jest.fn(),
@@ -55,10 +57,7 @@ describe('CoursesService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CoursesService,
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
+      providers: [CoursesService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
 
     service = module.get<CoursesService>(CoursesService);
@@ -129,10 +128,7 @@ describe('CoursesService', () => {
 
       const whereArg = mockPrisma.course.findMany.mock.calls[0][0].where;
       expect(whereArg.published).toBe(true);
-      expect(whereArg.OR).toEqual([
-        { schoolYearId: 'sy1' },
-        { id: { in: ['courseX'] } },
-      ]);
+      expect(whereArg.OR).toEqual([{ schoolYearId: 'sy1' }, { id: { in: ['courseX'] } }]);
     });
 
     it('ADMIN: devuelve todos los cursos sin filtro published', async () => {
@@ -232,10 +228,7 @@ describe('CoursesService', () => {
     });
 
     it('percentageComplete = 100 si todas las lecciones están completadas', async () => {
-      mockPrisma.userProgress.findMany.mockResolvedValue([
-        { lessonId: 'l1' },
-        { lessonId: 'l2' },
-      ]);
+      mockPrisma.userProgress.findMany.mockResolvedValue([{ lessonId: 'l1' }, { lessonId: 'l2' }]);
 
       const result = await service.getCourseProgress('course1', 'u1');
 
@@ -310,6 +303,153 @@ describe('CoursesService', () => {
       );
 
       expect(mockPrisma.course.update).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // listAvailableSubjects — la página Asignaturas debe mostrar TODOS los cursos
+  // publicados (matriculado o no), marcando isEnrolled.
+  // -------------------------------------------------------------------------
+
+  describe('listAvailableSubjects', () => {
+    const subjMath = {
+      id: 'subj-math',
+      title: 'Matemáticas',
+      description: 'Asignatura',
+      subject: 'Matemáticas',
+      published: true,
+      schoolYear: null,
+    };
+    const subjPhys = {
+      id: 'subj-phys',
+      title: 'Física y Química',
+      description: 'Asignatura',
+      subject: 'Física y Química',
+      published: true,
+      schoolYear: null,
+    };
+    const subjEng = {
+      id: 'subj-eng',
+      title: 'Inglés',
+      description: 'Asignatura',
+      subject: 'Inglés',
+      published: true,
+      schoolYear: null,
+    };
+
+    it('devuelve también los cursos en los que el alumno NO está matriculado', async () => {
+      mockPrisma.course.findMany.mockResolvedValue([subjMath, subjPhys, subjEng]);
+      mockPrisma.enrollment.findMany.mockResolvedValue([{ courseId: subjMath.id }]);
+
+      const result = await service.listAvailableSubjects('u1');
+
+      expect(result).toHaveLength(3);
+      const ids = result.map((c) => c.id);
+      expect(ids).toEqual(expect.arrayContaining([subjMath.id, subjPhys.id, subjEng.id]));
+    });
+
+    it('marca isEnrolled=true sólo para los cursos en los que el alumno está matriculado', async () => {
+      mockPrisma.course.findMany.mockResolvedValue([subjMath, subjPhys, subjEng]);
+      mockPrisma.enrollment.findMany.mockResolvedValue([{ courseId: subjMath.id }]);
+
+      const result = await service.listAvailableSubjects('u1');
+
+      const byId = Object.fromEntries(result.map((c) => [c.id, c]));
+      expect(byId[subjMath.id].isEnrolled).toBe(true);
+      expect(byId[subjPhys.id].isEnrolled).toBe(false);
+      expect(byId[subjEng.id].isEnrolled).toBe(false);
+    });
+
+    it('filtra cursos no publicados en la consulta a Prisma', async () => {
+      mockPrisma.course.findMany.mockResolvedValue([]);
+      mockPrisma.enrollment.findMany.mockResolvedValue([]);
+
+      await service.listAvailableSubjects('u1');
+
+      const where = mockPrisma.course.findMany.mock.calls[0][0].where;
+      expect(where.published).toBe(true);
+    });
+
+    it('devuelve array vacío sin reventar si no hay cursos publicados', async () => {
+      mockPrisma.course.findMany.mockResolvedValue([]);
+      mockPrisma.enrollment.findMany.mockResolvedValue([]);
+
+      const result = await service.listAvailableSubjects('u1');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // enrollSelf — auto-matriculación del alumno desde Asignaturas.
+  // -------------------------------------------------------------------------
+
+  describe('enrollSelf', () => {
+    it('matricula al alumno en un curso publicado', async () => {
+      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', published: true });
+      mockPrisma.enrollment.upsert.mockResolvedValue({
+        id: 'enr1',
+        userId: 'u1',
+        courseId: 'c1',
+      });
+
+      const result = await service.enrollSelf('u1', 'c1', 'academy1');
+
+      expect(mockPrisma.enrollment.upsert).toHaveBeenCalledWith({
+        where: { userId_courseId: { userId: 'u1', courseId: 'c1' } },
+        create: { userId: 'u1', courseId: 'c1', academyId: 'academy1' },
+        update: {},
+      });
+      expect(result.courseId).toBe('c1');
+    });
+
+    it('lanza NotFoundException si el curso no existe', async () => {
+      mockPrisma.course.findUnique.mockResolvedValue(null);
+
+      await expect(service.enrollSelf('u1', 'missing', null)).rejects.toThrow(NotFoundException);
+      expect(mockPrisma.enrollment.upsert).not.toHaveBeenCalled();
+    });
+
+    it('lanza ForbiddenException si el curso no está publicado', async () => {
+      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', published: false });
+
+      await expect(service.enrollSelf('u1', 'c1', null)).rejects.toThrow(ForbiddenException);
+      expect(mockPrisma.enrollment.upsert).not.toHaveBeenCalled();
+    });
+
+    it('es idempotente: una segunda matriculación no falla (upsert)', async () => {
+      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', published: true });
+      mockPrisma.enrollment.upsert.mockResolvedValue({ id: 'enr1', userId: 'u1', courseId: 'c1' });
+
+      await service.enrollSelf('u1', 'c1', null);
+      await service.enrollSelf('u1', 'c1', null);
+
+      expect(mockPrisma.enrollment.upsert).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // unenrollSelf — el alumno puede darse de baja desde Asignaturas.
+  // -------------------------------------------------------------------------
+
+  describe('unenrollSelf', () => {
+    it('borra la matriculación del usuario y del curso', async () => {
+      mockPrisma.enrollment.deleteMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.unenrollSelf('u1', 'c1');
+
+      expect(mockPrisma.enrollment.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 'u1', courseId: 'c1' },
+      });
+      expect(result).toEqual({ success: true });
+    });
+
+    it('no falla si el alumno no estaba matriculado (deleteMany devuelve 0)', async () => {
+      mockPrisma.enrollment.deleteMany.mockResolvedValue({ count: 0 });
+
+      const result = await service.unenrollSelf('u1', 'c1');
+
+      expect(result).toEqual({ success: true });
     });
   });
 });
