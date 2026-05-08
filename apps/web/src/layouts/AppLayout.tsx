@@ -62,11 +62,11 @@ function buildNavLinks(role: Role | undefined): NavLink[] {
   // STUDENT por defecto
   return [
     ...base,
+    { to: '/subjects', label: '📚 Asignaturas' },
     { to: '/exercises', label: '🧮 Ejercicios' },
     { to: '/theory', label: '📖 Teoría' },
     { to: '/my-exams', label: '🎓 Exámenes' },
     { to: '/challenges', label: '🏆 Retos' },
-    { to: '/certificates', label: '📜 Certificados' },
     { to: '/profile', label: '👤 Mi perfil' },
   ];
 }

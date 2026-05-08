@@ -392,12 +392,13 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
     appearance: 'none',
     WebkitAppearance: 'none',
     MozAppearance: 'none',
-    backgroundImage:
-      "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3e%3cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236b7280' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e\")",
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 14px center',
-    paddingRight: 38,
+    background:
+      "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10' fill='none'%3e%3cpath d='M1 1.5L7 8L13 1.5' stroke='%23ea580c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e\") no-repeat right 14px center / 14px 10px, #ffffff",
+    border: '1.5px solid #d1d5db',
+    paddingRight: 40,
     cursor: 'pointer',
+    minHeight: 44,
+    lineHeight: 1.2,
   };
 
   return (

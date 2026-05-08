@@ -260,130 +260,190 @@ async function main() {
     data: { userId: student.id, courseId: courseMath.id },
   });
 
-  // Crear retos de ejemplo (Ejercicios, Teoría, Exámenes + racha)
+  // ── Asignaturas por defecto disponibles para auto-matriculación ─────────
+  // schoolYearId: null → visibles para alumnos de cualquier nivel
   await Promise.all([
-    prisma.challenge.create({
+    prisma.course.create({
       data: {
-        title: 'Primer ejercicio',
-        description: 'Completa tu primer ejercicio.',
-        type: ChallengeType.EXERCISE_COMPLETED,
-        target: 1,
-        points: 10,
-        badgeIcon: '🎯',
-        badgeColor: '#10b981',
+        title: 'Matemáticas',
+        description: 'Asignatura de Matemáticas. Matricúlate para acceder al contenido.',
+        published: true,
+        subject: 'Matemáticas',
       },
     }),
-    prisma.challenge.create({
+    prisma.course.create({
       data: {
-        title: 'Entrenado',
-        description: 'Completa 25 ejercicios.',
-        type: ChallengeType.EXERCISE_COMPLETED,
-        target: 25,
-        points: 80,
-        badgeIcon: '💪',
-        badgeColor: '#22c55e',
+        title: 'Física y Química',
+        description: 'Asignatura de Física y Química. Matricúlate para acceder al contenido.',
+        published: true,
+        subject: 'Física y Química',
       },
     }),
-    prisma.challenge.create({
+    prisma.course.create({
       data: {
-        title: 'Ojo clínico',
-        description: 'Consigue al menos 80 puntos en cualquier ejercicio.',
-        type: ChallengeType.EXERCISE_SCORE,
-        target: 80,
-        points: 30,
-        badgeIcon: '🧠',
-        badgeColor: '#8b5cf6',
-      },
-    }),
-    prisma.challenge.create({
-      data: {
-        title: 'Curioso',
-        description: 'Genera tu primer módulo de teoría.',
-        type: ChallengeType.THEORY_COMPLETED,
-        target: 1,
-        points: 15,
-        badgeIcon: '📚',
-        badgeColor: '#0ea5e9',
-      },
-    }),
-    prisma.challenge.create({
-      data: {
-        title: 'Estudioso',
-        description: 'Genera 10 módulos de teoría.',
-        type: ChallengeType.THEORY_COMPLETED,
-        target: 10,
-        points: 70,
-        badgeIcon: '🎓',
-        badgeColor: '#3b82f6',
-      },
-    }),
-    prisma.challenge.create({
-      data: {
-        title: 'Primer examen',
-        description: 'Entrega tu primer examen.',
-        type: ChallengeType.EXAM_COMPLETED,
-        target: 1,
-        points: 25,
-        badgeIcon: '📝',
-        badgeColor: '#f97316',
-      },
-    }),
-    prisma.challenge.create({
-      data: {
-        title: 'Maestro del examen',
-        description: 'Consigue al menos 90 puntos en cualquier examen.',
-        type: ChallengeType.EXAM_SCORE,
-        target: 90,
-        points: 100,
-        badgeIcon: '🏆',
-        badgeColor: '#eab308',
-      },
-    }),
-    prisma.challenge.create({
-      data: {
-        title: 'Maratón de ejercicios',
-        description: 'Acumula 5 horas haciendo ejercicios.',
-        type: ChallengeType.TOTAL_HOURS_EXERCISE,
-        target: 5,
-        points: 60,
-        badgeIcon: '⏱️',
-        badgeColor: '#6366f1',
-      },
-    }),
-    prisma.challenge.create({
-      data: {
-        title: 'Maratón de teoría',
-        description: 'Acumula 5 horas estudiando teoría.',
-        type: ChallengeType.TOTAL_HOURS_THEORY,
-        target: 5,
-        points: 60,
-        badgeIcon: '📖',
-        badgeColor: '#14b8a6',
-      },
-    }),
-    prisma.challenge.create({
-      data: {
-        title: 'Maratón de exámenes',
-        description: 'Acumula 3 horas resolviendo exámenes.',
-        type: ChallengeType.TOTAL_HOURS_EXAM,
-        target: 3,
-        points: 90,
-        badgeIcon: '⌛',
-        badgeColor: '#ec4899',
-      },
-    }),
-    prisma.challenge.create({
-      data: {
-        title: 'Racha de fuego',
-        description: 'Mantén una racha activa de 4 semanas consecutivas.',
-        type: ChallengeType.STREAK_WEEKLY,
-        target: 4,
-        points: 100,
-        badgeIcon: '🔥',
-        badgeColor: '#ef4444',
+        title: 'Inglés',
+        description: 'Asignatura de Inglés. Matricúlate para acceder al contenido.',
+        published: true,
+        subject: 'Inglés',
       },
     }),
   ]);
+
+  // Crear retos de ejemplo — 15 distintos cubriendo los 9 ChallengeType
+  const challengesData: Array<{
+    title: string;
+    description: string;
+    type: ChallengeType;
+    target: number;
+    points: number;
+    badgeIcon: string;
+    badgeColor: string;
+  }> = [
+    // ── Ejercicios completados (3) ──────────────────────────────────────────
+    {
+      title: 'Primer ejercicio',
+      description: 'Completa tu primer ejercicio.',
+      type: ChallengeType.EXERCISE_COMPLETED,
+      target: 1,
+      points: 10,
+      badgeIcon: '🎯',
+      badgeColor: '#10b981',
+    },
+    {
+      title: 'En forma',
+      description: 'Completa 10 ejercicios.',
+      type: ChallengeType.EXERCISE_COMPLETED,
+      target: 10,
+      points: 40,
+      badgeIcon: '🏃',
+      badgeColor: '#16a34a',
+    },
+    {
+      title: 'Entrenado',
+      description: 'Completa 25 ejercicios.',
+      type: ChallengeType.EXERCISE_COMPLETED,
+      target: 25,
+      points: 80,
+      badgeIcon: '💪',
+      badgeColor: '#22c55e',
+    },
+    // ── Score en ejercicios (2) ──────────────────────────────────────────────
+    {
+      title: 'Ojo clínico',
+      description: 'Consigue al menos 80% en cualquier ejercicio.',
+      type: ChallengeType.EXERCISE_SCORE,
+      target: 80,
+      points: 30,
+      badgeIcon: '🧠',
+      badgeColor: '#8b5cf6',
+    },
+    {
+      title: 'Pleno',
+      description: 'Consigue 100% en cualquier ejercicio.',
+      type: ChallengeType.EXERCISE_SCORE,
+      target: 100,
+      points: 50,
+      badgeIcon: '💯',
+      badgeColor: '#a855f7',
+    },
+    // ── Teoría (2) ───────────────────────────────────────────────────────────
+    {
+      title: 'Curioso',
+      description: 'Genera tu primer módulo de teoría.',
+      type: ChallengeType.THEORY_COMPLETED,
+      target: 1,
+      points: 15,
+      badgeIcon: '📚',
+      badgeColor: '#0ea5e9',
+    },
+    {
+      title: 'Estudioso',
+      description: 'Genera 10 módulos de teoría.',
+      type: ChallengeType.THEORY_COMPLETED,
+      target: 10,
+      points: 70,
+      badgeIcon: '🎓',
+      badgeColor: '#3b82f6',
+    },
+    // ── Exámenes completados (2) ─────────────────────────────────────────────
+    {
+      title: 'Primer examen',
+      description: 'Entrega tu primer examen.',
+      type: ChallengeType.EXAM_COMPLETED,
+      target: 1,
+      points: 25,
+      badgeIcon: '📝',
+      badgeColor: '#f97316',
+    },
+    {
+      title: 'Veterano',
+      description: 'Entrega 10 exámenes.',
+      type: ChallengeType.EXAM_COMPLETED,
+      target: 10,
+      points: 90,
+      badgeIcon: '🪖',
+      badgeColor: '#dc2626',
+    },
+    // ── Score en exámenes (2) ────────────────────────────────────────────────
+    {
+      title: 'Aprobado con nota',
+      description: 'Consigue al menos 70% en cualquier examen.',
+      type: ChallengeType.EXAM_SCORE,
+      target: 70,
+      points: 40,
+      badgeIcon: '✅',
+      badgeColor: '#84cc16',
+    },
+    {
+      title: 'Maestro del examen',
+      description: 'Consigue al menos 90% en cualquier examen.',
+      type: ChallengeType.EXAM_SCORE,
+      target: 90,
+      points: 100,
+      badgeIcon: '🏆',
+      badgeColor: '#eab308',
+    },
+    // ── Horas acumuladas (3) ─────────────────────────────────────────────────
+    {
+      title: 'Maratón de ejercicios',
+      description: 'Acumula 5 horas haciendo ejercicios.',
+      type: ChallengeType.TOTAL_HOURS_EXERCISE,
+      target: 5,
+      points: 60,
+      badgeIcon: '⏱️',
+      badgeColor: '#6366f1',
+    },
+    {
+      title: 'Maratón de teoría',
+      description: 'Acumula 5 horas estudiando teoría.',
+      type: ChallengeType.TOTAL_HOURS_THEORY,
+      target: 5,
+      points: 60,
+      badgeIcon: '📖',
+      badgeColor: '#14b8a6',
+    },
+    {
+      title: 'Maratón de exámenes',
+      description: 'Acumula 3 horas resolviendo exámenes.',
+      type: ChallengeType.TOTAL_HOURS_EXAM,
+      target: 3,
+      points: 90,
+      badgeIcon: '⌛',
+      badgeColor: '#ec4899',
+    },
+    // ── Racha (1) ────────────────────────────────────────────────────────────
+    {
+      title: 'Racha de fuego',
+      description: 'Mantén una racha activa de 4 semanas consecutivas.',
+      type: ChallengeType.STREAK_WEEKLY,
+      target: 4,
+      points: 100,
+      badgeIcon: '🔥',
+      badgeColor: '#ef4444',
+    },
+  ];
+
+  await Promise.all(challengesData.map((data) => prisma.challenge.create({ data })));
 
   console.log('✅ Seed completado:');
   console.log(`   🏫 Academy:  ${vkbAcademy.name} (${vkbAcademy.slug})`);

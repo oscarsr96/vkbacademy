@@ -6,7 +6,6 @@ import {
   IsArray,
   ArrayMinSize,
   ValidateNested,
-  IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -16,9 +15,9 @@ export class RegisterStudentDto {
   @MaxLength(100)
   name: string;
 
-  @IsOptional()
-  @IsString()
-  schoolYearId?: string;
+  @IsString({ message: 'Debes indicar el curso del alumno' })
+  @MinLength(1, { message: 'Debes indicar el curso del alumno' })
+  schoolYearId: string;
 }
 
 export class RegisterTutorDto {
