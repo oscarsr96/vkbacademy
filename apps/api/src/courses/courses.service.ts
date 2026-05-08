@@ -194,13 +194,19 @@ export class CoursesService {
   }
 
   /**
-   * Lista las asignaturas disponibles para auto-matricularse: todos los cursos
-   * publicados, marcando si el alumno ya está matriculado.
+   * Lista las asignaturas disponibles para auto-matricularse: cursos publicados
+   * del nivel del alumno (schoolYearId), marcando si ya está matriculado.
+   * Si no se pasa schoolYearId (admin/tutor), no filtra por nivel.
    */
-  async listAvailableSubjects(userId: string) {
+  async listAvailableSubjects(userId: string, schoolYearId: string | null = null) {
+    const where: Record<string, unknown> = { published: true };
+    if (schoolYearId) {
+      where.schoolYearId = schoolYearId;
+    }
+
     const [courses, enrollments] = await Promise.all([
       this.prisma.course.findMany({
-        where: { published: true },
+        where,
         orderBy: [{ subject: 'asc' }, { title: 'asc' }],
         include: {
           schoolYear: { select: { id: true, label: true } },

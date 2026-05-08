@@ -378,6 +378,28 @@ describe('CoursesService', () => {
 
       expect(result).toEqual([]);
     });
+
+    it('filtra por schoolYearId del alumno: STUDENT 2ESO no ve cursos de 3ESO', async () => {
+      mockPrisma.course.findMany.mockResolvedValue([]);
+      mockPrisma.enrollment.findMany.mockResolvedValue([]);
+
+      await service.listAvailableSubjects('u1', 'sy-2eso');
+
+      const where = mockPrisma.course.findMany.mock.calls[0][0].where;
+      expect(where.published).toBe(true);
+      expect(where.schoolYearId).toBe('sy-2eso');
+    });
+
+    it('sin schoolYearId del alumno (admin/tutor): no aplica filtro de nivel', async () => {
+      mockPrisma.course.findMany.mockResolvedValue([]);
+      mockPrisma.enrollment.findMany.mockResolvedValue([]);
+
+      await service.listAvailableSubjects('u1', null);
+
+      const where = mockPrisma.course.findMany.mock.calls[0][0].where;
+      expect(where.published).toBe(true);
+      expect(where.schoolYearId).toBeUndefined();
+    });
   });
 
   // -------------------------------------------------------------------------
