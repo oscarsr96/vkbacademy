@@ -4,7 +4,10 @@ import type { Certificate, CertificateType } from '@vkbacademy/shared';
 
 // ─── Metadatos por tipo ───────────────────────────────────────────────────────
 
-const TYPE_LABELS: Record<CertificateType, { label: string; icon: string; badgeBg: string; badgeColor: string }> = {
+const TYPE_LABELS: Record<
+  CertificateType,
+  { label: string; icon: string; badgeBg: string; badgeColor: string }
+> = {
   MODULE_COMPLETION: {
     label: 'Módulo completado',
     icon: '📜',
@@ -93,7 +96,15 @@ function CertificateCard({ cert }: { cert: Certificate }) {
 
       {/* Curso padre (si es módulo) */}
       {cert.courseTitle && (
-        <div style={{ fontSize: '0.82rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div
+          style={{
+            fontSize: '0.82rem',
+            color: '#6b7280',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+          }}
+        >
           <span>📚</span>
           <span>{cert.courseTitle}</span>
         </div>
@@ -121,7 +132,15 @@ function CertificateCard({ cert }: { cert: Certificate }) {
       )}
 
       {/* Fecha de emisión */}
-      <div style={{ fontSize: '0.8rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div
+        style={{
+          fontSize: '0.8rem',
+          color: '#6b7280',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+        }}
+      >
         <span>📅</span>
         <span>
           Emitido el{' '}
@@ -192,7 +211,9 @@ export default function CertificatesPage() {
       <div style={{ maxWidth: 840, margin: '0 auto' }}>
         <div className="page-hero animate-in">
           <h1 className="hero-title">Mis Certificados</h1>
-          <p style={{ color: 'rgba(252,165,165,0.9)', marginTop: 8 }}>Error al cargar los certificados.</p>
+          <p style={{ color: 'rgba(252,165,165,0.9)', marginTop: 8 }}>
+            Error al cargar los certificados.
+          </p>
         </div>
       </div>
     );
@@ -202,13 +223,15 @@ export default function CertificatesPage() {
 
   return (
     <div style={{ maxWidth: 840, margin: '0 auto' }}>
-
       {/* Hero */}
       <div className="page-hero animate-in">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
           <span style={{ fontSize: '2.5rem' }}>📜</span>
           {total > 0 && (
-            <div className="stat-card" style={{ padding: '8px 18px', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+            <div
+              className="stat-card"
+              style={{ padding: '8px 18px', display: 'inline-flex', gap: 6, alignItems: 'center' }}
+            >
               <span
                 style={{
                   fontSize: '1.4rem',
@@ -221,7 +244,9 @@ export default function CertificatesPage() {
               >
                 {total}
               </span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+              <span
+                style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500 }}
+              >
                 {total === 1 ? 'certificado' : 'certificados'}
               </span>
             </div>
@@ -246,29 +271,130 @@ export default function CertificatesPage() {
           }}
         >
           <div style={{ fontSize: '4rem', marginBottom: 16 }}>📜</div>
-          <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--color-text)', marginBottom: 8 }}>
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: '1.1rem',
+              color: 'var(--color-text)',
+              marginBottom: 8,
+            }}
+          >
             Aun no tienes certificados
           </div>
-          <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', maxWidth: 400, margin: '0 auto', lineHeight: 1.6 }}>
+          <div
+            style={{
+              fontSize: '0.9rem',
+              color: 'var(--color-text-muted)',
+              maxWidth: 400,
+              margin: '0 auto',
+              lineHeight: 1.6,
+            }}
+          >
             Completa modulos o cursos enteros y aprueba examenes para obtener tus primeros diplomas.
           </div>
         </div>
       )}
 
-      {/* Grid de certificados */}
+      {/* Certificados agrupados por curso */}
       {certs && certs.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: '18px',
-          }}
-        >
-          {certs.map((cert) => (
-            <CertificateCard key={cert.id} cert={cert} />
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 28 }}>
+          {groupCertificatesByCourse(certs).map((group) => (
+            <CourseGroup key={group.key} title={group.title} count={group.certs.length}>
+              {group.certs.map((cert) => (
+                <CertificateCard key={cert.id} cert={cert} />
+              ))}
+            </CourseGroup>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Agrupador por curso ──────────────────────────────────────────────────────
+
+interface CertificateGroup {
+  key: string;
+  title: string;
+  certs: Certificate[];
+}
+
+function groupCertificatesByCourse(certs: Certificate[]): CertificateGroup[] {
+  const groups = new Map<string, CertificateGroup>();
+
+  for (const cert of certs) {
+    // Para módulos, courseTitle es el padre; para curso, scopeTitle ES el curso.
+    const isCourseScope = cert.type === 'COURSE_COMPLETION' || cert.type === 'COURSE_EXAM';
+    const title = isCourseScope ? cert.scopeTitle : (cert.courseTitle ?? cert.scopeTitle);
+    const key = cert.courseId ?? title;
+
+    let group = groups.get(key);
+    if (!group) {
+      group = { key, title, certs: [] };
+      groups.set(key, group);
+    }
+    group.certs.push(cert);
+  }
+
+  return Array.from(groups.values());
+}
+
+function CourseGroup({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          marginBottom: 14,
+        }}
+      >
+        <span style={{ fontSize: '1.2rem' }}>📚</span>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: '1.05rem',
+            fontWeight: 800,
+            color: 'var(--color-text)',
+          }}
+        >
+          {title}
+        </h2>
+        <span
+          style={{
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            padding: '2px 10px',
+            borderRadius: 999,
+            background: 'rgba(234,88,12,0.12)',
+            color: '#ea580c',
+            border: '1px solid rgba(234,88,12,0.25)',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase' as const,
+          }}
+        >
+          {count} {count === 1 ? 'certificado' : 'certificados'}
+        </span>
+        <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+      </header>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+          gap: '18px',
+        }}
+      >
+        {children}
+      </div>
+    </section>
   );
 }

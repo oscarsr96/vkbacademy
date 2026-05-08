@@ -258,6 +258,23 @@ body {
   font-family: var(--font-sans);
 }
 
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--color-bg);
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3e%3cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236b7280' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+.field select option {
+  background: #ffffff;
+  color: var(--color-text);
+}
+
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
@@ -536,13 +553,19 @@ body {
   }
 
   .app-topbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     color: #fff;
-    font-weight: 800;
-    font-size: 1rem;
-    background: var(--gradient-orange);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-weight: 700;
+    font-size: 0.95rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .app-topbar-brand img {
+    flex-shrink: 0;
   }
 
   .app-hamburger,

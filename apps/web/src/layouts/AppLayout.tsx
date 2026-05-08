@@ -92,7 +92,36 @@ export default function AppLayout() {
         <button className="app-hamburger" onClick={() => setMenuOpen(true)} aria-label="Abrir menú">
           ☰
         </button>
-        <span className="app-topbar-brand">🏀 {brandName}</span>
+        <span className="app-topbar-brand">
+          {brandLogo ? (
+            <img
+              src={brandLogo}
+              alt={brandName}
+              style={{ height: 28, width: 'auto', objectFit: 'contain', display: 'block' }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                background: `linear-gradient(135deg, ${c}, ${c}cc)`,
+                color: contrastText(c),
+                fontWeight: 800,
+                fontSize: '0.9rem',
+              }}
+            >
+              {brandName.charAt(0)}
+            </span>
+          )}
+          <span style={{ fontWeight: 700 }}>{brandName}</span>
+        </span>
         <button
           className="app-topbar-logout"
           onClick={() => logout()}
