@@ -29,6 +29,7 @@ import TheoryPage from './pages/TheoryPage';
 import TheoryModulePage from './pages/TheoryModulePage';
 import AdminExamBankPage from './pages/admin/AdminExamBankPage';
 import CertificatesPage from './pages/CertificatesPage';
+import SubjectsPage from './pages/SubjectsPage';
 import AdminAcademiesPage from './pages/admin/AdminAcademiesPage';
 import AcademyLandingPage from './pages/marketing/AcademyLandingPage';
 import AppLayout from './layouts/AppLayout';
@@ -105,6 +106,9 @@ export default function App() {
       >
         {/* Dashboard es la raíz privada */}
         <Route path="dashboard" element={<DashboardPage />} />
+
+        {/* Asignaturas — auto-matriculación del alumno */}
+        <Route path="subjects" element={<SubjectsPage />} />
 
         {/* Fase 2 — Cursos */}
         <Route path="courses" element={<CoursesPage />} />

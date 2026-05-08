@@ -71,7 +71,7 @@ export default function RegisterPage() {
 
   function handleStep2(e: FormEvent) {
     e.preventDefault();
-    const valid = students.every((s) => s.name.trim().length > 0);
+    const valid = students.every((s) => s.name.trim().length > 0 && s.schoolYearId.length > 0);
     if (!valid) return;
 
     mutate({
@@ -81,7 +81,7 @@ export default function RegisterPage() {
       academySlug,
       students: students.map((s) => ({
         name: s.name.trim(),
-        ...(s.schoolYearId ? { schoolYearId: s.schoolYearId } : {}),
+        schoolYearId: s.schoolYearId,
       })),
     });
   }
@@ -211,23 +211,22 @@ export default function RegisterPage() {
                   </span>
                 </div>
 
-                {schoolYears.length > 0 && (
-                  <div className="field field-dark">
-                    <label htmlFor={`student-sy-${i}`}>Nivel educativo</label>
-                    <select
-                      id={`student-sy-${i}`}
-                      value={student.schoolYearId}
-                      onChange={(e) => updateStudent(i, 'schoolYearId', e.target.value)}
-                    >
-                      <option value="">Selecciona el curso</option>
-                      {schoolYears.map((sy) => (
-                        <option key={sy.id} value={sy.id}>
-                          {sy.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                <div className="field field-dark">
+                  <label htmlFor={`student-sy-${i}`}>Curso del alumno</label>
+                  <select
+                    id={`student-sy-${i}`}
+                    value={student.schoolYearId}
+                    onChange={(e) => updateStudent(i, 'schoolYearId', e.target.value)}
+                    required
+                  >
+                    <option value="">Selecciona el curso (ej: 3º ESO)</option>
+                    {schoolYears.map((sy) => (
+                      <option key={sy.id} value={sy.id}>
+                        {sy.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             ))}
 

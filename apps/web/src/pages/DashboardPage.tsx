@@ -33,6 +33,12 @@ export default function DashboardPage() {
             desc: 'Practica con ejercicios al instante',
             to: '/exercises',
           },
+          {
+            emoji: '🎓',
+            label: 'Exámenes',
+            desc: 'Pon a prueba tus conocimientos',
+            to: '/my-exams',
+          },
         ]
       : user.role === Role.TEACHER
         ? [

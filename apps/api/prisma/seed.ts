@@ -260,6 +260,35 @@ async function main() {
     data: { userId: student.id, courseId: courseMath.id },
   });
 
+  // ── Asignaturas por defecto disponibles para auto-matriculación ─────────
+  // schoolYearId: null → visibles para alumnos de cualquier nivel
+  await Promise.all([
+    prisma.course.create({
+      data: {
+        title: 'Matemáticas',
+        description: 'Asignatura de Matemáticas. Matricúlate para acceder al contenido.',
+        published: true,
+        subject: 'Matemáticas',
+      },
+    }),
+    prisma.course.create({
+      data: {
+        title: 'Física y Química',
+        description: 'Asignatura de Física y Química. Matricúlate para acceder al contenido.',
+        published: true,
+        subject: 'Física y Química',
+      },
+    }),
+    prisma.course.create({
+      data: {
+        title: 'Inglés',
+        description: 'Asignatura de Inglés. Matricúlate para acceder al contenido.',
+        published: true,
+        subject: 'Inglés',
+      },
+    }),
+  ]);
+
   // Crear retos de ejemplo — 15 distintos cubriendo los 9 ChallengeType
   const challengesData: Array<{
     title: string;
