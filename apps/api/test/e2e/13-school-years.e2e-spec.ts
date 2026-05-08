@@ -24,9 +24,11 @@ describe('School Years — /school-years', () => {
       expect(res.body.length).toBeGreaterThan(0);
     });
 
-    it('devuelve 401 sin token de autenticación', async () => {
+    it('es público (no requiere token) para que el formulario de registro pueda poblarlo', async () => {
       const res = await publicGet('/school-years');
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
     });
 
     it('cada item tiene id, name y label', async () => {
