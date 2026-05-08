@@ -268,6 +268,8 @@ body {
     #ffffff;
   border: 1.5px solid #d1d5db;
   color: var(--color-text);
+  /* iOS Safari aplica zoom automático al hacer focus si font-size < 16px */
+  font-size: 16px;
   padding-right: 40px;
   cursor: pointer;
   min-height: 44px;
