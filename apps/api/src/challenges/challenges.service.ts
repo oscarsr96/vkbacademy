@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChallengeType, BookingStatus, LessonType } from '@prisma/client';
+import { ChallengeType, LessonType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 /** Devuelve la semana ISO como "2026-W07" */
@@ -67,50 +67,29 @@ export class ChallengesService {
     });
   }
 
+  /** Tipos de Lesson considerados "ejercicio" para los retos */
+  private static readonly EXERCISE_LESSON_TYPES: LessonType[] = [
+    LessonType.EXERCISE,
+    LessonType.MATCH,
+    LessonType.SORT,
+    LessonType.FILL_BLANK,
+    LessonType.QUIZ,
+  ];
+
   /** Calcula el progreso actual del usuario para un tipo de reto */
   private async calculateProgress(userId: string, type: ChallengeType): Promise<number> {
     switch (type) {
-      case ChallengeType.LESSON_COMPLETED:
-        return this.prisma.userProgress.count({ where: { userId, completed: true } });
-
-      case ChallengeType.MODULE_COMPLETED: {
-        // Módulos donde TODAS las lecciones tienen UserProgress.completed=true para el usuario
-        const modules = await this.prisma.module.findMany({
-          include: {
-            lessons: {
-              include: {
-                progress: { where: { userId, completed: true } },
-              },
-            },
+      case ChallengeType.EXERCISE_COMPLETED:
+        return this.prisma.userProgress.count({
+          where: {
+            userId,
+            completed: true,
+            lesson: { type: { in: ChallengesService.EXERCISE_LESSON_TYPES } },
           },
         });
-        return modules.filter(
-          (m) => m.lessons.length > 0 && m.lessons.every((l) => l.progress.length > 0),
-        ).length;
-      }
 
-      case ChallengeType.COURSE_COMPLETED: {
-        // Cursos donde TODAS las lecciones de todos los módulos están completadas
-        const courses = await this.prisma.course.findMany({
-          include: {
-            modules: {
-              include: {
-                lessons: {
-                  include: {
-                    progress: { where: { userId, completed: true } },
-                  },
-                },
-              },
-            },
-          },
-        });
-        return courses.filter((c) => {
-          const allLessons = c.modules.flatMap((m) => m.lessons);
-          return allLessons.length > 0 && allLessons.every((l) => l.progress.length > 0);
-        }).length;
-      }
-
-      case ChallengeType.QUIZ_SCORE: {
+      case ChallengeType.EXERCISE_SCORE: {
+        // QuizAttempt es la única fuente de score para ejercicios
         const agg = await this.prisma.quizAttempt.aggregate({
           where: { userId },
           _max: { score: true },
@@ -118,10 +97,21 @@ export class ChallengesService {
         return Math.round(agg._max.score ?? 0);
       }
 
-      case ChallengeType.BOOKING_ATTENDED:
-        return this.prisma.booking.count({
-          where: { studentId: userId, status: BookingStatus.CONFIRMED, endAt: { lte: new Date() } },
+      case ChallengeType.THEORY_COMPLETED:
+        return this.prisma.theoryModule.count({ where: { userId } });
+
+      case ChallengeType.EXAM_COMPLETED:
+        return this.prisma.examAttempt.count({
+          where: { userId, submittedAt: { not: null } },
         });
+
+      case ChallengeType.EXAM_SCORE: {
+        const agg = await this.prisma.examAttempt.aggregate({
+          where: { userId, submittedAt: { not: null } },
+          _max: { score: true },
+        });
+        return Math.round(agg._max.score ?? 0);
+      }
 
       case ChallengeType.STREAK_WEEKLY: {
         const u = await this.prisma.user.findUnique({
@@ -131,24 +121,36 @@ export class ChallengesService {
         return u?.currentStreak ?? 0;
       }
 
-      case ChallengeType.TOTAL_HOURS: {
-        // Horas de bookings confirmados pasados
-        const bookings = await this.prisma.booking.findMany({
-          where: { studentId: userId, status: BookingStatus.CONFIRMED, endAt: { lte: new Date() } },
-          select: { startAt: true, endAt: true },
+      case ChallengeType.TOTAL_HOURS_EXERCISE: {
+        // Heurística: 5 min por ejercicio completado
+        const exercises = await this.prisma.userProgress.count({
+          where: {
+            userId,
+            completed: true,
+            lesson: { type: { in: ChallengesService.EXERCISE_LESSON_TYPES } },
+          },
         });
-        const bookingHours = bookings.reduce(
-          (acc, b) => acc + (b.endAt.getTime() - b.startAt.getTime()) / 3_600_000,
-          0,
-        );
+        return Math.floor(exercises * (5 / 60));
+      }
 
-        // Horas de lecciones VIDEO completadas (20 min cada una)
-        const videoLessons = await this.prisma.userProgress.count({
-          where: { userId, completed: true, lesson: { type: LessonType.VIDEO } },
+      case ChallengeType.TOTAL_HOURS_THEORY: {
+        // Heurística: 10 min por TheoryLesson en módulos del usuario
+        const theoryLessons = await this.prisma.theoryLesson.count({
+          where: { module: { userId } },
         });
-        const videoHours = videoLessons * (20 / 60);
+        return Math.floor(theoryLessons * (10 / 60));
+      }
 
-        return Math.floor(bookingHours + videoHours);
+      case ChallengeType.TOTAL_HOURS_EXAM: {
+        const exams = await this.prisma.examAttempt.findMany({
+          where: { userId, submittedAt: { not: null } },
+          select: { startedAt: true, submittedAt: true },
+        });
+        const hours = exams.reduce((acc, e) => {
+          if (!e.submittedAt) return acc;
+          return acc + (e.submittedAt.getTime() - e.startedAt.getTime()) / 3_600_000;
+        }, 0);
+        return Math.floor(hours);
       }
 
       default:
@@ -256,7 +258,9 @@ export class ChallengesService {
     if (!user) throw new Error('Usuario no encontrado');
 
     if (user.totalPoints < cost) {
-      throw new Error(`Puntos insuficientes. Tienes ${user.totalPoints} pts y necesitas ${cost} pts.`);
+      throw new Error(
+        `Puntos insuficientes. Tienes ${user.totalPoints} pts y necesitas ${cost} pts.`,
+      );
     }
 
     const [updated] = await this.prisma.$transaction([

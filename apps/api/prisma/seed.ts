@@ -260,35 +260,35 @@ async function main() {
     data: { userId: student.id, courseId: courseMath.id },
   });
 
-  // Crear retos de ejemplo (uno por cada ChallengeType)
+  // Crear retos de ejemplo (Ejercicios, Teoría, Exámenes + racha)
   await Promise.all([
     prisma.challenge.create({
       data: {
-        title: 'Primer paso',
-        description: 'Completa tu primera lección del curso.',
-        type: ChallengeType.LESSON_COMPLETED,
+        title: 'Primer ejercicio',
+        description: 'Completa tu primer ejercicio.',
+        type: ChallengeType.EXERCISE_COMPLETED,
         target: 1,
         points: 10,
-        badgeIcon: '📖',
+        badgeIcon: '🎯',
         badgeColor: '#10b981',
       },
     }),
     prisma.challenge.create({
       data: {
-        title: 'Módulo superado',
-        description: 'Completa todos los temas de un módulo entero.',
-        type: ChallengeType.MODULE_COMPLETED,
-        target: 1,
-        points: 50,
-        badgeIcon: '🎓',
-        badgeColor: '#3b82f6',
+        title: 'Entrenado',
+        description: 'Completa 25 ejercicios.',
+        type: ChallengeType.EXERCISE_COMPLETED,
+        target: 25,
+        points: 80,
+        badgeIcon: '💪',
+        badgeColor: '#22c55e',
       },
     }),
     prisma.challenge.create({
       data: {
-        title: 'Maestro del quiz',
-        description: 'Consigue al menos 80 puntos en cualquier quiz.',
-        type: ChallengeType.QUIZ_SCORE,
+        title: 'Ojo clínico',
+        description: 'Consigue al menos 80 puntos en cualquier ejercicio.',
+        type: ChallengeType.EXERCISE_SCORE,
         target: 80,
         points: 30,
         badgeIcon: '🧠',
@@ -297,13 +297,79 @@ async function main() {
     }),
     prisma.challenge.create({
       data: {
-        title: 'Alumno dedicado',
-        description: 'Asiste a 3 clases particulares confirmadas.',
-        type: ChallengeType.BOOKING_ATTENDED,
+        title: 'Curioso',
+        description: 'Genera tu primer módulo de teoría.',
+        type: ChallengeType.THEORY_COMPLETED,
+        target: 1,
+        points: 15,
+        badgeIcon: '📚',
+        badgeColor: '#0ea5e9',
+      },
+    }),
+    prisma.challenge.create({
+      data: {
+        title: 'Estudioso',
+        description: 'Genera 10 módulos de teoría.',
+        type: ChallengeType.THEORY_COMPLETED,
+        target: 10,
+        points: 70,
+        badgeIcon: '🎓',
+        badgeColor: '#3b82f6',
+      },
+    }),
+    prisma.challenge.create({
+      data: {
+        title: 'Primer examen',
+        description: 'Entrega tu primer examen.',
+        type: ChallengeType.EXAM_COMPLETED,
+        target: 1,
+        points: 25,
+        badgeIcon: '📝',
+        badgeColor: '#f97316',
+      },
+    }),
+    prisma.challenge.create({
+      data: {
+        title: 'Maestro del examen',
+        description: 'Consigue al menos 90 puntos en cualquier examen.',
+        type: ChallengeType.EXAM_SCORE,
+        target: 90,
+        points: 100,
+        badgeIcon: '🏆',
+        badgeColor: '#eab308',
+      },
+    }),
+    prisma.challenge.create({
+      data: {
+        title: 'Maratón de ejercicios',
+        description: 'Acumula 5 horas haciendo ejercicios.',
+        type: ChallengeType.TOTAL_HOURS_EXERCISE,
+        target: 5,
+        points: 60,
+        badgeIcon: '⏱️',
+        badgeColor: '#6366f1',
+      },
+    }),
+    prisma.challenge.create({
+      data: {
+        title: 'Maratón de teoría',
+        description: 'Acumula 5 horas estudiando teoría.',
+        type: ChallengeType.TOTAL_HOURS_THEORY,
+        target: 5,
+        points: 60,
+        badgeIcon: '📖',
+        badgeColor: '#14b8a6',
+      },
+    }),
+    prisma.challenge.create({
+      data: {
+        title: 'Maratón de exámenes',
+        description: 'Acumula 3 horas resolviendo exámenes.',
+        type: ChallengeType.TOTAL_HOURS_EXAM,
         target: 3,
-        points: 75,
-        badgeIcon: '📅',
-        badgeColor: '#f59e0b',
+        points: 90,
+        badgeIcon: '⌛',
+        badgeColor: '#ec4899',
       },
     }),
     prisma.challenge.create({
@@ -315,17 +381,6 @@ async function main() {
         points: 100,
         badgeIcon: '🔥',
         badgeColor: '#ef4444',
-      },
-    }),
-    prisma.challenge.create({
-      data: {
-        title: 'Maratonista',
-        description: 'Acumula 5 horas de formación entre lecciones y clases.',
-        type: ChallengeType.TOTAL_HOURS,
-        target: 5,
-        points: 60,
-        badgeIcon: '⏱️',
-        badgeColor: '#6366f1',
       },
     }),
   ]);

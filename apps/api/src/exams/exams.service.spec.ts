@@ -3,6 +3,7 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import { ExamsService } from './exams.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CertificatesService } from '../certificates/certificates.service';
+import { ChallengesService } from '../challenges/challenges.service';
 
 // Helper: construye una pregunta de examen con respuestas
 function buildQuestion(id: string, correctAnswerIdx = 0) {
@@ -51,18 +52,24 @@ describe('ExamsService', () => {
     issueExamCertificate: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockChallenges = {
+    checkAndAward: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ExamsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: CertificatesService, useValue: mockCertificates },
+        { provide: ChallengesService, useValue: mockChallenges },
       ],
     }).compile();
 
     service = module.get<ExamsService>(ExamsService);
     jest.clearAllMocks();
     mockCertificates.issueExamCertificate.mockResolvedValue(undefined);
+    mockChallenges.checkAndAward.mockResolvedValue(undefined);
   });
 
   // ─── getBankInfo ─────────────────────────────────────────────────────────────

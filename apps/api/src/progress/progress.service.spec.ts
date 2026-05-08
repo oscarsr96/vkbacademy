@@ -102,7 +102,7 @@ describe('ProgressService', () => {
               text: '¿Cuántos pasos se pueden dar sin botar?',
               order: 0,
               answers: [
-                { id: 'a1', text: 'Uno' },  // sin isCorrect (select explícito)
+                { id: 'a1', text: 'Uno' }, // sin isCorrect (select explícito)
                 { id: 'a2', text: 'Dos' },
               ],
             },
@@ -133,8 +133,7 @@ describe('ProgressService', () => {
       await service.findLesson('lesson1', 'user1');
 
       const prismaCall = mockPrisma.lesson.findUnique.mock.calls[0][0];
-      const answersSelect =
-        prismaCall?.include?.quiz?.include?.questions?.include?.answers?.select;
+      const answersSelect = prismaCall?.include?.quiz?.include?.questions?.include?.answers?.select;
 
       // El select debe existir y no incluir isCorrect
       expect(answersSelect).toBeDefined();
@@ -201,17 +200,15 @@ describe('ProgressService', () => {
       expect(result).toEqual(fakeProgress);
     });
 
-    it('dispara checkAndAward con los 4 tipos de evento de una lección', async () => {
+    it('dispara checkAndAward con los tipos de evento de un ejercicio', async () => {
       mockPrisma.userProgress.upsert.mockResolvedValue({});
 
       await service.completeLesson('lesson1', 'user1');
 
       expect(mockChallenges.checkAndAward).toHaveBeenCalledWith(
         'user1',
-        ChallengeType.LESSON_COMPLETED,
-        ChallengeType.MODULE_COMPLETED,
-        ChallengeType.COURSE_COMPLETED,
-        ChallengeType.TOTAL_HOURS,
+        ChallengeType.EXERCISE_COMPLETED,
+        ChallengeType.TOTAL_HOURS_EXERCISE,
       );
     });
 
@@ -229,7 +226,9 @@ describe('ProgressService', () => {
     it('no espera a checkAndIssueLessonCertificates — patrón void (non-blocking)', async () => {
       let resolveCertificates!: () => void;
       mockCertificates.checkAndIssueLessonCertificates.mockReturnValue(
-        new Promise<void>((resolve) => { resolveCertificates = resolve; }),
+        new Promise<void>((resolve) => {
+          resolveCertificates = resolve;
+        }),
       );
       mockPrisma.userProgress.upsert.mockResolvedValue({ completed: true });
 
@@ -243,7 +242,9 @@ describe('ProgressService', () => {
       // checkAndAward devuelve una promesa que resuelve más tarde
       let resolveCheckAndAward!: () => void;
       mockChallenges.checkAndAward.mockReturnValue(
-        new Promise<void>((resolve) => { resolveCheckAndAward = resolve; }),
+        new Promise<void>((resolve) => {
+          resolveCheckAndAward = resolve;
+        }),
       );
       mockPrisma.userProgress.upsert.mockResolvedValue({ completed: true });
 

@@ -381,13 +381,15 @@ model Redemption {
 // ─────────────────────────────────────────────────────────
 
 enum ChallengeType {
-  LESSON_COMPLETED // completa N lecciones en total
-  MODULE_COMPLETED // completa N módulos enteros
-  COURSE_COMPLETED // completa N cursos completos
-  QUIZ_SCORE // consigue ≥ N% en cualquier quiz
-  BOOKING_ATTENDED // asiste a N clases confirmadas (endAt < now)
+  EXERCISE_COMPLETED // completa N ejercicios (lessons EXERCISE/MATCH/SORT/FILL_BLANK/QUIZ)
+  EXERCISE_SCORE // consigue ≥ N% en cualquier ejercicio (QuizAttempt.score)
+  THEORY_COMPLETED // genera/lee N módulos de teoría (TheoryModule)
+  EXAM_COMPLETED // entrega N exámenes (ExamAttempt.submittedAt)
+  EXAM_SCORE // consigue ≥ N% en cualquier examen
   STREAK_WEEKLY // racha activa de N semanas consecutivas
-  TOTAL_HOURS // acumula N horas (bookings + lecciones VIDEO × 20min)
+  TOTAL_HOURS_EXERCISE // acumula N horas en ejercicios (5 min × completados)
+  TOTAL_HOURS_THEORY // acumula N horas en teoría (10 min × TheoryLesson)
+  TOTAL_HOURS_EXAM // acumula N horas en exámenes (submittedAt − startedAt)
 }
 
 model Challenge {

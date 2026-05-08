@@ -1,13 +1,15 @@
 import api from '../lib/axios';
 
 export type ChallengeType =
-  | 'LESSON_COMPLETED'
-  | 'MODULE_COMPLETED'
-  | 'COURSE_COMPLETED'
-  | 'QUIZ_SCORE'
-  | 'BOOKING_ATTENDED'
+  | 'EXERCISE_COMPLETED'
+  | 'EXERCISE_SCORE'
+  | 'THEORY_COMPLETED'
+  | 'EXAM_COMPLETED'
+  | 'EXAM_SCORE'
   | 'STREAK_WEEKLY'
-  | 'TOTAL_HOURS';
+  | 'TOTAL_HOURS_EXERCISE'
+  | 'TOTAL_HOURS_THEORY'
+  | 'TOTAL_HOURS_EXAM';
 
 export interface ChallengeWithProgress {
   id: string;
@@ -56,11 +58,9 @@ export interface RedeemResult {
 }
 
 export const challengesApi = {
-  getMyProgress: () =>
-    api.get<ChallengesProgressResponse>('/challenges').then((r) => r.data),
+  getMyProgress: () => api.get<ChallengesProgressResponse>('/challenges').then((r) => r.data),
 
-  getSummary: () =>
-    api.get<ChallengeSummary>('/challenges/summary').then((r) => r.data),
+  getSummary: () => api.get<ChallengeSummary>('/challenges/summary').then((r) => r.data),
 
   redeemItem: (itemName: string, cost: number) =>
     api.post<RedeemResult>('/challenges/redeem', { itemName, cost }).then((r) => r.data),

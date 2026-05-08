@@ -1,11 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { Role, BookingMode, BookingStatus, ChallengeType } from '@prisma/client';
+import { Role, BookingMode, BookingStatus } from '@prisma/client';
 import { BookingsService } from './bookings.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DailyService } from '../daily/daily.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { ChallengesService } from '../challenges/challenges.service';
 
 describe('BookingsService', () => {
   let service: BookingsService;
@@ -41,10 +40,6 @@ describe('BookingsService', () => {
     sendBookingCancelled: jest.fn().mockResolvedValue(undefined),
   };
 
-  const mockChallenges = {
-    checkAndAward: jest.fn().mockResolvedValue(undefined),
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -52,7 +47,6 @@ describe('BookingsService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: DailyService, useValue: mockDaily },
         { provide: NotificationsService, useValue: mockNotifications },
-        { provide: ChallengesService, useValue: mockChallenges },
       ],
     }).compile();
 
@@ -61,7 +55,6 @@ describe('BookingsService', () => {
     mockNotifications.sendBookingCreated.mockResolvedValue(undefined);
     mockNotifications.sendBookingConfirmed.mockResolvedValue(undefined);
     mockNotifications.sendBookingCancelled.mockResolvedValue(undefined);
-    mockChallenges.checkAndAward.mockResolvedValue(undefined);
   });
 
   // ─── getMyBookings ────────────────────────────────────────────────────────────
@@ -166,17 +159,17 @@ describe('BookingsService', () => {
     it('TUTOR: lanza ForbiddenException si el alumno no le pertenece', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ tutorId: 'otherTutor' });
 
-      await expect(
-        service.create(validDto, 'tutor1', Role.TUTOR),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.create(validDto, 'tutor1', Role.TUTOR)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('lanza NotFoundException si el profesor no existe', async () => {
       mockPrisma.teacherProfile.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.create(validDto, 'admin1', Role.ADMIN),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.create(validDto, 'admin1', Role.ADMIN)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('lanza NotFoundException si el courseId indicado no existe', async () => {
@@ -188,9 +181,7 @@ describe('BookingsService', () => {
 
       const dto = { ...validDto, courseId: 'nonexistent-course' };
 
-      await expect(
-        service.create(dto, 'admin1', Role.ADMIN),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.create(dto, 'admin1', Role.ADMIN)).rejects.toThrow(NotFoundException);
     });
 
     it('lanza BadRequestException si startAt >= endAt', async () => {
@@ -205,9 +196,7 @@ describe('BookingsService', () => {
         endAt: '2026-01-20T10:00:00Z',
       };
 
-      await expect(
-        service.create(dto, 'admin1', Role.ADMIN),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.create(dto, 'admin1', Role.ADMIN)).rejects.toThrow(BadRequestException);
     });
 
     it('lanza BadRequestException si startAt es en el pasado', async () => {
@@ -222,9 +211,7 @@ describe('BookingsService', () => {
         endAt: '2026-01-10T11:00:00Z',
       };
 
-      await expect(
-        service.create(dto, 'admin1', Role.ADMIN),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.create(dto, 'admin1', Role.ADMIN)).rejects.toThrow(BadRequestException);
     });
 
     it('lanza BadRequestException si hay conflicto de horario con otra reserva', async () => {
@@ -234,9 +221,9 @@ describe('BookingsService', () => {
       });
       mockPrisma.booking.findFirst.mockResolvedValue({ id: 'existing-booking' });
 
-      await expect(
-        service.create(validDto, 'admin1', Role.ADMIN),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.create(validDto, 'admin1', Role.ADMIN)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('crea la reserva correctamente en el happy path', async () => {
@@ -248,7 +235,7 @@ describe('BookingsService', () => {
       const createdBooking = { id: 'new-booking', studentId: 'student1', teacherId: 'tp1' };
       mockPrisma.booking.create.mockResolvedValue(createdBooking);
       mockPrisma.user.findUnique
-        .mockResolvedValueOnce({ name: 'Admin User' })  // creador
+        .mockResolvedValueOnce({ name: 'Admin User' }) // creador
         .mockResolvedValueOnce({ name: 'Alumno Test' }); // alumno
 
       const result = await service.create(validDto, 'admin1', Role.ADMIN);
@@ -274,7 +261,7 @@ describe('BookingsService', () => {
       mockPrisma.booking.create.mockResolvedValue({ id: 'new-booking' });
       // Para Role.ADMIN no hay verificación de tutorId, solo las dos llamadas finales
       mockPrisma.user.findUnique
-        .mockResolvedValueOnce({ name: 'Admin User' })  // creador
+        .mockResolvedValueOnce({ name: 'Admin User' }) // creador
         .mockResolvedValueOnce({ name: 'Alumno Test' }); // alumno
 
       await service.create(validDto, 'admin1', Role.ADMIN, 'academy1');
@@ -377,33 +364,6 @@ describe('BookingsService', () => {
             meetingUrl: 'https://daily.co/room/b1',
           }),
         }),
-      );
-    });
-
-    it('llama a challenges.checkAndAward con BOOKING_ATTENDED y TOTAL_HOURS tras confirmar', async () => {
-      mockPrisma.booking.findUnique.mockResolvedValue({
-        id: 'b1',
-        teacherId: 'tp1',
-        mode: BookingMode.IN_PERSON,
-        meetingUrl: null,
-        studentId: 'student1',
-        courseId: null,
-        startAt: new Date('2026-01-20T10:00:00Z'),
-        endAt: new Date('2026-01-20T11:00:00Z'),
-      });
-      mockPrisma.teacherProfile.findUnique.mockResolvedValue({
-        id: 'tp1',
-        user: { name: 'Profesor Test' },
-      });
-      mockPrisma.booking.update.mockResolvedValue({ id: 'b1', status: BookingStatus.CONFIRMED });
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-
-      await service.confirm('b1', 'teacher1');
-
-      expect(mockChallenges.checkAndAward).toHaveBeenCalledWith(
-        'student1',
-        ChallengeType.BOOKING_ATTENDED,
-        ChallengeType.TOTAL_HOURS,
       );
     });
   });

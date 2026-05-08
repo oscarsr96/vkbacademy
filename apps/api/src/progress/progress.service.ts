@@ -90,10 +90,8 @@ export class ProgressService {
     // Disparar evaluación de retos en segundo plano (sin bloquear la respuesta)
     void this.challenges.checkAndAward(
       userId,
-      ChallengeType.LESSON_COMPLETED,
-      ChallengeType.MODULE_COMPLETED,
-      ChallengeType.COURSE_COMPLETED,
-      ChallengeType.TOTAL_HOURS,
+      ChallengeType.EXERCISE_COMPLETED,
+      ChallengeType.TOTAL_HOURS_EXERCISE,
     );
 
     // Verificar y emitir certificados de completado en segundo plano

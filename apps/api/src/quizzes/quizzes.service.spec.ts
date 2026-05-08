@@ -125,9 +125,9 @@ describe('QuizzesService', () => {
     it('lanza NotFoundException si el quiz no existe', async () => {
       mockPrisma.quiz.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.submit('nonexistent', { answers: [] }, 'user1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.submit('nonexistent', { answers: [] }, 'user1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('calcula score 100% cuando todas las respuestas son correctas', async () => {
@@ -178,12 +178,16 @@ describe('QuizzesService', () => {
       mockPrisma.quiz.findUnique.mockResolvedValue(quiz);
       mockPrisma.quizAttempt.create.mockResolvedValue({});
 
-      const result = await service.submit('quiz1', {
-        answers: [
-          { questionId: 'q1', answerId: 'q1-correct' }, // correcta
-          { questionId: 'q2', answerId: 'q2-wrong' },   // incorrecta
-        ],
-      }, 'user1');
+      const result = await service.submit(
+        'quiz1',
+        {
+          answers: [
+            { questionId: 'q1', answerId: 'q1-correct' }, // correcta
+            { questionId: 'q2', answerId: 'q2-wrong' }, // incorrecta
+          ],
+        },
+        'user1',
+      );
 
       expect(result.corrections[0].isCorrect).toBe(true);
       expect(result.corrections[0].correctAnswerId).toBe('q1-correct');
@@ -196,9 +200,13 @@ describe('QuizzesService', () => {
       mockPrisma.quiz.findUnique.mockResolvedValue(quiz);
       mockPrisma.quizAttempt.create.mockResolvedValue({});
 
-      await service.submit('quiz1', {
-        answers: [{ questionId: 'q1', answerId: 'q1-correct' }],
-      }, 'user1');
+      await service.submit(
+        'quiz1',
+        {
+          answers: [{ questionId: 'q1', answerId: 'q1-correct' }],
+        },
+        'user1',
+      );
 
       expect(mockPrisma.quizAttempt.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -211,18 +219,22 @@ describe('QuizzesService', () => {
       );
     });
 
-    it('dispara checkAndAward con QUIZ_SCORE sin bloquear la respuesta', async () => {
+    it('dispara checkAndAward con EXERCISE_SCORE sin bloquear la respuesta', async () => {
       const quiz = buildQuiz(1);
       mockPrisma.quiz.findUnique.mockResolvedValue(quiz);
       mockPrisma.quizAttempt.create.mockResolvedValue({});
 
-      await service.submit('quiz1', {
-        answers: [{ questionId: 'q1', answerId: 'q1-correct' }],
-      }, 'user1');
+      await service.submit(
+        'quiz1',
+        {
+          answers: [{ questionId: 'q1', answerId: 'q1-correct' }],
+        },
+        'user1',
+      );
 
       expect(mockChallenges.checkAndAward).toHaveBeenCalledWith(
         'user1',
-        ChallengeType.QUIZ_SCORE,
+        ChallengeType.EXERCISE_SCORE,
       );
     });
 
@@ -232,13 +244,17 @@ describe('QuizzesService', () => {
       mockPrisma.quizAttempt.create.mockResolvedValue({});
 
       // 1 de 3 correctas = 33.333...%
-      const result = await service.submit('quiz1', {
-        answers: [
-          { questionId: 'q1', answerId: 'q1-correct' },  // correcta
-          { questionId: 'q2', answerId: 'q2-wrong' },    // incorrecta
-          { questionId: 'q3', answerId: 'q3-wrong' },    // incorrecta
-        ],
-      }, 'user1');
+      const result = await service.submit(
+        'quiz1',
+        {
+          answers: [
+            { questionId: 'q1', answerId: 'q1-correct' }, // correcta
+            { questionId: 'q2', answerId: 'q2-wrong' }, // incorrecta
+            { questionId: 'q3', answerId: 'q3-wrong' }, // incorrecta
+          ],
+        },
+        'user1',
+      );
 
       // Math.round(1/3 * 100 * 10) / 10 = Math.round(333.33) / 10 = 333 / 10 = 33.3
       expect(result.score).toBe(33.3);
@@ -291,9 +307,9 @@ describe('QuizzesService', () => {
     it('lanza NotFoundException si el intento no pertenece al usuario o quiz', async () => {
       mockPrisma.quizAttempt.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.getAttemptDetail('quiz1', 'attempt1', 'user1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getAttemptDetail('quiz1', 'attempt1', 'user1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('lanza NotFoundException si el quiz no existe al reconstruir correcciones', async () => {
@@ -305,16 +321,16 @@ describe('QuizzesService', () => {
       });
       mockPrisma.quiz.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.getAttemptDetail('quiz1', 'att1', 'user1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getAttemptDetail('quiz1', 'att1', 'user1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('devuelve correcciones con textos de pregunta y respuestas', async () => {
       const quiz = buildQuiz(2);
       const storedAnswers = [
         { questionId: 'q1', answerId: 'q1-correct' }, // acierto
-        { questionId: 'q2', answerId: 'q2-wrong' },   // fallo
+        { questionId: 'q2', answerId: 'q2-wrong' }, // fallo
       ];
 
       mockPrisma.quizAttempt.findFirst.mockResolvedValue({

@@ -6,18 +6,24 @@ import {
   useDeleteChallenge,
   useToggleChallenge,
 } from '../../hooks/useChallenges';
-import type { AdminChallenge, AdminChallengeType, CreateChallengePayload } from '../../api/admin.api';
+import type {
+  AdminChallenge,
+  AdminChallengeType,
+  CreateChallengePayload,
+} from '../../api/admin.api';
 import AcademyFilter from '../../components/AcademyFilter';
 import { useAcademyFilterStore } from '../../store/academy-filter.store';
 
 const CHALLENGE_TYPE_LABELS: Record<AdminChallengeType, string> = {
-  LESSON_COMPLETED: 'Lecciones completadas',
-  MODULE_COMPLETED: 'Módulos completados',
-  COURSE_COMPLETED: 'Cursos completados',
-  QUIZ_SCORE: 'Puntuación en quiz (%)',
-  BOOKING_ATTENDED: 'Clases asistidas',
+  EXERCISE_COMPLETED: 'Ejercicios completados',
+  EXERCISE_SCORE: 'Puntuación en ejercicio (%)',
+  THEORY_COMPLETED: 'Módulos de teoría',
+  EXAM_COMPLETED: 'Exámenes entregados',
+  EXAM_SCORE: 'Puntuación en examen (%)',
   STREAK_WEEKLY: 'Racha semanal',
-  TOTAL_HOURS: 'Horas totales',
+  TOTAL_HOURS_EXERCISE: 'Horas en ejercicios',
+  TOTAL_HOURS_THEORY: 'Horas en teoría',
+  TOTAL_HOURS_EXAM: 'Horas en exámenes',
 };
 
 const CHALLENGE_TYPES = Object.keys(CHALLENGE_TYPE_LABELS) as AdminChallengeType[];
@@ -25,7 +31,7 @@ const CHALLENGE_TYPES = Object.keys(CHALLENGE_TYPE_LABELS) as AdminChallengeType
 const EMPTY_FORM: CreateChallengePayload = {
   title: '',
   description: '',
-  type: 'LESSON_COMPLETED',
+  type: 'EXERCISE_COMPLETED',
   target: 1,
   points: 10,
   badgeIcon: '🏅',
@@ -71,11 +77,25 @@ function ChallengeForm({ initial, onSubmit, onCancel, isPending, title }: Challe
   return (
     <div style={overlayStyle}>
       <div style={modalStyle}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1.5rem', color: 'var(--color-text)' }}>
+        <h2
+          style={{
+            fontSize: '1.2rem',
+            fontWeight: 700,
+            marginBottom: '1.5rem',
+            color: 'var(--color-text)',
+          }}
+        >
           {title}
         </h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', marginBottom: '0.5rem' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr auto',
+            gap: '1rem',
+            marginBottom: '0.5rem',
+          }}
+        >
           <div className="field">
             <label>Título</label>
             <input
@@ -108,10 +128,7 @@ function ChallengeForm({ initial, onSubmit, onCancel, isPending, title }: Challe
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           <div className="field">
             <label>Tipo de reto</label>
-            <select
-              value={form.type}
-              onChange={(e) => set('type', e.target.value)}
-            >
+            <select value={form.type} onChange={(e) => set('type', e.target.value)}>
               {CHALLENGE_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {CHALLENGE_TYPE_LABELS[t]}
@@ -149,7 +166,15 @@ function ChallengeForm({ initial, onSubmit, onCancel, isPending, title }: Challe
                 type="color"
                 value={form.badgeColor}
                 onChange={(e) => set('badgeColor', e.target.value)}
-                style={{ width: 40, height: 36, border: 'none', borderRadius: 6, cursor: 'pointer', padding: 0, flexShrink: 0 }}
+                style={{
+                  width: 40,
+                  height: 36,
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  padding: 0,
+                  flexShrink: 0,
+                }}
               />
               <input
                 style={{ flex: 1 }}
@@ -161,7 +186,9 @@ function ChallengeForm({ initial, onSubmit, onCancel, isPending, title }: Challe
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+        <div
+          style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}
+        >
           <button className="btn btn-ghost" onClick={onCancel} disabled={isPending}>
             Cancelar
           </button>
@@ -231,7 +258,15 @@ export default function AdminChallengesPage() {
 
       {/* Hero */}
       <div className="page-hero animate-in">
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+          }}
+        >
           <div>
             <h1 className="hero-title">Gestión de Retos</h1>
             <p className="hero-subtitle">
@@ -270,7 +305,11 @@ export default function AdminChallengesPage() {
               {list.map((c) => (
                 <tr
                   key={c.id}
-                  style={{ borderBottom: '1px solid var(--color-border)', cursor: 'pointer', transition: 'background 0.12s' }}
+                  style={{
+                    borderBottom: '1px solid var(--color-border)',
+                    cursor: 'pointer',
+                    transition: 'background 0.12s',
+                  }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   onClick={() => setEditing(c)}
@@ -361,7 +400,15 @@ export default function AdminChallengesPage() {
                       <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                         <button
                           className="btn"
-                          style={{ padding: '0.25rem 0.6rem', fontSize: '0.78rem', background: 'rgba(220,38,38,0.1)', color: 'var(--color-error)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+                          style={{
+                            padding: '0.25rem 0.6rem',
+                            fontSize: '0.78rem',
+                            background: 'rgba(220,38,38,0.1)',
+                            color: 'var(--color-error)',
+                            border: '1px solid rgba(220,38,38,0.25)',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: 'pointer',
+                          }}
                           onClick={() => handleDelete(c.id)}
                           disabled={deleteMutation.isPending}
                         >
@@ -378,7 +425,11 @@ export default function AdminChallengesPage() {
                     ) : (
                       <button
                         className="btn btn-ghost"
-                        style={{ padding: '0.3rem 0.65rem', fontSize: '0.8rem', color: 'var(--color-error)' }}
+                        style={{
+                          padding: '0.3rem 0.65rem',
+                          fontSize: '0.8rem',
+                          color: 'var(--color-error)',
+                        }}
                         onClick={() => setConfirmDelete(c.id)}
                       >
                         Eliminar
@@ -391,7 +442,12 @@ export default function AdminChallengesPage() {
                 <tr>
                   <td
                     colSpan={8}
-                    style={{ ...tdStyle, textAlign: 'center', color: 'var(--color-text-muted)', padding: '3rem' }}
+                    style={{
+                      ...tdStyle,
+                      textAlign: 'center',
+                      color: 'var(--color-text-muted)',
+                      padding: '3rem',
+                    }}
                   >
                     No hay retos creados aún.
                   </td>
