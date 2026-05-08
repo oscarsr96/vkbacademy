@@ -66,7 +66,6 @@ function buildNavLinks(role: Role | undefined): NavLink[] {
     { to: '/theory', label: '📖 Teoría' },
     { to: '/my-exams', label: '🎓 Exámenes' },
     { to: '/challenges', label: '🏆 Retos' },
-    { to: '/certificates', label: '📜 Certificados' },
     { to: '/profile', label: '👤 Mi perfil' },
   ];
 }
