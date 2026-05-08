@@ -46,7 +46,7 @@ export class CoursesController {
   // (debe ir ANTES de @Get(':id') para que Nest lo resuelva como ruta estática)
   @Get('subjects')
   listSubjects(@CurrentUser() user: User) {
-    return this.coursesService.listAvailableSubjects(user.id);
+    return this.coursesService.listAvailableSubjects(user.id, user.schoolYearId ?? null);
   }
 
   @Post(':id/enroll')
