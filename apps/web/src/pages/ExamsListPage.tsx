@@ -7,7 +7,7 @@ import {
   useDeleteAiExamBank,
   useStartAiAttempt,
 } from '../hooks/useExams';
-import { useCourses, useCourse } from '../hooks/useCourses';
+import { useCourses } from '../hooks/useCourses';
 import type { AiExamBankSummary } from '../api/exams.api';
 
 // ─── Helper: color de score ───────────────────────────────────────────────────
@@ -333,7 +333,6 @@ function AiBankCard({
 function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const { data: coursesPage } = useCourses();
   const [courseId, setCourseId] = useState('');
-  const [moduleId, setModuleId] = useState('');
   const [topic, setTopic] = useState('');
   const [numQuestions, setNumQuestions] = useState<5 | 10>(5);
   const [useTimer, setUseTimer] = useState(false);
@@ -341,11 +340,9 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   const [onlyOnce, setOnlyOnce] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const { data: courseDetail } = useCourse(courseId);
   const generate = useGenerateAiExam();
 
   const courses = coursesPage?.data ?? [];
-  const modules = courseDetail?.modules ?? [];
 
   const canSubmit = courseId && topic.trim().length >= 3 && !generate.isPending;
 
@@ -354,7 +351,6 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
     try {
       await generate.mutateAsync({
         courseId,
-        moduleId: moduleId || undefined,
         topic: topic.trim(),
         numQuestions,
         timeLimit: useTimer ? Math.round(timerMins * 60) : undefined,
@@ -389,6 +385,19 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
     fontSize: '0.95rem',
     outline: 'none',
     boxSizing: 'border-box' as const,
+  };
+
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    MozAppearance: 'none',
+    backgroundImage:
+      "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3e%3cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236b7280' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e\")",
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 14px center',
+    paddingRight: 38,
+    cursor: 'pointer',
   };
 
   return (
@@ -451,11 +460,8 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
           <label style={labelStyle}>Curso</label>
           <select
             value={courseId}
-            onChange={(e) => {
-              setCourseId(e.target.value);
-              setModuleId('');
-            }}
-            style={inputStyle}
+            onChange={(e) => setCourseId(e.target.value)}
+            style={selectStyle}
           >
             <option value="">Selecciona un curso...</option>
             {courses.map((c) => (
@@ -465,25 +471,6 @@ function CreateAiExamModal({ onClose, onSuccess }: { onClose: () => void; onSucc
             ))}
           </select>
         </div>
-
-        {/* Módulo (opcional) */}
-        {courseId && modules.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>Módulo (opcional)</label>
-            <select
-              value={moduleId}
-              onChange={(e) => setModuleId(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="">Todo el curso</option>
-              {modules.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.title}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
 
         {/* Tema */}
         <div style={{ marginBottom: 16 }}>

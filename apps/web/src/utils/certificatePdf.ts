@@ -1,11 +1,11 @@
 import jsPDF from 'jspdf';
 import type { Certificate } from '@vkbacademy/shared';
 
-// Paleta del club (mismas constantes que examPdf.ts)
-const PURPLE = { r: 99, g: 102, b: 241 } as const;  // #6366f1 — color primario
-const GOLD   = { r: 202, g: 138, b: 4   } as const;  // dorado para certificados
-const DARK   = { r: 30,  g: 27,  b: 24  } as const;
-const MUTED  = { r: 120, g: 113, b: 108 } as const;
+// Paleta del club — naranja VKB como color primario
+const ORANGE = { r: 234, g: 88, b: 12 } as const; // #ea580c — naranja primario
+const GOLD = { r: 202, g: 138, b: 4 } as const; // dorado para certificados
+const DARK = { r: 30, g: 27, b: 24 } as const;
+const MUTED = { r: 120, g: 113, b: 108 } as const;
 const PAGE_W = 210;
 const PAGE_H = 297;
 
@@ -22,8 +22,8 @@ function setColor(
 const TYPE_LABELS: Record<string, string> = {
   MODULE_COMPLETION: 'Certificado de Módulo Completado',
   COURSE_COMPLETION: 'Certificado de Curso Completado',
-  MODULE_EXAM:  'Certificado de Examen de Módulo',
-  COURSE_EXAM:  'Certificado de Examen de Curso',
+  MODULE_EXAM: 'Certificado de Examen de Módulo',
+  COURSE_EXAM: 'Certificado de Examen de Curso',
 };
 
 export function downloadCertificatePdf(cert: Certificate) {
@@ -32,8 +32,8 @@ export function downloadCertificatePdf(cert: Certificate) {
   const contentW = PAGE_W - margin * 2;
   const issuedAt = new Date(cert.issuedAt);
 
-  // ── Banda morada superior ──────────────────────────────────────────────────
-  setColor(doc, 'fill', PURPLE);
+  // ── Banda naranja superior ─────────────────────────────────────────────────
+  setColor(doc, 'fill', ORANGE);
   doc.rect(0, 0, PAGE_W, 52, 'F');
 
   // Logo / marca
@@ -49,14 +49,14 @@ export function downloadCertificatePdf(cert: Certificate) {
   const chipX = PAGE_W - margin;
   setColor(doc, 'fill', { r: 255, g: 255, b: 255 });
   doc.roundedRect(chipX - chipW, 5, chipW, 10, 2, 2, 'F');
-  setColor(doc, 'text', PURPLE);
+  setColor(doc, 'text', ORANGE);
   doc.setFont('helvetica', 'bold');
   doc.text(chipText, chipX - chipW / 2, 11.5, { align: 'center' });
 
-  // Subtítulo
+  // Subtítulo (naranja claro sobre la banda)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(199, 210, 254);
+  doc.setTextColor(255, 215, 180);
   doc.text(TYPE_LABELS[cert.type] ?? cert.type, margin, 24);
 
   // Título principal
@@ -112,7 +112,7 @@ export function downloadCertificatePdf(cert: Certificate) {
   if (cert.examScore !== null && cert.examScore !== undefined) {
     doc.setFontSize(28);
     doc.setFont('helvetica', 'bold');
-    setColor(doc, 'text', PURPLE);
+    setColor(doc, 'text', ORANGE);
     doc.text(`${cert.examScore.toFixed(1)}%`, PAGE_W / 2, y, { align: 'center' });
     y += 16;
   }
@@ -159,7 +159,7 @@ export function downloadCertificatePdf(cert: Certificate) {
   y += 28;
 
   // ── Código de verificación ─────────────────────────────────────────────────
-  setColor(doc, 'fill', { r: 245, g: 243, b: 255 });
+  setColor(doc, 'fill', { r: 255, g: 247, b: 237 });
   doc.roundedRect(margin, y, contentW, 22, 4, 4, 'F');
 
   doc.setFontSize(8);
@@ -169,7 +169,7 @@ export function downloadCertificatePdf(cert: Certificate) {
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  setColor(doc, 'text', PURPLE);
+  setColor(doc, 'text', ORANGE);
   doc.text(cert.verifyCode, margin + contentW / 2, y + 16, { align: 'center' });
 
   // ── Pie de página ──────────────────────────────────────────────────────────
@@ -182,7 +182,10 @@ export function downloadCertificatePdf(cert: Certificate) {
   doc.text('Verifica en vkbacademy.com/verify', PAGE_W - margin, PAGE_H - 4.5, { align: 'right' });
 
   // ── Guardar ────────────────────────────────────────────────────────────────
-  const slug = cert.scopeTitle.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const slug = cert.scopeTitle
+    .replace(/\s+/g, '-')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '');
   const filename = `certificado-${slug}-${issuedAt.toISOString().slice(0, 10)}.pdf`;
   doc.save(filename);
 }

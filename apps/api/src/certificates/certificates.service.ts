@@ -38,6 +38,7 @@ export class CertificatesService {
       recipientName: c.user.name,
       scopeTitle: c.course?.title ?? c.module?.title ?? '',
       scopeId: c.courseId ?? c.moduleId ?? '',
+      courseId: c.courseId ?? c.module?.course.id ?? undefined,
       courseTitle: c.module ? c.module.course.title : undefined,
     };
   }
@@ -73,10 +74,7 @@ export class CertificatesService {
 
   // ─── Hook: completar lección → emitir MODULE_COMPLETION / COURSE_COMPLETION
 
-  async checkAndIssueLessonCertificates(
-    userId: string,
-    lessonId: string,
-  ): Promise<void> {
+  async checkAndIssueLessonCertificates(userId: string, lessonId: string): Promise<void> {
     const lesson = await this.prisma.lesson.findUnique({
       where: { id: lessonId },
       select: {
@@ -104,9 +102,7 @@ export class CertificatesService {
     const moduleId = lesson.module.id;
     const courseId = lesson.module.courseId;
     const moduleLessonIds = lesson.module.lessons.map((l) => l.id);
-    const allLessonIds = lesson.module.course.modules.flatMap((m) =>
-      m.lessons.map((l) => l.id),
-    );
+    const allLessonIds = lesson.module.course.modules.flatMap((m) => m.lessons.map((l) => l.id));
 
     // Comprobar si el módulo está completo
     if (moduleLessonIds.length > 0) {
@@ -118,12 +114,7 @@ export class CertificatesService {
         },
       });
       if (completedInModule === moduleLessonIds.length) {
-        await this.issueCertificate(
-          userId,
-          moduleId,
-          'module',
-          CertificateType.MODULE_COMPLETION,
-        );
+        await this.issueCertificate(userId, moduleId, 'module', CertificateType.MODULE_COMPLETION);
       }
     }
 
@@ -137,23 +128,14 @@ export class CertificatesService {
         },
       });
       if (completedInCourse === allLessonIds.length) {
-        await this.issueCertificate(
-          userId,
-          courseId,
-          'course',
-          CertificateType.COURSE_COMPLETION,
-        );
+        await this.issueCertificate(userId, courseId, 'course', CertificateType.COURSE_COMPLETION);
       }
     }
   }
 
   // ─── Hook: entregar examen → emitir MODULE_EXAM / COURSE_EXAM ─────────────
 
-  async issueExamCertificate(
-    userId: string,
-    attemptId: string,
-    score: number,
-  ): Promise<void> {
+  async issueExamCertificate(userId: string, attemptId: string, score: number): Promise<void> {
     if (score < 50) return;
 
     const attempt = await this.prisma.examAttempt.findUnique({
@@ -300,6 +282,7 @@ export class CertificatesService {
         issuedAt: cert.issuedAt.toISOString(),
         scopeTitle,
         scopeId: cert.courseId ?? cert.moduleId ?? '',
+        courseId: cert.courseId ?? cert.module?.course.id ?? undefined,
         courseTitle,
       },
     };

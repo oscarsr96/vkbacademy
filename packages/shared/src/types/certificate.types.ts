@@ -10,10 +10,11 @@ export interface Certificate {
   verifyCode: string;
   examScore: number | null;
   issuedAt: string;
-  recipientName: string;   // user.name
-  scopeTitle: string;      // título del módulo o curso
-  scopeId: string;         // courseId o moduleId
-  courseTitle?: string;    // curso padre (solo si el certificado es de módulo)
+  recipientName: string; // user.name
+  scopeTitle: string; // título del módulo o curso
+  scopeId: string; // courseId o moduleId
+  courseId?: string; // id del curso (propio o padre del módulo) para agrupar
+  courseTitle?: string; // curso padre (solo si el certificado es de módulo)
 }
 
 export interface CertificateVerification {
