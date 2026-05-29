@@ -6,7 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CryptoService } from '../crypto/crypto.service';
+import { UsernameService } from '../username/username.service';
 
 // Mockear bcrypt para evitar el coste de rondas reales en los tests
 jest.mock('bcrypt');
@@ -17,6 +17,7 @@ describe('AuthService', () => {
   let mockPrisma: {
     user: {
       findUnique: jest.Mock;
+      findFirst: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
       findUniqueOrThrow: jest.Mock;
@@ -30,7 +31,7 @@ describe('AuthService', () => {
   };
   let mockJwt: { sign: jest.Mock; decode: jest.Mock; verify: jest.Mock };
   let mockConfig: { get: jest.Mock };
-  let mockCrypto: { encrypt: jest.Mock; decrypt: jest.Mock };
+  let mockUsername: { slugify: jest.Mock; allocate: jest.Mock };
 
   // Usuario de ejemplo con todos los campos necesarios
   const fakeUser = {
@@ -49,6 +50,7 @@ describe('AuthService', () => {
     mockPrisma = {
       user: {
         findUnique: jest.fn(),
+        findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
         findUniqueOrThrow: jest.fn(),
@@ -66,9 +68,11 @@ describe('AuthService', () => {
       verify: jest.fn(),
     };
     mockConfig = { get: jest.fn() };
-    mockCrypto = {
-      encrypt: jest.fn((plain: string) => `enc(${plain})`),
-      decrypt: jest.fn((cipher: string) => cipher.replace(/^enc\(|\)$/g, '')),
+    mockUsername = {
+      slugify: jest.fn((n: string) => n.toLowerCase().replace(/\s+/g, '-')),
+      allocate: jest.fn((names: string[]) =>
+        Promise.resolve(names.map((n) => n.toLowerCase().replace(/\s+/g, '-'))),
+      ),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -81,7 +85,7 @@ describe('AuthService', () => {
           provide: NotificationsService,
           useValue: { sendPasswordReset: jest.fn().mockResolvedValue(undefined) },
         },
-        { provide: CryptoService, useValue: mockCrypto },
+        { provide: UsernameService, useValue: mockUsername },
       ],
     }).compile();
 
@@ -293,6 +297,31 @@ describe('AuthService', () => {
       expect(result.user.schoolYearId).toBeNull();
       expect(result.user.schoolYear).toBeNull();
     });
+
+    it('busca por username cuando el identificador no es un email', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'st1',
+        email: null,
+        username: 'juan-garcia',
+        name: 'Juan',
+        role: 'STUDENT',
+        passwordHash: 'h',
+        avatarUrl: null,
+        schoolYearId: null,
+        schoolYear: null,
+        mustChangePassword: true,
+        academyMembers: [],
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.login({ identifier: 'juan-garcia', password: 'cambiar123' });
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { username: 'juan-garcia' } }),
+      );
+      expect(result.user.mustChangePassword).toBe(true);
+      expect(result.user.username).toBe('juan-garcia');
+    });
   });
 
   // ─── refresh ─────────────────────────────────────────────────────────────────
@@ -390,15 +419,15 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── resetPassword: sincronización viewablePassword ─────────────────────────
+  // ─── resetPassword: limpia mustChangePassword al fijar contraseña propia ─────
 
-  describe('resetPassword viewablePassword sync', () => {
+  describe('resetPassword', () => {
     beforeEach(() => {
       mockedBcrypt.hash.mockResolvedValue('newhash' as never);
       mockJwt.verify.mockReturnValue({ sub: 'u1', purpose: 'reset' });
     });
 
-    it('actualiza viewablePassword cuando user es STUDENT con tutorId', async () => {
+    it('actualiza passwordHash y limpia mustChangePassword', async () => {
       mockJwt.decode.mockReturnValue({ sub: 'st1', purpose: 'reset' });
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'st1',
@@ -410,65 +439,13 @@ describe('AuthService', () => {
 
       await service.resetPassword('any-token', 'newSecret');
 
-      expect(mockCrypto.encrypt).toHaveBeenCalledWith('newSecret');
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'st1' },
         data: {
           passwordHash: 'newhash',
-          viewablePassword: 'enc(newSecret)',
+          mustChangePassword: false,
         },
       });
-    });
-
-    it('NO toca viewablePassword cuando user es TUTOR', async () => {
-      mockJwt.decode.mockReturnValue({ sub: 'tut1', purpose: 'reset' });
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'tut1',
-        role: 'TUTOR',
-        tutorId: null,
-        passwordHash: 'oldhash',
-      });
-      mockPrisma.user.update.mockResolvedValue({ id: 'tut1' });
-
-      await service.resetPassword('any-token', 'newSecret');
-
-      expect(mockCrypto.encrypt).not.toHaveBeenCalled();
-      const updateArg = mockPrisma.user.update.mock.calls[0][0];
-      expect(updateArg.data).not.toHaveProperty('viewablePassword');
-    });
-
-    it('NO toca viewablePassword cuando user es STUDENT sin tutorId', async () => {
-      mockJwt.decode.mockReturnValue({ sub: 's2', purpose: 'reset' });
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: 's2',
-        role: 'STUDENT',
-        tutorId: null,
-        passwordHash: 'oldhash',
-      });
-      mockPrisma.user.update.mockResolvedValue({ id: 's2' });
-
-      await service.resetPassword('any-token', 'newSecret');
-
-      expect(mockCrypto.encrypt).not.toHaveBeenCalled();
-      const updateArg = mockPrisma.user.update.mock.calls[0][0];
-      expect(updateArg.data).not.toHaveProperty('viewablePassword');
-    });
-
-    it('NO toca viewablePassword cuando user es TEACHER', async () => {
-      mockJwt.decode.mockReturnValue({ sub: 'tch1', purpose: 'reset' });
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'tch1',
-        role: 'TEACHER',
-        tutorId: null,
-        passwordHash: 'oldhash',
-      });
-      mockPrisma.user.update.mockResolvedValue({ id: 'tch1' });
-
-      await service.resetPassword('any-token', 'newSecret');
-
-      expect(mockCrypto.encrypt).not.toHaveBeenCalled();
-      const updateArg = mockPrisma.user.update.mock.calls[0][0];
-      expect(updateArg.data).not.toHaveProperty('viewablePassword');
     });
   });
 });

@@ -21,9 +21,11 @@ export type AuthResponse = AuthTokens & {
   user: {
     id: string;
     email: string | null;
+    username: string | null;
     name: string;
     role: string;
     avatarUrl: string | null;
+    mustChangePassword: boolean;
     schoolYearId: string | null;
     schoolYear: { id: string; name: string; label: string } | null;
     academyId: string | null;
@@ -199,8 +201,8 @@ export class AuthService {
           where: { email: dto.identifier },
           include: { schoolYear: true, academyMembers: { take: 1, include: { academy: true } } },
         })
-      : await this.prisma.user.findFirst({
-          where: { name: { equals: dto.identifier, mode: 'insensitive' } },
+      : await this.prisma.user.findUnique({
+          where: { username: dto.identifier.toLowerCase() },
           include: { schoolYear: true, academyMembers: { take: 1, include: { academy: true } } },
         });
     if (!user) throw new UnauthorizedException('Credenciales incorrectas');
@@ -346,9 +348,11 @@ export class AuthService {
     user: {
       id: string;
       email: string | null;
+      username?: string | null;
       name: string;
       role: string;
       avatarUrl: string | null;
+      mustChangePassword?: boolean;
       schoolYearId?: string | null;
       schoolYear?: { id: string; name: string; label: string } | null;
     },
@@ -365,9 +369,11 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
+      username: user.username ?? null,
       name: user.name,
       role: user.role,
       avatarUrl: user.avatarUrl,
+      mustChangePassword: user.mustChangePassword ?? false,
       schoolYearId: user.schoolYearId ?? null,
       schoolYear: user.schoolYear ?? null,
       academyId: academyId ?? null,
