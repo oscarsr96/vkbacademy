@@ -62,10 +62,10 @@ Se respetan las reglas duras del proyecto: guards antes de services, DTOs con `c
 
 ## 6. Frontend (apps/web)
 
-- **RegisterPage**: el hint pasa a explicar que se crea un usuario y que la primera vez entrará con la contraseña por defecto y deberá cambiarla. Tras el registro, se muestra el `username` generado de cada alumno.
-- **Eliminar** `StudentCredentialsTable` y su uso. En el panel del tutor, cada alumno tiene:
-  - Botón **"Restablecer contraseña"** (confirma "vuelve a la contraseña por defecto", sin mostrar nada).
-  - Botón **"Añadir alumno"** a nivel de panel.
+- **RegisterPage**: el hint pasa a explicar que se crea un usuario y que la primera vez entrará con la contraseña por defecto y deberá cambiarla.
+- **Eliminar** `StudentCredentialsTable` y su uso. Se reemplaza por un **panel de accesos** en "Mis Alumnos" donde el `username` de cada alumno es visible (también va en el email de bienvenida), con:
+  - Botón **"Restablecer contraseña"** (confirma "vuelve a la contraseña por defecto", sin mostrar nada sensible).
+  - Formulario **"Añadir alumno"** a nivel de panel.
 - **Nueva pantalla de cambio de contraseña obligatorio**: si el login indica `mustChangePassword`, se redirige aquí y se bloquea la navegación hasta completarla.
 
 ## 7. Migración de datos existentes
