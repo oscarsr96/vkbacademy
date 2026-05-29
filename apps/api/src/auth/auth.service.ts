@@ -10,7 +10,8 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CryptoService } from '../crypto/crypto.service';
+import { UsernameService } from '../username/username.service';
+import { DEFAULT_STUDENT_PASSWORD } from './auth.constants';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterTutorDto } from './dto/register-tutor.dto';
 import { LoginDto } from './dto/login.dto';
@@ -19,7 +20,7 @@ import type { AuthTokens, JwtPayload } from '@vkbacademy/shared';
 export type AuthResponse = AuthTokens & {
   user: {
     id: string;
-    email: string;
+    email: string | null;
     name: string;
     role: string;
     avatarUrl: string | null;
@@ -44,7 +45,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly notifications: NotificationsService,
-    private readonly crypto: CryptoService,
+    private readonly usernames: UsernameService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
@@ -86,7 +87,7 @@ export class AuthService {
 
     const tokens = await this.generateTokens({
       sub: user.id,
-      email: user.email,
+      email: user.email ?? '',
       role: user.role,
       academyId,
     });
@@ -96,9 +97,10 @@ export class AuthService {
   /**
    * Registro de tutor con alumnos.
    *
-   * Los alumnos no aportan email — se autogenera del nombre (slug + dominio
-   * fijo) y la contraseña se genera aleatoriamente. Todas las credenciales
-   * (las del tutor y las de cada alumno) se envían en un único email al tutor.
+   * Los alumnos no aportan email — se les asigna un username único derivado del
+   * nombre (vía UsernameService) y nacen con la contraseña por defecto y el flag
+   * mustChangePassword=true. El tutor recibe un único email con los usernames de
+   * sus alumnos y la contraseña por defecto.
    *
    * Todo se ejecuta dentro de una transacción Prisma: si algo falla,
    * ningún usuario ni membresía queda persistido.
@@ -119,18 +121,12 @@ export class AuthService {
       throw new ConflictException(`El email "${dto.email}" ya está registrado`);
     }
 
-    // 3. Generar email único para cada alumno (slug del nombre + sufijo si colisiona)
-    const studentEmails = await this.allocateStudentEmails(dto.students.map((s) => s.name));
+    // 3. Generar username único para cada alumno (slug del nombre + sufijo si colisiona)
+    const studentUsernames = await this.usernames.allocate(dto.students.map((s) => s.name));
 
-    // 4. Hashes de contraseñas
+    // 4. Hashes de contraseñas: el tutor con la suya; los alumnos con la por defecto
     const tutorPasswordHash = await bcrypt.hash(dto.password, 10);
-    const studentPasswords = dto.students.map(() => this.generatePassword());
-    const studentPasswordHashes = await Promise.all(
-      studentPasswords.map((pw) => bcrypt.hash(pw, 10)),
-    );
-    // Cifrado reversible (AES-256-GCM) para que el tutor pueda consultar la
-    // contraseña del alumno en el panel — el hash bcrypt es irreversible.
-    const studentViewable = studentPasswords.map((pw) => this.crypto.encrypt(pw));
+    const defaultStudentHash = await bcrypt.hash(DEFAULT_STUDENT_PASSWORD, 10);
 
     // 5. Crear tutor y alumnos en transacción
     const { tutor, students } = await this.prisma.$transaction(async (tx) => {
@@ -149,9 +145,9 @@ export class AuthService {
         dto.students.map((studentDto, index) =>
           tx.user.create({
             data: {
-              email: studentEmails[index],
-              passwordHash: studentPasswordHashes[index],
-              viewablePassword: studentViewable[index],
+              username: studentUsernames[index],
+              passwordHash: defaultStudentHash,
+              mustChangePassword: true,
               name: studentDto.name,
               role: 'STUDENT',
               tutorId: createdTutor.id,
@@ -166,21 +162,21 @@ export class AuthService {
       return { tutor: createdTutor, students: createdStudents };
     });
 
-    // 6. Enviar UN email consolidado al tutor con todas las credenciales
+    // 6. Enviar UN email al tutor con los usernames de los alumnos y la contraseña por defecto
     const frontendUrl = this.config
       .get<string>('FRONTEND_URL', 'http://localhost:5173')
       .split(',')[0];
     const loginUrl = `${frontendUrl}/login`;
 
     void this.notifications.sendTutorWelcomeWithStudents({
-      tutorEmail: tutor.email,
+      tutorEmail: tutor.email!,
       tutorName: tutor.name,
       tutorPassword: dto.password,
       students: students.map((student, index) => ({
         name: student.name,
-        email: student.email,
-        password: studentPasswords[index],
+        username: studentUsernames[index],
       })),
+      defaultPassword: DEFAULT_STUDENT_PASSWORD,
       academyName: academy.name,
       loginUrl,
     });
@@ -188,68 +184,12 @@ export class AuthService {
     // 7. Auto-login del tutor: generar tokens y devolver respuesta
     const tokens = await this.generateTokens({
       sub: tutor.id,
-      email: tutor.email,
+      email: tutor.email!,
       role: tutor.role,
       academyId: academy.id,
     });
 
     return { ...tokens, user: this.toPublic(tutor, academy.id, academy) };
-  }
-
-  /** Genera una contraseña aleatoria alfanumérica de 8 caracteres */
-  private generatePassword(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join(
-      '',
-    );
-  }
-
-  /**
-   * Convierte un nombre en slug ASCII apto para email.
-   * "María Pérez García" → "maria-perez-garcia".
-   */
-  private slugifyName(name: string): string {
-    return (
-      name
-        .normalize('NFD')
-        // Marca de diacríticos: U+0300 a U+036F (tildes, virgulillas, etc.)
-        .replace(/[̀-ͯ]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+|-+$/g, '')
-    );
-  }
-
-  /**
-   * Genera un email único @vkbacademy.com para cada nombre de alumno.
-   * Resuelve colisiones con sufijo incremental (-2, -3, ...).
-   */
-  private async allocateStudentEmails(names: string[]): Promise<string[]> {
-    const STUDENT_EMAIL_DOMAIN = 'vkbacademy.com';
-    const used = new Set<string>();
-    const result: string[] = [];
-
-    for (const name of names) {
-      const base = this.slugifyName(name) || 'alumno';
-      let candidate = `${base}@${STUDENT_EMAIL_DOMAIN}`;
-      let suffix = 1;
-
-      while (
-        used.has(candidate) ||
-        (await this.prisma.user.findUnique({ where: { email: candidate } }))
-      ) {
-        suffix++;
-        candidate = `${base}-${suffix}@${STUDENT_EMAIL_DOMAIN}`;
-      }
-
-      used.add(candidate);
-      result.push(candidate);
-    }
-
-    return result;
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
@@ -274,7 +214,7 @@ export class AuthService {
 
     const tokens = await this.generateTokens({
       sub: user.id,
-      email: user.email,
+      email: user.email ?? '',
       role: user.role,
       academyId,
     });
@@ -298,7 +238,12 @@ export class AuthService {
       include: { academyMembers: { take: 1 } },
     });
     const academyId = user.academyMembers[0]?.academyId ?? null;
-    return this.generateTokens({ sub: user.id, email: user.email, role: user.role, academyId });
+    return this.generateTokens({
+      sub: user.id,
+      email: user.email ?? '',
+      role: user.role,
+      academyId,
+    });
   }
 
   async logout(token: string): Promise<{ message: string }> {
@@ -329,7 +274,7 @@ export class AuthService {
       .split(',')[0];
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
-    void this.notifications.sendPasswordReset({ email: user.email, name: user.name, resetUrl });
+    void this.notifications.sendPasswordReset({ email: user.email!, name: user.name, resetUrl });
 
     return { message: 'Si el email existe, recibirás un enlace en breve' };
   }
@@ -361,12 +306,11 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    const data: { passwordHash: string; viewablePassword?: string } = { passwordHash };
-    if (user.role === 'STUDENT' && user.tutorId) {
-      data.viewablePassword = this.crypto.encrypt(newPassword);
-    }
-
-    await this.prisma.user.update({ where: { id: user.id }, data });
+    // Al fijar una contraseña propia, el alumno deja de estar obligado a cambiarla
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, mustChangePassword: false },
+    });
 
     return { message: 'Contraseña actualizada correctamente' };
   }
@@ -401,7 +345,7 @@ export class AuthService {
   private toPublic(
     user: {
       id: string;
-      email: string;
+      email: string | null;
       name: string;
       role: string;
       avatarUrl: string | null;
