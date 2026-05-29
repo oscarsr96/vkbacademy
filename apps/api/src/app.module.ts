@@ -27,6 +27,7 @@ import { AiModule } from './ai/ai.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { TheoryModule } from './theory/theory.module';
 import { CryptoModule } from './crypto/crypto.module';
+import { UsernameModule } from './username/username.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { CryptoModule } from './crypto/crypto.module';
     AiModule,
     ExercisesModule,
     TheoryModule,
+    UsernameModule,
   ],
   providers: [
     // Rate limiting global (100 req/min por defecto)
