@@ -33,7 +33,7 @@ export class NotificationsService {
 
   /** Notifica al profesor cuando un tutor crea una nueva reserva */
   async sendBookingCreated(params: {
-    teacherEmail: string;
+    teacherEmail: string | null;
     teacherName: string;
     studentName: string;
     tutorName: string;
@@ -42,6 +42,8 @@ export class NotificationsService {
     mode: string;
     courseName?: string;
   }) {
+    // Defensivo: un profesor siempre tiene email, pero si falta no enviamos nada
+    if (!params.teacherEmail) return;
     const date = this.formatDate(params.startAt);
     const time = `${this.formatTime(params.startAt)} – ${this.formatTime(params.endAt)}`;
     const modeLabel = params.mode === 'ONLINE' ? 'Online' : 'Presencial';
@@ -63,8 +65,8 @@ export class NotificationsService {
 
   /** Notifica al tutor y al alumno cuando el profesor confirma la reserva */
   async sendBookingConfirmed(params: {
-    tutorEmail: string;
-    studentEmail: string;
+    tutorEmail: string | null;
+    studentEmail: string | null;
     tutorName: string;
     studentName: string;
     teacherName: string;
@@ -93,14 +95,24 @@ export class NotificationsService {
          ${meetingRow}
        </table>`;
 
-    await Promise.allSettled([
-      this.sendEmail(params.tutorEmail, 'Clase confirmada — VKB Academy', html(params.tutorName)),
-      this.sendEmail(
-        params.studentEmail,
-        'Clase confirmada — VKB Academy',
-        html(params.studentName),
-      ),
-    ]);
+    // Cada destinatario es opcional: los alumnos menores no tienen email, así que
+    // solo enviamos a las direcciones presentes.
+    const sends: Array<Promise<void>> = [];
+    if (params.tutorEmail) {
+      sends.push(
+        this.sendEmail(params.tutorEmail, 'Clase confirmada — VKB Academy', html(params.tutorName)),
+      );
+    }
+    if (params.studentEmail) {
+      sends.push(
+        this.sendEmail(
+          params.studentEmail,
+          'Clase confirmada — VKB Academy',
+          html(params.studentName),
+        ),
+      );
+    }
+    await Promise.allSettled(sends);
   }
 
   /** Notifica a las partes afectadas cuando se cancela una reserva */

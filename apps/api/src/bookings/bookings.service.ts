@@ -202,7 +202,7 @@ export class BookingsService {
     if (student) {
       this.notifications
         .sendBookingConfirmed({
-          tutorEmail: tutor?.email ?? student.email,
+          tutorEmail: tutor?.email ?? null,
           studentEmail: student.email,
           tutorName: tutor?.name ?? student.name,
           studentName: student.name,
@@ -272,13 +272,15 @@ export class BookingsService {
         })
       : null;
 
-    // Notificar solo a las partes que no cancelaron
+    // Notificar solo a las partes que no cancelaron y que tengan email
+    // (los alumnos menores no tienen email → se omiten)
     const notifyEmails: Array<{ email: string; name: string }> = [];
-    if (!isTeacher && teacher)
+    if (!isTeacher && teacher?.user.email)
       notifyEmails.push({ email: teacher.user.email, name: teacher.user.name });
-    if (!isTutor && !isStudent && tutor)
+    if (!isTutor && !isStudent && tutor?.email)
       notifyEmails.push({ email: tutor.email, name: tutor.name });
-    if (!isStudent && student) notifyEmails.push({ email: student.email, name: student.name });
+    if (!isStudent && student?.email)
+      notifyEmails.push({ email: student.email, name: student.name });
 
     if (notifyEmails.length > 0 && student && teacher) {
       this.notifications
