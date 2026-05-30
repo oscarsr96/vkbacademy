@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { useLogout } from '../hooks/useAuth';
 import { useAcademyDomain } from '../contexts/AcademyContext';
@@ -77,6 +77,9 @@ export default function AppLayout() {
   const { academy: domainAcademy } = useAcademyDomain();
   const { mutate: logout, isPending } = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Gate: un alumno con contraseña por defecto debe cambiarla antes de entrar
+  if (user?.mustChangePassword) return <Navigate to="/change-password" replace />;
 
   // Prioridad: auth store (post-login) > domain context > fallback VKB
   const academy = storeAcademy ?? domainAcademy;
