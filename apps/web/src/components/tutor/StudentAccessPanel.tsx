@@ -29,10 +29,20 @@ export function StudentAccessPanel() {
   });
 
   const resetMut = useMutation({
-    mutationFn: (id: string) => tutorsApi.resetStudentPassword(id),
-    onSuccess: () =>
-      setResetMsg('Contraseña restablecida a "cambiar123". El alumno la cambiará al entrar.'),
+    mutationFn: (student: StudentSummary) => tutorsApi.resetStudentPassword(student.id),
+    onSuccess: (_data, student) =>
+      setResetMsg(
+        `Contraseña de ${student.name} restablecida a "cambiar123". La cambiará al entrar.`,
+      ),
   });
+
+  // Pide confirmación: un reset accidental obliga al alumno a volver a cambiar la contraseña.
+  function handleReset(student: StudentSummary) {
+    setResetMsg(null);
+    if (window.confirm(`¿Restablecer la contraseña de ${student.name} a "cambiar123"?`)) {
+      resetMut.mutate(student);
+    }
+  }
 
   return (
     <section
@@ -80,7 +90,7 @@ export function StudentAccessPanel() {
               <td style={{ padding: '8px 4px' }}>
                 <button
                   type="button"
-                  onClick={() => resetMut.mutate(s.id)}
+                  onClick={() => handleReset(s)}
                   disabled={resetMut.isPending}
                   style={{
                     padding: '6px 10px',
@@ -103,6 +113,11 @@ export function StudentAccessPanel() {
       {resetMsg && (
         <p style={{ marginTop: 12, fontSize: '0.85rem', color: '#16a34a' }}>{resetMsg}</p>
       )}
+      {resetMut.isError && (
+        <p style={{ marginTop: 12, fontSize: '0.85rem', color: '#b91c1c' }}>
+          No se pudo restablecer la contraseña. Inténtalo de nuevo.
+        </p>
+      )}
 
       <div style={{ marginTop: 20, borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
         <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, marginBottom: 10 }}>
@@ -119,6 +134,7 @@ export function StudentAccessPanel() {
               padding: '8px 10px',
               borderRadius: 8,
               border: '1px solid #cbd5e1',
+              fontSize: 16,
             }}
           />
           <select
