@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, BadRequestException } from '@nestjs/common';
 import { TutorsService } from './tutors.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CryptoService } from '../crypto/crypto.service';
+import { UsernameService } from '../username/username.service';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -28,14 +28,21 @@ const mockStudent = {
 // Mock de PrismaService
 // ---------------------------------------------------------------------------
 
-const mockCrypto = {
-  encrypt: jest.fn(),
-  decrypt: jest.fn((cipher: string) => cipher.replace(/^enc\(|\)$/g, '')),
+const mockUsername = {
+  slugify: jest.fn((n: string) => n.toLowerCase().replace(/\s+/g, '-')),
+  allocate: jest.fn((names: string[]) =>
+    Promise.resolve(names.map((n) => n.toLowerCase().replace(/\s+/g, '-'))),
+  ),
 };
 
 const mockPrisma = {
   user: {
     findMany: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  schoolYear: {
     findUnique: jest.fn(),
   },
   enrollment: {
@@ -82,13 +89,12 @@ describe('TutorsService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockCrypto.decrypt.mockImplementation((cipher: string) => cipher.replace(/^enc\(|\)$/g, ''));
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TutorsService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: CryptoService, useValue: mockCrypto },
+        { provide: UsernameService, useValue: mockUsername },
       ],
     }).compile();
 
@@ -105,6 +111,7 @@ describe('TutorsService', () => {
         {
           id: STUDENT_ID,
           name: 'Alumno',
+          username: 'alumno',
           email: 'a@b.com',
           avatarUrl: null,
           totalPoints: 50,
@@ -440,65 +447,85 @@ describe('TutorsService', () => {
   });
 
   // -------------------------------------------------------------------------
-  // getStudentsCredentials
+  // addStudent
   // -------------------------------------------------------------------------
 
-  describe('getStudentsCredentials', () => {
-    it('devuelve credenciales descifradas solo de alumnos del tutor', async () => {
-      mockPrisma.user.findMany.mockResolvedValue([
-        { id: 's1', name: 'Pepe', email: 'pepe@x.com', viewablePassword: 'enc(aB3xY7Q9)' },
-        { id: 's2', name: 'Ana', email: 'ana@x.com', viewablePassword: 'enc(M9pQrS2t)' },
-      ]);
-
-      const result = await service.getStudentsCredentials(TUTOR_ID);
-
-      expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { tutorId: TUTOR_ID },
-          select: expect.objectContaining({
-            id: true,
-            name: true,
-            email: true,
-            viewablePassword: true,
-          }),
-        }),
-      );
-      expect(result).toEqual([
-        { id: 's1', name: 'Pepe', email: 'pepe@x.com', password: 'aB3xY7Q9' },
-        { id: 's2', name: 'Ana', email: 'ana@x.com', password: 'M9pQrS2t' },
-      ]);
-    });
-
-    it('devuelve password=null cuando viewablePassword es null (alumno preexistente)', async () => {
-      mockPrisma.user.findMany.mockResolvedValue([
-        { id: 's3', name: 'Old', email: 'old@x.com', viewablePassword: null },
-      ]);
-
-      const result = await service.getStudentsCredentials(TUTOR_ID);
-
-      expect(mockCrypto.decrypt).not.toHaveBeenCalled();
-      expect(result).toEqual([{ id: 's3', name: 'Old', email: 'old@x.com', password: null }]);
-    });
-
-    it('devuelve password=null si descifrar falla', async () => {
-      mockPrisma.user.findMany.mockResolvedValue([
-        { id: 's4', name: 'Corrupt', email: 'c@x.com', viewablePassword: 'broken' },
-      ]);
-      mockCrypto.decrypt.mockImplementationOnce(() => {
-        throw new Error('bad tag');
+  describe('addStudent', () => {
+    it('crea un alumno bajo el tutor con username y contraseña por defecto', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: TUTOR_ID,
+        role: 'TUTOR',
+        academyMembers: [{ academyId: 'ac1' }],
+      });
+      mockPrisma.schoolYear.findUnique.mockResolvedValue({ id: 'sy1' });
+      mockUsername.allocate.mockResolvedValue(['nuevo-alumno']);
+      mockPrisma.user.create.mockResolvedValue({
+        id: 'new1',
+        name: 'Nuevo Alumno',
+        username: 'nuevo-alumno',
+        schoolYear: { id: 'sy1', name: '1eso', label: '1º ESO' },
       });
 
-      const result = await service.getStudentsCredentials(TUTOR_ID);
+      const result = await service.addStudent(TUTOR_ID, {
+        name: 'Nuevo Alumno',
+        schoolYearId: 'sy1',
+      });
 
-      expect(result).toEqual([{ id: 's4', name: 'Corrupt', email: 'c@x.com', password: null }]);
+      const createArg = mockPrisma.user.create.mock.calls[0][0];
+      expect(createArg.data.role).toBe('STUDENT');
+      expect(createArg.data.username).toBe('nuevo-alumno');
+      expect(createArg.data.tutorId).toBe(TUTOR_ID);
+      expect(createArg.data.mustChangePassword).toBe(true);
+      expect(createArg.data.academyMembers.create.academyId).toBe('ac1');
+      expect(result.username).toBe('nuevo-alumno');
     });
 
-    it('devuelve [] cuando el tutor no tiene alumnos', async () => {
-      mockPrisma.user.findMany.mockResolvedValue([]);
+    it('lanza ForbiddenException si el tutor no existe', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      await expect(
+        service.addStudent(TUTOR_ID, { name: 'X', schoolYearId: 'sy1' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
 
-      const result = await service.getStudentsCredentials(TUTOR_ID);
+    it('lanza BadRequestException si el nivel no existe', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: TUTOR_ID,
+        role: 'TUTOR',
+        academyMembers: [{ academyId: 'ac1' }],
+      });
+      mockPrisma.schoolYear = { findUnique: jest.fn().mockResolvedValue(null) };
+      await expect(
+        service.addStudent(TUTOR_ID, { name: 'X', schoolYearId: 'nope' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
 
-      expect(result).toEqual([]);
+  // -------------------------------------------------------------------------
+  // resetStudentPassword
+  // -------------------------------------------------------------------------
+
+  describe('resetStudentPassword', () => {
+    it('restablece a la contraseña por defecto y reactiva mustChangePassword', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: STUDENT_ID,
+        tutorId: TUTOR_ID,
+        schoolYearId: 'sy1',
+      });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.resetStudentPassword(TUTOR_ID, STUDENT_ID);
+
+      const updateArg = mockPrisma.user.update.mock.calls[0][0];
+      expect(updateArg.where).toEqual({ id: STUDENT_ID });
+      expect(updateArg.data.mustChangePassword).toBe(true);
+      expect(typeof updateArg.data.passwordHash).toBe('string');
+    });
+
+    it('lanza ForbiddenException si el alumno no es del tutor', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: STUDENT_ID, tutorId: 'otro' });
+      await expect(service.resetStudentPassword(TUTOR_ID, STUDENT_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });

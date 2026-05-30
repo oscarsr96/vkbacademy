@@ -138,6 +138,7 @@ async function main() {
       passwordHash,
       role: Role.STUDENT,
       name: 'juan-garcia',
+      username: 'juan-garcia',
       schoolYearId: sy3eso.id,
       tutorId: tutor.id,
       academyMembers: { create: { academyId: vkbAcademy.id } },

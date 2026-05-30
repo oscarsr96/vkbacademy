@@ -328,6 +328,37 @@ describe('BookingsService', () => {
       expect(mockDaily.createRoom).not.toHaveBeenCalled();
     });
 
+    it('alumno sin email pero con tutor: notifica al tutor y omite el email del alumno', async () => {
+      mockPrisma.booking.findUnique.mockResolvedValue({
+        id: 'b1',
+        teacherId: 'tp1',
+        mode: BookingMode.IN_PERSON,
+        meetingUrl: null,
+        studentId: 'student1',
+        courseId: null,
+        startAt: new Date('2026-01-20T10:00:00Z'),
+        endAt: new Date('2026-01-20T11:00:00Z'),
+      });
+      mockPrisma.teacherProfile.findUnique.mockResolvedValue({
+        id: 'tp1',
+        user: { name: 'Profesor Test' },
+      });
+      mockPrisma.booking.update.mockResolvedValue({ id: 'b1', status: BookingStatus.CONFIRMED });
+      // Primer findUnique → alumno sin email; segundo → tutor con email
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ name: 'Alumno Test', email: null, tutorId: 'tut1' }) // alumno
+        .mockResolvedValueOnce({ name: 'Tutor Test', email: 'tutor@x.com' }); // tutor
+
+      await service.confirm('b1', 'teacher1');
+
+      expect(mockNotifications.sendBookingConfirmed).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tutorEmail: 'tutor@x.com',
+          studentEmail: null,
+        }),
+      );
+    });
+
     it('reserva ONLINE sin meetingUrl: llama a daily.createRoom', async () => {
       const startAt = new Date('2026-01-20T10:00:00Z');
       const endAt = new Date('2026-01-20T11:00:00Z');
@@ -441,6 +472,34 @@ describe('BookingsService', () => {
       await expect(service.cancel('b1', 'random1', Role.STUDENT)).rejects.toThrow(
         ForbiddenException,
       );
+    });
+
+    it('alumno sin email: no suprime la notificación al profesor', async () => {
+      mockPrisma.booking.findUnique.mockResolvedValue(baseBooking);
+      // teacherProfile: por userId (permiso) → null; por id (datos notif) → profesor con email
+      mockPrisma.teacherProfile.findUnique.mockImplementation(({ where }) => {
+        if (where.userId) return Promise.resolve(null); // el tutor no es teacher
+        return Promise.resolve({
+          id: 'tp1',
+          user: { name: 'Profesor Test', email: 'teacher@x.com' },
+        });
+      });
+      mockPrisma.user.findUnique
+        // 1) chequeo de permisos: tutorId del alumno coincide con el tutor que cancela
+        .mockResolvedValueOnce({ tutorId: 'tut1' })
+        // 2) datos del alumno para notif: sin email
+        .mockResolvedValueOnce({ name: 'Alumno Test', email: null, tutorId: 'tut1' })
+        // 3) datos del tutor (quien cancela)
+        .mockResolvedValueOnce({ name: 'Tutor Test', email: 'tutor@x.com' });
+      const cancelledBooking = { ...baseBooking, status: BookingStatus.CANCELLED };
+      mockPrisma.booking.update.mockResolvedValue(cancelledBooking);
+
+      await service.cancel('b1', 'tut1', Role.TUTOR);
+
+      expect(mockNotifications.sendBookingCancelled).toHaveBeenCalled();
+      const arg = (mockNotifications.sendBookingCancelled as jest.Mock).mock.calls[0][0];
+      expect(arg.notifyEmails).toContainEqual({ email: 'teacher@x.com', name: 'Profesor Test' });
+      expect(arg.notifyEmails.every((e: { email: string }) => !!e.email)).toBe(true);
     });
 
     it('reserva ONLINE con meetingUrl: llama a daily.deleteRoom al cancelar', async () => {

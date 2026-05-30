@@ -16,7 +16,6 @@ import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { CreateExamQuestionDto, UpdateExamQuestionDto } from './dto/create-exam-question.dto';
 import { YoutubeService } from '../youtube/youtube.service';
 import type { YoutubeCandidate } from '../youtube/dto/youtube-candidate.dto';
-import { CryptoService } from '../crypto/crypto.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -24,7 +23,6 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly youtube: YoutubeService,
-    private readonly crypto: CryptoService,
   ) {}
 
   async getUsers(academyId?: string | null) {
@@ -130,9 +128,6 @@ export class AdminService {
     if ('schoolYearId' in dto) data.schoolYearId = dto.schoolYearId ?? null;
     if (dto.password) {
       data.passwordHash = await bcrypt.hash(dto.password, 10);
-      if (user.role === 'STUDENT' && user.tutorId) {
-        data.viewablePassword = this.crypto.encrypt(dto.password);
-      }
     }
 
     return this.prisma.user.update({

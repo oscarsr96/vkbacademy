@@ -29,7 +29,7 @@ export function useLogin() {
       setTokens({ accessToken, refreshToken });
       setUser(user);
       queryClient.setQueryData(['me'], user);
-      navigate('/dashboard', { replace: true });
+      navigate(user.mustChangePassword ? '/change-password' : '/dashboard', { replace: true });
     },
   });
 }
@@ -45,7 +45,7 @@ export function useRegister() {
       setTokens({ accessToken, refreshToken });
       setUser(user);
       queryClient.setQueryData(['me'], user);
-      navigate('/dashboard', { replace: true });
+      navigate(user.mustChangePassword ? '/change-password' : '/dashboard', { replace: true });
     },
   });
 }
@@ -61,7 +61,7 @@ export function useRegisterTutor() {
       setTokens({ accessToken, refreshToken });
       setUser(user);
       queryClient.setQueryData(['me'], user);
-      navigate('/dashboard', { replace: true });
+      navigate(user.mustChangePassword ? '/change-password' : '/dashboard', { replace: true });
     },
   });
 }

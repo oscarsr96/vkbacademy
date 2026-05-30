@@ -52,4 +52,7 @@ export const authApi = {
 
   resetPassword: (token: string, password: string) =>
     api.post<{ message: string }>('/auth/reset-password', { token, password }).then((r) => r.data),
+
+  changePassword: (newPassword: string) =>
+    api.post<{ message: string }>('/auth/change-password', { newPassword }).then((r) => r.data),
 };

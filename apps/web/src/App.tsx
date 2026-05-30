@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import ProfilePage from './pages/ProfilePage';
 import TeacherPortalPage from './pages/TeacherPortalPage';
 import DashboardPage from './pages/DashboardPage';
@@ -95,6 +96,14 @@ export default function App() {
       />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route
+        path="/change-password"
+        element={
+          <PrivateRoute>
+            <ChangePasswordPage />
+          </PrivateRoute>
+        }
+      />
 
       {/* ── Rutas privadas con sidebar (AppLayout) ── */}
       <Route

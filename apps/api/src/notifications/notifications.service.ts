@@ -33,7 +33,7 @@ export class NotificationsService {
 
   /** Notifica al profesor cuando un tutor crea una nueva reserva */
   async sendBookingCreated(params: {
-    teacherEmail: string;
+    teacherEmail: string | null;
     teacherName: string;
     studentName: string;
     tutorName: string;
@@ -42,6 +42,8 @@ export class NotificationsService {
     mode: string;
     courseName?: string;
   }) {
+    // Defensivo: un profesor siempre tiene email, pero si falta no enviamos nada
+    if (!params.teacherEmail) return;
     const date = this.formatDate(params.startAt);
     const time = `${this.formatTime(params.startAt)} – ${this.formatTime(params.endAt)}`;
     const modeLabel = params.mode === 'ONLINE' ? 'Online' : 'Presencial';
@@ -63,8 +65,8 @@ export class NotificationsService {
 
   /** Notifica al tutor y al alumno cuando el profesor confirma la reserva */
   async sendBookingConfirmed(params: {
-    tutorEmail: string;
-    studentEmail: string;
+    tutorEmail: string | null;
+    studentEmail: string | null;
     tutorName: string;
     studentName: string;
     teacherName: string;
@@ -93,14 +95,24 @@ export class NotificationsService {
          ${meetingRow}
        </table>`;
 
-    await Promise.allSettled([
-      this.sendEmail(params.tutorEmail, 'Clase confirmada — VKB Academy', html(params.tutorName)),
-      this.sendEmail(
-        params.studentEmail,
-        'Clase confirmada — VKB Academy',
-        html(params.studentName),
-      ),
-    ]);
+    // Cada destinatario es opcional: los alumnos menores no tienen email, así que
+    // solo enviamos a las direcciones presentes.
+    const sends: Array<Promise<void>> = [];
+    if (params.tutorEmail) {
+      sends.push(
+        this.sendEmail(params.tutorEmail, 'Clase confirmada — VKB Academy', html(params.tutorName)),
+      );
+    }
+    if (params.studentEmail) {
+      sends.push(
+        this.sendEmail(
+          params.studentEmail,
+          'Clase confirmada — VKB Academy',
+          html(params.studentName),
+        ),
+      );
+    }
+    await Promise.allSettled(sends);
   }
 
   /** Notifica a las partes afectadas cuando se cancela una reserva */
@@ -136,15 +148,16 @@ export class NotificationsService {
   }
 
   /**
-   * Email único al tutor con TODAS las credenciales: las suyas + las de cada
-   * alumno (email autogenerado + contraseña aleatoria). Los alumnos no
-   * reciben email propio porque a esta edad no suelen tener cuenta personal.
+   * Email único al tutor con sus credenciales + los accesos de cada alumno.
+   * Cada alumno entra con su `username` y una `defaultPassword` común que debe
+   * cambiar en el primer acceso — no se exponen contraseñas individuales.
    */
   async sendTutorWelcomeWithStudents(params: {
     tutorEmail: string;
     tutorName: string;
     tutorPassword: string;
-    students: Array<{ name: string; email: string; password: string }>;
+    students: Array<{ name: string; username: string }>;
+    defaultPassword: string;
     academyName: string;
     loginUrl: string;
   }) {
@@ -153,22 +166,21 @@ export class NotificationsService {
         (s) => `
          <tr>
            <td style="padding:8px 14px;border-bottom:1px solid #eee">${s.name}</td>
-           <td style="padding:8px 14px;border-bottom:1px solid #eee"><code>${s.email}</code></td>
-           <td style="padding:8px 14px;border-bottom:1px solid #eee"><code>${s.password}</code></td>
+           <td style="padding:8px 14px;border-bottom:1px solid #eee"><code>${s.username}</code></td>
          </tr>`,
       )
       .join('');
 
     const studentsBlock =
       params.students.length > 0
-        ? `<h3 style="margin-top:2rem">Credenciales de tus alumnos</h3>
-       <p>Cada alumno entra con su propio usuario y contraseña — guárdalas o compártelas con ellos:</p>
+        ? `<h3 style="margin-top:2rem">Accesos de tus alumnos</h3>
+       <p>Cada alumno entra con su <strong>usuario</strong> y la contraseña por defecto
+          <code>${params.defaultPassword}</code>. En el primer acceso deberá cambiarla.</p>
        <table style="border-collapse:collapse;margin:1rem 0;width:100%;max-width:560px">
          <thead>
            <tr style="background:#f8fafc">
              <th style="padding:10px 14px;text-align:left;color:#475569;font-size:0.85rem">Alumno</th>
              <th style="padding:10px 14px;text-align:left;color:#475569;font-size:0.85rem">Usuario</th>
-             <th style="padding:10px 14px;text-align:left;color:#475569;font-size:0.85rem">Contraseña</th>
            </tr>
          </thead>
          <tbody>${studentRows}</tbody>
@@ -193,8 +205,7 @@ export class NotificationsService {
          <a href="${params.loginUrl}" style="background:#f5911e;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
            Acceder a la plataforma
          </a>
-       </p>
-       <p style="color:#666;font-size:0.875rem">Os recomendamos cambiar las contraseñas tras el primer acceso.</p>`,
+       </p>`,
     );
   }
 

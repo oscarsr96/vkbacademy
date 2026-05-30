@@ -71,9 +71,10 @@ enum Role {
 
 model User {
   id           String   @id @default(cuid())
-  email        String   @unique
+  email        String?  @unique
+  username     String?  @unique // identificador de login del alumno (slug del nombre)
   passwordHash String
-  viewablePassword String?  // AES-256-GCM (iv:tag:ciphertext). Solo poblado para STUDENT con tutorId.
+  mustChangePassword Boolean @default(false) // true tras crear/restablecer hasta que el alumno la cambie
   role         Role     @default(STUDENT)
   name         String
   avatarUrl    String?

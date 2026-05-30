@@ -6,7 +6,8 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CryptoService } from '../crypto/crypto.service';
+import { UsernameService } from '../username/username.service';
+import { DEFAULT_STUDENT_PASSWORD } from './auth.constants';
 import { RegisterTutorDto } from './dto/register-tutor.dto';
 
 // Mockear bcrypt para evitar el coste de rondas reales en los tests
@@ -38,7 +39,8 @@ const fakeTutor = {
 
 const fakeStudent1 = {
   id: 'student-uuid-1',
-  email: 'alumno-uno@vkbacademy.com',
+  username: 'alumno-uno',
+  email: null,
   name: 'Alumno Uno',
   role: 'STUDENT',
   passwordHash: '$2b$10$hashed_student1',
@@ -51,7 +53,8 @@ const fakeStudent1 = {
 
 const fakeStudent2 = {
   id: 'student-uuid-2',
-  email: 'alumno-dos@vkbacademy.com',
+  username: 'alumno-dos',
+  email: null,
   name: 'Alumno Dos',
   role: 'STUDENT',
   passwordHash: '$2b$10$hashed_student2',
@@ -64,7 +67,8 @@ const fakeStudent2 = {
 
 const fakeStudent3 = {
   id: 'student-uuid-3',
-  email: 'alumno-tres@vkbacademy.com',
+  username: 'alumno-tres',
+  email: null,
   name: 'Alumno Tres',
   role: 'STUDENT',
   passwordHash: '$2b$10$hashed_student3',
@@ -102,7 +106,7 @@ describe('AuthService.registerTutor', () => {
     sendTutorWelcomeWithStudents: jest.Mock;
     sendPasswordReset: jest.Mock;
   };
-  let mockCrypto: { encrypt: jest.Mock; decrypt: jest.Mock };
+  let mockUsername: { slugify: jest.Mock; allocate: jest.Mock };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -139,9 +143,11 @@ describe('AuthService.registerTutor', () => {
       sendTutorWelcomeWithStudents: jest.fn().mockResolvedValue(undefined),
       sendPasswordReset: jest.fn().mockResolvedValue(undefined),
     };
-    mockCrypto = {
-      encrypt: jest.fn((plain: string) => `enc(${plain})`),
-      decrypt: jest.fn((cipher: string) => cipher.replace(/^enc\(|\)$/g, '')),
+    mockUsername = {
+      slugify: jest.fn((n: string) => n.toLowerCase().replace(/\s+/g, '-')),
+      allocate: jest.fn((names: string[]) =>
+        Promise.resolve(names.map((n) => n.toLowerCase().replace(/\s+/g, '-'))),
+      ),
     };
 
     mockedBcrypt.hash.mockResolvedValue('$2b$10$hashed' as never);
@@ -154,7 +160,7 @@ describe('AuthService.registerTutor', () => {
         { provide: JwtService, useValue: mockJwt },
         { provide: ConfigService, useValue: mockConfig },
         { provide: NotificationsService, useValue: mockNotifications },
-        { provide: CryptoService, useValue: mockCrypto },
+        { provide: UsernameService, useValue: mockUsername },
       ],
     }).compile();
 
@@ -203,11 +209,18 @@ describe('AuthService.registerTutor', () => {
       expect(studentCreateCall.data.role).toBe('STUDENT');
     });
 
-    it('el alumno se crea con email autogenerado @vkbacademy.com', async () => {
+    it('el alumno se crea con username autogenerado a partir del nombre', async () => {
       await service.registerTutor(dto);
-
       const studentCreateCall = mockPrisma.user.create.mock.calls[1][0];
-      expect(studentCreateCall.data.email).toBe('alumno-uno@vkbacademy.com');
+      expect(studentCreateCall.data.username).toBe('alumno-uno');
+      expect(studentCreateCall.data.email).toBeUndefined();
+    });
+
+    it('el alumno nace con la contraseña por defecto hasheada y mustChangePassword', async () => {
+      await service.registerTutor(dto);
+      const studentCreateCall = mockPrisma.user.create.mock.calls[1][0];
+      expect(studentCreateCall.data.mustChangePassword).toBe(true);
+      expect(studentCreateCall.data).not.toHaveProperty('viewablePassword');
     });
 
     it('el alumno tiene tutorId apuntando al tutor', async () => {
@@ -240,17 +253,15 @@ describe('AuthService.registerTutor', () => {
       expect(studentCreateCall.data.academyMembers.create.academyId).toBe(fakeAcademy.id);
     });
 
-    it('envía un único email consolidado al tutor con sus credenciales y las del alumno', async () => {
+    it('envía un único email al tutor con el username del alumno y la contraseña por defecto', async () => {
       await service.registerTutor(dto);
-
       expect(mockNotifications.sendTutorWelcomeWithStudents).toHaveBeenCalledTimes(1);
       const call = mockNotifications.sendTutorWelcomeWithStudents.mock.calls[0][0];
       expect(call.tutorEmail).toBe(fakeTutor.email);
-      expect(call.tutorPassword).toBe(dto.password);
+      expect(call.defaultPassword).toBe(DEFAULT_STUDENT_PASSWORD);
       expect(call.students).toHaveLength(1);
-      expect(call.students[0].email).toBe(fakeStudent1.email);
-      expect(typeof call.students[0].password).toBe('string');
-      expect(call.students[0].password.length).toBeGreaterThanOrEqual(8);
+      expect(call.students[0].username).toBe('alumno-uno');
+      expect(call.students[0]).not.toHaveProperty('password');
     });
 
     it('ejecuta la creación de usuarios dentro de una transacción Prisma', async () => {
@@ -384,116 +395,78 @@ describe('AuthService.registerTutor', () => {
     });
   });
 
-  // ─── Auto-generación de email + contraseña ──────────────────────────────────
+  // ─── Username + contraseña por defecto ──────────────────────────────────────
 
-  describe('auto-generación de email y contraseña para alumnos', () => {
+  describe('username y contraseña por defecto para alumnos', () => {
     beforeEach(() => {
       mockPrisma.academy.findUnique.mockResolvedValue(fakeAcademy);
       mockPrisma.user.findUnique.mockResolvedValue(null);
     });
 
-    it('slugifica nombres con tildes y ñ a ASCII', async () => {
+    it('delega la generación de usernames en UsernameService.allocate', async () => {
       mockPrisma.user.create
         .mockResolvedValueOnce(fakeTutor)
-        .mockResolvedValueOnce({ ...fakeStudent1, email: 'maria-perez-garcia@vkbacademy.com' });
+        .mockResolvedValueOnce(fakeStudent1)
+        .mockResolvedValueOnce(fakeStudent2);
 
       await service.registerTutor({
         name: 'Tutor',
         email: 'tutor@test.es',
         password: 'password123',
         academySlug: 'vallekas-basket',
-        students: [{ name: 'María Pérez García', schoolYearId: 'sy1' }],
+        students: [
+          { name: 'Alumno Uno', schoolYearId: 'sy1' },
+          { name: 'Alumno Dos', schoolYearId: 'sy1' },
+        ],
       });
 
-      const studentCreateCall = mockPrisma.user.create.mock.calls[1][0];
-      expect(studentCreateCall.data.email).toBe('maria-perez-garcia@vkbacademy.com');
+      expect(mockUsername.allocate).toHaveBeenCalledWith(['Alumno Uno', 'Alumno Dos']);
     });
 
-    it('añade sufijo numérico cuando el email base ya existe en BD', async () => {
-      // Primera comprobación (email del tutor en findUnique): libre.
-      // Segunda comprobación (email base del alumno juan-garcia): ocupado.
-      // Tercera comprobación (juan-garcia-2): libre.
-      mockPrisma.user.findUnique
-        .mockResolvedValueOnce(null) // tutor
-        .mockResolvedValueOnce({ id: 'otro' }) // juan-garcia@ ocupado
-        .mockResolvedValueOnce(null); // juan-garcia-2@ libre
+    it('asigna a cada alumno el username devuelto por allocate, en orden', async () => {
       mockPrisma.user.create
         .mockResolvedValueOnce(fakeTutor)
-        .mockResolvedValueOnce({ ...fakeStudent1, email: 'juan-garcia-2@vkbacademy.com' });
+        .mockResolvedValueOnce(fakeStudent1)
+        .mockResolvedValueOnce(fakeStudent2);
 
       await service.registerTutor({
         name: 'Tutor',
         email: 'tutor@test.es',
         password: 'password123',
         academySlug: 'vallekas-basket',
-        students: [{ name: 'Juan García', schoolYearId: 'sy1' }],
+        students: [
+          { name: 'Alumno Uno', schoolYearId: 'sy1' },
+          { name: 'Alumno Dos', schoolYearId: 'sy1' },
+        ],
       });
 
-      const studentCreateCall = mockPrisma.user.create.mock.calls[1][0];
-      expect(studentCreateCall.data.email).toBe('juan-garcia-2@vkbacademy.com');
+      expect(mockPrisma.user.create.mock.calls[1][0].data.username).toBe('alumno-uno');
+      expect(mockPrisma.user.create.mock.calls[2][0].data.username).toBe('alumno-dos');
     });
 
-    it('desambigua dos alumnos con el mismo nombre dentro del mismo registro', async () => {
+    it('hashea dos contraseñas: la del tutor y la por defecto de los alumnos', async () => {
       mockPrisma.user.create
         .mockResolvedValueOnce(fakeTutor)
-        .mockResolvedValueOnce({ ...fakeStudent1, email: 'juan-garcia@vkbacademy.com' })
-        .mockResolvedValueOnce({ ...fakeStudent2, email: 'juan-garcia-2@vkbacademy.com' });
+        .mockResolvedValueOnce(fakeStudent1)
+        .mockResolvedValueOnce(fakeStudent2);
 
       await service.registerTutor({
         name: 'Tutor',
         email: 'tutor@test.es',
         password: 'password123',
         academySlug: 'vallekas-basket',
-        students: [{ name: 'Juan García', schoolYearId: 'sy1' }, { name: 'Juan García', schoolYearId: 'sy1' }],
+        students: [
+          { name: 'Alumno Uno', schoolYearId: 'sy1' },
+          { name: 'Alumno Dos', schoolYearId: 'sy1' },
+        ],
       });
 
-      expect(mockPrisma.user.create.mock.calls[1][0].data.email).toBe('juan-garcia@vkbacademy.com');
-      expect(mockPrisma.user.create.mock.calls[2][0].data.email).toBe(
-        'juan-garcia-2@vkbacademy.com',
-      );
-    });
-
-    it('hashea la contraseña del alumno antes de persistir', async () => {
-      mockPrisma.user.create.mockResolvedValueOnce(fakeTutor).mockResolvedValueOnce(fakeStudent1);
-
-      await service.registerTutor({
-        name: 'Tutor',
-        email: 'tutor@test.es',
-        password: 'password123',
-        academySlug: 'vallekas-basket',
-        students: [{ name: 'Alumno', schoolYearId: 'sy1' }],
-      });
-
-      // bcrypt.hash se llama exactamente 2 veces: una para el tutor y otra para el alumno
+      // El tutor con su contraseña; los alumnos comparten el hash por defecto → 2 llamadas
       expect(mockedBcrypt.hash).toHaveBeenCalledTimes(2);
+      expect(mockedBcrypt.hash).toHaveBeenCalledWith(DEFAULT_STUDENT_PASSWORD, 10);
     });
 
-    it('la contraseña generada para el alumno se envía en texto plano dentro del email consolidado', async () => {
-      mockPrisma.user.create.mockResolvedValueOnce(fakeTutor).mockResolvedValueOnce(fakeStudent1);
-
-      await service.registerTutor({
-        name: 'Tutor',
-        email: 'tutor@test.es',
-        password: 'password123',
-        academySlug: 'vallekas-basket',
-        students: [{ name: 'Alumno', schoolYearId: 'sy1' }],
-      });
-
-      const call = mockNotifications.sendTutorWelcomeWithStudents.mock.calls[0][0];
-      expect(typeof call.students[0].password).toBe('string');
-      expect(call.students[0].password.length).toBeGreaterThanOrEqual(8);
-    });
-  });
-
-  // ─── Cifrado de viewablePassword ────────────────────────────────────────────
-
-  describe('cifra y guarda viewablePassword para cada alumno', () => {
-    beforeEach(() => {
-      mockPrisma.academy.findUnique.mockResolvedValue(fakeAcademy);
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-    });
-
-    it('llama a crypto.encrypt una vez por alumno con la contraseña en plano generada', async () => {
+    it('ningún create de alumno incluye viewablePassword', async () => {
       mockPrisma.user.create
         .mockResolvedValueOnce(fakeTutor)
         .mockResolvedValueOnce(fakeStudent1)
@@ -504,28 +477,10 @@ describe('AuthService.registerTutor', () => {
         email: 'tutor@test.es',
         password: 'password123',
         academySlug: 'vallekas-basket',
-        students: [{ name: 'Alumno Uno', schoolYearId: 'sy1' }, { name: 'Alumno Dos', schoolYearId: 'sy1' }],
-      });
-
-      expect(mockCrypto.encrypt).toHaveBeenCalledTimes(2);
-      // El argumento debe ser la misma contraseña en plano que se envía en el email
-      const emailCall = mockNotifications.sendTutorWelcomeWithStudents.mock.calls[0][0];
-      expect(mockCrypto.encrypt).toHaveBeenNthCalledWith(1, emailCall.students[0].password);
-      expect(mockCrypto.encrypt).toHaveBeenNthCalledWith(2, emailCall.students[1].password);
-    });
-
-    it('cada tx.user.create de un alumno recibe viewablePassword cifrada', async () => {
-      mockPrisma.user.create
-        .mockResolvedValueOnce(fakeTutor)
-        .mockResolvedValueOnce(fakeStudent1)
-        .mockResolvedValueOnce(fakeStudent2);
-
-      await service.registerTutor({
-        name: 'Tutor',
-        email: 'tutor@test.es',
-        password: 'password123',
-        academySlug: 'vallekas-basket',
-        students: [{ name: 'Alumno Uno', schoolYearId: 'sy1' }, { name: 'Alumno Dos', schoolYearId: 'sy1' }],
+        students: [
+          { name: 'Alumno Uno', schoolYearId: 'sy1' },
+          { name: 'Alumno Dos', schoolYearId: 'sy1' },
+        ],
       });
 
       const studentCreateCalls = mockPrisma.user.create.mock.calls.filter(
@@ -533,7 +488,7 @@ describe('AuthService.registerTutor', () => {
       );
       expect(studentCreateCalls).toHaveLength(2);
       for (const [arg] of studentCreateCalls) {
-        expect(arg.data.viewablePassword).toMatch(/^enc\(.+\)$/);
+        expect(arg.data).not.toHaveProperty('viewablePassword');
       }
     });
 

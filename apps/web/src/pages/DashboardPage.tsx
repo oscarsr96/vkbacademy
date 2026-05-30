@@ -115,7 +115,7 @@ export default function DashboardPage() {
         <h2 style={S.sectionTitle}>Tu cuenta</h2>
         <div className="vkb-card" style={{ padding: '0 24px' }}>
           <Row label="Nombre" value={user.name} />
-          <Row label="Email" value={user.email} />
+          <Row label="Email" value={user.email ?? '—'} />
           <Row label="Rol" value={ROLE_LABELS[user.role]} />
           {user.role === Role.STUDENT && (
             <Row label="Nivel" value={user.schoolYear?.label ?? '—'} />
