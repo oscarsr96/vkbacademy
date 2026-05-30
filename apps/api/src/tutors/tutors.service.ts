@@ -1,6 +1,8 @@
 import { Injectable, Logger, ForbiddenException, BadRequestException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { CryptoService } from '../crypto/crypto.service';
+import { UsernameService } from '../username/username.service';
+import { DEFAULT_STUDENT_PASSWORD } from '../auth/auth.constants';
 
 @Injectable()
 export class TutorsService {
@@ -8,7 +10,7 @@ export class TutorsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly crypto: CryptoService,
+    private readonly usernames: UsernameService,
   ) {}
 
   /**
@@ -33,6 +35,7 @@ export class TutorsService {
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         avatarUrl: true,
         totalPoints: true,
@@ -45,34 +48,50 @@ export class TutorsService {
     });
   }
 
-  /**
-   * Devuelve credenciales (email + contraseña descifrada) de cada alumno del tutor.
-   * Si `viewablePassword` es null o el descifrado falla, devuelve `password: null`.
-   */
-  async getStudentsCredentials(tutorId: string) {
-    const students = await this.prisma.user.findMany({
-      where: { tutorId },
+  /** Crea un alumno bajo el tutor, con username generado y contraseña por defecto */
+  async addStudent(tutorId: string, dto: { name: string; schoolYearId: string }) {
+    const tutor = await this.prisma.user.findUnique({
+      where: { id: tutorId },
+      select: { id: true, role: true, academyMembers: { take: 1, select: { academyId: true } } },
+    });
+    if (!tutor) throw new ForbiddenException('Tutor no encontrado');
+
+    const [username] = await this.usernames.allocate([dto.name]);
+    const passwordHash = await bcrypt.hash(DEFAULT_STUDENT_PASSWORD, 10);
+    const academyId = tutor.academyMembers[0]?.academyId ?? null;
+
+    return this.prisma.user.create({
+      data: {
+        username,
+        passwordHash,
+        mustChangePassword: true,
+        name: dto.name,
+        role: 'STUDENT',
+        tutorId,
+        ...(dto.schoolYearId ? { schoolYearId: dto.schoolYearId } : {}),
+        ...(academyId ? { academyMembers: { create: { academyId } } } : {}),
+      },
       select: {
         id: true,
         name: true,
-        email: true,
-        viewablePassword: true,
+        username: true,
+        avatarUrl: true,
+        totalPoints: true,
+        currentStreak: true,
+        schoolYear: { select: { id: true, name: true, label: true } },
       },
-      orderBy: { name: 'asc' },
     });
+  }
 
-    return students.map((s) => {
-      if (!s.viewablePassword) {
-        return { id: s.id, name: s.name, email: s.email, password: null };
-      }
-      try {
-        const password = this.crypto.decrypt(s.viewablePassword);
-        return { id: s.id, name: s.name, email: s.email, password };
-      } catch {
-        this.logger.warn(`No se pudo descifrar viewablePassword del alumno ${s.id}`);
-        return { id: s.id, name: s.name, email: s.email, password: null };
-      }
+  /** Restablece la contraseña del alumno a la por defecto (sin exponerla) */
+  async resetStudentPassword(tutorId: string, studentId: string) {
+    await this.getStudentForTutor(tutorId, studentId);
+    const passwordHash = await bcrypt.hash(DEFAULT_STUDENT_PASSWORD, 10);
+    await this.prisma.user.update({
+      where: { id: studentId },
+      data: { passwordHash, mustChangePassword: true },
     });
+    return { message: 'Contraseña restablecida a la contraseña por defecto' };
   }
 
   /** Devuelve los cursos en los que está matriculado un alumno del tutor */

@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { TutorsService } from './tutors.service';
+import { AddStudentDto } from './dto/add-student.dto';
 import { User } from '@prisma/client';
 
 class EnrollDto {
@@ -24,10 +25,16 @@ export class TutorsController {
     return this.tutorsService.getMyStudents(user.id);
   }
 
-  @Get('my-students/credentials')
+  @Post('my-students')
   @Roles(Role.TUTOR, Role.ADMIN)
-  getMyStudentsCredentials(@CurrentUser() user: User) {
-    return this.tutorsService.getStudentsCredentials(user.id);
+  addStudent(@Body() dto: AddStudentDto, @CurrentUser() user: User) {
+    return this.tutorsService.addStudent(user.id, dto);
+  }
+
+  @Post('my-students/:studentId/reset-password')
+  @Roles(Role.TUTOR, Role.ADMIN)
+  resetStudentPassword(@Param('studentId') studentId: string, @CurrentUser() user: User) {
+    return this.tutorsService.resetStudentPassword(user.id, studentId);
   }
 
   @Get('my-students/:studentId/courses')
