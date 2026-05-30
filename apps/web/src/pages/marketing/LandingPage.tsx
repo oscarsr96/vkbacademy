@@ -29,60 +29,119 @@ const F = {
   body: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 };
 
-// Merchandising del club
+// Merchandising del club — `icon` referencia una clave del registro SVG (ver ICONS)
 const MERCH = [
-  { icon: '🎨', name: 'Pack de stickers VKB', pts: 100 },
-  { icon: '💧', name: 'Botella termo del club', pts: 200 },
-  { icon: '🧢', name: 'Gorra oficial VKB', pts: 350 },
-  { icon: '👕', name: 'Camiseta oficial del club', pts: 500 },
-  { icon: '🏀', name: 'Balón firmado por el equipo', pts: 1000 },
+  { icon: 'sticker', name: 'Pack de stickers VKB', pts: 100 },
+  { icon: 'bottle', name: 'Botella termo del club', pts: 200 },
+  { icon: 'cap', name: 'Gorra oficial VKB', pts: 350 },
+  { icon: 'shirt', name: 'Camiseta oficial del club', pts: 500 },
+  { icon: 'basketball', name: 'Balón firmado por el equipo', pts: 1000 },
 ];
 
-// Datos de las tarjetas de características — enfocadas en el padre/tutor
+// Datos de las tarjetas de características — enfocadas en el padre/tutor.
+// `icon` referencia una clave del registro de iconos SVG (ver ICONS abajo).
 const FEATURES = [
   {
-    icon: '🎯',
+    icon: 'target',
     title: 'Ejercicios bajo demanda',
     description:
       'Tu hijo/a genera ejercicios al instante de cualquier tema: polinomios, sintaxis, el Renacimiento… La IA crea actividades a su medida, justo cuando las necesita.',
   },
   {
-    icon: '✏️',
+    icon: 'shapes',
     title: 'Aprende jugando',
     description:
       'Cada ejercicio es interactivo: emparejar, ordenar, rellenar huecos o test. Más entretenido que un libro y mil veces más rápido que una ficha.',
   },
   {
-    icon: '📹',
+    icon: 'video',
     title: 'Vídeos curados automáticamente',
     description:
       'Cada práctica se acompaña de los mejores vídeos sobre el tema, seleccionados por la IA. Sin perder horas buscando en YouTube.',
   },
   {
-    icon: '🧠',
+    icon: 'check',
     title: 'Corrección automática',
     description:
       'Tu hijo/a comprueba lo que ha aprendido en el momento, con explicación al fallar. Sin esperar a la próxima clase.',
   },
   {
-    icon: '🎓',
+    icon: 'graduation',
     title: 'Exámenes y certificados',
     description:
       'Al superar los exámenes del club, recibe un certificado digital descargable en PDF que acredita su progreso.',
   },
   {
-    icon: '📅',
+    icon: 'calendar',
     title: 'Reserva clases con sus profes',
     description:
       'Tú gestionas las clases particulares directamente desde la plataforma, tanto presenciales como online.',
   },
   {
-    icon: '📊',
+    icon: 'chart',
     title: 'Tú siempre al tanto',
     description:
       'Como tutor, ves en tiempo real qué ejercicios ha completado, sus resultados y los certificados que ha obtenido.',
   },
 ];
+
+// Registro de iconos SVG (estilo línea, 24×24, heredan color vía currentColor).
+// Sustituyen a los emojis para un acabado profesional y consistente en todas
+// las plataformas (los emojis dependen de la fuente del sistema).
+const ICONS: Record<string, string> = {
+  target:
+    '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/>',
+  shapes:
+    '<path d="M8.3 10a.7.7 0 0 1-.62-1.05l3.7-6.36a.7.7 0 0 1 1.2 0l3.7 6.36A.7.7 0 0 1 15.7 10Z"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><circle cx="17.5" cy="17.5" r="3.5"/>',
+  video: '<path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  check: '<path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/>',
+  graduation:
+    '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/><path d="M22 10v6"/>',
+  calendar:
+    '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/>',
+  chart:
+    '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  trophy:
+    '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+  sticker:
+    '<path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9.5l6.5-6.5V5a2 2 0 0 0-2-2Z"/><path d="M15 21v-4a2 2 0 0 1 2-2h4"/><path d="M9 11h.01"/><path d="M14 11h.01"/><path d="M9.5 14.5s1 1.2 2.5 1.2 2.5-1.2 2.5-1.2"/>',
+  bottle:
+    '<path d="M9 2h6"/><path d="M9.5 2v2.4a3 3 0 0 1-.55 1.73l-.9 1.27A3 3 0 0 0 7.5 9.1V20a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2V9.1a3 3 0 0 0-.55-1.7l-.9-1.27A3 3 0 0 1 14.5 4.4V2"/><path d="M7.5 13h9"/>',
+  cap: '<path d="M4 15a8 6 0 0 1 16 0H4Z"/><path d="M20 15c2.2 0 4 .7 4 1.7 0 .7-.8 1-1.8 1H14"/><path d="M12 9V7"/>',
+  shirt:
+    '<path d="M20.4 3.5 16 2a4 4 0 0 1-8 0L3.6 3.5a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.17a1 1 0 0 0 .99-.84l.58-3.47A2 2 0 0 0 20.4 3.5Z"/>',
+  basketball:
+    '<circle cx="12" cy="12" r="10"/><path d="M4.9 4.9C8 8 8 16 4.9 19.1"/><path d="M19.1 4.9C16 8 16 16 19.1 19.1"/><path d="M2 12h20"/><path d="M12 2v20"/>',
+};
+
+// ── Icono SVG de línea reutilizable ──
+function Icon({
+  name,
+  size = 26,
+  color = 'currentColor',
+  strokeWidth = 1.85,
+}: {
+  name: string;
+  size?: number | string;
+  color?: string;
+  strokeWidth?: number;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      dangerouslySetInnerHTML={{ __html: ICONS[name] ?? '' }}
+    />
+  );
+}
 
 const STATS = [
   { value: '6', label: 'Niveles educativos' },
@@ -153,6 +212,22 @@ export default function LandingPage() {
         }
         .lp-glow-center { animation: lp-glow-pulse 7s ease-in-out infinite; }
         .lp-glow-side   { animation: lp-glow-pulse-side 9s ease-in-out infinite; }
+
+        /* Foco visible para navegación por teclado (accesibilidad) */
+        .lp-focusable:focus-visible {
+          outline: 3px solid ${C.cyanLight};
+          outline-offset: 3px;
+          border-radius: 14px;
+        }
+
+        /* Respeta la preferencia de movimiento reducido del sistema */
+        @media (prefers-reduced-motion: reduce) {
+          .lp-shimmer-text,
+          .lp-glow-center,
+          .lp-glow-side {
+            animation: none !important;
+          }
+        }
 
         @media (max-width: 768px) {
           .lp-hero { min-height: auto !important; padding: 3rem 1.25rem !important; }
@@ -242,6 +317,7 @@ export default function LandingPage() {
           <div style={styles.heroCtas}>
             <button
               onClick={() => navigate('/login')}
+              className="lp-focusable"
               style={styles.ctaPrimary}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLButtonElement;
@@ -262,6 +338,7 @@ export default function LandingPage() {
             <a
               href="#features"
               onClick={handleScrollToFeatures}
+              className="lp-focusable"
               style={styles.ctaSecondary}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(245,145,30,0.14)';
@@ -420,7 +497,17 @@ export default function LandingPage() {
           <div style={styles.sectionHeader}>
             <span style={styles.sectionEyebrow}>Recompensas</span>
             <h2 style={styles.sectionTitle}>
-              🏆 EL ESFUERZO <span style={styles.sectionTitleAccent}>TIENE PREMIO</span>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  verticalAlign: '-0.12em',
+                  marginRight: '0.35em',
+                  color: C.orange,
+                }}
+              >
+                <Icon name="trophy" size="0.85em" color={C.orange} strokeWidth={1.75} />
+              </span>
+              EL ESFUERZO <span style={styles.sectionTitleAccent}>TIENE PREMIO</span>
             </h2>
             <p style={styles.sectionSubtitle}>
               Tu hijo/a gana puntos completando lecciones y retos. Canjéalos por merchandising
@@ -491,6 +578,7 @@ export default function LandingPage() {
           </p>
           <button
             onClick={() => navigate('/login')}
+            className="lp-focusable"
             style={styles.ctaBottomButton}
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLButtonElement;
@@ -550,7 +638,15 @@ function FeatureCard({
         el.style.borderColor = '#e2e8f0';
       }}
     >
-      <span style={featureCardStyle.icon}>{icon}</span>
+      <span
+        style={{
+          ...featureCardStyle.iconChip,
+          background: `rgba(${accentRgb},0.10)`,
+          color: accent,
+        }}
+      >
+        <Icon name={icon} size={26} color={accent} strokeWidth={1.9} />
+      </span>
       <h3 style={featureCardStyle.title}>{title}</h3>
       <p style={featureCardStyle.description}>{description}</p>
     </div>
@@ -576,7 +672,9 @@ function MerchCard({ item }: { item: { icon: string; name: string; pts: number }
         el.style.borderColor = '#e2e8f0';
       }}
     >
-      <span style={merchCardStyle.icon}>{item.icon}</span>
+      <span style={merchCardStyle.iconChip}>
+        <Icon name={item.icon} size={30} color={C.orange} strokeWidth={1.75} />
+      </span>
       <span style={merchCardStyle.name}>{item.name}</span>
       <span style={merchCardStyle.pts}>{item.pts.toLocaleString('es-ES')} pts</span>
     </div>
@@ -596,9 +694,14 @@ const featureCardStyle: Record<string, React.CSSProperties> = {
     cursor: 'default',
     boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
   },
-  icon: {
-    fontSize: '2.5rem',
-    lineHeight: 1,
+  iconChip: {
+    width: 54,
+    height: 54,
+    borderRadius: 15,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   title: {
     fontSize: '1.0625rem',
@@ -632,9 +735,15 @@ const merchCardStyle: Record<string, React.CSSProperties> = {
     cursor: 'default',
     boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
   },
-  icon: {
-    fontSize: '2.25rem',
-    lineHeight: 1,
+  iconChip: {
+    width: 56,
+    height: 56,
+    borderRadius: '50%',
+    background: 'rgba(245,145,30,0.10)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   name: {
     fontSize: '0.825rem',
