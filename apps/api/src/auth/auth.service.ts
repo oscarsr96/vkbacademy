@@ -317,6 +317,16 @@ export class AuthService {
     return { message: 'Contraseña actualizada correctamente' };
   }
 
+  /** Cambia la contraseña del usuario autenticado y limpia el flag de cambio obligatorio */
+  async changePassword(userId: string, newPassword: string): Promise<{ message: string }> {
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: false },
+    });
+    return { message: 'Contraseña actualizada correctamente' };
+  }
+
   private async generateTokens(payload: JwtPayload): Promise<AuthTokens> {
     const accessToken = this.jwtService.sign(payload);
 

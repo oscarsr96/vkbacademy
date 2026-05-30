@@ -448,4 +448,20 @@ describe('AuthService', () => {
       });
     });
   });
+
+  // ─── changePassword: cambio de contraseña del usuario autenticado ────────────
+
+  describe('changePassword', () => {
+    it('hashea la nueva contraseña y limpia mustChangePassword', async () => {
+      (bcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$new');
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.changePassword('user-1', 'nuevaPass123');
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { passwordHash: '$2b$10$new', mustChangePassword: false },
+      });
+    });
+  });
 });
