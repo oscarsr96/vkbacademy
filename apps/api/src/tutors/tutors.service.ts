@@ -1,4 +1,4 @@
-import { Injectable, Logger, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, ForbiddenException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsernameService } from '../username/username.service';
@@ -6,8 +6,6 @@ import { DEFAULT_STUDENT_PASSWORD } from '../auth/auth.constants';
 
 @Injectable()
 export class TutorsService {
-  private readonly logger = new Logger(TutorsService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly usernames: UsernameService,
@@ -56,6 +54,13 @@ export class TutorsService {
     });
     if (!tutor) throw new ForbiddenException('Tutor no encontrado');
 
+    // Los niveles educativos son globales: validar que exista
+    const schoolYear = await this.prisma.schoolYear.findUnique({
+      where: { id: dto.schoolYearId },
+      select: { id: true },
+    });
+    if (!schoolYear) throw new BadRequestException('Nivel educativo no encontrado');
+
     const [username] = await this.usernames.allocate([dto.name]);
     const passwordHash = await bcrypt.hash(DEFAULT_STUDENT_PASSWORD, 10);
     const academyId = tutor.academyMembers[0]?.academyId ?? null;
@@ -68,7 +73,7 @@ export class TutorsService {
         name: dto.name,
         role: 'STUDENT',
         tutorId,
-        ...(dto.schoolYearId ? { schoolYearId: dto.schoolYearId } : {}),
+        schoolYearId: dto.schoolYearId,
         ...(academyId ? { academyMembers: { create: { academyId } } } : {}),
       },
       select: {

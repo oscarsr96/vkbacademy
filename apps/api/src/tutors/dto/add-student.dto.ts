@@ -6,7 +6,7 @@ export class AddStudentDto {
   @MaxLength(100)
   name: string;
 
-  @IsString({ message: 'Debes indicar el curso del alumno' })
-  @MinLength(1, { message: 'Debes indicar el curso del alumno' })
+  @IsString({ message: 'Debes indicar el nivel del alumno' })
+  @MinLength(1, { message: 'Debes indicar el nivel del alumno' })
   schoolYearId: string;
 }

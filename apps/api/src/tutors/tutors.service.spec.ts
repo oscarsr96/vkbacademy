@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, BadRequestException } from '@nestjs/common';
 import { TutorsService } from './tutors.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsernameService } from '../username/username.service';
@@ -41,6 +41,9 @@ const mockPrisma = {
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+  },
+  schoolYear: {
+    findUnique: jest.fn(),
   },
   enrollment: {
     findMany: jest.fn(),
@@ -454,6 +457,7 @@ describe('TutorsService', () => {
         role: 'TUTOR',
         academyMembers: [{ academyId: 'ac1' }],
       });
+      mockPrisma.schoolYear.findUnique.mockResolvedValue({ id: 'sy1' });
       mockUsername.allocate.mockResolvedValue(['nuevo-alumno']);
       mockPrisma.user.create.mockResolvedValue({
         id: 'new1',
@@ -474,6 +478,25 @@ describe('TutorsService', () => {
       expect(createArg.data.mustChangePassword).toBe(true);
       expect(createArg.data.academyMembers.create.academyId).toBe('ac1');
       expect(result.username).toBe('nuevo-alumno');
+    });
+
+    it('lanza ForbiddenException si el tutor no existe', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      await expect(
+        service.addStudent(TUTOR_ID, { name: 'X', schoolYearId: 'sy1' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('lanza BadRequestException si el nivel no existe', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: TUTOR_ID,
+        role: 'TUTOR',
+        academyMembers: [{ academyId: 'ac1' }],
+      });
+      mockPrisma.schoolYear = { findUnique: jest.fn().mockResolvedValue(null) };
+      await expect(
+        service.addStudent(TUTOR_ID, { name: 'X', schoolYearId: 'nope' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
