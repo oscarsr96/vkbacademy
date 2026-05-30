@@ -17,7 +17,7 @@ import { LessonType, QuestionType, Role } from '@vkbacademy/shared';
 
 export interface AdminUser {
   id: string;
-  email: string;
+  email: string | null;
   name: string;
   role: Role;
   avatarUrl?: string | null;
@@ -148,7 +148,7 @@ export interface CourseActivity {
 export interface StudentActivity {
   studentId: string;
   name: string;
-  email: string;
+  email: string | null;
   completedLessons: number;
   quizAttempts: number;
   avgScore: number;
@@ -169,7 +169,7 @@ export interface TeacherActivity {
 export interface AtRiskStudent {
   studentId: string;
   name: string;
-  email: string;
+  email: string | null;
   daysSinceLastActivity: number | null;
 }
 

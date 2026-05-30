@@ -3,7 +3,7 @@ import api from '../lib/axios';
 export interface StudentSummary {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   username?: string | null;
   avatarUrl?: string | null;
   totalPoints: number;
@@ -42,7 +42,7 @@ export interface StudentStats {
   student: {
     id: string;
     name: string;
-    email: string;
+    email: string | null;
     username?: string | null;
     avatarUrl?: string | null;
     schoolYear?: { id: string; name: string; label: string } | null;
