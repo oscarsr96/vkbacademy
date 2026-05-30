@@ -14,34 +14,79 @@ interface AcademyPublic {
   isActive: boolean;
 }
 
+// Registro de iconos SVG (estilo línea, 24×24, heredan color vía currentColor).
+// Sustituyen a los emojis para un acabado profesional y consistente entre
+// plataformas (los emojis dependen de la fuente del sistema).
+const ICONS: Record<string, string> = {
+  video: '<path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  shapes:
+    '<path d="M8.3 10a.7.7 0 0 1-.62-1.05l3.7-6.36a.7.7 0 0 1 1.2 0l3.7 6.36A.7.7 0 0 1 15.7 10Z"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><circle cx="17.5" cy="17.5" r="3.5"/>',
+  check: '<path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/>',
+  graduation:
+    '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/><path d="M22 10v6"/>',
+  calendar:
+    '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/>',
+  chart:
+    '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+};
+
+// ── Icono SVG de línea reutilizable ──
+function Icon({
+  name,
+  size = 26,
+  color = 'currentColor',
+  strokeWidth = 1.85,
+}: {
+  name: string;
+  size?: number | string;
+  color?: string;
+  strokeWidth?: number;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      dangerouslySetInnerHTML={{ __html: ICONS[name] ?? '' }}
+    />
+  );
+}
+
 const FEATURES = [
   {
-    icon: '📹',
+    icon: 'video',
     title: 'Lecciones en vídeo',
     desc: 'Contenido actualizado con los mejores vídeos de cada temática.',
   },
   {
-    icon: '✏️',
+    icon: 'shapes',
     title: 'Aprende jugando',
     desc: 'Lecciones interactivas con ejercicios de emparejamiento, ordenación y rellenar huecos.',
   },
   {
-    icon: '🧠',
+    icon: 'check',
     title: 'Tests con corrección automática',
     desc: 'Comprueba lo que ha aprendido en el momento, sin esperar a la próxima clase.',
   },
   {
-    icon: '🎓',
+    icon: 'graduation',
     title: 'Exámenes y certificados',
     desc: 'Al superar los exámenes, recibe un certificado digital descargable en PDF.',
   },
   {
-    icon: '📅',
+    icon: 'calendar',
     title: 'Reserva clases particulares',
     desc: 'Gestiona clases particulares directamente desde la plataforma, presenciales u online.',
   },
   {
-    icon: '📊',
+    icon: 'chart',
     title: 'Seguimiento en tiempo real',
     desc: 'Ve qué lecciones ha completado, sus resultados y los certificados obtenidos.',
   },
@@ -125,6 +170,13 @@ export default function AcademyLandingPage() {
         .acad-hamburger { display: none; }
         .acad-mobile-menu { display: none; }
 
+        /* Foco visible para navegación por teclado (accesibilidad) */
+        .acad-focusable:focus-visible {
+          outline: 3px solid ${color};
+          outline-offset: 3px;
+          border-radius: 12px;
+        }
+
         @media (max-width: 768px) {
           .acad-nav-links { display: none !important; }
           .acad-nav-actions { display: none !important; }
@@ -201,7 +253,9 @@ export default function AcademyLandingPage() {
         <div style={{ position: 'relative', maxWidth: 720, margin: '0 auto' }}>
           <span
             style={{
-              display: 'inline-block',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
               background: `${color}18`,
               border: `1px solid ${color}33`,
               borderRadius: 20,
@@ -212,7 +266,17 @@ export default function AcademyLandingPage() {
               marginBottom: 24,
             }}
           >
-            🏀 {academy.name}
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: color,
+                boxShadow: `0 0 10px ${color}`,
+                flexShrink: 0,
+              }}
+            />
+            {academy.name}
           </span>
 
           <h1
@@ -245,11 +309,13 @@ export default function AcademyLandingPage() {
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={() => navigate(`/register?academy=${slug}`)}
+              className="acad-focusable"
               style={{ ...btnPrimary(color), padding: '14px 32px', fontSize: '1.05rem' }}
             >
               Registrarse gratis
             </button>
             <button
+              className="acad-focusable"
               onClick={() => {
                 const el = document.getElementById('features');
                 el?.scrollIntoView({ behavior: 'smooth' });
@@ -339,7 +405,20 @@ export default function AcademyLandingPage() {
                   padding: '28px 24px',
                 }}
               >
-                <div style={{ fontSize: '2rem', marginBottom: 12 }}>{f.icon}</div>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 14,
+                    background: `${color}1a`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 16,
+                  }}
+                >
+                  <Icon name={f.icon} size={26} color={color} strokeWidth={1.9} />
+                </div>
                 <h3
                   style={{
                     color: '#f1f5f9',
@@ -389,6 +468,7 @@ export default function AcademyLandingPage() {
           </p>
           <button
             onClick={() => navigate(`/register?academy=${slug}`)}
+            className="acad-focusable"
             style={{ ...btnPrimary(color), padding: '14px 36px', fontSize: '1.05rem' }}
           >
             Crear cuenta gratis
