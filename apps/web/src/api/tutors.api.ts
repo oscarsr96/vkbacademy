@@ -4,6 +4,7 @@ export interface StudentSummary {
   id: string;
   name: string;
   email: string;
+  username?: string | null;
   avatarUrl?: string | null;
   totalPoints: number;
   currentStreak: number;
@@ -42,6 +43,7 @@ export interface StudentStats {
     id: string;
     name: string;
     email: string;
+    username?: string | null;
     avatarUrl?: string | null;
     schoolYear?: { id: string; name: string; label: string } | null;
     totalPoints: number;
@@ -87,18 +89,16 @@ export interface AvailableCourse {
   enrolled: boolean;
 }
 
-export interface StudentCredential {
-  id: string;
-  name: string;
-  email: string;
-  password: string | null;
-}
-
 export const tutorsApi = {
   getMyStudents: () => api.get<StudentSummary[]>('/tutors/my-students').then((r) => r.data),
 
-  getStudentsCredentials: () =>
-    api.get<StudentCredential[]>('/tutors/my-students/credentials').then((r) => r.data),
+  addStudent: (name: string, schoolYearId: string) =>
+    api.post<StudentSummary>('/tutors/my-students', { name, schoolYearId }).then((r) => r.data),
+
+  resetStudentPassword: (studentId: string) =>
+    api
+      .post<{ message: string }>(`/tutors/my-students/${studentId}/reset-password`)
+      .then((r) => r.data),
 
   getStudentCourses: (studentId: string) =>
     api.get<EnrolledCourse[]>(`/tutors/my-students/${studentId}/courses`).then((r) => r.data),

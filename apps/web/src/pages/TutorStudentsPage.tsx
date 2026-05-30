@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { StudentCredentialsTable } from '../components/tutor/StudentCredentialsTable';
+import { StudentAccessPanel } from '../components/tutor/StudentAccessPanel';
 import {
   tutorsApi,
   type StudentSummary,
@@ -412,7 +412,7 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
         <div style={S.studentHeaderInfo}>
           <div style={S.studentHeaderName}>{stats.student.name}</div>
           <div style={S.studentHeaderMeta}>
-            {stats.student.email}
+            {stats.student.username ?? '—'}
             {stats.student.schoolYear && ` · ${stats.student.schoolYear.label}`}
             {` · Miembro desde ${memberSince}`}
           </div>
@@ -880,7 +880,7 @@ export default function TutorStudentsPage() {
       {/* ── Panel de detalle ── */}
       {!selected ? (
         <div style={{ ...S.empty, display: 'block', padding: '2rem' }}>
-          <StudentCredentialsTable />
+          <StudentAccessPanel />
           <div style={{ textAlign: 'center', marginTop: '2rem', color: '#94a3b8' }}>
             <span style={{ fontSize: '2rem' }}>👈</span>
             <p style={{ ...S.emptyText, marginTop: '0.5rem' }}>
