@@ -1,11 +1,4 @@
-import {
-  createApp,
-  closeApp,
-  login,
-  publicPost,
-  authPost,
-  getPrisma,
-} from './setup';
+import { createApp, closeApp, login, publicGet, publicPost, authPost, getPrisma } from './setup';
 
 describe('Auth — /auth', () => {
   beforeAll(async () => {
@@ -279,6 +272,173 @@ describe('Auth — /auth', () => {
       });
 
       expect([400, 401, 404]).toContain(res.status);
+    });
+  });
+
+  // ─── Registro de tutor con alumnos ───────────────────────────────────────────
+
+  describe('POST /auth/register-tutor', () => {
+    let schoolYearId: string;
+
+    beforeAll(async () => {
+      // Los niveles son públicos; tomamos uno para asignarlo a los alumnos
+      const res = await publicGet('/school-years');
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+      schoolYearId = res.body[0].id;
+    });
+
+    it('registra un tutor con un alumno y hace auto-login del tutor', async () => {
+      const res = await publicPost('/auth/register-tutor', {
+        name: 'tutor-e2e',
+        email: 'tutor.e2e@test.com',
+        password: 'password123',
+        academySlug: 'vallekas-basket',
+        students: [{ name: 'alumno-e2e-uno', schoolYearId }],
+      });
+
+      expect(res.status).toBe(201);
+      // Auto-login del tutor: tokens + usuario tutor
+      expect(res.body).toHaveProperty('accessToken');
+      expect(res.body).toHaveProperty('refreshToken');
+      expect(res.body.user.role).toBe('TUTOR');
+      expect(res.body.user.email).toBe('tutor.e2e@test.com');
+      // La respuesta NO expone contraseñas ni datos por alumno
+      expect(res.body).not.toHaveProperty('students');
+      expect(res.body).not.toHaveProperty('password');
+      expect(res.body.user).not.toHaveProperty('passwordHash');
+    });
+
+    it('el alumno creado no tiene email y se autentica por username con la contraseña por defecto', async () => {
+      const prisma = getPrisma();
+      const student = await prisma.user.findFirst({
+        where: { name: 'alumno-e2e-uno', role: 'STUDENT' },
+        select: { email: true, username: true, mustChangePassword: true },
+      });
+
+      expect(student).not.toBeNull();
+      expect(student!.email).toBeNull();
+      expect(student!.username).toBeTruthy();
+      expect(student!.mustChangePassword).toBe(true);
+
+      // Login del alumno por username con la contraseña por defecto 'cambiar123'
+      const loginRes = await publicPost('/auth/login', {
+        identifier: student!.username,
+        password: 'cambiar123',
+      });
+
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body).toHaveProperty('accessToken');
+      expect(loginRes.body.user.role).toBe('STUDENT');
+    });
+
+    it('devuelve 409 si el email del tutor ya está registrado', async () => {
+      const res = await publicPost('/auth/register-tutor', {
+        name: 'tutor-duplicado',
+        email: 'tutor.e2e@test.com',
+        password: 'password123',
+        academySlug: 'vallekas-basket',
+        students: [{ name: 'alumno-duplicado', schoolYearId }],
+      });
+
+      expect(res.status).toBe(409);
+    });
+
+    it('devuelve 400 si no se registra ningún alumno', async () => {
+      const res = await publicPost('/auth/register-tutor', {
+        name: 'tutor-sin-alumnos',
+        email: 'tutor.sin.alumnos@test.com',
+        password: 'password123',
+        academySlug: 'vallekas-basket',
+        students: [],
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('devuelve 404 si la academia no existe', async () => {
+      const res = await publicPost('/auth/register-tutor', {
+        name: 'tutor-academia-invalida',
+        email: 'tutor.academia.invalida@test.com',
+        password: 'password123',
+        academySlug: 'academia-que-no-existe',
+        students: [{ name: 'alumno-x', schoolYearId }],
+      });
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ─── Cambio de contraseña forzado ────────────────────────────────────────────
+
+  describe('POST /auth/change-password', () => {
+    let schoolYearId: string;
+
+    beforeAll(async () => {
+      const res = await publicGet('/school-years');
+      schoolYearId = res.body[0].id;
+    });
+
+    it('un alumno con mustChangePassword puede cambiar su contraseña y luego usarla', async () => {
+      // Registrar un tutor con un alumno fresco
+      await publicPost('/auth/register-tutor', {
+        name: 'tutor-cambio-pass',
+        email: 'tutor.cambio.pass@test.com',
+        password: 'password123',
+        academySlug: 'vallekas-basket',
+        students: [{ name: 'alumno-cambio-pass', schoolYearId }],
+      });
+
+      const prisma = getPrisma();
+      const student = await prisma.user.findFirst({
+        where: { name: 'alumno-cambio-pass', role: 'STUDENT' },
+        select: { username: true },
+      });
+      expect(student?.username).toBeTruthy();
+
+      // Login con la contraseña por defecto
+      const loginRes = await publicPost('/auth/login', {
+        identifier: student!.username,
+        password: 'cambiar123',
+      });
+      expect(loginRes.status).toBe(200);
+      const token = loginRes.body.accessToken;
+
+      // Cambio de contraseña (permitido pese a mustChangePassword)
+      const changeRes = await authPost('/auth/change-password', token, {
+        newPassword: 'nuevaPassword123',
+      });
+      expect(changeRes.status).toBe(200);
+      expect(changeRes.body).toHaveProperty('message');
+
+      // La nueva contraseña funciona; la antigua ya no
+      const newLogin = await publicPost('/auth/login', {
+        identifier: student!.username,
+        password: 'nuevaPassword123',
+      });
+      expect(newLogin.status).toBe(200);
+
+      const oldLogin = await publicPost('/auth/login', {
+        identifier: student!.username,
+        password: 'cambiar123',
+      });
+      expect(oldLogin.status).toBe(401);
+    });
+
+    it('devuelve 401 sin token', async () => {
+      const res = await authPost('/auth/change-password', '', {
+        newPassword: 'nuevaPassword123',
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('devuelve 400 si la nueva contraseña es demasiado corta', async () => {
+      const { accessToken } = await login('student@vkbacademy.com');
+      const res = await authPost('/auth/change-password', accessToken, {
+        newPassword: '123',
+      });
+      expect(res.status).toBe(400);
     });
   });
 });
