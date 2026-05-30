@@ -207,7 +207,8 @@ export default function RegisterPage() {
                     required
                   />
                   <span style={s.fieldHint}>
-                    Le crearemos un usuario y contraseña automáticos. Te llegarán por email.
+                    Le crearemos un usuario de acceso. La primera vez entrará con la contraseña{' '}
+                    <code>cambiar123</code> y deberá cambiarla.
                   </span>
                 </div>
 
