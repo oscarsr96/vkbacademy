@@ -18,7 +18,7 @@ const ROLE_LABELS: Record<string, string> = {
 function PersonalDataSection({ user }: { user: User }) {
   const setUser = useAuthStore((s) => s.setUser);
   const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
+  const [email, setEmail] = useState(user.email ?? '');
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -54,7 +54,10 @@ function PersonalDataSection({ user }: { user: User }) {
           <label>Nombre completo</label>
           <input
             value={name}
-            onChange={(e) => { setName(e.target.value); setStatus('idle'); }}
+            onChange={(e) => {
+              setName(e.target.value);
+              setStatus('idle');
+            }}
             required
           />
         </div>
@@ -63,15 +66,14 @@ function PersonalDataSection({ user }: { user: User }) {
           <input
             type="email"
             value={email}
-            onChange={(e) => { setEmail(e.target.value); setStatus('idle'); }}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setStatus('idle');
+            }}
             required
           />
         </div>
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={isPending || unchanged}
-        >
+        <button type="submit" className="btn btn-primary" disabled={isPending || unchanged}>
           {isPending ? 'Guardando...' : 'Guardar cambios'}
         </button>
         {status === 'success' && (
@@ -102,7 +104,9 @@ function ChangePasswordSection() {
     mutationFn: () => usersApi.updateProfile({ password: newPass }),
     onSuccess: () => {
       setStatus('success');
-      setCurrent(''); setNewPass(''); setConfirm('');
+      setCurrent('');
+      setNewPass('');
+      setConfirm('');
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -139,7 +143,10 @@ function ChangePasswordSection() {
           <input
             type="password"
             value={current}
-            onChange={(e) => { setCurrent(e.target.value); setStatus('idle'); }}
+            onChange={(e) => {
+              setCurrent(e.target.value);
+              setStatus('idle');
+            }}
             placeholder="••••••••"
           />
         </div>
@@ -148,7 +155,10 @@ function ChangePasswordSection() {
           <input
             type="password"
             value={newPass}
-            onChange={(e) => { setNewPass(e.target.value); setStatus('idle'); }}
+            onChange={(e) => {
+              setNewPass(e.target.value);
+              setStatus('idle');
+            }}
             placeholder="••••••••"
           />
         </div>
@@ -157,15 +167,14 @@ function ChangePasswordSection() {
           <input
             type="password"
             value={confirm}
-            onChange={(e) => { setConfirm(e.target.value); setStatus('idle'); }}
+            onChange={(e) => {
+              setConfirm(e.target.value);
+              setStatus('idle');
+            }}
             placeholder="••••••••"
           />
         </div>
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={isPending || !newPass}
-        >
+        <button type="submit" className="btn btn-primary" disabled={isPending || !newPass}>
           {isPending ? 'Actualizando...' : 'Cambiar contraseña'}
         </button>
         {status === 'success' && (
