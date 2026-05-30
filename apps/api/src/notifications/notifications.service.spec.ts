@@ -88,9 +88,7 @@ describe('NotificationsService', () => {
     });
 
     it('sendBookingCreated no lanza ningún error cuando resend es null', async () => {
-      await expect(
-        service.sendBookingCreated(BOOKING_CREATED_PARAMS),
-      ).resolves.toBeUndefined();
+      await expect(service.sendBookingCreated(BOOKING_CREATED_PARAMS)).resolves.toBeUndefined();
     });
   });
 
@@ -146,9 +144,7 @@ describe('NotificationsService', () => {
         .mockRejectedValueOnce(new Error('SMTP error'));
 
       // Promise.allSettled nunca rechaza; el servicio no debe propagar el error
-      await expect(
-        service.sendBookingConfirmed(BOOKING_CONFIRMED_PARAMS),
-      ).resolves.not.toThrow();
+      await expect(service.sendBookingConfirmed(BOOKING_CONFIRMED_PARAMS)).resolves.not.toThrow();
 
       expect(mockSend).toHaveBeenCalledTimes(2);
     });
@@ -156,9 +152,7 @@ describe('NotificationsService', () => {
     it('sendBookingCancelled envía un email por cada entrada en notifyEmails', async () => {
       await service.sendBookingCancelled(BOOKING_CANCELLED_PARAMS);
 
-      expect(mockSend).toHaveBeenCalledTimes(
-        BOOKING_CANCELLED_PARAMS.notifyEmails.length,
-      );
+      expect(mockSend).toHaveBeenCalledTimes(BOOKING_CANCELLED_PARAMS.notifyEmails.length);
 
       const recipients = mockSend.mock.calls.map((call) => call[0].to as string);
       expect(recipients).toContain('tutor@vkb.com');
@@ -176,9 +170,7 @@ describe('NotificationsService', () => {
       });
 
       expect(mockSend).toHaveBeenCalledTimes(1);
-      const [{ html, subject }] = mockSend.mock.calls[0] as [
-        { html: string; subject: string },
-      ];
+      const [{ html, subject }] = mockSend.mock.calls[0] as [{ html: string; subject: string }];
       expect(subject).toBe('Restablecer contraseña — VKB Academy');
       expect(html).toContain(resetUrl);
     });
@@ -194,9 +186,7 @@ describe('NotificationsService', () => {
     it('sendEmail utiliza el from configurado en EMAIL_FROM', async () => {
       await service.sendEmail('dest@test.com', 'Asunto', '<p>HTML</p>');
 
-      expect(mockSend).toHaveBeenCalledWith(
-        expect.objectContaining({ from: 'test@vkb.com' }),
-      );
+      expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({ from: 'test@vkb.com' }));
     });
 
     it('sendBookingCancelled con lista vacía no invoca send', async () => {
@@ -206,6 +196,30 @@ describe('NotificationsService', () => {
       });
 
       expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('sendTutorWelcomeWithStudents incluye username y contraseña por defecto en el HTML', async () => {
+      await service.sendTutorWelcomeWithStudents({
+        tutorEmail: 't@x.com',
+        tutorName: 'Tutor',
+        tutorPassword: 'pass1234',
+        students: [{ name: 'Juan', username: 'juan' }],
+        defaultPassword: 'cambiar123',
+        academyName: 'VKB',
+        loginUrl: 'http://x/login',
+      });
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const [{ html }] = mockSend.mock.calls[0] as [{ html: string }];
+
+      // Muestra el nombre y el username del alumno
+      expect(html).toContain('Juan');
+      expect(html).toContain('juan');
+      // Una sola contraseña por defecto para todos los alumnos
+      expect(html).toContain('cambiar123');
+      // Credenciales del tutor
+      expect(html).toContain('t@x.com');
+      expect(html).toContain('pass1234');
     });
   });
 });

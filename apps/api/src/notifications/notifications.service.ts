@@ -136,15 +136,16 @@ export class NotificationsService {
   }
 
   /**
-   * Email único al tutor con TODAS las credenciales: las suyas + las de cada
-   * alumno (email autogenerado + contraseña aleatoria). Los alumnos no
-   * reciben email propio porque a esta edad no suelen tener cuenta personal.
+   * Email único al tutor con sus credenciales + los accesos de cada alumno.
+   * Cada alumno entra con su `username` y una `defaultPassword` común que debe
+   * cambiar en el primer acceso — no se exponen contraseñas individuales.
    */
   async sendTutorWelcomeWithStudents(params: {
     tutorEmail: string;
     tutorName: string;
     tutorPassword: string;
-    students: Array<{ name: string; email: string; password: string }>;
+    students: Array<{ name: string; username: string }>;
+    defaultPassword: string;
     academyName: string;
     loginUrl: string;
   }) {
@@ -153,22 +154,21 @@ export class NotificationsService {
         (s) => `
          <tr>
            <td style="padding:8px 14px;border-bottom:1px solid #eee">${s.name}</td>
-           <td style="padding:8px 14px;border-bottom:1px solid #eee"><code>${s.email}</code></td>
-           <td style="padding:8px 14px;border-bottom:1px solid #eee"><code>${s.password}</code></td>
+           <td style="padding:8px 14px;border-bottom:1px solid #eee"><code>${s.username}</code></td>
          </tr>`,
       )
       .join('');
 
     const studentsBlock =
       params.students.length > 0
-        ? `<h3 style="margin-top:2rem">Credenciales de tus alumnos</h3>
-       <p>Cada alumno entra con su propio usuario y contraseña — guárdalas o compártelas con ellos:</p>
+        ? `<h3 style="margin-top:2rem">Accesos de tus alumnos</h3>
+       <p>Cada alumno entra con su <strong>usuario</strong> y la contraseña por defecto
+          <code>${params.defaultPassword}</code>. En el primer acceso deberá cambiarla.</p>
        <table style="border-collapse:collapse;margin:1rem 0;width:100%;max-width:560px">
          <thead>
            <tr style="background:#f8fafc">
              <th style="padding:10px 14px;text-align:left;color:#475569;font-size:0.85rem">Alumno</th>
              <th style="padding:10px 14px;text-align:left;color:#475569;font-size:0.85rem">Usuario</th>
-             <th style="padding:10px 14px;text-align:left;color:#475569;font-size:0.85rem">Contraseña</th>
            </tr>
          </thead>
          <tbody>${studentRows}</tbody>
@@ -193,8 +193,7 @@ export class NotificationsService {
          <a href="${params.loginUrl}" style="background:#f5911e;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
            Acceder a la plataforma
          </a>
-       </p>
-       <p style="color:#666;font-size:0.875rem">Os recomendamos cambiar las contraseñas tras el primer acceso.</p>`,
+       </p>`,
     );
   }
 
