@@ -18,6 +18,10 @@ export default function ChangePasswordPage() {
       if (user) setUser({ ...user, mustChangePassword: false });
       navigate('/dashboard', { replace: true });
     },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg ?? 'No se pudo cambiar la contraseña. Inténtalo de nuevo.');
+    },
   });
 
   function handleSubmit(e: FormEvent) {
