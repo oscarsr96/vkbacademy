@@ -17,8 +17,6 @@ function buildNavLinks(role: Role | undefined): NavLink[] {
       ...base,
       { to: '/tutor/students', label: '👥 Mis alumnos' },
       { to: '/bookings', label: '📅 Reservas' },
-      { to: '/challenges', label: '🏆 Retos' },
-      { to: '/certificates', label: '📜 Certificados' },
       { to: '/profile', label: '👤 Mi perfil' },
     ];
   }
