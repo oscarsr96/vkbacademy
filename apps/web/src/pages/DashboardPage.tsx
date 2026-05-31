@@ -1,16 +1,22 @@
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/auth.store';
 import { Role } from '@vkbacademy/shared';
 import { useChallengeSummary } from '../hooks/useChallenges';
+import { tutorsApi, type StudentSummary } from '../api/tutors.api';
+
+const ORANGE = '#ea580c';
 
 const ROLE_LABELS: Record<string, string> = {
   [Role.STUDENT]: 'Estudiante',
+  [Role.TUTOR]: 'Tutor',
   [Role.TEACHER]: 'Profesor',
   [Role.ADMIN]: 'Administrador',
 };
 
 const ROLE_DESCRIPTION: Record<string, string> = {
   [Role.STUDENT]: 'Practica con teoría y ejercicios bajo demanda, y reserva clases particulares.',
+  [Role.TUTOR]: 'Consulta el progreso de tus alumnos y gestiona sus reservas de clases.',
   [Role.TEACHER]: 'Gestiona tus cursos, sube contenido y consulta las reservas de tus alumnos.',
   [Role.ADMIN]: 'Administra usuarios, cursos y visualiza las métricas globales de la plataforma.',
 };
@@ -19,6 +25,7 @@ export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const isStudent = user?.role === Role.STUDENT;
+  const isTutor = user?.role === Role.TUTOR;
   const { data: summary } = useChallengeSummary();
 
   if (!user) return null;
@@ -96,19 +103,29 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Accesos rápidos */}
-      <section>
-        <h2 style={S.sectionTitle}>Accesos rápidos</h2>
-        <div style={S.grid}>
-          {quickActions.map(({ emoji, label, desc, to }) => (
-            <div key={label} className="vkb-card" style={S.quickCard} onClick={() => navigate(to)}>
-              <span style={S.cardEmoji}>{emoji}</span>
-              <p style={S.cardLabel}>{label}</p>
-              <p style={S.cardDesc}>{desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Métricas de los alumnos — solo para TUTOR */}
+      {isTutor && <TutorStudentsOverview onOpenStudents={() => navigate('/tutor/students')} />}
+
+      {/* Accesos rápidos — todos los roles salvo TUTOR */}
+      {!isTutor && (
+        <section>
+          <h2 style={S.sectionTitle}>Accesos rápidos</h2>
+          <div style={S.grid}>
+            {quickActions.map(({ emoji, label, desc, to }) => (
+              <div
+                key={label}
+                className="vkb-card"
+                style={S.quickCard}
+                onClick={() => navigate(to)}
+              >
+                <span style={S.cardEmoji}>{emoji}</span>
+                <p style={S.cardLabel}>{label}</p>
+                <p style={S.cardDesc}>{desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Tu cuenta */}
       <section>
@@ -126,6 +143,79 @@ export default function DashboardPage() {
   );
 
   return <div style={S.page}>{mainContent}</div>;
+}
+
+// ─── Tutor: resumen de métricas de sus alumnos ──────────────────────────────────
+
+function TutorStudentsOverview({ onOpenStudents }: { onOpenStudents: () => void }) {
+  const { data: students, isLoading } = useQuery({
+    queryKey: ['tutor', 'my-students'],
+    queryFn: tutorsApi.getMyStudents,
+  });
+
+  return (
+    <section>
+      <h2 style={S.sectionTitle}>Mis alumnos</h2>
+      {isLoading ? (
+        <div className="vkb-card" style={S.tutorEmpty}>
+          Cargando alumnos…
+        </div>
+      ) : !students || students.length === 0 ? (
+        <div className="vkb-card" style={S.tutorEmpty}>
+          Aún no tienes alumnos asignados.
+        </div>
+      ) : (
+        <div style={S.grid}>
+          {students.map((student) => (
+            <StudentMetricCard key={student.id} student={student} onClick={onOpenStudents} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function StudentMetricCard({ student, onClick }: { student: StudentSummary; onClick: () => void }) {
+  // Reutiliza la misma queryKey que TutorStudentsPage (period "Todo" → from/to undefined),
+  // de modo que abrir el detalle del alumno sea un acierto de caché instantáneo.
+  const { data: stats } = useQuery({
+    queryKey: ['tutor', 'stats', student.id, undefined, undefined],
+    queryFn: () => tutorsApi.getStudentStats(student.id),
+  });
+
+  const lessons = stats ? String(stats.lessons.completedAllTime) : '—';
+  const examAvg = stats?.exams.avgScore != null ? `${stats.exams.avgScore}%` : '—';
+
+  return (
+    <div className="vkb-card" style={S.studentCard} onClick={onClick}>
+      <div style={S.studentCardHead}>
+        <div style={S.studentAvatar}>{student.name.charAt(0).toUpperCase()}</div>
+        <div style={{ minWidth: 0 }}>
+          <p style={S.studentName}>{student.name}</p>
+          <p style={S.studentLevel}>{student.schoolYear?.label ?? 'Sin nivel'}</p>
+        </div>
+      </div>
+
+      <div style={S.miniKpiGrid}>
+        <MiniKpi icon="⭐" label="Puntos" value={String(student.totalPoints)} />
+        <MiniKpi icon="🔥" label="Racha" value={`${student.currentStreak} sem`} />
+        <MiniKpi icon="📚" label="Lecciones" value={lessons} />
+        <MiniKpi icon="📝" label="Nota media" value={examAvg} />
+      </div>
+
+      <span style={S.studentLink}>Ver detalle →</span>
+    </div>
+  );
+}
+
+function MiniKpi({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <div style={S.miniKpi}>
+      <span style={S.miniKpiIcon}>{icon}</span>
+      <span style={S.miniKpiValue}>{value}</span>
+      <span style={S.miniKpiLabel}>{label}</span>
+    </div>
+  );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -239,4 +329,77 @@ const S: Record<string, React.CSSProperties> = {
   cardEmoji: { fontSize: '2.5rem', lineHeight: 1, marginBottom: 4 },
   cardLabel: { fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text)', margin: 0 },
   cardDesc: { fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 },
+
+  // Tutor — resumen de alumnos
+  tutorEmpty: {
+    padding: '20px 24px',
+    fontSize: '0.875rem',
+    color: 'var(--color-text-muted)',
+  },
+  studentCard: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 16,
+    cursor: 'pointer',
+    padding: 20,
+  },
+  studentCardHead: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+  },
+  studentAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: '50%',
+    background: 'var(--gradient-orange)',
+    color: '#fff',
+    fontWeight: 800,
+    fontSize: '1.1rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  studentName: {
+    margin: 0,
+    fontWeight: 700,
+    fontSize: '0.9375rem',
+    color: 'var(--color-text)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  studentLevel: {
+    margin: '2px 0 0',
+    fontSize: '0.78rem',
+    color: 'var(--color-text-muted)',
+  },
+  miniKpiGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: 10,
+  },
+  miniKpi: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'flex-start',
+    gap: 2,
+    background: 'var(--color-surface-muted, rgba(15,23,42,0.03))',
+    borderRadius: 'var(--radius-sm, 8px)',
+    padding: '8px 10px',
+  },
+  miniKpiIcon: { fontSize: '0.95rem', lineHeight: 1 },
+  miniKpiValue: {
+    fontWeight: 800,
+    fontSize: '1.05rem',
+    color: 'var(--color-text)',
+    letterSpacing: '-0.01em',
+  },
+  miniKpiLabel: { fontSize: '0.7rem', color: 'var(--color-text-muted)' },
+  studentLink: {
+    fontSize: '0.8125rem',
+    fontWeight: 700,
+    color: ORANGE,
+  },
 };
