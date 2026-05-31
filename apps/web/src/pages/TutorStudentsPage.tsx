@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { StudentAccessPanel } from '../components/tutor/StudentAccessPanel';
 import {
@@ -352,10 +352,17 @@ function useStudentStats(studentId: string | null, from?: string, to?: string) {
 // ─── Componente: panel de detalle del alumno ───────────────────────────────────
 
 function StudentDetail({ student, periodDays }: { student: StudentSummary; periodDays: number }) {
-  const now = new Date();
-  const from =
-    periodDays > 0 ? new Date(now.getTime() - periodDays * 86400000).toISOString() : undefined;
-  const to = periodDays > 0 ? now.toISOString() : undefined;
+  // Memoizamos el rango de fechas: si recalculáramos `new Date()` en cada render,
+  // el ISO cambiaría siempre, el queryKey nunca se estabilizaría e isLoading no se
+  // resolvería jamás ("Cargando métricas..." infinito).
+  const { from, to } = useMemo(() => {
+    if (periodDays <= 0) return { from: undefined, to: undefined };
+    const now = Date.now();
+    return {
+      from: new Date(now - periodDays * 86400000).toISOString(),
+      to: new Date(now).toISOString(),
+    };
+  }, [periodDays]);
 
   const { data: stats, isLoading, isError } = useStudentStats(student.id, from, to);
 
