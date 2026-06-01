@@ -165,7 +165,7 @@ function TutorStudentsOverview({ onOpenStudents }: { onOpenStudents: () => void 
           Aún no tienes alumnos asignados.
         </div>
       ) : (
-        <div style={S.grid}>
+        <div style={S.studentGrid}>
           {students.map((student) => (
             <StudentMetricCard key={student.id} student={student} onClick={onOpenStudents} />
           ))}
@@ -336,26 +336,31 @@ const S: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     color: 'var(--color-text-muted)',
   },
+  studentGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: 18,
+  },
   studentCard: {
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: 16,
+    gap: 20,
     cursor: 'pointer',
-    padding: 20,
+    padding: 28,
   },
   studentCardHead: {
     display: 'flex',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   studentAvatar: {
-    width: 42,
-    height: 42,
+    width: 52,
+    height: 52,
     borderRadius: '50%',
     background: 'var(--gradient-orange)',
     color: '#fff',
     fontWeight: 800,
-    fontSize: '1.1rem',
+    fontSize: '1.3rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -364,41 +369,41 @@ const S: Record<string, React.CSSProperties> = {
   studentName: {
     margin: 0,
     fontWeight: 700,
-    fontSize: '0.9375rem',
+    fontSize: '1.0625rem',
     color: 'var(--color-text)',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap' as const,
   },
   studentLevel: {
-    margin: '2px 0 0',
-    fontSize: '0.78rem',
+    margin: '3px 0 0',
+    fontSize: '0.85rem',
     color: 'var(--color-text-muted)',
   },
   miniKpiGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: 10,
+    gap: 12,
   },
   miniKpi: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'flex-start',
-    gap: 2,
+    gap: 3,
     background: 'var(--color-surface-muted, rgba(15,23,42,0.03))',
     borderRadius: 'var(--radius-sm, 8px)',
-    padding: '8px 10px',
+    padding: '12px 14px',
   },
-  miniKpiIcon: { fontSize: '0.95rem', lineHeight: 1 },
+  miniKpiIcon: { fontSize: '1.1rem', lineHeight: 1 },
   miniKpiValue: {
     fontWeight: 800,
-    fontSize: '1.05rem',
+    fontSize: '1.25rem',
     color: 'var(--color-text)',
     letterSpacing: '-0.01em',
   },
-  miniKpiLabel: { fontSize: '0.7rem', color: 'var(--color-text-muted)' },
+  miniKpiLabel: { fontSize: '0.75rem', color: 'var(--color-text-muted)' },
   studentLink: {
-    fontSize: '0.8125rem',
+    fontSize: '0.875rem',
     fontWeight: 700,
     color: ORANGE,
   },
