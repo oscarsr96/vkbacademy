@@ -1,13 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import ReactMarkdown, { type Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css';
 import { theoryApi } from '../api/theory.api';
 import type { TheoryLesson, TheoryLessonKind, TheoryVideoCandidate } from '@vkbacademy/shared';
+import { TheoryMarkdown, THEORY_CALLOUT_CSS } from '../components/theory/theoryMarkdown';
+import TheorySlides from '../components/theory/TheorySlides';
+import { downloadTheoryPdf, shareTheoryPdf } from '../utils/theoryPdf';
 
 const KIND_ICON: Record<TheoryLessonKind, string> = {
   INTRO: '🧭',
@@ -35,6 +33,33 @@ export default function TheoryModulePage() {
     },
   });
 
+  const [showSlides, setShowSlides] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState<'download' | 'share' | null>(null);
+
+  async function handleDownload() {
+    if (!data || pdfBusy) return;
+    setPdfBusy('download');
+    try {
+      await downloadTheoryPdf(data);
+    } catch {
+      window.alert('No se pudo generar el PDF. Inténtalo de nuevo.');
+    } finally {
+      setPdfBusy(null);
+    }
+  }
+
+  async function handleShare() {
+    if (!data || pdfBusy) return;
+    setPdfBusy('share');
+    try {
+      await shareTheoryPdf(data);
+    } catch {
+      window.alert('No se pudo compartir el PDF. Inténtalo de nuevo.');
+    } finally {
+      setPdfBusy(null);
+    }
+  }
+
   if (isLoading) {
     return (
       <div style={s.page}>
@@ -56,7 +81,10 @@ export default function TheoryModulePage() {
 
   return (
     <div style={s.page}>
-      <style>{ANIMATIONS}</style>
+      <style>
+        {ANIMATIONS}
+        {THEORY_CALLOUT_CSS}
+      </style>
       <Link to="/theory" style={s.backLink}>
         ← Volver a Teoría
       </Link>
@@ -66,6 +94,35 @@ export default function TheoryModulePage() {
         <h1 style={s.title}>{data.title}</h1>
         <p style={s.summary}>{data.summary}</p>
       </header>
+
+      <div style={s.actions}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setShowSlides(true)}
+          style={s.presentBtn}
+        >
+          ▶ Presentación
+        </button>
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={pdfBusy !== null}
+          style={s.secondaryBtn}
+        >
+          {pdfBusy === 'download' ? '⏳ Generando…' : '⬇️ Descargar PDF'}
+        </button>
+        <button
+          type="button"
+          onClick={handleShare}
+          disabled={pdfBusy !== null}
+          style={s.secondaryBtn}
+        >
+          {pdfBusy === 'share' ? '⏳ Generando…' : '📲 Enviar por WhatsApp'}
+        </button>
+      </div>
+
+      {showSlides && <TheorySlides module={data} onClose={() => setShowSlides(false)} />}
 
       <article style={s.article}>
         {data.lessons.map((lesson, idx) => (
@@ -114,104 +171,25 @@ function LessonSection({ lesson, index }: { lesson: TheoryLesson; index: number 
         <VideoLesson lesson={lesson} />
       ) : (
         <div style={s.markdown}>
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeKatex]}
-            components={MARKDOWN_COMPONENTS}
-          >
-            {lesson.body ?? ''}
-          </ReactMarkdown>
+          <TheoryMarkdown>{lesson.body ?? ''}</TheoryMarkdown>
         </div>
       )}
     </section>
   );
 }
 
-// ── Callouts didácticos ──────────────────────────────────────────────
-// La IA emite tips/recuerda/cuidado/pregunta como blockquotes de markdown
-// con un emoji al inicio. Detectamos el emoji para estilar el bloque.
-
-type CalloutKind = 'tip' | 'remember' | 'warning' | 'question' | 'default';
-
-const CALLOUT_RULES: Array<{ test: RegExp; kind: CalloutKind; icon: string; label: string }> = [
-  { test: /^\s*💡/, kind: 'tip', icon: '💡', label: 'Tip' },
-  { test: /^\s*🧠/, kind: 'remember', icon: '🧠', label: 'Recuerda' },
-  { test: /^\s*⚠️|^\s*⚠/, kind: 'warning', icon: '⚠️', label: 'Cuidado' },
-  { test: /^\s*❓/, kind: 'question', icon: '❓', label: 'Pregunta' },
-];
-
-function flattenText(node: ReactNode): string {
-  if (node == null || typeof node === 'boolean') return '';
-  if (typeof node === 'string' || typeof node === 'number') return String(node);
-  if (Array.isArray(node)) return node.map(flattenText).join('');
-  if (typeof node === 'object' && 'props' in node) {
-    return flattenText((node as { props: { children?: ReactNode } }).props.children);
-  }
-  return '';
-}
-
-function detectCalloutKind(text: string): CalloutKind {
-  for (const rule of CALLOUT_RULES) {
-    if (rule.test.test(text)) return rule.kind;
-  }
-  return 'default';
-}
-
-const MARKDOWN_COMPONENTS: Components = {
-  blockquote: ({ children }) => {
-    const kind = detectCalloutKind(flattenText(children));
-    return <aside className={`theory-callout theory-callout-${kind}`}>{children}</aside>;
-  },
-};
-
+// Animación de entrada de cada sección. Los estilos de callouts viven en
+// THEORY_CALLOUT_CSS (módulo compartido) y se inyectan junto a esto.
 const ANIMATIONS = `
   @keyframes theory-fade-in-up {
     from { opacity: 0; transform: translateY(16px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  @keyframes theory-callout-pop {
-    0%   { opacity: 0; transform: scale(0.96); }
-    60%  { opacity: 1; transform: scale(1.01); }
-    100% { transform: scale(1); }
-  }
   .theory-section {
     animation: theory-fade-in-up 0.55s cubic-bezier(0.2, 0.8, 0.25, 1) backwards;
   }
-  .theory-callout {
-    margin: 1.1rem 0;
-    padding: 14px 16px 14px 52px;
-    border-radius: 12px;
-    border-left: 4px solid;
-    position: relative;
-    line-height: 1.55;
-    animation: theory-callout-pop 0.45s ease-out backwards;
-  }
-  .theory-callout > p:first-child { margin-top: 0; }
-  .theory-callout > p:last-child  { margin-bottom: 0; }
-  .theory-callout::before {
-    position: absolute;
-    left: 14px;
-    top: 12px;
-    font-size: 1.4rem;
-    line-height: 1;
-  }
-  .theory-callout-tip       { background: rgba(234,179,8,0.10);  border-left-color: #eab308; }
-  .theory-callout-tip::before       { content: '💡'; }
-  .theory-callout-remember  { background: rgba(99,102,241,0.10); border-left-color: #6366f1; }
-  .theory-callout-remember::before  { content: '🧠'; }
-  .theory-callout-warning   { background: rgba(220,38,38,0.10);  border-left-color: #dc2626; }
-  .theory-callout-warning::before   { content: '⚠️'; }
-  .theory-callout-question  { background: rgba(20,184,166,0.10); border-left-color: #14b8a6; }
-  .theory-callout-question::before  { content: '❓'; }
-  .theory-callout-default   {
-    background: var(--color-bg);
-    border-left-color: var(--color-border);
-    padding-left: 16px;
-  }
-  .theory-callout-default::before { content: ''; }
   @media (prefers-reduced-motion: reduce) {
-    .theory-section,
-    .theory-callout { animation: none; }
+    .theory-section { animation: none; }
   }
 `;
 
@@ -324,6 +302,27 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--color-text-muted)',
     lineHeight: 1.6,
     margin: 0,
+  },
+  actions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 10,
+    alignItems: 'center',
+  },
+  presentBtn: {
+    padding: '10px 18px',
+    fontSize: '0.9rem',
+    fontWeight: 700,
+  },
+  secondaryBtn: {
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-text)',
+    padding: '10px 16px',
+    borderRadius: 8,
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    cursor: 'pointer',
   },
   article: { display: 'flex', flexDirection: 'column', gap: 32 },
   section: {
