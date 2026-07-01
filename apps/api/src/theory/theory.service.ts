@@ -14,6 +14,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
+import { generateAiJson } from '../ai/ai-json';
 import { YoutubeService } from '../youtube/youtube.service';
 import { ChallengesService } from '../challenges/challenges.service';
 import { GenerateTheoryDto } from './dto/generate-theory.dto';
@@ -79,8 +80,19 @@ export class TheoryService {
 
     this.logger.log(`Generando temario sobre "${dto.topic}" para curso "${course.title}"`);
 
-    const text = await this.ai.generate(prompt, 4000);
-    const payload = this.parseAi(text);
+    // Reintento automático ante JSON inválido: el fallback Haiku no garantiza
+    // JSON bien formado y los errores de sintaxis son estocásticos (regenerar
+    // casi siempre lo arregla). Ver `ai-json.ts`.
+    let parsed: unknown;
+    try {
+      parsed = await generateAiJson(this.ai, prompt, 4000, { attempts: 2, logger: this.logger });
+    } catch (err) {
+      this.logger.error('Error al parsear JSON de IA (teoría) tras reintentos:', err);
+      throw new InternalServerErrorException(
+        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
+      );
+    }
+    const payload = this.validatePayload(parsed);
 
     // Resolver vídeo de YouTube para lecciones VIDEO. Para cada VIDEO pedimos
     // hasta 5 candidatos (ordenados por engagement+whitelist) y los guardamos
@@ -170,21 +182,7 @@ export class TheoryService {
     await this.prisma.theoryModule.delete({ where: { id } });
   }
 
-  private parseAi(text: string): GeneratedTheoryPayload {
-    let parsed: unknown;
-    try {
-      const raw = text
-        .trim()
-        .replace(/^```json\n?/, '')
-        .replace(/\n?```$/, '');
-      parsed = JSON.parse(raw);
-    } catch (err) {
-      this.logger.error('Error al parsear JSON de IA (teoría):', text);
-      throw new InternalServerErrorException(
-        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
-      );
-    }
-
+  private validatePayload(parsed: unknown): GeneratedTheoryPayload {
     const obj = parsed as Partial<GeneratedTheoryPayload>;
     if (!obj.title || !obj.summary || !Array.isArray(obj.lessons) || obj.lessons.length === 0) {
       throw new InternalServerErrorException(
