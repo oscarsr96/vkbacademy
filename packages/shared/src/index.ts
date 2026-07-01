@@ -22,6 +22,9 @@ export * from './types/tutor.types';
 // Tipos de teoría bajo demanda
 export * from './types/theory.types';
 
+// Tipos de la unidad de estudio
+export * from './types/study.types';
+
 // Utilidades de API
 export * from './types/pagination.types';
 export * from './types/api.types';
