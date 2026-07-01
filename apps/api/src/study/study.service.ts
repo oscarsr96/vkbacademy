@@ -75,11 +75,14 @@ export class StudyService {
     }
 
     const data: Prisma.StudyUnitUpdateInput = {};
+    const ops: Prisma.PrismaPromise<unknown>[] = [];
     if (theoryRes.status === 'fulfilled') {
-      await this.prisma.theoryModule.update({
-        where: { id: theoryRes.value.id },
-        data: { studyUnitId: unit.id },
-      });
+      ops.push(
+        this.prisma.theoryModule.update({
+          where: { id: theoryRes.value.id },
+          data: { studyUnitId: unit.id },
+        }) as unknown as Prisma.PrismaPromise<unknown>,
+      );
       data.title = theoryRes.value.title;
       data.summary = theoryRes.value.summary;
     }
@@ -87,12 +90,20 @@ export class StudyService {
       data.exercises = exercisesRes.value.exercises as unknown as Prisma.InputJsonValue;
     }
     if (examRes.status === 'fulfilled') {
-      await this.prisma.aiExamBank.update({
-        where: { id: examRes.value.id },
-        data: { studyUnitId: unit.id },
-      });
+      ops.push(
+        this.prisma.aiExamBank.update({
+          where: { id: examRes.value.id },
+          data: { studyUnitId: unit.id },
+        }) as unknown as Prisma.PrismaPromise<unknown>,
+      );
     }
-    await this.prisma.studyUnit.update({ where: { id: unit.id }, data });
+    ops.push(
+      this.prisma.studyUnit.update({
+        where: { id: unit.id },
+        data,
+      }) as unknown as Prisma.PrismaPromise<unknown>,
+    );
+    await this.prisma.$transaction(ops);
 
     return this.getById(userId, unit.id);
   }

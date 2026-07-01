@@ -18,6 +18,7 @@ describe('StudyService', () => {
     };
     theoryModule: { update: jest.Mock };
     aiExamBank: { update: jest.Mock };
+    $transaction: jest.Mock;
   };
   let theory: { generate: jest.Mock; getById: jest.Mock; deleteById: jest.Mock };
   let exercises: { generate: jest.Mock };
@@ -69,6 +70,7 @@ describe('StudyService', () => {
       },
       theoryModule: { update: jest.fn().mockResolvedValue({}) },
       aiExamBank: { update: jest.fn().mockResolvedValue({}) },
+      $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
     };
     theory = {
       generate: jest.fn().mockResolvedValue(theoryResult),
