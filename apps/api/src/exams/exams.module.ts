@@ -10,5 +10,6 @@ import { ChallengesModule } from '../challenges/challenges.module';
   imports: [PrismaModule, CertificatesModule, ChallengesModule],
   controllers: [ExamsController],
   providers: [ExamsService, AiExamsService],
+  exports: [ExamsService, AiExamsService],
 })
 export class ExamsModule {}

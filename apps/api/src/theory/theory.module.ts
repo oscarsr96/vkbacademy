@@ -10,5 +10,6 @@ import { TheoryService } from './theory.service';
   imports: [PrismaModule, AiModule, YoutubeModule, ChallengesModule],
   controllers: [TheoryController],
   providers: [TheoryService],
+  exports: [TheoryService],
 })
 export class TheoryModule {}
