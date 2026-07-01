@@ -1,0 +1,367 @@
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import type { StudyExercise } from '@vkbacademy/shared';
+import api from '../../lib/axios';
+
+type Verdict = 'correct' | 'partial' | 'incorrect';
+
+interface EvaluationResult {
+  verdict: Verdict;
+  feedback: string;
+}
+
+interface EvaluatePayload {
+  statement: string;
+  studentAnswer: string;
+  solution: string;
+}
+
+export default function ExercisePractice({ exercises }: { exercises: StudyExercise[] }) {
+  const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  const [selected, setSelected] = useState<Record<number, number | null>>({});
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [evaluations, setEvaluations] = useState<Record<number, EvaluationResult>>({});
+  const [evalErrors, setEvalErrors] = useState<Record<number, string>>({});
+
+  const evalMutation = useMutation({
+    mutationFn: ({ index, ...payload }: EvaluatePayload & { index: number }) =>
+      api
+        .post<EvaluationResult>('/exercises/evaluate', payload)
+        .then((r) => ({ index, data: r.data })),
+    onSuccess: ({ index, data }) => {
+      setEvaluations((prev) => ({ ...prev, [index]: data }));
+      setRevealed((prev) => ({ ...prev, [index]: true }));
+      setEvalErrors((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+    },
+    onError: (err, variables) => {
+      const msg = (err as { response?: { data?: { message?: string | string[] } } } | null)
+        ?.response?.data?.message;
+      const text = Array.isArray(msg) ? msg.join(' · ') : msg;
+      setEvalErrors((prev) => ({
+        ...prev,
+        [variables.index]:
+          text ?? 'No se pudo evaluar la respuesta. Inténtalo de nuevo en unos segundos.',
+      }));
+    },
+  });
+
+  const evaluatingIdx =
+    evalMutation.isPending && evalMutation.variables ? evalMutation.variables.index : null;
+
+  function toggleSolution(index: number) {
+    setRevealed((prev) => ({ ...prev, [index]: !prev[index] }));
+  }
+  function chooseOption(exerciseIndex: number, optionIndex: number) {
+    setSelected((prev) => ({ ...prev, [exerciseIndex]: optionIndex }));
+  }
+  function updateAnswer(index: number, value: string) {
+    setAnswers((prev) => ({ ...prev, [index]: value }));
+  }
+  function evaluateOpen(index: number, ex: StudyExercise) {
+    const answer = (answers[index] ?? '').trim();
+    if (!answer) return;
+    evalMutation.mutate({
+      index,
+      statement: ex.statement,
+      studentAnswer: answer,
+      solution: ex.solution,
+    });
+  }
+
+  if (exercises.length === 0) {
+    return <p style={s.muted}>No hay ejercicios en esta unidad.</p>;
+  }
+
+  return (
+    <div style={s.exerciseList}>
+      {exercises.map((ex, i) => (
+        <ExerciseCard
+          key={i}
+          exercise={ex}
+          index={i}
+          revealed={!!revealed[i]}
+          selected={selected[i] ?? null}
+          answer={answers[i] ?? ''}
+          evaluation={evaluations[i] ?? null}
+          evaluationError={evalErrors[i] ?? null}
+          evaluating={evaluatingIdx === i}
+          onChoose={(optIdx) => chooseOption(i, optIdx)}
+          onAnswerChange={(value) => updateAnswer(i, value)}
+          onEvaluate={() => evaluateOpen(i, ex)}
+          onToggle={() => toggleSolution(i)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ExerciseCard({
+  exercise,
+  index,
+  revealed,
+  selected,
+  answer,
+  evaluation,
+  evaluationError,
+  evaluating,
+  onChoose,
+  onAnswerChange,
+  onEvaluate,
+  onToggle,
+}: {
+  exercise: StudyExercise;
+  index: number;
+  revealed: boolean;
+  selected: number | null;
+  answer: string;
+  evaluation: EvaluationResult | null;
+  evaluationError: string | null;
+  evaluating: boolean;
+  onChoose: (optionIndex: number) => void;
+  onAnswerChange: (value: string) => void;
+  onEvaluate: () => void;
+  onToggle: () => void;
+}) {
+  const hasOptions = exercise.options.length > 0;
+  const correctIndex = hasOptions
+    ? exercise.options.findIndex((o) => o.trim() === exercise.solution.trim())
+    : -1;
+  const canCheck = hasOptions ? selected !== null : answer.trim().length > 0;
+
+  function optionStyle(j: number): React.CSSProperties {
+    if (revealed) {
+      if (j === correctIndex) return { ...s.option, ...s.optionCorrect };
+      if (j === selected) return { ...s.option, ...s.optionWrong };
+      return s.option;
+    }
+    if (j === selected) return { ...s.option, ...s.optionSelected };
+    return s.option;
+  }
+
+  function handleCheckClick() {
+    if (revealed) {
+      onToggle();
+      return;
+    }
+    if (hasOptions) onToggle();
+    else onEvaluate();
+  }
+
+  const buttonLabel = evaluating
+    ? '⏳ Evaluando...'
+    : revealed
+      ? '🙈 Ocultar solución'
+      : '✓ Comprobar';
+
+  return (
+    <article style={s.card}>
+      <header style={s.cardHeader}>
+        <span style={s.cardNumber}>#{index + 1}</span>
+        <span style={s.cardType}>{labelForType(exercise.type)}</span>
+      </header>
+
+      <p style={s.statement}>{exercise.statement}</p>
+
+      {hasOptions && (
+        <ul style={s.options}>
+          {exercise.options.map((opt, j) => (
+            <li
+              key={j}
+              style={{ ...optionStyle(j), cursor: revealed ? 'default' : 'pointer' }}
+              onClick={revealed ? undefined : () => onChoose(j)}
+            >
+              <span style={s.optionLetter}>{String.fromCharCode(65 + j)}.</span>
+              {opt}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!hasOptions && (
+        <textarea
+          value={answer}
+          onChange={(e) => onAnswerChange(e.target.value)}
+          disabled={revealed || evaluating}
+          placeholder="Escribe aquí tu respuesta..."
+          rows={3}
+          style={s.openAnswer}
+        />
+      )}
+
+      <button
+        onClick={handleCheckClick}
+        style={{ ...s.revealBtn, opacity: (!revealed && !canCheck) || evaluating ? 0.5 : 1 }}
+        disabled={(!revealed && !canCheck) || evaluating}
+      >
+        {buttonLabel}
+      </button>
+
+      {evaluationError && !evaluating && (
+        <div style={s.errorBox}>
+          <strong>!</strong> {evaluationError}
+        </div>
+      )}
+
+      {revealed && evaluation && (
+        <div style={{ ...s.verdictBox, ...VERDICT_STYLES[evaluation.verdict] }}>
+          <div style={s.verdictHeader}>{verdictLabel(evaluation.verdict)}</div>
+          <div style={s.verdictFeedback}>{evaluation.feedback}</div>
+        </div>
+      )}
+
+      {revealed && (
+        <div style={s.solution}>
+          <div style={s.solutionLine}>
+            <strong style={s.solutionLabel}>Solución:</strong> {exercise.solution}
+          </div>
+          {exercise.explanation && (
+            <div style={s.solutionLine}>
+              <strong style={s.solutionLabel}>Explicación:</strong> {exercise.explanation}
+            </div>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function verdictLabel(verdict: Verdict): string {
+  switch (verdict) {
+    case 'correct':
+      return '✅ Correcto';
+    case 'partial':
+      return '⚠️ Parcialmente correcto';
+    case 'incorrect':
+      return '❌ Incorrecto';
+  }
+}
+
+function labelForType(type: StudyExercise['type']): string {
+  switch (type) {
+    case 'SINGLE':
+      return 'Opción múltiple';
+    case 'TRUE_FALSE':
+      return 'Verdadero/Falso';
+    case 'OPEN':
+      return 'Respuesta abierta';
+  }
+}
+
+const GREEN = '#16a34a';
+const RED = '#dc2626';
+const YELLOW = '#eab308';
+
+const VERDICT_STYLES: Record<Verdict, React.CSSProperties> = {
+  correct: { background: '#dcfce7', border: `1px solid ${GREEN}`, color: '#166534' },
+  partial: { background: '#fef9c3', border: `1px solid ${YELLOW}`, color: '#854d0e' },
+  incorrect: { background: '#fee2e2', border: `1px solid ${RED}`, color: '#991b1b' },
+};
+
+const s: Record<string, React.CSSProperties> = {
+  muted: { color: 'var(--color-text-muted)', fontSize: '0.95rem', margin: 0 },
+  exerciseList: { display: 'flex', flexDirection: 'column', gap: 16 },
+  card: {
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 12,
+    padding: 20,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+  cardHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  cardNumber: { fontSize: '0.9rem', fontWeight: 700, color: '#f97316' },
+  cardType: {
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    color: 'var(--color-text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    background: 'rgba(0,0,0,0.05)',
+    padding: '2px 8px',
+    borderRadius: 6,
+  },
+  statement: { margin: 0, fontSize: '1rem', lineHeight: 1.5, color: 'var(--color-text)' },
+  options: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  },
+  option: {
+    background: 'var(--color-bg)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 8,
+    padding: '10px 14px',
+    fontSize: '0.95rem',
+    color: 'var(--color-text)',
+    display: 'flex',
+    gap: 10,
+    transition: 'background 0.15s, border-color 0.15s',
+  },
+  optionSelected: { background: '#fef9c3', border: `1px solid ${YELLOW}` },
+  optionCorrect: { background: '#dcfce7', border: `1px solid ${GREEN}` },
+  optionWrong: { background: '#fee2e2', border: `1px solid ${RED}` },
+  optionLetter: { color: '#f97316', fontWeight: 700, minWidth: 20 },
+  revealBtn: {
+    alignSelf: 'flex-start',
+    background: 'transparent',
+    border: '1px solid rgba(234,88,12,0.4)',
+    color: '#f97316',
+    padding: '8px 16px',
+    borderRadius: 8,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  solution: {
+    background: 'rgba(16,185,129,0.08)',
+    border: '1px solid rgba(16,185,129,0.25)',
+    borderRadius: 8,
+    padding: 14,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    fontSize: '0.92rem',
+    lineHeight: 1.5,
+  },
+  solutionLine: { color: 'var(--color-text)' },
+  solutionLabel: { color: '#10b981' },
+  openAnswer: {
+    width: '100%',
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 8,
+    color: 'var(--color-text)',
+    padding: '10px 12px',
+    fontSize: '0.95rem',
+    fontFamily: 'inherit',
+    resize: 'vertical',
+    minHeight: 80,
+  },
+  errorBox: {
+    background: 'rgba(220,38,38,0.15)',
+    borderLeft: '4px solid #dc2626',
+    color: 'var(--color-error)',
+    padding: '12px 14px',
+    borderRadius: 8,
+    fontSize: '0.875rem',
+  },
+  verdictBox: {
+    borderRadius: 8,
+    padding: 14,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    fontSize: '0.92rem',
+    lineHeight: 1.5,
+  },
+  verdictHeader: { fontWeight: 700, fontSize: '0.95rem' },
+  verdictFeedback: { color: 'var(--color-text)' },
+};
