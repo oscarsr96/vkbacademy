@@ -18,6 +18,36 @@ import { THEORY_CALLOUT_CSS } from '../components/theory/theoryMarkdown';
 const PAGE_W = 1280;
 const PAGE_H = 720;
 
+// Footer de marca VKB, dibujado con jsPDF sobre cada página (independiente del
+// escalado del contenido, así aparece siempre y sin recortes).
+const FOOTER_MARGIN = 64;
+const FOOTER_BASELINE = PAGE_H - 26; // línea de texto del pie
+const ORANGE = { r: 234, g: 88, b: 12 } as const; // #ea580c
+const FOOTER_MUTED = { r: 148, g: 163, b: 184 } as const; // slate-400, legible sobre fondo oscuro
+
+function drawFooter(doc: JsPdf, pageNum: number, totalPages: number): void {
+  // Línea fina naranja separando el pie del contenido
+  doc.setDrawColor(ORANGE.r, ORANGE.g, ORANGE.b);
+  doc.setLineWidth(1.5);
+  doc.line(FOOTER_MARGIN, PAGE_H - 46, PAGE_W - FOOTER_MARGIN, PAGE_H - 46);
+
+  // Marca (izquierda)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(ORANGE.r, ORANGE.g, ORANGE.b);
+  doc.text('VKB ACADEMY', FOOTER_MARGIN, FOOTER_BASELINE);
+
+  const brandW = doc.getTextWidth('VKB ACADEMY');
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(FOOTER_MUTED.r, FOOTER_MUTED.g, FOOTER_MUTED.b);
+  doc.text('· Temario', FOOTER_MARGIN + brandW + 10, FOOTER_BASELINE);
+
+  // Numeración de página (derecha)
+  doc.text(`${pageNum} / ${totalPages}`, PAGE_W - FOOTER_MARGIN, FOOTER_BASELINE, {
+    align: 'right',
+  });
+}
+
 const PAGE_STYLE: React.CSSProperties = {
   width: PAGE_W,
   height: PAGE_H,
@@ -132,6 +162,7 @@ async function generateTheoryPdf(module: TheoryModuleWithLessons): Promise<JsPdf
       const img = canvas.toDataURL('image/jpeg', 0.92);
       if (i > 0) doc.addPage([PAGE_W, PAGE_H], 'landscape');
       doc.addImage(img, 'JPEG', 0, 0, PAGE_W, PAGE_H);
+      drawFooter(doc, i + 1, pages.length);
     }
   } finally {
     root.unmount();
