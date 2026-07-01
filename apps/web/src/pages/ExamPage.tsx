@@ -859,7 +859,7 @@ export default function ExamPage() {
                 marginBottom: 14,
               }}
             >
-              Volver a mis exámenes
+              Volver
             </button>
           )}
           <h1 className="hero-title" style={{ fontSize: '1.6rem' }}>
@@ -881,7 +881,7 @@ export default function ExamPage() {
               style={{ marginTop: 14 }}
               onClick={() => navigate(returnTo)}
             >
-              Volver a mis exámenes
+              Volver
             </button>
           </div>
         )}

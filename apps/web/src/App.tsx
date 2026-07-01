@@ -24,10 +24,8 @@ import ChallengesPage from './pages/ChallengesPage';
 import BookingsPage from './pages/BookingsPage';
 import TutorStudentsPage from './pages/TutorStudentsPage';
 import ExamPage from './pages/ExamPage';
-import ExamsListPage from './pages/ExamsListPage';
-import ExercisesPage from './pages/ExercisesPage';
-import TheoryPage from './pages/TheoryPage';
-import TheoryModulePage from './pages/TheoryModulePage';
+import StudyPage from './pages/StudyPage';
+import StudyUnitPage from './pages/StudyUnitPage';
 import AdminExamBankPage from './pages/admin/AdminExamBankPage';
 import CertificatesPage from './pages/CertificatesPage';
 import SubjectsPage from './pages/SubjectsPage';
@@ -134,15 +132,11 @@ export default function App() {
         <Route path="challenges" element={<ChallengesPage />} />
 
         {/* Fase 8 — Exámenes */}
-        <Route path="my-exams" element={<ExamsListPage />} />
         <Route path="exam" element={<ExamPage />} />
 
-        {/* Ejercicios generados por IA */}
-        <Route path="exercises" element={<ExercisesPage />} />
-
-        {/* Teoría bajo demanda — módulos generados por IA */}
-        <Route path="theory" element={<TheoryPage />} />
-        <Route path="theory/:id" element={<TheoryModulePage />} />
+        {/* Estudiar — curso generado por IA (teoría + ejercicios + examen) */}
+        <Route path="study" element={<StudyPage />} />
+        <Route path="study/:id" element={<StudyUnitPage />} />
 
         {/* Fase 9 — Certificados */}
         <Route path="certificates" element={<CertificatesPage />} />

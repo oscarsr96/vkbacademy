@@ -33,18 +33,11 @@ export default function DashboardPage() {
   const quickActions =
     user.role === Role.STUDENT
       ? [
-          { emoji: '📖', label: 'Teoría', desc: 'Genera un temario a tu medida', to: '/theory' },
           {
-            emoji: '🧮',
-            label: 'Ejercicios',
-            desc: 'Practica con ejercicios al instante',
-            to: '/exercises',
-          },
-          {
-            emoji: '🎓',
-            label: 'Exámenes',
-            desc: 'Pon a prueba tus conocimientos',
-            to: '/my-exams',
+            emoji: '🧠',
+            label: 'Estudiar',
+            desc: 'Crea un curso con teoría, ejercicios y examen',
+            to: '/study',
           },
         ]
       : user.role === Role.TEACHER
