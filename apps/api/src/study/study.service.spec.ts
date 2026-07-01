@@ -141,6 +141,20 @@ describe('StudyService', () => {
       expect(prisma.studyUnit.delete).toHaveBeenCalledWith({ where: { id: 'unit-1' } });
     });
 
+    it('borra la unidad cáscara y relanza el error si la transacción de enlace falla', async () => {
+      stubUnitForGetById();
+      prisma.$transaction.mockRejectedValue(new Error('tx failed'));
+      await expect(
+        service.create('user-1', {
+          courseId: 'course-1',
+          topic: 't',
+          numExercises: 1,
+          numQuestions: 5,
+        }),
+      ).rejects.toThrow('tx failed');
+      expect(prisma.studyUnit.delete).toHaveBeenCalledWith({ where: { id: 'unit-1' } });
+    });
+
     it('lanza ForbiddenException si el alumno no está matriculado', async () => {
       prisma.enrollment.findFirst.mockResolvedValue(null);
       await expect(

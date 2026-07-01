@@ -103,7 +103,13 @@ export class StudyService {
         data,
       }) as unknown as Prisma.PrismaPromise<unknown>,
     );
-    await this.prisma.$transaction(ops);
+    try {
+      await this.prisma.$transaction(ops);
+    } catch (err) {
+      // Si el enlace transaccional falla, no dejar una unidad cáscara huérfana.
+      await this.prisma.studyUnit.delete({ where: { id: unit.id } });
+      throw err;
+    }
 
     return this.getById(userId, unit.id);
   }
