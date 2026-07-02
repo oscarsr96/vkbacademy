@@ -678,6 +678,9 @@ model StudyUnit {
   topic     String // input crudo del alumno
   title     String // título limpio (se toma de la teoría generada)
   summary   String   @db.Text
+  /// Dificultad elegida por el alumno (EASY | MEDIUM | HARD). Gobierna la
+  /// generación de ejercicios y examen; se reutiliza al regenerar cada sección.
+  difficulty String  @default("MEDIUM")
   /// Ejercicios generados por IA, persistidos como JSON. Estructura:
   /// [{ statement, type: 'SINGLE'|'TRUE_FALSE'|'OPEN', options: string[], solution, explanation }]
   exercises Json?

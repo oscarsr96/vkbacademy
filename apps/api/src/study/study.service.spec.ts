@@ -98,6 +98,7 @@ describe('StudyService', () => {
         courseId: 'course-1',
         topic: 't',
         numExercises: 1,
+        difficulty: 'MEDIUM',
         numQuestions: 5,
       });
       expect(prisma.studyUnit.create).toHaveBeenCalled();
@@ -110,6 +111,18 @@ describe('StudyService', () => {
         data: { studyUnitId: 'unit-1' },
       });
       expect(result.sections).toEqual({ theory: true, exercises: true, exam: true });
+      // La dificultad se persiste en la unidad y se propaga a ambos generadores.
+      expect(prisma.studyUnit.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ difficulty: 'MEDIUM' }) }),
+      );
+      expect(exercises.generate).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ difficulty: 'MEDIUM' }),
+      );
+      expect(aiExams.generate).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ difficulty: 'MEDIUM' }),
+      );
     });
 
     it('crea la unidad aunque falle una sección (examen) y la marca ausente', async () => {
@@ -119,6 +132,7 @@ describe('StudyService', () => {
         courseId: 'course-1',
         topic: 't',
         numExercises: 1,
+        difficulty: 'MEDIUM',
         numQuestions: 5,
       });
       expect(prisma.aiExamBank.update).not.toHaveBeenCalled();
@@ -135,6 +149,7 @@ describe('StudyService', () => {
           courseId: 'course-1',
           topic: 't',
           numExercises: 1,
+          difficulty: 'MEDIUM',
           numQuestions: 5,
         }),
       ).rejects.toThrow(InternalServerErrorException);
@@ -149,6 +164,7 @@ describe('StudyService', () => {
           courseId: 'course-1',
           topic: 't',
           numExercises: 1,
+          difficulty: 'MEDIUM',
           numQuestions: 5,
         }),
       ).rejects.toThrow('tx failed');
@@ -162,6 +178,7 @@ describe('StudyService', () => {
           courseId: 'course-1',
           topic: 't',
           numExercises: 1,
+          difficulty: 'MEDIUM',
           numQuestions: 5,
         }),
       ).rejects.toThrow(ForbiddenException);
