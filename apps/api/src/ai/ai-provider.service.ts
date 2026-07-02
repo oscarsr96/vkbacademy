@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI, GoogleGenerativeAIAbortError } from '@google/generative-ai';
+import Anthropic, { APIConnectionTimeoutError } from '@anthropic-ai/sdk';
 
 /**
  * Proveedor de IA unificado con fallback automático.
@@ -25,6 +25,7 @@ export class AiProviderService {
   private readonly gemini?: GoogleGenerativeAI;
   private readonly anthropic?: Anthropic;
   private readonly provider: 'gemini' | 'haiku' | 'auto';
+  private readonly timeoutMs: number;
 
   constructor(private readonly config: ConfigService) {
     const geminiKey = this.config.get<string>('GEMINI_API_KEY');
@@ -39,9 +40,13 @@ export class AiProviderService {
 
     this.provider =
       (this.config.get<string>('AI_PROVIDER') as 'gemini' | 'haiku' | 'auto') ?? 'auto';
+    // Number() en vez de confiar en la coerción de Joi: el valor puede llegar
+    // como string (process.env) o number (ConfigService validado), y así
+    // funciona igual en ambos casos.
+    this.timeoutMs = Number(this.config.get('AI_TIMEOUT_MS')) || 60000;
 
     this.logger.log(
-      `AI Provider inicializado: mode=${this.provider}, gemini=${!!this.gemini}, haiku=${!!this.anthropic}`,
+      `AI Provider inicializado: mode=${this.provider}, gemini=${!!this.gemini}, haiku=${!!this.anthropic}, timeoutMs=${this.timeoutMs}`,
     );
   }
 
@@ -102,8 +107,17 @@ export class AiProviderService {
       } as Record<string, unknown>,
     });
 
-    this.logger.debug(`Llamando a Gemini Flash latest (maxTokens=${maxTokens})`);
-    const result = await model.generateContent(prompt);
+    this.logger.debug(`Llamando a Gemini Flash latest (maxTokens=${maxTokens}, timeout=${this.timeoutMs}ms)`);
+    let result;
+    try {
+      result = await model.generateContent(prompt, { timeout: this.timeoutMs });
+    } catch (error) {
+      if (error instanceof GoogleGenerativeAIAbortError) {
+        this.logger.error(`Gemini superó el timeout de ${this.timeoutMs}ms sin responder`);
+        throw new Error(`Gemini no respondió en ${this.timeoutMs}ms (timeout)`);
+      }
+      throw error;
+    }
     const text = result.response.text();
 
     if (!text) {
@@ -118,12 +132,24 @@ export class AiProviderService {
       throw new Error('ANTHROPIC_API_KEY no configurada');
     }
 
-    this.logger.debug(`Llamando a Claude Haiku (maxTokens=${maxTokens})`);
-    const message = await this.anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-    });
+    this.logger.debug(`Llamando a Claude Haiku (maxTokens=${maxTokens}, timeout=${this.timeoutMs}ms)`);
+    let message;
+    try {
+      message = await this.anthropic.messages.create(
+        {
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content: prompt }],
+        },
+        { timeout: this.timeoutMs },
+      );
+    } catch (error) {
+      if (error instanceof APIConnectionTimeoutError) {
+        this.logger.error(`Haiku superó el timeout de ${this.timeoutMs}ms sin responder`);
+        throw new Error(`Haiku no respondió en ${this.timeoutMs}ms (timeout)`);
+      }
+      throw error;
+    }
 
     const textContent = message.content.find((c) => c.type === 'text');
     if (!textContent || textContent.type !== 'text') {

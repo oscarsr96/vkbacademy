@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
+import { generateAiJson } from '../ai/ai-json';
 import { YoutubeService } from '../youtube/youtube.service';
 
 // ─── Estructuras generadas por Claude ────────────────────────────────────────
@@ -431,6 +432,25 @@ export class CourseGeneratorService {
 
   // ─── Prompts privados ──────────────────────────────────────────────────────
 
+  /**
+   * Llama a la IA y parsea el JSON de respuesta con reintento automático ante
+   * JSON inválido (ver `ai-json.ts`). Centraliza el bloque repetido en los 5
+   * métodos `callClaudeFor*` de este service.
+   */
+  private async generateJson<T>(prompt: string, maxTokens: number, context: string): Promise<T> {
+    try {
+      return await generateAiJson<T>(this.ai, prompt, maxTokens, {
+        attempts: 2,
+        logger: this.logger,
+      });
+    } catch (err) {
+      this.logger.error(`Error al parsear JSON de IA (${context}) tras reintentos:`, err);
+      throw new InternalServerErrorException(
+        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
+      );
+    }
+  }
+
   private async callClaudeForQuestion(
     topic: string,
     context: {
@@ -480,22 +500,9 @@ Reglas:
 
     this.logger.log(`Generando pregunta: "${topic}" en quiz de "${lessonTitle}"`);
 
-    const text = await this.ai.generate(prompt, 512);
-
-    try {
-      const raw = text
-        .trim()
-        .replace(/^```json\n?/, '')
-        .replace(/\n?```$/, '');
-      const parsed = JSON.parse(raw) as GeneratedQuestion;
-      this.logger.log(`Pregunta generada correctamente: "${parsed.text}"`);
-      return parsed;
-    } catch {
-      this.logger.error('Error al parsear JSON de IA (pregunta):', text);
-      throw new InternalServerErrorException(
-        'El agente IA devolvió un formato inválido. Inténtalo de nuevo.',
-      );
-    }
+    const parsed = await this.generateJson<GeneratedQuestion>(prompt, 512, 'pregunta');
+    this.logger.log(`Pregunta generada correctamente: "${parsed.text}"`);
+    return parsed;
   }
 
   private async callClaudeForLesson(
@@ -609,22 +616,9 @@ Reglas:
 
     this.logger.log(`Generando lección: "${topic}" en módulo "${moduleTitle}"`);
 
-    const text = await this.ai.generate(prompt, 1024);
-
-    try {
-      const raw = text
-        .trim()
-        .replace(/^```json\n?/, '')
-        .replace(/\n?```$/, '');
-      const parsed = JSON.parse(raw) as Omit<GeneratedLesson, 'order'>;
-      this.logger.log(`Lección generada correctamente: "${parsed.title}" (${parsed.type})`);
-      return parsed;
-    } catch {
-      this.logger.error('Error al parsear JSON de IA (lección):', text);
-      throw new InternalServerErrorException(
-        'El agente IA devolvió un formato inválido. Inténtalo de nuevo.',
-      );
-    }
+    const parsed = await this.generateJson<Omit<GeneratedLesson, 'order'>>(prompt, 1024, 'lección');
+    this.logger.log(`Lección generada correctamente: "${parsed.title}" (${parsed.type})`);
+    return parsed;
   }
 
   private async callClaudeForModule(
@@ -716,22 +710,9 @@ Reglas:
 
     this.logger.log(`Generando módulo: "${name}" en curso "${courseTitle}"`);
 
-    const text = await this.ai.generate(prompt, 3000);
-
-    try {
-      const raw = text
-        .trim()
-        .replace(/^```json\n?/, '')
-        .replace(/\n?```$/, '');
-      const parsed = JSON.parse(raw) as Omit<GeneratedModule, 'order'>;
-      this.logger.log(`Módulo generado correctamente: "${parsed.title}"`);
-      return parsed;
-    } catch {
-      this.logger.error('Error al parsear JSON de IA (módulo):', text);
-      throw new InternalServerErrorException(
-        'El agente IA devolvió un formato inválido. Inténtalo de nuevo.',
-      );
-    }
+    const parsed = await this.generateJson<Omit<GeneratedModule, 'order'>>(prompt, 3000, 'módulo');
+    this.logger.log(`Módulo generado correctamente: "${parsed.title}"`);
+    return parsed;
   }
 
   private async callClaudeForExamQuestions(
@@ -778,22 +759,13 @@ ${moduleTitle ? `- Las preguntas deben ser coherentes con el contenido del módu
       `Generando ${count} preguntas de examen sobre "${topic}" (${courseTitle || 'sin curso'}, ${moduleTitle || 'sin módulo'})`,
     );
 
-    const text = await this.ai.generate(prompt, 2000);
-
-    try {
-      const raw = text
-        .trim()
-        .replace(/^```json\n?/, '')
-        .replace(/\n?```$/, '');
-      const parsed = JSON.parse(raw) as GeneratedQuestion[];
-      this.logger.log(`${parsed.length} preguntas de examen generadas correctamente`);
-      return parsed;
-    } catch {
-      this.logger.error('Error al parsear JSON de IA (preguntas de examen):', text);
-      throw new InternalServerErrorException(
-        'El agente IA devolvió un formato inválido. Inténtalo de nuevo.',
-      );
-    }
+    const parsed = await this.generateJson<GeneratedQuestion[]>(
+      prompt,
+      2000,
+      'preguntas de examen',
+    );
+    this.logger.log(`${parsed.length} preguntas de examen generadas correctamente`);
+    return parsed;
   }
 
   private async callClaude(name: string, schoolYearLabel: string): Promise<GeneratedCourse> {
@@ -895,21 +867,8 @@ Reglas:
 
     this.logger.log(`Generando curso: "${name}" (${schoolYearLabel})`);
 
-    const text = await this.ai.generate(prompt, 6000);
-
-    try {
-      const raw = text
-        .trim()
-        .replace(/^```json\n?/, '')
-        .replace(/\n?```$/, '');
-      const parsed = JSON.parse(raw) as GeneratedCourse;
-      this.logger.log(`Curso generado correctamente: "${parsed.title}"`);
-      return parsed;
-    } catch {
-      this.logger.error('Error al parsear JSON de IA:', text);
-      throw new InternalServerErrorException(
-        'El agente IA devolvió un formato inválido. Inténtalo de nuevo.',
-      );
-    }
+    const parsed = await this.generateJson<GeneratedCourse>(prompt, 6000, 'curso');
+    this.logger.log(`Curso generado correctamente: "${parsed.title}"`);
+    return parsed;
   }
 }

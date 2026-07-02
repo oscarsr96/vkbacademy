@@ -71,6 +71,8 @@ export const envValidationSchema = Joi.object({
   GEMINI_API_KEY: Joi.string().allow('').optional(),
   ANTHROPIC_API_KEY: Joi.string().allow('').optional(),
   AI_PROVIDER: Joi.string().valid('gemini', 'haiku', 'auto').default('auto'),
+  // Timeout por llamada a Gemini/Haiku (ms). Evita que una IA colgada bloquee la request HTTP.
+  AI_TIMEOUT_MS: Joi.number().integer().min(1000).default(60000),
 
   // ── Vercel (registro dinámico de dominios para multi-tenancy) ──────────────
   VERCEL_TOKEN: Joi.string().allow('').optional(),

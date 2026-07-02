@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
+import { generateAiJson } from '../ai/ai-json';
 import { GenerateExercisesDto } from './dto/generate-exercises.dto';
 import { EvaluateExerciseDto } from './dto/evaluate-exercise.dto';
 
@@ -91,14 +92,18 @@ export class ExercisesService {
 
     // ~150 tokens por ejercicio + overhead
     const maxTokens = Math.min(8000, 200 + dto.count * 250);
-    const text = await this.ai.generate(prompt, maxTokens);
 
-    return this.parseAiJson<GenerateExercisesResult>(text, 'ejercicios', (parsed) => {
-      if (!Array.isArray((parsed as GenerateExercisesResult).exercises)) {
-        throw new Error('La respuesta no contiene un array `exercises`');
-      }
-      return parsed as GenerateExercisesResult;
-    });
+    // Reintento automático ante JSON inválido: ver `ai-json.ts`.
+    let parsed: unknown;
+    try {
+      parsed = await generateAiJson(this.ai, prompt, maxTokens, { attempts: 2, logger: this.logger });
+    } catch (err) {
+      this.logger.error('Error al parsear JSON de IA (ejercicios) tras reintentos:', err);
+      throw new InternalServerErrorException(
+        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
+      );
+    }
+    return this.validateExercisesResult(parsed);
   }
 
   async evaluate(dto: EvaluateExerciseDto): Promise<EvaluationResult> {
@@ -107,33 +112,34 @@ export class ExercisesService {
       `Evaluando respuesta abierta para enunciado: "${dto.statement.slice(0, 60)}..."`,
     );
 
-    const text = await this.ai.generate(prompt, 400);
-
-    return this.parseAiJson<EvaluationResult>(text, 'evaluación', (parsed) => {
-      const { verdict, feedback } = parsed as Partial<EvaluationResult>;
-      if (!verdict || !VALID_VERDICTS.includes(verdict)) {
-        throw new Error(`Veredicto inválido: "${verdict}"`);
-      }
-      if (typeof feedback !== 'string' || feedback.length === 0) {
-        throw new Error('Feedback ausente o vacío');
-      }
-      return { verdict, feedback };
-    });
-  }
-
-  private parseAiJson<T>(text: string, context: string, validate: (parsed: unknown) => T): T {
+    let parsed: unknown;
     try {
-      const raw = text
-        .trim()
-        .replace(/^```json\n?/, '')
-        .replace(/\n?```$/, '');
-      return validate(JSON.parse(raw));
+      parsed = await generateAiJson(this.ai, prompt, 400, { attempts: 2, logger: this.logger });
     } catch (err) {
-      this.logger.error(`Error al parsear JSON de IA (${context}):`, text);
+      this.logger.error('Error al parsear JSON de IA (evaluación) tras reintentos:', err);
       throw new InternalServerErrorException(
         `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
       );
     }
+    return this.validateEvaluationResult(parsed);
+  }
+
+  private validateExercisesResult(parsed: unknown): GenerateExercisesResult {
+    if (!Array.isArray((parsed as GenerateExercisesResult).exercises)) {
+      throw new InternalServerErrorException('La respuesta no contiene un array `exercises`');
+    }
+    return parsed as GenerateExercisesResult;
+  }
+
+  private validateEvaluationResult(parsed: unknown): EvaluationResult {
+    const { verdict, feedback } = parsed as Partial<EvaluationResult>;
+    if (!verdict || !VALID_VERDICTS.includes(verdict)) {
+      throw new InternalServerErrorException(`Veredicto inválido: "${verdict}"`);
+    }
+    if (typeof feedback !== 'string' || feedback.length === 0) {
+      throw new InternalServerErrorException('Feedback ausente o vacío');
+    }
+    return { verdict, feedback };
   }
 
   private buildEvaluationPrompt(dto: EvaluateExerciseDto): string {
