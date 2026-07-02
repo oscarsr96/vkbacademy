@@ -56,8 +56,19 @@ export class AdminController {
   ) {}
 
   @Get('users')
-  getUsers(@CurrentAcademy() academyId: string | null) {
-    return this.adminService.getUsers(academyId);
+  getUsers(
+    @CurrentAcademy() academyId: string | null,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+    @Query('role') role?: Role,
+  ) {
+    return this.adminService.getUsers(academyId, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      search,
+      role,
+    });
   }
 
   @Patch('users/:id/role')
@@ -248,8 +259,15 @@ export class AdminController {
   // ─── Canjes ───────────────────────────────────────────────────────────────
 
   @Get('redemptions')
-  listRedemptions(@CurrentAcademy() academyId: string | null) {
-    return this.adminService.listRedemptions(academyId);
+  listRedemptions(
+    @CurrentAcademy() academyId: string | null,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.adminService.listRedemptions(academyId, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
   }
 
   @Patch('redemptions/:id/deliver')
@@ -260,8 +278,11 @@ export class AdminController {
   // ─── Retos ────────────────────────────────────────────────────────────────
 
   @Get('challenges')
-  listChallenges() {
-    return this.adminService.listChallenges();
+  listChallenges(@Query('page') page = '1', @Query('limit') limit = '20') {
+    return this.adminService.listChallenges({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
   }
 
   @Post('challenges')
@@ -321,15 +342,26 @@ export class AdminController {
   }
 
   @Get('exam-attempts')
-  getExamAttempts(@Query('courseId') courseId?: string, @Query('moduleId') moduleId?: string) {
-    return this.adminService.getExamAttempts(courseId, moduleId);
+  getExamAttempts(
+    @Query('courseId') courseId?: string,
+    @Query('moduleId') moduleId?: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.adminService.getExamAttempts(courseId, moduleId, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
   }
 
   // ─── Certificados ─────────────────────────────────────────────────────────
 
   @Get('certificates')
-  getAllCertificates() {
-    return this.certificatesService.getAllCertificates();
+  getAllCertificates(@Query('page') page = '1', @Query('limit') limit = '10') {
+    return this.certificatesService.getAllCertificates({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
   }
 
   @Post('certificates')

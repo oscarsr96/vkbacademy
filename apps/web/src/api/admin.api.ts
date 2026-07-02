@@ -27,6 +27,20 @@ export interface AdminUser {
   _count: { students: number };
 }
 
+export interface RedemptionStats {
+  totalPointsSpent: number;
+  pendingCount: number;
+  distinctStudents: number;
+}
+
+export interface ChallengeStats {
+  activeCount: number;
+}
+
+export interface CertificateStats {
+  byType: Record<AdminCertificateType, number>;
+}
+
 export interface AdminMetrics {
   users: { total: number; students: number; tutors: number; teachers: number };
   courses: { total: number; published: number };
@@ -40,6 +54,13 @@ export interface AdminCoursesParams {
   limit?: number;
   schoolYearId?: string;
   search?: string;
+}
+
+export interface AdminUsersParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: Role;
 }
 
 export interface UpdateCoursePayload {
@@ -384,7 +405,8 @@ export interface YoutubeCandidate {
 export const adminApi = {
   // ─── Usuarios ──────────────────────────────────────────────────────────────
 
-  getUsers: () => api.get<AdminUser[]>('/admin/users').then((r) => r.data),
+  getUsers: (params?: AdminUsersParams) =>
+    api.get<PaginatedResponse<AdminUser>>('/admin/users', { params }).then((r) => r.data),
 
   updateRole: (userId: string, role: Role) =>
     api.patch<AdminUser>(`/admin/users/${userId}/role`, { role }).then((r) => r.data),
@@ -524,14 +546,24 @@ export const adminApi = {
 
   // ─── Canjes ────────────────────────────────────────────────────────────────
 
-  listRedemptions: () => api.get<AdminRedemption[]>('/admin/redemptions').then((r) => r.data),
+  listRedemptions: (params?: { page?: number; limit?: number }) =>
+    api
+      .get<PaginatedResponse<AdminRedemption> & { stats: RedemptionStats }>('/admin/redemptions', {
+        params,
+      })
+      .then((r) => r.data),
 
   markRedemptionDelivered: (id: string) =>
     api.patch<AdminRedemption>(`/admin/redemptions/${id}/deliver`).then((r) => r.data),
 
   // ─── Retos ─────────────────────────────────────────────────────────────────
 
-  listChallenges: () => api.get<AdminChallenge[]>('/admin/challenges').then((r) => r.data),
+  listChallenges: (params?: { page?: number; limit?: number }) =>
+    api
+      .get<PaginatedResponse<AdminChallenge> & { stats: ChallengeStats }>('/admin/challenges', {
+        params,
+      })
+      .then((r) => r.data),
 
   createChallenge: (payload: CreateChallengePayload) =>
     api.post<AdminChallenge>('/admin/challenges', payload).then((r) => r.data),
@@ -597,14 +629,27 @@ export const adminApi = {
   deleteExamQuestion: (id: string) =>
     api.delete<{ message: string }>(`/admin/exam-questions/${id}`).then((r) => r.data),
 
-  listExamAttempts: (params: { courseId?: string; moduleId?: string }) =>
+  listExamAttempts: (params: {
+    courseId?: string;
+    moduleId?: string;
+    page?: number;
+    limit?: number;
+  }) =>
     api
-      .get<import('./exams.api').AdminExamAttempt[]>('/admin/exam-attempts', { params })
+      .get<PaginatedResponse<import('./exams.api').AdminExamAttempt>>('/admin/exam-attempts', {
+        params,
+      })
       .then((r) => r.data),
 
   // ─── Certificados ──────────────────────────────────────────────────────────
 
-  listCertificates: () => api.get<AdminCertificate[]>('/admin/certificates').then((r) => r.data),
+  listCertificates: (params?: { page?: number; limit?: number }) =>
+    api
+      .get<PaginatedResponse<AdminCertificate> & { stats: CertificateStats }>(
+        '/admin/certificates',
+        { params },
+      )
+      .then((r) => r.data),
 
   issueCertificate: (payload: {
     userId: string;

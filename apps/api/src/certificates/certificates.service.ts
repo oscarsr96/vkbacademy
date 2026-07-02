@@ -290,32 +290,53 @@ export class CertificatesService {
 
   // ─── Todos los certificados (admin) ──────────────────────────────────────
 
-  async getAllCertificates() {
-    const certs = await this.prisma.certificate.findMany({
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        course: { select: { id: true, title: true } },
-        module: {
-          select: {
-            id: true,
-            title: true,
-            course: { select: { id: true, title: true } },
+  async getAllCertificates(params?: { page?: number; limit?: number }) {
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const [certs, total, byTypeRaw] = await Promise.all([
+      this.prisma.certificate.findMany({
+        skip,
+        take: limit,
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          course: { select: { id: true, title: true } },
+          module: {
+            select: {
+              id: true,
+              title: true,
+              course: { select: { id: true, title: true } },
+            },
           },
         },
-      },
-      orderBy: { issuedAt: 'desc' },
-    });
+        orderBy: { issuedAt: 'desc' },
+      }),
+      this.prisma.certificate.count(),
+      this.prisma.certificate.groupBy({ by: ['type'], _count: { _all: true } }),
+    ]);
 
-    return certs.map((c) => ({
-      id: c.id,
-      type: c.type,
-      verifyCode: c.verifyCode,
-      examScore: c.examScore,
-      issuedAt: c.issuedAt.toISOString(),
-      recipientName: c.user.name,
-      recipientEmail: c.user.email,
-      scopeTitle: c.course?.title ?? c.module?.title ?? '',
-      courseTitle: c.module ? c.module.course.title : undefined,
-    }));
+    const byType = Object.fromEntries(
+      byTypeRaw.map((row) => [row.type, row._count._all]),
+    ) as Record<CertificateType, number>;
+
+    return {
+      data: certs.map((c) => ({
+        id: c.id,
+        type: c.type,
+        verifyCode: c.verifyCode,
+        examScore: c.examScore,
+        issuedAt: c.issuedAt.toISOString(),
+        recipientName: c.user.name,
+        recipientEmail: c.user.email,
+        scopeTitle: c.course?.title ?? c.module?.title ?? '',
+        courseTitle: c.module ? c.module.course.title : undefined,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      stats: { byType },
+    };
   }
 }

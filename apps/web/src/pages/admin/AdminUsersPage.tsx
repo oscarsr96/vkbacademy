@@ -37,10 +37,12 @@ export default function AdminUsersPage() {
   const selectedAcademyId = useAcademyFilterStore((s) => s.selectedAcademyId);
   const qc = useQueryClient();
 
-  const { data: users, isLoading } = useQuery({
+  const { data: usersPage, isLoading } = useQuery({
     queryKey: ['admin', 'users', selectedAcademyId],
-    queryFn: adminApi.getUsers,
+    // Límite alto: la página filtra/busca en cliente y necesita el listado completo
+    queryFn: () => adminApi.getUsers({ limit: 1000 }),
   });
+  const users = usersPage?.data;
 
   const { data: schoolYears } = useQuery({
     queryKey: ['school-years'],
@@ -173,8 +175,8 @@ export default function AdminUsersPage() {
           <div>
             <h1 className="hero-title">Gestión de Usuarios</h1>
             <p className="hero-subtitle">
-              {users
-                ? `${users.length} usuario${users.length !== 1 ? 's' : ''} registrados`
+              {usersPage
+                ? `${usersPage.total} usuario${usersPage.total !== 1 ? 's' : ''} registrados`
                 : 'Cargando…'}
             </p>
           </div>

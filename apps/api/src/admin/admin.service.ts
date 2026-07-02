@@ -25,28 +25,53 @@ export class AdminService {
     private readonly youtube: YoutubeService,
   ) {}
 
-  async getUsers(academyId?: string | null) {
-    // Si hay academyId, solo devolver miembros de esa academia
-    const where = academyId ? { academyMembers: { some: { academyId } } } : {};
+  async getUsers(
+    academyId?: string | null,
+    params?: { page?: number; limit?: number; search?: string; role?: Role },
+  ) {
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? 20;
+    const skip = (page - 1) * limit;
 
-    return this.prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        avatarUrl: true,
-        createdAt: true,
-        tutorId: true,
-        tutor: { select: { id: true, name: true } },
-        _count: { select: { students: true } },
-        academyMembers: {
-          select: { academy: { select: { id: true, slug: true, name: true } } },
+    // Si hay academyId, solo devolver miembros de esa academia
+    const where: Prisma.UserWhereInput = {
+      ...(academyId ? { academyMembers: { some: { academyId } } } : {}),
+      ...(params?.role ? { role: params.role } : {}),
+      ...(params?.search
+        ? {
+            OR: [
+              { name: { contains: params.search, mode: 'insensitive' as const } },
+              { email: { contains: params.search, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          avatarUrl: true,
+          createdAt: true,
+          tutorId: true,
+          tutor: { select: { id: true, name: true } },
+          _count: { select: { students: true } },
+          academyMembers: {
+            select: { academy: { select: { id: true, slug: true, name: true } } },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return { data: items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
   }
 
   async assignTutor(studentId: string, tutorId: string | null | undefined) {
@@ -955,14 +980,40 @@ export class AdminService {
 
   // ─── Canjes ───────────────────────────────────────────────────────────────
 
-  async listRedemptions(academyId?: string | null) {
-    return this.prisma.redemption.findMany({
-      where: academyId ? { academyId } : {},
-      orderBy: { redeemedAt: 'desc' },
-      include: {
-        user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+  async listRedemptions(academyId?: string | null, params?: { page?: number; limit?: number }) {
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? 20;
+    const skip = (page - 1) * limit;
+    const where: Prisma.RedemptionWhereInput = academyId ? { academyId } : {};
+
+    const [items, total, sumAgg, pendingCount, distinctStudents] = await Promise.all([
+      this.prisma.redemption.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { redeemedAt: 'desc' },
+        include: {
+          user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+        },
+      }),
+      this.prisma.redemption.count({ where }),
+      this.prisma.redemption.aggregate({ where, _sum: { cost: true } }),
+      this.prisma.redemption.count({ where: { ...where, delivered: false } }),
+      this.prisma.redemption.groupBy({ by: ['userId'], where }),
+    ]);
+
+    return {
+      data: items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      stats: {
+        totalPointsSpent: sumAgg._sum.cost ?? 0,
+        pendingCount,
+        distinctStudents: distinctStudents.length,
       },
-    });
+    };
   }
 
   async markRedemptionDelivered(id: string) {
@@ -977,13 +1028,32 @@ export class AdminService {
 
   // ─── Retos ────────────────────────────────────────────────────────────────
 
-  async listChallenges() {
-    return this.prisma.challenge.findMany({
-      orderBy: { createdAt: 'asc' },
-      include: {
-        _count: { select: { userChallenges: { where: { completed: true } } } },
-      },
-    });
+  async listChallenges(params?: { page?: number; limit?: number }) {
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const [items, total, activeCount] = await Promise.all([
+      this.prisma.challenge.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'asc' },
+        include: {
+          _count: { select: { userChallenges: { where: { completed: true } } } },
+        },
+      }),
+      this.prisma.challenge.count(),
+      this.prisma.challenge.count({ where: { isActive: true } }),
+    ]);
+
+    return {
+      data: items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      stats: { activeCount },
+    };
   }
 
   async createChallenge(dto: CreateChallengeDto) {
@@ -1092,15 +1162,30 @@ export class AdminService {
     return { message: 'Pregunta eliminada correctamente' };
   }
 
-  async getExamAttempts(courseId?: string, moduleId?: string) {
+  async getExamAttempts(
+    courseId?: string,
+    moduleId?: string,
+    params?: { page?: number; limit?: number },
+  ) {
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? 20;
+    const skip = (page - 1) * limit;
     const where = courseId ? { courseId } : moduleId ? { moduleId } : {};
-    return this.prisma.examAttempt.findMany({
-      where,
-      orderBy: { startedAt: 'desc' },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-      },
-    });
+
+    const [items, total] = await Promise.all([
+      this.prisma.examAttempt.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { startedAt: 'desc' },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+        },
+      }),
+      this.prisma.examAttempt.count({ where }),
+    ]);
+
+    return { data: items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
   }
 
   // ─── Matrículas manuales ──────────────────────────────────────────────────
@@ -1255,14 +1340,16 @@ export class AdminService {
           orderBy: { order: 'asc' },
         });
 
-        for (let i = 0; i < dto.examQuestions.length; i++) {
-          await tx.examAnswer.createMany({
-            data: dto.examQuestions[i].answers.map((a) => ({
-              questionId: createdExamQs[i].id,
-              text: a.text,
-              isCorrect: a.isCorrect,
-            })),
-          });
+        // Todas las respuestas en un único createMany (en vez de uno por pregunta)
+        const examAnswersData = dto.examQuestions.flatMap((q, i) =>
+          q.answers.map((a) => ({
+            questionId: createdExamQs[i].id,
+            text: a.text,
+            isCorrect: a.isCorrect,
+          })),
+        );
+        if (examAnswersData.length > 0) {
+          await tx.examAnswer.createMany({ data: examAnswersData });
         }
       }
 
@@ -1292,14 +1379,16 @@ export class AdminService {
             orderBy: { order: 'asc' },
           });
 
-          for (let i = 0; i < modDto.examQuestions.length; i++) {
-            await tx.examAnswer.createMany({
-              data: modDto.examQuestions[i].answers.map((a) => ({
-                questionId: createdModExamQs[i].id,
-                text: a.text,
-                isCorrect: a.isCorrect,
-              })),
-            });
+          // Todas las respuestas en un único createMany (en vez de uno por pregunta)
+          const modExamAnswersData = modDto.examQuestions.flatMap((q, i) =>
+            q.answers.map((a) => ({
+              questionId: createdModExamQs[i].id,
+              text: a.text,
+              isCorrect: a.isCorrect,
+            })),
+          );
+          if (modExamAnswersData.length > 0) {
+            await tx.examAnswer.createMany({ data: modExamAnswersData });
           }
         }
 
@@ -1322,24 +1411,32 @@ export class AdminService {
               data: { lessonId: newLesson.id },
             });
 
-            for (let qi = 0; qi < lesDto.quiz.questions.length; qi++) {
-              const qDto = lesDto.quiz.questions[qi];
-              const newQuestion = await tx.question.create({
-                data: {
-                  text: qDto.text,
-                  type: QuestionType.SINGLE,
-                  order: qi + 1,
-                  quizId: newQuiz.id,
-                },
-              });
+            // Todas las preguntas del quiz en un único createMany
+            await tx.question.createMany({
+              data: lesDto.quiz.questions.map((qDto, qi) => ({
+                text: qDto.text,
+                type: QuestionType.SINGLE,
+                order: qi + 1,
+                quizId: newQuiz.id,
+              })),
+            });
 
-              await tx.answer.createMany({
-                data: qDto.answers.map((a) => ({
-                  text: a.text,
-                  isCorrect: a.isCorrect,
-                  questionId: newQuestion.id,
-                })),
-              });
+            // Recuperar los IDs creados para asociarles las respuestas
+            const createdQuestions = await tx.question.findMany({
+              where: { quizId: newQuiz.id },
+              orderBy: { order: 'asc' },
+            });
+
+            // Todas las respuestas en un único createMany (en vez de uno por pregunta)
+            const quizAnswersData = lesDto.quiz.questions.flatMap((qDto, qi) =>
+              qDto.answers.map((a) => ({
+                text: a.text,
+                isCorrect: a.isCorrect,
+                questionId: createdQuestions[qi].id,
+              })),
+            );
+            if (quizAnswersData.length > 0) {
+              await tx.answer.createMany({ data: quizAnswersData });
             }
           }
         }

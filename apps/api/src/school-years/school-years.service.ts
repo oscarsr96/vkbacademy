@@ -1,5 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TtlCache } from '../common/ttl-cache';
+import type { SchoolYear } from '@prisma/client';
 
 /**
  * Niveles educativos por defecto. Son datos de referencia que la app necesita
@@ -18,11 +20,18 @@ const DEFAULT_SCHOOL_YEARS: ReadonlyArray<{ name: string; label: string }> = [
 @Injectable()
 export class SchoolYearsService implements OnApplicationBootstrap {
   private readonly logger = new Logger(SchoolYearsService.name);
+  // Datos casi estáticos: un único valor cacheado bajo una misma clave
+  private readonly cache = new TtlCache<'all', SchoolYear[]>(5 * 60 * 1000);
 
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.schoolYear.findMany({ orderBy: { name: 'asc' } });
+  async findAll() {
+    const cached = this.cache.get('all');
+    if (cached) return cached;
+
+    const schoolYears = await this.prisma.schoolYear.findMany({ orderBy: { name: 'asc' } });
+    this.cache.set('all', schoolYears);
+    return schoolYears;
   }
 
   /**
