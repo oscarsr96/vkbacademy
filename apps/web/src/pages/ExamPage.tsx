@@ -12,6 +12,9 @@ import { getApiErrorMessage } from '../utils/errorMessage';
 import { ConfigStep } from './exam/ConfigStep';
 import { InProgressStep } from './exam/InProgressStep';
 import { ResultsStep } from './exam/ResultsStep';
+import PageHeader from '../components/ui/PageHeader';
+import Icon from '../components/ui/Icon';
+import EmptyState from '../components/ui/EmptyState';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
 
@@ -126,53 +129,44 @@ export default function ExamPage() {
     else navigate('/courses');
   };
 
+  const backButton = (label: string) => (
+    <button
+      onClick={handleBack}
+      className="btn btn-ghost"
+      style={{ padding: '5px 12px', fontSize: '0.8rem', marginBottom: 14 }}
+    >
+      <Icon name="chevron-left" size={14} />
+      {label}
+    </button>
+  );
+
   // ── Camino IA: no carga bankInfo, renderiza in-progress / results directos ──
   if (isAiMode) {
     return (
       <div style={{ maxWidth: 780, margin: '0 auto' }}>
-        <div className="page-hero animate-in">
-          {examState !== 'in-progress' && (
-            <button
-              onClick={handleBack}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'rgba(255,255,255,0.50)',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                padding: 0,
-                marginBottom: 14,
-              }}
-            >
-              Volver
-            </button>
-          )}
-          <h1 className="hero-title" style={{ fontSize: '1.6rem' }}>
-            Examen IA
-          </h1>
-          <p className="hero-subtitle">
-            {currentAttempt ? 'Examen generado por IA' : 'Preparando preguntas...'}
-          </p>
-        </div>
+        {examState !== 'in-progress' && backButton('Volver')}
+        <PageHeader
+          variant="light"
+          title="Examen IA"
+          subtitle={currentAttempt ? 'Examen generado por IA' : 'Preparando preguntas...'}
+        />
 
         {aiStartError && (
-          <div
-            className="vkb-card"
-            style={{ padding: '24px', borderColor: 'var(--color-error, #dc2626)' }}
-          >
-            <p style={{ color: 'var(--color-error, #dc2626)', margin: 0 }}>{aiStartError}</p>
-            <button
-              className="btn btn-ghost"
-              style={{ marginTop: 14 }}
-              onClick={() => navigate(returnTo)}
-            >
+          <div className="vkb-card" style={{ padding: '24px', borderColor: 'var(--color-error)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <Icon name="close" size={18} color="var(--color-error)" />
+              <p style={{ color: 'var(--color-error)', margin: 0 }}>{aiStartError}</p>
+            </div>
+            <button className="btn btn-ghost" onClick={() => navigate(returnTo)}>
+              <Icon name="chevron-left" size={14} />
               Volver
             </button>
           </div>
         )}
 
         {!aiStartError && examState === 'in-progress' && !currentAttempt && (
-          <div className="vkb-card" style={{ padding: '24px' }}>
+          <div className="vkb-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="spinner dark" />
             <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>Cargando preguntas...</p>
           </div>
         )}
@@ -205,19 +199,18 @@ export default function ExamPage() {
   if (bankLoading) {
     return (
       <div style={{ maxWidth: 780, margin: '0 auto' }}>
-        <div className="page-hero animate-in">
-          <h1 className="hero-title">Cargando examen...</h1>
-          <p className="hero-subtitle">Preparando el banco de preguntas</p>
-        </div>
+        <PageHeader variant="light" title="Cargando examen..." subtitle="Preparando el banco de preguntas" />
       </div>
     );
   }
 
   if (bankError || !bankInfo) {
     return (
-      <div style={{ maxWidth: 780, margin: '0 auto', padding: '2rem' }}>
-        <div style={{ color: 'var(--color-error)', padding: '1rem' }}>
-          Error al cargar el examen.
+      <div style={{ maxWidth: 780, margin: '0 auto' }}>
+        <PageHeader variant="light" title="Examen" />
+        <div className="vkb-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Icon name="close" size={18} color="var(--color-error)" />
+          <span style={{ color: 'var(--color-error)' }}>Error al cargar el examen.</span>
         </div>
       </div>
     );
@@ -226,31 +219,18 @@ export default function ExamPage() {
   if (bankInfo.questionCount === 0) {
     return (
       <div style={{ maxWidth: 780, margin: '0 auto' }}>
-        <div className="page-hero animate-in">
-          <button
-            onClick={handleBack}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'rgba(255,255,255,0.55)',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              padding: 0,
-              marginBottom: 16,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            Volver
-          </button>
-          <h1 className="hero-title">Examen — {bankInfo.scopeTitle}</h1>
-          <p className="hero-subtitle">Este banco de preguntas esta vacio.</p>
-        </div>
-        <div className="vkb-card" style={{ padding: '24px' }}>
-          <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
-            El administrador debe anadir preguntas antes de poder examinarse.
-          </p>
+        {backButton('Volver')}
+        <PageHeader
+          variant="light"
+          title={`Examen — ${bankInfo.scopeTitle}`}
+          subtitle="Este banco de preguntas esta vacio."
+        />
+        <div className="vkb-card">
+          <EmptyState
+            icon="lock"
+            title="Banco de preguntas vacio"
+            message="El administrador debe anadir preguntas antes de poder examinarse."
+          />
         </div>
       </div>
     );
@@ -269,52 +249,18 @@ export default function ExamPage() {
 
   return (
     <div style={{ maxWidth: 780, margin: '0 auto' }}>
-      {/* Hero */}
-      <div className="page-hero animate-in">
-        {examState !== 'in-progress' && (
-          <button
-            onClick={handleBack}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'rgba(255,255,255,0.50)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              padding: 0,
-              marginBottom: 14,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            Volver al curso
-          </button>
-        )}
+      {examState !== 'in-progress' && backButton('Volver al curso')}
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            flexWrap: 'wrap' as const,
-          }}
-        >
-          <div>
-            <h1 className="hero-title" style={{ fontSize: '1.6rem' }}>
-              Examen
-            </h1>
-            <p className="hero-subtitle">{bankInfo.scopeTitle}</p>
-          </div>
-
-          {/* Indicador de paso */}
+      {/* Cabecera con indicador de paso */}
+      <PageHeader variant="light" title="Examen" subtitle={bankInfo.scopeTitle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' as const, marginTop: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {['Configurar', 'Examen', 'Resultados'].map((label, idx) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div
                   style={{
-                    width: 28,
-                    height: 28,
+                    width: 26,
+                    height: 26,
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
@@ -323,23 +269,27 @@ export default function ExamPage() {
                       idx === stepIndex
                         ? 'var(--gradient-orange)'
                         : idx < stepIndex
-                          ? 'rgba(234,88,12,0.35)'
-                          : 'rgba(255,255,255,0.10)',
-                    fontSize: '0.7rem',
+                          ? 'var(--brand-soft)'
+                          : 'var(--color-border)',
+                    fontSize: '0.68rem',
                     fontWeight: 800,
-                    color: idx <= stepIndex ? '#fff' : 'rgba(255,255,255,0.40)',
-                    border: idx === stepIndex ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                    color:
+                      idx === stepIndex
+                        ? 'var(--brand-contrast)'
+                        : idx < stepIndex
+                          ? 'var(--brand-deep)'
+                          : 'var(--color-text-muted)',
+                    border: idx === stepIndex ? 'none' : '1px solid var(--color-border)',
                   }}
                 >
-                  {idx < stepIndex ? '✓' : idx + 1}
+                  {idx < stepIndex ? <Icon name="check" size={12} /> : idx + 1}
                 </div>
                 {idx < 2 && (
                   <div
                     style={{
-                      width: 24,
+                      width: 20,
                       height: 2,
-                      background:
-                        idx < stepIndex ? 'rgba(234,88,12,0.50)' : 'rgba(255,255,255,0.12)',
+                      background: idx < stepIndex ? 'var(--brand-glow)' : 'var(--color-border)',
                       borderRadius: 1,
                     }}
                   />
@@ -347,22 +297,27 @@ export default function ExamPage() {
               </div>
             ))}
           </div>
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+            {stepLabel} · {bankInfo.questionCount} preguntas disponibles
+          </span>
         </div>
-
-        <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', marginTop: 8 }}>
-          {stepLabel} · {bankInfo.questionCount} preguntas disponibles
-        </div>
-      </div>
+      </PageHeader>
 
       {/* Error de arranque/entrega — no bloquea, permite reintentar */}
       {actionError && (
         <div
           className="vkb-card"
-          style={{ padding: '16px 20px', marginBottom: 16, borderColor: 'var(--color-error, #dc2626)' }}
+          style={{
+            padding: '14px 20px',
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            borderColor: 'var(--color-error)',
+          }}
         >
-          <p style={{ color: 'var(--color-error, #dc2626)', margin: 0, fontSize: '0.9rem' }}>
-            {actionError}
-          </p>
+          <Icon name="close" size={16} color="var(--color-error)" />
+          <p style={{ color: 'var(--color-error)', margin: 0, fontSize: '0.9rem' }}>{actionError}</p>
         </div>
       )}
 

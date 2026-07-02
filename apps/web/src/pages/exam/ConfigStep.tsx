@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import Icon from '../../components/ui/Icon';
+import ProgressBar from '../../components/ui/ProgressBar';
 import { scoreColor } from './examShared';
 
 // ─── Componente: Configuración ────────────────────────────────────────────────
@@ -21,18 +23,6 @@ export function ConfigStep({
   const [timeMins, setTimeMins] = useState(15);
   const [onlyOnce, setOnlyOnce] = useState(false);
 
-  const inputStyle: React.CSSProperties = {
-    padding: '10px 14px',
-    borderRadius: 'var(--radius-sm)',
-    border: '1.5px solid var(--color-border)',
-    background: 'var(--color-bg)',
-    color: 'var(--color-text)',
-    fontSize: '0.95rem',
-    outline: 'none',
-    transition: 'border-color 0.15s, box-shadow 0.15s',
-    boxSizing: 'border-box' as const,
-  };
-
   const toggleRowStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -50,28 +40,24 @@ export function ConfigStep({
       <div className="vkb-card" style={{ padding: '28px' }}>
         <h3
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
             fontSize: '1rem',
             fontWeight: 700,
             color: 'var(--color-text)',
             marginBottom: 20,
           }}
         >
+          <span style={{ color: 'var(--brand)', display: 'inline-flex' }}>
+            <Icon name="target" size={18} />
+          </span>
           {scopeTitle}
         </h3>
 
         {/* Numero de preguntas */}
-        <div style={{ marginBottom: 20 }}>
-          <label
-            style={{
-              display: 'block',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              color: 'var(--color-text-muted)',
-              marginBottom: 8,
-            }}
-          >
-            Numero de preguntas (maximo: {maxQuestions})
-          </label>
+        <div className="field" style={{ marginBottom: 20 }}>
+          <label>Numero de preguntas (maximo: {maxQuestions})</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <input
               type="number"
@@ -79,10 +65,10 @@ export function ConfigStep({
               max={maxQuestions}
               value={numQ}
               onChange={(e) => setNumQ(Math.min(maxQuestions, Math.max(1, Number(e.target.value))))}
-              style={{ ...inputStyle, width: 100 }}
+              style={{ width: 100 }}
             />
-            <div className="progress-bar" style={{ flex: 1 }}>
-              <div className="progress-fill" style={{ width: `${(numQ / maxQuestions) * 100}%` }} />
+            <div style={{ flex: 1 }}>
+              <ProgressBar value={numQ} max={maxQuestions} variant="brand" />
             </div>
             <span
               style={{
@@ -104,13 +90,20 @@ export function ConfigStep({
             type="checkbox"
             checked={useTimer}
             onChange={(e) => setUseTimer(e.target.checked)}
-            style={{ accentColor: 'var(--color-primary)', width: 16, height: 16 }}
+            style={{ accentColor: 'var(--brand)', width: 16, height: 16 }}
           />
+          <Icon name="clock" size={15} style={{ color: 'var(--color-text-muted)' }} />
           <span style={{ fontWeight: 500 }}>Limite de tiempo</span>
         </label>
         {useTimer && (
           <div
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 12px 26px' }}
+            className="field"
+            style={{
+              flexDirection: 'row' as const,
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 0 12px 26px',
+            }}
           >
             <input
               type="number"
@@ -118,7 +111,7 @@ export function ConfigStep({
               max={180}
               value={timeMins}
               onChange={(e) => setTimeMins(Math.max(1, Number(e.target.value)))}
-              style={{ ...inputStyle, width: 80 }}
+              style={{ width: 80 }}
             />
             <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>minutos</span>
           </div>
@@ -131,8 +124,9 @@ export function ConfigStep({
             type="checkbox"
             checked={onlyOnce}
             onChange={(e) => setOnlyOnce(e.target.checked)}
-            style={{ accentColor: 'var(--color-primary)', width: 16, height: 16 }}
+            style={{ accentColor: 'var(--brand)', width: 16, height: 16 }}
           />
+          <Icon name="lock" size={14} style={{ color: 'var(--color-text-muted)' }} />
           <span style={{ fontWeight: 500 }}>Respuesta unica (no se puede cambiar)</span>
         </label>
 
@@ -142,7 +136,14 @@ export function ConfigStep({
           disabled={isLoading}
           onClick={() => onStart(numQ, useTimer ? timeMins * 60 : undefined, onlyOnce || undefined)}
         >
-          {isLoading ? 'Preparando...' : 'Comenzar examen'}
+          {isLoading ? (
+            'Preparando...'
+          ) : (
+            <>
+              <Icon name="play" size={16} />
+              Comenzar examen
+            </>
+          )}
         </button>
       </div>
 
@@ -151,12 +152,16 @@ export function ConfigStep({
         <div className="vkb-card" style={{ padding: '24px' }}>
           <h4
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
               fontSize: '0.9rem',
               fontWeight: 700,
               color: 'var(--color-text)',
               marginBottom: 16,
             }}
           >
+            <Icon name="chart" size={16} style={{ color: 'var(--brand)' }} />
             Intentos recientes
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
@@ -182,6 +187,7 @@ export function ConfigStep({
                     fontWeight: 800,
                     color: scoreColor(a.score),
                     fontSize: '0.95rem',
+                    fontVariantNumeric: 'tabular-nums',
                   }}
                 >
                   {a.score.toFixed(1)}%
