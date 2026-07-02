@@ -24,6 +24,7 @@ import PublicLayout from './layouts/PublicLayout';
 import AboutPage from './pages/marketing/AboutPage';
 import PricingPage from './pages/marketing/PricingPage';
 import RootIndex from './components/RootIndex';
+import BrandSync from './components/BrandSync';
 
 // Rutas pesadas o de uso poco frecuente (panel admin, portal docente, estudio con IA) —
 // carga diferida para reducir el bundle inicial que descarga un alumno normal.
@@ -83,6 +84,7 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Suspense fallback={<RouteLoadingFallback />}>
+    <BrandSync />
     <Routes>
       {/* ── Ruta raíz: si dominio de academia, renderiza sin PublicLayout ── */}
       <Route path="/" element={<RootIndex />} />

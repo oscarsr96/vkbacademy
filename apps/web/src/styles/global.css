@@ -1,45 +1,107 @@
 /* ══════════════════════════════════════════════════════════════════
-   VKB Academy — Design System
-   Naranja #ea580c × Azul oscuro #0d1b2a
+   VKB Academy — Design System "Híbrido Estadio"
+   Marca: naranja oficial del club #f5911e × navy #0a1628
+   Acentos fijos del estadio: cyan #13aff0, rojo #cb2027, ámbar LED #ffd24d
    ══════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Colores base */
-  --color-bg: #f0f2f5;
+  /* ── Marca (sobrescribible por academia en runtime via applyBrand) ── */
+  --brand: #f5911e;
+  --brand-light: #fbb04a;
+  --brand-deep: #e07b06;
+  --brand-contrast: #0a1628; /* texto sobre --brand: navy, no negro puro */
+  --brand-soft: rgba(245, 145, 30, 0.12);
+  --brand-faint: rgba(245, 145, 30, 0.06);
+  --brand-glow: rgba(245, 145, 30, 0.4);
+
+  /* ── Acentos del club (FIJOS, no multi-tenant: hardware del estadio) ── */
+  --accent-cyan: #13aff0;
+  --accent-cyan-light: #46d4fe;
+  --accent-red: #cb2027;
+  --amber-led: #ffd24d; /* SOLO números de marcador */
+  --amber-glow:
+    0 0 18px rgba(255, 210, 77, 0.55),
+    0 0 50px rgba(255, 210, 77, 0.22);
+
+  /* ── Escala navy ── */
+  --navy-950: #080e1a;
+  --navy-900: #0a1628;
+  --navy-800: #0d1b2a;
+  --navy-700: #152233;
+
+  /* ── Tokens semánticos (valores LIGHT por defecto = zona lectura) ── */
+  --color-bg: #f4f5f7;
   --color-surface: #ffffff;
-  --color-primary: #ea580c;
-  --color-primary-hover: #c94e00;
-  --color-primary-light: #fff1eb;
-  --color-dark: #0d1b2a;
-  --color-dark-900: #080e1a;
-  --color-text: #1a1a2e;
-  --color-text-muted: #6b7280;
+  --color-text: #16213a;
+  --color-text-muted: #64748b;
   --color-border: #e5e7eb;
+  --panel: #ffffff;
+  --panel-border: #e5e7eb;
   --color-error: #dc2626;
   --color-error-light: #fef2f2;
   --color-success: #16a34a;
 
-  /* Gradientes */
-  --gradient-hero: linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%);
-  --gradient-orange: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
-  --gradient-sidebar: linear-gradient(180deg, #080e1a 0%, #0d1b2a 100%);
+  /* ── Alias retrocompatibles (hasta acabar la migración de #ea580c) ── */
+  --color-primary: var(--brand);
+  --color-primary-hover: var(--brand-deep);
+  --color-primary-light: var(--brand-soft);
+  --color-dark: var(--navy-800);
+  --color-dark-900: var(--navy-950);
 
-  /* Sombras */
+  /* ── Gradientes ── */
+  --gradient-hero: linear-gradient(135deg, var(--navy-950) 0%, var(--navy-800) 55%, var(--navy-700) 100%);
+  --gradient-orange: linear-gradient(135deg, #f5911e 0%, #fbb04a 100%);
+  --gradient-signature: linear-gradient(135deg, #f5911e 0%, #fbb04a 55%, #13aff0 100%);
+  --gradient-sidebar: linear-gradient(180deg, var(--navy-950) 0%, var(--navy-800) 100%);
+
+  /* ── Sombras ── */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
-  --shadow-orange: 0 8px 32px rgba(234, 88, 12, 0.3);
+  --shadow-orange: 0 8px 32px rgba(245, 145, 30, 0.3);
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.1);
-  --shadow-card-hover: 0 16px 48px rgba(234, 88, 12, 0.18);
-  --glow-orange: 0 0 24px rgba(234, 88, 12, 0.4);
+  --shadow-card-hover: 0 16px 48px rgba(245, 145, 30, 0.18);
+  --glow-orange: 0 0 24px var(--brand-glow);
 
-  /* Radios */
+  /* ── Radios ── */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
   --radius-xl: 24px;
 
-  /* Tipografía */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* ── Tipografía ── */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Bebas Neue', Impact, 'Arial Narrow', sans-serif;
+  --font-brand: 'Unbounded', 'Inter', sans-serif;
+
+  /* ── Textura de media cancha (decorativa, stroke tenue) ── */
+  --court-lines: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 260' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='1.5'%3E%3Cline x1='0' y1='250' x2='400' y2='250'/%3E%3Crect x='140' y='130' width='120' height='120' /%3E%3Ccircle cx='200' cy='130' r='38'/%3E%3Cpath d='M 55 250 A 168 168 0 0 1 345 250'/%3E%3Cpath d='M 172 250 A 28 28 0 0 1 228 250'/%3E%3C/svg%3E");
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ZONA OSCURA — "modo estadio"
+   Redefine los tokens semánticos; se activa por página con usePageZone('dark')
+   ══════════════════════════════════════════════════════════════════ */
+
+.zone-dark {
+  --color-bg: var(--navy-950);
+  --color-surface: rgba(13, 27, 42, 0.66);
+  --color-text: #f1f5f9;
+  --color-text-muted: rgba(241, 245, 249, 0.6);
+  --color-border: rgba(255, 255, 255, 0.09);
+  --panel: rgba(9, 12, 20, 0.66);
+  --panel-border: rgba(255, 255, 255, 0.09);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.45);
+  --color-error-light: rgba(220, 38, 38, 0.14);
+  color: var(--color-text);
+}
+
+/* Fondo de estadio: focos naranja/ámbar + dot-grid LED + navy */
+.app-main.zone-dark {
+  background:
+    radial-gradient(120% 80% at 50% -10%, var(--brand-soft), transparent 55%),
+    radial-gradient(80% 60% at 90% 110%, rgba(255, 210, 77, 0.08), transparent 60%),
+    radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1.4px) 0 0 / 15px 15px,
+    linear-gradient(180deg, var(--navy-950) 0%, var(--navy-800) 100%);
 }
 
 /* ──── Reset ──── */
@@ -94,10 +156,68 @@ body {
 @keyframes pulse-glow {
   0%,
   100% {
-    box-shadow: 0 4px 24px rgba(234, 88, 12, 0.15);
+    box-shadow: 0 4px 24px rgba(245, 145, 30, 0.15);
   }
   50% {
-    box-shadow: 0 4px 32px rgba(234, 88, 12, 0.35);
+    box-shadow: 0 4px 32px rgba(245, 145, 30, 0.35);
+  }
+}
+
+/* Pulso LED del ámbar de marcador */
+@keyframes ledPulse {
+  0%,
+  100% {
+    text-shadow:
+      0 0 12px rgba(255, 210, 77, 0.5),
+      0 0 34px rgba(255, 210, 77, 0.18);
+  }
+  50% {
+    text-shadow:
+      0 0 22px rgba(255, 210, 77, 0.85),
+      0 0 58px rgba(255, 210, 77, 0.3);
+  }
+}
+
+/* Entradas coreografiadas (deck style) */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Guion/acento que se dibuja de izquierda a derecha */
+@keyframes dashGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Barrido de foco de estadio */
+@keyframes sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
   }
 }
 
@@ -154,20 +274,46 @@ body {
   right: -60px;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(234, 88, 12, 0.2) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--brand-glow) 0%, transparent 70%);
+  opacity: 0.55;
   pointer-events: none;
 }
 
-/* Título hero con texto degradado naranja */
+/* Media cancha decorativa en la esquina del hero */
+.court-lines::after {
+  content: '';
+  position: absolute;
+  right: -30px;
+  bottom: -8px;
+  width: 340px;
+  height: 220px;
+  background: var(--court-lines) no-repeat center / contain;
+  pointer-events: none;
+}
+
+/* Barrido de foco de estadio (muy sutil, loop lento) */
+.sweep-light::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(130, 175, 255, 0.06), transparent);
+  animation: sweep 5.5s linear infinite;
+  pointer-events: none;
+}
+
+/* Título hero con texto degradado firma (naranja → cyan) */
 .hero-title {
-  font-size: 2rem;
-  font-weight: 900;
-  background: var(--gradient-orange);
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 5vw, 2.9rem);
+  font-weight: 400;
+  letter-spacing: 0.035em;
+  background: var(--gradient-signature);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  line-height: 1.04;
+  text-transform: uppercase;
 }
 
 .hero-subtitle {
@@ -192,15 +338,92 @@ body {
 .vkb-card:hover {
   box-shadow: var(--shadow-card-hover);
   transform: translateY(-3px);
-  border-color: rgba(234, 88, 12, 0.25);
+  border-color: var(--brand-glow);
+}
+
+/* ── Panel glass (zona estadio) ── */
+.panel-glass {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+
+/* ── Número de marcador LED (solo datos: puntos, tiempos, rachas) ── */
+.score-number {
+  font-family: var(--font-display);
+  color: var(--amber-led);
+  text-shadow: var(--amber-glow);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-number.pulse {
+  animation: ledPulse 2.6s ease-in-out infinite;
+}
+
+/* ── Label de sección (mono-editorial, uppercase) ── */
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+/* ── Chip / tab de filtro ── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    color 0.18s,
+    border-color 0.18s;
+}
+
+.chip:hover {
+  border-color: var(--brand);
+  color: var(--brand-deep);
+}
+
+.chip.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--brand-contrast);
+  box-shadow: 0 0 14px var(--brand-glow);
+}
+
+.zone-dark .chip:hover {
+  color: var(--brand-light);
 }
 
 /* ── Tarjeta de estadística con glow pulsante ── */
 .stat-card {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  border: 1.5px solid rgba(234, 88, 12, 0.15);
-  box-shadow: 0 4px 24px rgba(234, 88, 12, 0.12);
+  border: 1.5px solid var(--brand-soft);
+  box-shadow: 0 4px 24px rgba(245, 145, 30, 0.12);
   padding: 20px 24px;
   animation: pulse-glow 3s ease-in-out infinite;
   transition: transform 0.2s;
@@ -212,7 +435,7 @@ body {
 
 /* ── Barra de progreso animada ── */
 .progress-bar {
-  background: rgba(234, 88, 12, 0.12);
+  background: var(--brand-soft);
   border-radius: 999px;
   height: 8px;
   overflow: hidden;
@@ -223,7 +446,12 @@ body {
   background: var(--gradient-orange);
   border-radius: 999px;
   animation: progressFill 0.8s ease both;
-  box-shadow: 0 0 8px rgba(234, 88, 12, 0.4);
+  box-shadow: 0 0 8px var(--brand-glow);
+}
+
+.progress-fill.amber {
+  background: linear-gradient(90deg, #ffd24d 0%, #ffe08a 100%);
+  box-shadow: 0 0 10px rgba(255, 210, 77, 0.5);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -263,7 +491,7 @@ body {
   -webkit-appearance: none;
   -moz-appearance: none;
   background:
-    url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10' fill='none'%3e%3cpath d='M1 1.5L7 8L13 1.5' stroke='%23ea580c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")
+    url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10' fill='none'%3e%3cpath d='M1 1.5L7 8L13 1.5' stroke='%23f5911e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")
       no-repeat right 14px center / 14px 10px,
     #ffffff;
   border: 1.5px solid #d1d5db;
@@ -288,8 +516,8 @@ body {
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.12);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
 }
 
 .field input.error {
@@ -316,8 +544,8 @@ body {
 
 .field-dark input:focus,
 .field-dark select:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -352,7 +580,7 @@ body {
 
 .btn-primary {
   background: var(--gradient-orange);
-  color: #fff;
+  color: var(--brand-contrast);
   box-shadow: var(--shadow-orange);
 }
 
@@ -360,6 +588,10 @@ body {
   box-shadow: var(--glow-orange);
   transform: translateY(-2px);
   filter: brightness(1.07);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .btn-ghost {
@@ -432,9 +664,9 @@ body {
 }
 
 .role-badge.ADMIN {
-  background: rgba(234, 88, 12, 0.15);
-  color: #c94e00;
-  border: 1px solid rgba(234, 88, 12, 0.25);
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  border: 1px solid var(--brand-glow);
 }
 .role-badge.TEACHER {
   background: #dbeafe;
@@ -463,8 +695,8 @@ body {
 }
 
 .spinner.dark {
-  border-color: rgba(234, 88, 12, 0.2);
-  border-top-color: var(--color-primary);
+  border-color: var(--brand-soft);
+  border-top-color: var(--brand);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -513,7 +745,7 @@ body {
 }
 
 .table-wrap tbody tr:hover {
-  background: rgba(234, 88, 12, 0.04);
+  background: var(--brand-faint);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -523,6 +755,7 @@ body {
 .app-shell {
   display: flex;
   height: 100vh;
+  height: 100dvh; /* móvil: evita el salto de la barra del navegador */
   overflow: hidden;
 }
 
@@ -559,7 +792,7 @@ body {
     top: 0;
     z-index: 50;
     flex-shrink: 0;
-    border-bottom: 1px solid rgba(234, 88, 12, 0.2);
+    border-bottom: 1px solid var(--brand-soft);
   }
 
   .app-topbar-brand {
@@ -593,7 +826,7 @@ body {
 
   .app-hamburger:hover,
   .app-topbar-logout:hover {
-    color: #ea580c;
+    color: var(--brand);
   }
 
   .app-sidebar {
@@ -624,7 +857,7 @@ body {
   }
 
   .app-sidebar-close:hover {
-    color: #ea580c;
+    color: var(--brand);
   }
 
   .app-overlay {
@@ -741,5 +974,20 @@ body {
   }
   50% {
     opacity: 0;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ACCESIBILIDAD — sin animaciones si el usuario lo pide
+   ══════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
