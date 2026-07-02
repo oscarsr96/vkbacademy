@@ -418,6 +418,22 @@ body {
   color: var(--brand-light);
 }
 
+/* ── Dashboard a dos columnas: contenido + rail lateral ── */
+.dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
+  align-items: start;
+  max-width: 1240px;
+}
+
+@media (max-width: 1100px) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 820px;
+  }
+}
+
 /* ── Numeración editorial de cards (Swiss): 01, 02, 03… ── */
 .numbered-grid {
   counter-reset: card;
