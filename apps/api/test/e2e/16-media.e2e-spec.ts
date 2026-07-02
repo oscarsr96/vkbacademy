@@ -96,12 +96,23 @@ describe('Media — /media', () => {
       expect(res.status).toBe(401);
     });
 
-    it('un STUDENT autenticado no recibe 401 ni 403 (cualquier rol puede ver vídeos)', async () => {
-      // Igual que upload-url: sin AWS real el SDK puede devolver 500, pero
-      // lo que importa es que auth pasa y el rol STUDENT tiene acceso.
+    it('devuelve 403 cuando un STUDENT intenta firmar una key arbitraria', async () => {
+      // Sin mapeo key→recurso en BD (los vídeos son de YouTube), la firma se
+      // restringe a roles de gestión de contenido; un alumno recibe 403.
       const res = await authGet(
         '/media/view-url/cursos/leccion-01.mp4',
         studentToken,
+      );
+
+      expect(res.status).toBe(403);
+    });
+
+    it('un TEACHER autenticado no recibe 401 ni 403 (rol de gestión de contenido)', async () => {
+      // Sin AWS real el SDK puede devolver 500, pero lo relevante es que auth y
+      // roles pasan para un TEACHER.
+      const res = await authGet(
+        '/media/view-url/cursos/leccion-01.mp4',
+        teacherToken,
       );
 
       expect(res.status).not.toBe(401);

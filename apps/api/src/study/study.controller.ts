@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -12,8 +13,11 @@ import { RegenerateExamDto } from './dto/regenerate-exam.dto';
 export class StudyController {
   constructor(private readonly study: StudyService) {}
 
+  // Creación completa = 3 llamadas IA (teoría + ejercicios + examen), lo más
+  // caro del módulo: límite estricto de 10/hora por usuario.
   /** Crea una unidad de estudio generando las 3 secciones a partir de un tema. */
   @Post()
+  @Throttle({ default: { ttl: 3600000, limit: 10 } })
   create(@CurrentUser() user: User, @Body() dto: CreateStudyUnitDto) {
     return this.study.create(user.id, dto);
   }
@@ -37,14 +41,17 @@ export class StudyController {
     await this.study.deleteById(user.id, id);
   }
 
+  // Regeneraciones = 1 llamada IA por sección: límite más laxo de 30/hora.
   /** Regenera la sección de teoría. */
   @Post(':id/theory')
+  @Throttle({ default: { ttl: 3600000, limit: 30 } })
   regenTheory(@CurrentUser() user: User, @Param('id') id: string) {
     return this.study.regenerateTheory(user.id, id);
   }
 
   /** Regenera los ejercicios (acepta count opcional). */
   @Post(':id/exercises')
+  @Throttle({ default: { ttl: 3600000, limit: 30 } })
   regenExercises(
     @CurrentUser() user: User,
     @Param('id') id: string,
@@ -55,6 +62,7 @@ export class StudyController {
 
   /** Regenera el examen (acepta numQuestions/timeLimit/onlyOnce opcionales). */
   @Post(':id/exam')
+  @Throttle({ default: { ttl: 3600000, limit: 30 } })
   regenExam(@CurrentUser() user: User, @Param('id') id: string, @Body() dto: RegenerateExamDto) {
     return this.study.regenerateExam(user.id, id, dto);
   }

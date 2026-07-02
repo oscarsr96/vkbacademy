@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 
@@ -137,8 +138,56 @@ export class CoursesService {
     };
   }
 
-  /** Progreso detallado de un alumno en un curso — solo accesible para TEACHER/ADMIN */
-  async getStudentCourseProgress(courseId: string, studentId: string) {
+  /**
+   * Verifica que el solicitante puede ver el progreso de un alumno concreto.
+   * - TEACHER / SUPER_ADMIN: ven resultados de todos (matriz de permisos).
+   * - TUTOR: solo sus alumnos asignados (`tutorId`).
+   * - ADMIN: solo alumnos de su propia academia (membresía compartida).
+   */
+  private async assertCanViewStudentProgress(
+    requester: AuthenticatedUser,
+    studentId: string,
+  ): Promise<void> {
+    if (requester.role === Role.TEACHER || requester.role === Role.SUPER_ADMIN) {
+      return;
+    }
+
+    if (requester.role === Role.TUTOR) {
+      const student = await this.prisma.user.findUnique({
+        where: { id: studentId },
+        select: { tutorId: true },
+      });
+      if (!student || student.tutorId !== requester.id) {
+        throw new ForbiddenException('No tienes acceso a este alumno');
+      }
+      return;
+    }
+
+    if (requester.role === Role.ADMIN) {
+      if (!requester.academyId) {
+        throw new ForbiddenException('No tienes acceso a este alumno');
+      }
+      const membership = await this.prisma.academyMember.findFirst({
+        where: { userId: studentId, academyId: requester.academyId },
+        select: { id: true },
+      });
+      if (!membership) {
+        throw new ForbiddenException('No tienes acceso a este alumno');
+      }
+      return;
+    }
+
+    throw new ForbiddenException('No tienes acceso a este alumno');
+  }
+
+  /** Progreso detallado de un alumno en un curso — acceso validado por rol/ownership */
+  async getStudentCourseProgress(
+    courseId: string,
+    studentId: string,
+    requester: AuthenticatedUser,
+  ) {
+    await this.assertCanViewStudentProgress(requester, studentId);
+
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
       include: {

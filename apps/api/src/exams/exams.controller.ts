@@ -1,4 +1,6 @@
 import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { User } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ExamsService } from './exams.service';
@@ -22,23 +24,25 @@ export class ExamsController {
 
   @Get('info')
   getBankInfo(
+    @CurrentUser() user: User,
     @Query('courseId') courseId?: string,
     @Query('moduleId') moduleId?: string,
-    @CurrentUser() user?: { id: string },
   ) {
-    return this.examsService.getBankInfo({ courseId, moduleId }, user!.id);
+    return this.examsService.getBankInfo({ courseId, moduleId }, user.id, user.role);
   }
 
   @Post('start')
-  startExam(@Body() dto: StartExamDto, @CurrentUser() user: { id: string }) {
-    return this.examsService.startExam(user.id, dto);
+  startExam(@Body() dto: StartExamDto, @CurrentUser() user: User) {
+    return this.examsService.startExam(user.id, dto, user.role);
   }
 
   // ─── Exámenes generados por IA (alumno) ─────────────────────────────────
   // Las rutas /ai/* van ANTES de :attemptId/submit para que NestJS no las
   // confunda con un attemptId.
 
+  // Generación de banco por IA = 1 llamada IA: límite de 30/hora por usuario.
   @Post('ai/generate')
+  @Throttle({ default: { ttl: 3600000, limit: 30 } })
   generateAiExam(@Body() dto: GenerateAiExamDto, @CurrentUser() user: { id: string }) {
     return this.aiExamsService.generate(user.id, dto);
   }

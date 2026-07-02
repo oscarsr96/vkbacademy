@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { CurrentAcademy } from '../auth/decorators/current-academy.decorator';
 import { AcademyGuard } from '../auth/guards/academy.guard';
 import { CoursesService } from './courses.service';
@@ -77,8 +78,12 @@ export class CoursesController {
   @Get(':id/student-progress/:studentId')
   @UseGuards(RolesGuard)
   @Roles(Role.TUTOR, Role.TEACHER, Role.ADMIN)
-  getStudentCourseProgress(@Param('id') id: string, @Param('studentId') studentId: string) {
-    return this.coursesService.getStudentCourseProgress(id, studentId);
+  getStudentCourseProgress(
+    @Param('id') id: string,
+    @Param('studentId') studentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.coursesService.getStudentCourseProgress(id, studentId, user);
   }
 
   @Post()

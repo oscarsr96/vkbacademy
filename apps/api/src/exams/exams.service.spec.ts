@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { ExamsService } from './exams.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CertificatesService } from '../certificates/certificates.service';
@@ -45,6 +46,7 @@ describe('ExamsService', () => {
     },
     enrollment: {
       findMany: jest.fn(),
+      findFirst: jest.fn(),
     },
   };
 
@@ -76,7 +78,9 @@ describe('ExamsService', () => {
 
   describe('getBankInfo', () => {
     it('lanza BadRequestException si no se especifica courseId ni moduleId', async () => {
-      await expect(service.getBankInfo({}, 'user1')).rejects.toThrow(BadRequestException);
+      await expect(service.getBankInfo({}, 'user1', Role.TEACHER)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('lanza NotFoundException si el curso no existe', async () => {
@@ -84,9 +88,9 @@ describe('ExamsService', () => {
       mockPrisma.examAttempt.findMany.mockResolvedValue([]);
       mockPrisma.course.findUnique.mockResolvedValue(null);
 
-      await expect(service.getBankInfo({ courseId: 'nonexistent' }, 'user1')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.getBankInfo({ courseId: 'nonexistent' }, 'user1', Role.TEACHER),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('lanza NotFoundException si el módulo no existe', async () => {
@@ -94,9 +98,9 @@ describe('ExamsService', () => {
       mockPrisma.examAttempt.findMany.mockResolvedValue([]);
       mockPrisma.module.findUnique.mockResolvedValue(null);
 
-      await expect(service.getBankInfo({ moduleId: 'nonexistent' }, 'user1')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.getBankInfo({ moduleId: 'nonexistent' }, 'user1', Role.TEACHER),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('devuelve la info del banco para un curso con intentos previos', async () => {
@@ -110,7 +114,7 @@ describe('ExamsService', () => {
         title: 'Fundamentos de Baloncesto',
       });
 
-      const result = await service.getBankInfo({ courseId: 'c1' }, 'user1');
+      const result = await service.getBankInfo({ courseId: 'c1' }, 'user1', Role.TEACHER);
 
       expect(result.questionCount).toBe(15);
       expect(result.scope).toBe('course');
@@ -127,7 +131,7 @@ describe('ExamsService', () => {
       mockPrisma.examAttempt.findMany.mockResolvedValue([]);
       mockPrisma.module.findUnique.mockResolvedValue({ id: 'm1', title: 'Módulo 1' });
 
-      const result = await service.getBankInfo({ moduleId: 'm1' }, 'user1');
+      const result = await service.getBankInfo({ moduleId: 'm1' }, 'user1', Role.TEACHER);
 
       expect(result.scope).toBe('module');
       expect(result.scopeId).toBe('m1');
@@ -140,7 +144,7 @@ describe('ExamsService', () => {
       mockPrisma.examAttempt.findMany.mockResolvedValue([]);
       mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Curso' });
 
-      await service.getBankInfo({ courseId: 'c1' }, 'user1');
+      await service.getBankInfo({ courseId: 'c1' }, 'user1', Role.TEACHER);
 
       expect(mockPrisma.examQuestion.count).toHaveBeenCalledWith({
         where: { courseId: 'c1' },
@@ -152,14 +156,14 @@ describe('ExamsService', () => {
 
   describe('startExam', () => {
     it('lanza BadRequestException si no se especifica courseId ni moduleId', async () => {
-      await expect(service.startExam('user1', { numQuestions: 10 } as never)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.startExam('user1', { numQuestions: 10 } as never, Role.TEACHER),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('lanza BadRequestException si se especifican courseId y moduleId simultáneamente', async () => {
       await expect(
-        service.startExam('user1', { courseId: 'c1', moduleId: 'm1', numQuestions: 10 }),
+        service.startExam('user1', { courseId: 'c1', moduleId: 'm1', numQuestions: 10 }, Role.TEACHER),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -170,7 +174,7 @@ describe('ExamsService', () => {
       ]);
 
       await expect(
-        service.startExam('user1', { courseId: 'c1', numQuestions: 10 }),
+        service.startExam('user1', { courseId: 'c1', numQuestions: 10 }, Role.TEACHER),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -182,7 +186,7 @@ describe('ExamsService', () => {
         startedAt: new Date(),
       });
 
-      const result = await service.startExam('user1', { courseId: 'c1', numQuestions: 10 });
+      const result = await service.startExam('user1', { courseId: 'c1', numQuestions: 10 }, Role.TEACHER);
 
       expect(result.attemptId).toBe('attempt1');
       expect(result.questions).toHaveLength(10);
@@ -200,7 +204,7 @@ describe('ExamsService', () => {
       mockPrisma.examQuestion.findMany.mockResolvedValue(questions);
       mockPrisma.examAttempt.create.mockResolvedValue({ id: 'attempt1', startedAt: new Date() });
 
-      await service.startExam('user1', { courseId: 'c1', numQuestions: 5 });
+      await service.startExam('user1', { courseId: 'c1', numQuestions: 5 }, Role.TEACHER);
 
       const createCall = mockPrisma.examAttempt.create.mock.calls[0][0];
       const snapshot = createCall.data.questionsSnapshot as Array<{
@@ -218,7 +222,7 @@ describe('ExamsService', () => {
       mockPrisma.examQuestion.findMany.mockResolvedValue(questions);
       mockPrisma.examAttempt.create.mockResolvedValue({ id: 'a1', startedAt: new Date() });
 
-      const result = await service.startExam('user1', { courseId: 'c1', numQuestions: 7 });
+      const result = await service.startExam('user1', { courseId: 'c1', numQuestions: 7 }, Role.TEACHER);
 
       expect(result.questions).toHaveLength(7);
     });
@@ -228,12 +232,16 @@ describe('ExamsService', () => {
       mockPrisma.examQuestion.findMany.mockResolvedValue(questions);
       mockPrisma.examAttempt.create.mockResolvedValue({ id: 'a1', startedAt: new Date() });
 
-      await service.startExam('user1', {
-        courseId: 'c1',
-        numQuestions: 5,
-        timeLimit: 300,
-        onlyOnce: true,
-      });
+      await service.startExam(
+        'user1',
+        {
+          courseId: 'c1',
+          numQuestions: 5,
+          timeLimit: 300,
+          onlyOnce: true,
+        },
+        Role.TEACHER,
+      );
 
       const createCall = mockPrisma.examAttempt.create.mock.calls[0][0];
       expect(createCall.data.timeLimit).toBe(300);
@@ -246,9 +254,69 @@ describe('ExamsService', () => {
       mockPrisma.examQuestion.findMany.mockResolvedValue(questions);
       mockPrisma.examAttempt.create.mockResolvedValue({ id: 'a1', startedAt: fakeDate });
 
-      const result = await service.startExam('user1', { courseId: 'c1', numQuestions: 5 });
+      const result = await service.startExam('user1', { courseId: 'c1', numQuestions: 5 }, Role.TEACHER);
 
       expect(result.startedAt).toBe(fakeDate.toISOString());
+    });
+  });
+
+  // ─── Control de acceso por rol/matrícula (SEG-03) ─────────────────────────────
+
+  describe('control de acceso (SEG-03)', () => {
+    it('STUDENT matriculado: startExam procede y crea el intento', async () => {
+      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
+      const questions = Array.from({ length: 10 }, (_, i) => buildQuestion(`q${i + 1}`));
+      mockPrisma.examQuestion.findMany.mockResolvedValue(questions);
+      mockPrisma.examAttempt.create.mockResolvedValue({ id: 'a1', startedAt: new Date() });
+
+      const result = await service.startExam('user1', { courseId: 'c1', numQuestions: 5 }, Role.STUDENT);
+
+      expect(mockPrisma.enrollment.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'user1', courseId: 'c1' },
+        select: { id: true },
+      });
+      expect(result.attemptId).toBe('a1');
+    });
+
+    it('STUDENT NO matriculado: startExam lanza ForbiddenException y no toca el banco', async () => {
+      mockPrisma.enrollment.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.startExam('user1', { courseId: 'c1', numQuestions: 5 }, Role.STUDENT),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockPrisma.examQuestion.findMany).not.toHaveBeenCalled();
+    });
+
+    it('STUDENT con moduleId cuyo curso no tiene matrícula: startExam lanza ForbiddenException', async () => {
+      mockPrisma.module.findUnique.mockResolvedValue({ courseId: 'c1' });
+      mockPrisma.enrollment.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.startExam('user1', { moduleId: 'm1', numQuestions: 5 }, Role.STUDENT),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockPrisma.enrollment.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'user1', courseId: 'c1' },
+        select: { id: true },
+      });
+    });
+
+    it('STUDENT NO matriculado: getBankInfo lanza ForbiddenException', async () => {
+      mockPrisma.enrollment.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getBankInfo({ courseId: 'c1' }, 'user1', Role.STUDENT),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockPrisma.examQuestion.count).not.toHaveBeenCalled();
+    });
+
+    it('TEACHER: no se comprueba matrícula (los no-alumno mantienen su acceso)', async () => {
+      mockPrisma.examQuestion.count.mockResolvedValue(5);
+      mockPrisma.examAttempt.findMany.mockResolvedValue([]);
+      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Curso' });
+
+      await service.getBankInfo({ courseId: 'c1' }, 'teacher1', Role.TEACHER);
+
+      expect(mockPrisma.enrollment.findFirst).not.toHaveBeenCalled();
     });
   });
 

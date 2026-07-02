@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -20,8 +21,10 @@ import { GenerateTheoryDto } from './dto/generate-theory.dto';
 export class TheoryController {
   constructor(private readonly theory: TheoryService) {}
 
+  // Generación = 1 llamada IA: límite de 30/hora por usuario (coste acotado).
   /** Genera un temario nuevo y lo guarda en la biblioteca privada del alumno. */
   @Post('generate')
+  @Throttle({ default: { ttl: 3600000, limit: 30 } })
   generate(@CurrentUser() user: User, @Body() dto: GenerateTheoryDto) {
     return this.theory.generate(user.id, dto);
   }

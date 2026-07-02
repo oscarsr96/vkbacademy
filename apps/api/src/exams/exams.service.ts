@@ -4,7 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { ChallengeType } from '@prisma/client';
+import { ChallengeType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CertificatesService } from '../certificates/certificates.service';
 import { ChallengesService } from '../challenges/challenges.service';
@@ -37,13 +37,55 @@ export class ExamsService {
     private readonly challenges: ChallengesService,
   ) {}
 
+  // ─── Control de acceso al banco (mismo criterio que getAvailable) ──────────
+
+  /**
+   * Un STUDENT solo puede consultar/iniciar exámenes de cursos en los que está
+   * matriculado (igual que `getAvailable`). Para un banco de módulo se exige
+   * matrícula en el curso al que pertenece el módulo. Los roles no-alumno
+   * (profesores/admin) mantienen su acceso actual.
+   */
+  private async assertBankAccess(
+    userId: string,
+    role: Role,
+    params: { courseId?: string; moduleId?: string },
+  ): Promise<void> {
+    if (role !== Role.STUDENT) return;
+
+    let courseId = params.courseId;
+    if (!courseId && params.moduleId) {
+      const mod = await this.prisma.module.findUnique({
+        where: { id: params.moduleId },
+        select: { courseId: true },
+      });
+      courseId = mod?.courseId;
+    }
+    if (!courseId) {
+      throw new ForbiddenException('No tienes acceso a este examen');
+    }
+
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { userId, courseId },
+      select: { id: true },
+    });
+    if (!enrollment) {
+      throw new ForbiddenException('No tienes acceso a este examen');
+    }
+  }
+
   // ─── Info del banco de preguntas ──────────────────────────────────────────
 
-  async getBankInfo(params: { courseId?: string; moduleId?: string }, userId: string) {
+  async getBankInfo(
+    params: { courseId?: string; moduleId?: string },
+    userId: string,
+    role: Role,
+  ) {
     const { courseId, moduleId } = params;
     if (!courseId && !moduleId) {
       throw new BadRequestException('Debes especificar courseId o moduleId');
     }
+
+    await this.assertBankAccess(userId, role, params);
 
     const where = courseId ? { courseId } : { moduleId };
 
@@ -91,7 +133,7 @@ export class ExamsService {
 
   // ─── Iniciar examen ───────────────────────────────────────────────────────
 
-  async startExam(userId: string, dto: StartExamDto) {
+  async startExam(userId: string, dto: StartExamDto, role: Role) {
     const { courseId, moduleId, numQuestions, timeLimit, onlyOnce } = dto;
 
     if (!courseId && !moduleId) {
@@ -100,6 +142,8 @@ export class ExamsService {
     if (courseId && moduleId) {
       throw new BadRequestException('No puedes especificar courseId y moduleId a la vez');
     }
+
+    await this.assertBankAccess(userId, role, { courseId, moduleId });
 
     const where = courseId ? { courseId } : { moduleId };
 
