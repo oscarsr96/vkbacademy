@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import type { TeacherPublic } from '@vkbacademy/shared';
+import Icon from '../../components/ui/Icon';
+import EmptyState from '../../components/ui/EmptyState';
 import type { FreeSlotRaw } from '../../api/bookings.api';
 import type { BookingWithRelations } from '../../api/bookings.api';
 import {
@@ -104,9 +106,11 @@ export function TutorView() {
   return (
     <div>
       {/* Hero */}
-      <div className="page-hero animate-in">
+      <div className="page-hero court-lines sweep-light animate-in">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
-          <span style={{ fontSize: '2.2rem' }}>📅</span>
+          <span style={{ color: 'var(--brand-deep)', display: 'inline-flex' }}>
+            <Icon name="calendar" size={32} />
+          </span>
         </div>
         <h1 className="hero-title">Reservas</h1>
         <p className="hero-subtitle">Gestiona las clases particulares de tus alumnos.</p>
@@ -130,9 +134,7 @@ export function TutorView() {
           </p>
         )}
         {!isLoading && !isError && (!bookings || bookings.length === 0) && (
-          <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-            No hay reservas todavia.
-          </p>
+          <EmptyState icon="calendar" title="No hay reservas todavia." />
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
@@ -265,7 +267,7 @@ export function TutorView() {
                           background: isActive
                             ? 'var(--gradient-orange)'
                             : isDone
-                            ? 'rgba(234,88,12,0.20)'
+                            ? 'var(--brand-soft)'
                             : 'var(--color-bg)',
                           fontSize: '0.7rem',
                           fontWeight: 800,
@@ -273,7 +275,7 @@ export function TutorView() {
                           border: isActive
                             ? 'none'
                             : isDone
-                            ? '1.5px solid rgba(234,88,12,0.35)'
+                            ? '1.5px solid var(--brand-glow)'
                             : '1.5px solid var(--color-border)',
                           boxShadow: isActive ? 'var(--shadow-orange)' : 'none',
                         }}
@@ -295,7 +297,7 @@ export function TutorView() {
                         style={{
                           flex: 1,
                           height: 2,
-                          background: isDone ? 'rgba(234,88,12,0.30)' : 'var(--color-border)',
+                          background: isDone ? 'var(--brand-glow)' : 'var(--color-border)',
                           borderRadius: 1,
                         }}
                       />
@@ -353,7 +355,7 @@ export function TutorView() {
                         borderRadius: 'var(--radius-md)',
                         padding: '14px',
                         cursor: 'pointer',
-                        background: selectedTeacher?.id === t.id ? 'rgba(234,88,12,0.06)' : 'var(--color-surface)',
+                        background: selectedTeacher?.id === t.id ? 'var(--brand-faint)' : 'var(--color-surface)',
                         transition: 'all 0.15s',
                       }}
                     >
@@ -429,7 +431,7 @@ export function TutorView() {
                             : '1.5px solid var(--color-border)',
                           borderRadius: 'var(--radius-sm)',
                           cursor: 'pointer',
-                          background: isSelected ? 'rgba(234,88,12,0.10)' : 'var(--color-bg)',
+                          background: isSelected ? 'var(--brand-soft)' : 'var(--color-bg)',
                           color: isSelected ? 'var(--color-primary)' : 'var(--color-text)',
                           fontSize: '0.8rem',
                           textAlign: 'center' as const,

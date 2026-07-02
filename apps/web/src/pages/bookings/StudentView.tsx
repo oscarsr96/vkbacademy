@@ -1,5 +1,7 @@
 import { useMyBookings } from '../../hooks/useBookings';
 import { formatDate, formatTime, StatusBadge, bookingCardBorder } from './bookingsShared';
+import Icon from '../../components/ui/Icon';
+import EmptyState from '../../components/ui/EmptyState';
 
 // ---------------------------------------------------------------------------
 // Vista STUDENT — solo lectura
@@ -14,9 +16,11 @@ export function StudentView() {
   return (
     <div>
       {/* Hero */}
-      <div className="page-hero animate-in">
+      <div className="page-hero court-lines sweep-light animate-in">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
-          <span style={{ fontSize: '2.2rem' }}>📅</span>
+          <span style={{ color: 'var(--brand-deep)', display: 'inline-flex' }}>
+            <Icon name="calendar" size={32} />
+          </span>
           {!isLoading && bookings && bookings.length > 0 && (
             <div style={{ display: 'flex', gap: 10 }}>
               {pending > 0 && (
@@ -80,22 +84,12 @@ export function StudentView() {
         </div>
       )}
       {!isLoading && !isError && (!bookings || bookings.length === 0) && (
-        <div
-          style={{
-            textAlign: 'center' as const,
-            padding: '48px 24px',
-            background: 'var(--color-surface)',
-            borderRadius: 'var(--radius-xl)',
-            border: '1.5px solid var(--color-border)',
-          }}
-        >
-          <div style={{ fontSize: '3rem', marginBottom: 12 }}>📅</div>
-          <div style={{ fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
-            Aun no tienes reservas
-          </div>
-          <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
-            Tu tutor las gestionara por ti.
-          </div>
+        <div className="vkb-card">
+          <EmptyState
+            icon="calendar"
+            title="Aun no tienes reservas"
+            message="Tu tutor las gestionara por ti."
+          />
         </div>
       )}
 

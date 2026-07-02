@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tutorsApi, type StudentSummary } from '../../api/tutors.api';
 import { useSchoolYears } from '../../hooks/useCourses';
 
-const ORANGE = '#ea580c';
+const ORANGE = 'var(--brand-deep)';
 
 export function StudentAccessPanel() {
   const qc = useQueryClient();
@@ -162,8 +162,8 @@ export function StudentAccessPanel() {
               padding: '8px 16px',
               borderRadius: 8,
               border: 'none',
-              background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
-              color: '#fff',
+              background: 'var(--gradient-orange)',
+              color: 'var(--brand-contrast)',
               fontWeight: 700,
               cursor: 'pointer',
             }}
