@@ -290,9 +290,12 @@ export const TSLIDES_CSS = `
     z-index: 1000;
     display: flex;
     flex-direction: column;
+    /* Fondo "modo estadio" del design system: focos + dot-grid LED + navy */
     background:
-      radial-gradient(120% 80% at 50% -10%, var(--brand-glow), transparent 60%),
-      linear-gradient(180deg, #080e1a 0%, #0d1b2a 60%, #152233 100%);
+      radial-gradient(120% 80% at 50% -10%, var(--brand-soft), transparent 55%),
+      radial-gradient(80% 60% at 90% 110%, rgba(255, 210, 77, 0.08), transparent 60%),
+      radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1.4px) 0 0 / 15px 15px,
+      linear-gradient(180deg, var(--navy-950, #080e1a) 0%, var(--navy-800, #0d1b2a) 100%);
     color: #fff;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -306,7 +309,7 @@ export const TSLIDES_CSS = `
   .tslides-progress > span {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, var(--brand), var(--brand-light));
+    background: var(--gradient-signature, linear-gradient(90deg, var(--brand), var(--brand-light)));
     border-radius: 0 4px 4px 0;
     transition: width 0.35s cubic-bezier(0.2,0.8,0.25,1);
   }
@@ -346,9 +349,13 @@ export const TSLIDES_CSS = `
   }
   .tslides-actions button:hover { background: var(--brand-glow); transform: translateY(-1px); }
   .tslides-counter {
+    /* Marcador del estadio: display + ámbar LED */
+    font-family: var(--font-display, 'Inter');
     font-variant-numeric: tabular-nums;
-    font-size: 0.85rem;
-    color: rgba(255,255,255,0.65);
+    font-size: 1.1rem;
+    letter-spacing: 0.08em;
+    color: var(--amber-led, #ffd24d);
+    text-shadow: 0 0 14px rgba(255, 210, 77, 0.45);
     min-width: 54px;
     text-align: center;
   }
@@ -361,6 +368,17 @@ export const TSLIDES_CSS = `
     justify-content: center;
     overflow: hidden;
     padding: 8px 5vw;
+  }
+  /* Media cancha tenue al pie del escenario (textura del design system) */
+  .tslides-stage::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 46%;
+    background: var(--court-lines) bottom center / min(640px, 80vw) auto no-repeat;
+    pointer-events: none;
   }
   .tslides-zone {
     position: absolute;
@@ -581,10 +599,11 @@ export const TSLIDES_CSS = `
     border: 1px solid var(--brand);
   }
   .tsl-ex-why {
-    background: rgba(255,255,255,0.04);
-    border-left: 4px solid var(--brand-light);
+    background: rgba(19, 175, 240, 0.07);
+    border-left: 4px solid var(--accent-cyan, #13aff0);
     border-radius: 6px 14px 14px 6px;
   }
+  .tsl-ex-why .tsl-ex-label { color: var(--accent-cyan-light, #46d4fe); }
   .tsl-ex-steps {
     list-style: none;
     margin: 0 0 12px;

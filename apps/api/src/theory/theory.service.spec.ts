@@ -254,6 +254,9 @@ describe('TheoryService', () => {
       // Cierre de contribuciones (W-CLOSE-1), nunca despedidas
       expect(prompt).toContain('Lo que te llevas');
       expect(prompt).toContain('**Ya sabes**');
+      // Voz anti patrón-IA (humanizer): tono de entrenador y AIismos vetados
+      expect(prompt).toContain('anti patrón-IA');
+      expect(prompt).toContain('"En resumen"');
       // Presupuesto ampliado para la estructura nueva
       expect(ai.generate.mock.calls[0][1]).toBe(6000);
     });

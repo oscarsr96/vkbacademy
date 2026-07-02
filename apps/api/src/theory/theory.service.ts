@@ -256,6 +256,14 @@ ESTRUCTURA — metodología Winston de enseñanza, OBLIGATORIA:
 
 - CONTENT "Lo que te llevas" — cierre de contribuciones, espejo de la promesa inicial: lista de 3-4 items "- **Ya sabes** [la misma habilidad prometida al inicio]" + 1 frase final que empuje al siguiente paso (practicar con ejercicios o hacer el test). PROHIBIDO cerrar con "gracias", "espero que" o despedidas.
 
+VOZ Y ESTILO (anti patrón-IA) — escribe como un entrenador cercano en el vestuario, no como un manual:
+- Tutea siempre y habla directo al alumno ("mira", "ojo con esto", "ahora te toca a ti").
+- Varía el ritmo: frases cortas y punzantes mezcladas con alguna más larga. Nada de párrafos clónicos.
+- PROHIBIDO el relleno típico de IA: "En resumen", "En conclusión", "Es importante destacar", "cabe mencionar", "juega un papel crucial/fundamental", "sumérgete", "el fascinante mundo de", "no es solo X, es Y".
+- PROHIBIDO inflar la importancia del tema ("marca un antes y un después", "es clave para tu futuro").
+- Nada de guiones largos (—) como puntuación: usa coma, paréntesis o dos puntos.
+- Concreto siempre: números, objetos y situaciones reales de un adolescente (la paga, los entrenos, los videojuegos, las notas) antes que abstracciones.
+
 Reglas de formato:
 - INTRO/CONTENT/EXAMPLE: campo "body" obligatorio en markdown. NO incluir "ytQuery".
 - VIDEO: campo "ytQuery" obligatorio. NO incluir "body".
