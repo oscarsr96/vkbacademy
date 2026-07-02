@@ -2,11 +2,15 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/auth.store';
 import { Role } from '@vkbacademy/shared';
-import { useChallengeSummary } from '../hooks/useChallenges';
+import { useChallengeSummary, useMyChallenges } from '../hooks/useChallenges';
+import { useRecentLessons } from '../hooks/useCourses';
+import { useMyBookings } from '../hooks/useBookings';
+import { useMyCertificates } from '../hooks/useCertificates';
 import { usePageZone } from '../hooks/usePageZone';
 import { tutorsApi, type StudentSummary } from '../api/tutors.api';
 import Icon from '../components/ui/Icon';
 import StatTile from '../components/ui/StatTile';
+import ProgressBar from '../components/ui/ProgressBar';
 
 const ROLE_LABELS: Record<string, string> = {
   [Role.STUDENT]: 'Estudiante',
@@ -159,7 +163,191 @@ export default function DashboardPage() {
     </>
   );
 
+  // El alumno tiene rail lateral en desktop; el resto de roles ocupa una sola columna
+  if (isStudent) {
+    return (
+      <div className="dash-grid">
+        {/* dentro del grid, el ancho lo gobierna la columna, no el maxWidth */}
+        <div style={{ ...S.page, maxWidth: 'none' }}>{mainContent}</div>
+        <StudentRail onNavigate={navigate} />
+      </div>
+    );
+  }
+
   return <div style={S.page}>{mainContent}</div>;
+}
+
+// ─── Rail lateral del alumno: continuar, retos en marcha, próxima clase, trofeos ─
+
+function StudentRail({ onNavigate }: { onNavigate: (to: string) => void }) {
+  const { data: recentLessons } = useRecentLessons();
+  const { data: challengesData } = useMyChallenges();
+  const { data: bookings } = useMyBookings();
+  const { data: certs } = useMyCertificates();
+
+  // Continuar donde lo dejaste: primera lección reciente sin completar
+  const nextLesson = (recentLessons ?? []).find((l) => l.completedAt === null) ?? null;
+
+  // Retos en marcha: los 3 más cerca de completarse
+  const activeChallenges = (challengesData?.challenges ?? [])
+    .filter((c) => !c.completed && c.target > 0)
+    .sort((a, b) => b.progress / b.target - a.progress / a.target)
+    .slice(0, 3);
+
+  // Próxima clase: la reserva futura más cercana no cancelada
+  const now = Date.now();
+  const nextBooking =
+    (bookings ?? [])
+      .filter((b) => b.status !== 'CANCELLED' && new Date(b.startAt).getTime() > now)
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())[0] ?? null;
+
+  // Últimos trofeos
+  const latestCerts = (certs ?? [])
+    .slice()
+    .sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime())
+    .slice(0, 2);
+
+  const isEmpty =
+    !nextLesson && activeChallenges.length === 0 && !nextBooking && latestCerts.length === 0;
+
+  return (
+    <aside style={S.rail}>
+      {nextLesson && (
+        <RailCard icon="play" label="Continúa donde lo dejaste" delay={100}>
+          <p style={S.railCourse}>{nextLesson.courseTitle}</p>
+          <p style={S.railTitle}>{nextLesson.lessonTitle}</p>
+          <p style={S.railMeta}>{nextLesson.moduleTitle}</p>
+          <button
+            className="btn btn-primary btn-full"
+            style={{ marginTop: 12, padding: '9px 16px', fontSize: '0.85rem' }}
+            onClick={() => onNavigate(`/courses/${nextLesson.courseId}/lessons/${nextLesson.lessonId}`)}
+          >
+            <Icon name="play" size={14} />
+            Seguir entrenando
+          </button>
+        </RailCard>
+      )}
+
+      {activeChallenges.length > 0 && (
+        <RailCard icon="target" label="Retos en marcha" delay={180}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {activeChallenges.map((c) => (
+              <div key={c.id}>
+                <div style={S.railChallengeRow}>
+                  <span style={S.railChallengeTitle}>{c.title}</span>
+                  <span style={S.railChallengeCount}>
+                    {c.progress}/{c.target}
+                  </span>
+                </div>
+                <ProgressBar
+                  value={c.progress}
+                  max={c.target}
+                  variant="amber"
+                  height={6}
+                  label={`Progreso del reto ${c.title}`}
+                />
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-dark btn-full" style={S.railGhostBtn} onClick={() => onNavigate('/challenges')}>
+            Ver todos los retos
+          </button>
+        </RailCard>
+      )}
+
+      {nextBooking && (
+        <RailCard icon="calendar" label="Próxima clase" delay={260}>
+          <p style={S.railTitle}>
+            {new Date(nextBooking.startAt).toLocaleDateString('es-ES', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            })}
+          </p>
+          <p style={S.railMeta}>
+            {new Date(nextBooking.startAt).toLocaleTimeString('es-ES', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+            {nextBooking.teacher?.user.name ? ` · con ${nextBooking.teacher.user.name}` : ''}
+            {nextBooking.mode === 'ONLINE' ? ' · online' : ''}
+          </p>
+        </RailCard>
+      )}
+
+      {latestCerts.length > 0 && (
+        <RailCard icon="trophy" label="Últimos trofeos" delay={340}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {latestCerts.map((cert) => (
+              <div key={cert.id} style={S.railTrophyRow}>
+                <span style={S.railTrophyIcon}>
+                  <Icon name="award" size={16} />
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <p style={S.railChallengeTitle}>{cert.scopeTitle}</p>
+                  <p style={S.railMeta}>
+                    {new Date(cert.issuedAt).toLocaleDateString('es-ES', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-dark btn-full" style={S.railGhostBtn} onClick={() => onNavigate('/certificates')}>
+            Sala de trofeos
+          </button>
+        </RailCard>
+      )}
+
+      {isEmpty && (
+        <RailCard icon="basketball" label="Tu primera canasta" delay={100}>
+          <p style={S.railTitle}>Empieza a entrenar</p>
+          <p style={S.railMeta}>
+            Completa tu primera lección para sumar puntos, encender la racha y desbloquear retos.
+          </p>
+          <button
+            className="btn btn-primary btn-full"
+            style={{ marginTop: 12, padding: '9px 16px', fontSize: '0.85rem' }}
+            onClick={() => onNavigate('/subjects')}
+          >
+            Elegir asignatura
+          </button>
+        </RailCard>
+      )}
+    </aside>
+  );
+}
+
+function RailCard({
+  icon,
+  label,
+  delay = 0,
+  children,
+}: {
+  icon: string;
+  label: string;
+  delay?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className="panel-glass"
+      style={{
+        padding: '18px 20px',
+        animation: `riseIn 0.5s cubic-bezier(0.18, 0.72, 0.24, 1.12) ${delay}ms both`,
+      }}
+    >
+      <h3 style={S.railLabel}>
+        <span style={S.railLabelIcon}>
+          <Icon name={icon} size={14} />
+        </span>
+        {label}
+      </h3>
+      {children}
+    </section>
+  );
 }
 
 // ─── Tutor: resumen de métricas de sus alumnos ──────────────────────────────────
@@ -422,5 +610,93 @@ const S: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     fontWeight: 700,
     color: 'var(--brand-light)',
+  },
+
+  // Rail lateral del alumno
+  rail: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 18,
+    position: 'sticky' as const,
+    top: 0,
+  },
+  railLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    margin: '0 0 12px',
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--color-text-muted)',
+  },
+  railLabelIcon: {
+    display: 'inline-flex',
+    color: 'var(--brand-light)',
+  },
+  railCourse: {
+    margin: 0,
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--brand-light)',
+  },
+  railTitle: {
+    margin: '4px 0 0',
+    fontWeight: 700,
+    fontSize: '0.95rem',
+    color: 'var(--color-text)',
+    lineHeight: 1.3,
+  },
+  railMeta: {
+    margin: '3px 0 0',
+    fontSize: '0.8rem',
+    color: 'var(--color-text-muted)',
+  },
+  railChallengeRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: 8,
+    marginBottom: 6,
+  },
+  railChallengeTitle: {
+    margin: 0,
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    color: 'var(--color-text)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  railChallengeCount: {
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: 'var(--amber-led)',
+    fontVariantNumeric: 'tabular-nums',
+    flexShrink: 0,
+  },
+  railGhostBtn: {
+    marginTop: 14,
+    padding: '8px 14px',
+    fontSize: '0.8rem',
+  },
+  railTrophyRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  },
+  railTrophyIcon: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    background: 'rgba(255, 210, 77, 0.12)',
+    color: 'var(--amber-led)',
+    flexShrink: 0,
   },
 };
