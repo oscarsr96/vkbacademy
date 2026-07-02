@@ -27,6 +27,7 @@ import { AiModule } from './ai/ai.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { TheoryModule } from './theory/theory.module';
 import { UsernameModule } from './username/username.module';
+import { StudyModule } from './study/study.module';
 import { MustChangePasswordInterceptor } from './auth/interceptors/must-change-password.interceptor';
 
 @Module({
@@ -74,6 +75,7 @@ import { MustChangePasswordInterceptor } from './auth/interceptors/must-change-p
     AiModule,
     ExercisesModule,
     TheoryModule,
+    StudyModule,
     UsernameModule,
   ],
   providers: [

@@ -1,27 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useCourses } from '../hooks/useCourses';
-import api from '../lib/axios';
-
-type ExerciseType = 'SINGLE' | 'TRUE_FALSE' | 'OPEN';
-
-interface Exercise {
-  statement: string;
-  type: ExerciseType;
-  options: string[];
-  solution: string;
-  explanation: string;
-}
-
-interface GenerateResponse {
-  exercises: Exercise[];
-}
-
-interface GeneratePayload {
-  courseId: string;
-  topic: string;
-  count: number;
-}
+import type { StudyExercise } from '@vkbacademy/shared';
+import api from '../../lib/axios';
 
 type Verdict = 'correct' | 'partial' | 'incorrect';
 
@@ -36,32 +16,12 @@ interface EvaluatePayload {
   solution: string;
 }
 
-export default function ExercisesPage() {
-  const { data: coursesData } = useCourses(1);
-  const courses = coursesData?.data ?? [];
-
-  const [courseId, setCourseId] = useState('');
-  const [topic, setTopic] = useState('');
-  const [count, setCount] = useState(5);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+export default function ExercisePractice({ exercises }: { exercises: StudyExercise[] }) {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [selected, setSelected] = useState<Record<number, number | null>>({});
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [evaluations, setEvaluations] = useState<Record<number, EvaluationResult>>({});
   const [evalErrors, setEvalErrors] = useState<Record<number, string>>({});
-
-  const { mutate, isPending, error } = useMutation({
-    mutationFn: (payload: GeneratePayload) =>
-      api.post<GenerateResponse>('/exercises/generate', payload).then((r) => r.data),
-    onSuccess: (data) => {
-      setExercises(data.exercises);
-      setRevealed({});
-      setSelected({});
-      setAnswers({});
-      setEvaluations({});
-      setEvalErrors({});
-    },
-  });
 
   const evalMutation = useMutation({
     mutationFn: ({ index, ...payload }: EvaluatePayload & { index: number }) =>
@@ -92,25 +52,16 @@ export default function ExercisesPage() {
   const evaluatingIdx =
     evalMutation.isPending && evalMutation.variables ? evalMutation.variables.index : null;
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!courseId || !topic.trim()) return;
-    mutate({ courseId, topic: topic.trim(), count });
-  }
-
   function toggleSolution(index: number) {
     setRevealed((prev) => ({ ...prev, [index]: !prev[index] }));
   }
-
   function chooseOption(exerciseIndex: number, optionIndex: number) {
     setSelected((prev) => ({ ...prev, [exerciseIndex]: optionIndex }));
   }
-
   function updateAnswer(index: number, value: string) {
     setAnswers((prev) => ({ ...prev, [index]: value }));
   }
-
-  function evaluateOpen(index: number, ex: Exercise) {
+  function evaluateOpen(index: number, ex: StudyExercise) {
     const answer = (answers[index] ?? '').trim();
     if (!answer) return;
     evalMutation.mutate({
@@ -121,106 +72,29 @@ export default function ExercisesPage() {
     });
   }
 
-  const apiError = (error as { response?: { data?: { message?: string } } } | null)?.response?.data
-    ?.message;
+  if (exercises.length === 0) {
+    return <p style={s.muted}>No hay ejercicios en esta unidad.</p>;
+  }
 
   return (
-    <div style={s.page}>
-      <header style={s.header}>
-        <h1 style={s.title}>🧮 Ejercicios</h1>
-        <p style={s.subtitle}>
-          Pide ejercicios de práctica sobre cualquier tema de tus cursos. Se generarán el número que
-          indiques con su solución y explicación.
-        </p>
-      </header>
-
-      <form onSubmit={handleSubmit} style={s.form}>
-        <div style={s.row}>
-          <div className="field" style={{ flex: 2 }}>
-            <label htmlFor="courseId">Curso</label>
-            <select
-              id="courseId"
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-              required
-            >
-              <option value="">Selecciona un curso</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field" style={{ flex: 1 }}>
-            <label htmlFor="count">Nº de ejercicios</label>
-            <input
-              id="count"
-              type="number"
-              min={1}
-              max={20}
-              value={count}
-              onChange={(e) => setCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
-            />
-          </div>
-        </div>
-
-        <div className="field">
-          <label htmlFor="topic">¿Sobre qué tema quieres ejercicios?</label>
-          <textarea
-            id="topic"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder="Ej: propiedades de logaritmos, ecuaciones de segundo grado, análisis sintáctico..."
-            rows={3}
-            style={s.textarea}
-            required
-          />
-        </div>
-
-        {apiError && (
-          <div style={s.errorBox}>
-            <strong>!</strong> {apiError}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={isPending || !courseId || !topic.trim()}
-          style={{ alignSelf: 'flex-start', padding: '12px 24px' }}
-        >
-          {isPending ? '⏳ Generando ejercicios...' : '✨ Generar ejercicios'}
-        </button>
-      </form>
-
-      {exercises.length > 0 && (
-        <section style={s.results}>
-          <h2 style={s.resultsTitle}>
-            {exercises.length} ejercicios sobre "{topic}"
-          </h2>
-          <div style={s.exerciseList}>
-            {exercises.map((ex, i) => (
-              <ExerciseCard
-                key={i}
-                exercise={ex}
-                index={i}
-                revealed={!!revealed[i]}
-                selected={selected[i] ?? null}
-                answer={answers[i] ?? ''}
-                evaluation={evaluations[i] ?? null}
-                evaluationError={evalErrors[i] ?? null}
-                evaluating={evaluatingIdx === i}
-                onChoose={(optIdx) => chooseOption(i, optIdx)}
-                onAnswerChange={(value) => updateAnswer(i, value)}
-                onEvaluate={() => evaluateOpen(i, ex)}
-                onToggle={() => toggleSolution(i)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+    <div style={s.exerciseList}>
+      {exercises.map((ex, i) => (
+        <ExerciseCard
+          key={i}
+          exercise={ex}
+          index={i}
+          revealed={!!revealed[i]}
+          selected={selected[i] ?? null}
+          answer={answers[i] ?? ''}
+          evaluation={evaluations[i] ?? null}
+          evaluationError={evalErrors[i] ?? null}
+          evaluating={evaluatingIdx === i}
+          onChoose={(optIdx) => chooseOption(i, optIdx)}
+          onAnswerChange={(value) => updateAnswer(i, value)}
+          onEvaluate={() => evaluateOpen(i, ex)}
+          onToggle={() => toggleSolution(i)}
+        />
+      ))}
     </div>
   );
 }
@@ -239,7 +113,7 @@ function ExerciseCard({
   onEvaluate,
   onToggle,
 }: {
-  exercise: Exercise;
+  exercise: StudyExercise;
   index: number;
   revealed: boolean;
   selected: number | null;
@@ -273,11 +147,8 @@ function ExerciseCard({
       onToggle();
       return;
     }
-    if (hasOptions) {
-      onToggle();
-    } else {
-      onEvaluate();
-    }
+    if (hasOptions) onToggle();
+    else onEvaluate();
   }
 
   const buttonLabel = evaluating
@@ -323,10 +194,7 @@ function ExerciseCard({
 
       <button
         onClick={handleCheckClick}
-        style={{
-          ...s.revealBtn,
-          opacity: (!revealed && !canCheck) || evaluating ? 0.5 : 1,
-        }}
+        style={{ ...s.revealBtn, opacity: (!revealed && !canCheck) || evaluating ? 0.5 : 1 }}
         disabled={(!revealed && !canCheck) || evaluating}
       >
         {buttonLabel}
@@ -372,7 +240,7 @@ function verdictLabel(verdict: Verdict): string {
   }
 }
 
-function labelForType(type: ExerciseType): string {
+function labelForType(type: StudyExercise['type']): string {
   switch (type) {
     case 'SINGLE':
       return 'Opción múltiple';
@@ -394,53 +262,7 @@ const VERDICT_STYLES: Record<Verdict, React.CSSProperties> = {
 };
 
 const s: Record<string, React.CSSProperties> = {
-  page: {
-    maxWidth: 900,
-    margin: '0 auto',
-    padding: '32px 16px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 32,
-  },
-  header: { display: 'flex', flexDirection: 'column', gap: 8 },
-  title: { fontSize: '1.8rem', fontWeight: 800, margin: 0 },
-  subtitle: {
-    color: 'var(--color-text-muted)',
-    fontSize: '0.95rem',
-    lineHeight: 1.5,
-    margin: 0,
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 16,
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 14,
-    padding: 24,
-  },
-  row: { display: 'flex', gap: 16, flexWrap: 'wrap' as const },
-  textarea: {
-    width: '100%',
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 8,
-    color: 'var(--color-text)',
-    padding: '10px 12px',
-    fontSize: '0.95rem',
-    fontFamily: 'inherit',
-    resize: 'vertical' as const,
-  },
-  errorBox: {
-    background: 'rgba(220,38,38,0.15)',
-    borderLeft: '4px solid #dc2626',
-    color: 'var(--color-error)',
-    padding: '12px 14px',
-    borderRadius: 8,
-    fontSize: '0.875rem',
-  },
-  results: { display: 'flex', flexDirection: 'column', gap: 16 },
-  resultsTitle: { fontSize: '1.2rem', fontWeight: 700, margin: 0 },
+  muted: { color: 'var(--color-text-muted)', fontSize: '0.95rem', margin: 0 },
   exerciseList: { display: 'flex', flexDirection: 'column', gap: 16 },
   card: {
     background: 'var(--color-surface)',
@@ -451,32 +273,19 @@ const s: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 12,
   },
-  cardHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  cardNumber: {
-    fontSize: '0.9rem',
-    fontWeight: 700,
-    color: '#f97316',
-  },
+  cardHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  cardNumber: { fontSize: '0.9rem', fontWeight: 700, color: '#f97316' },
   cardType: {
     fontSize: '0.75rem',
     fontWeight: 600,
     color: 'var(--color-text-muted)',
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
     letterSpacing: '0.05em',
     background: 'rgba(0,0,0,0.05)',
     padding: '2px 8px',
     borderRadius: 6,
   },
-  statement: {
-    margin: 0,
-    fontSize: '1rem',
-    lineHeight: 1.5,
-    color: 'var(--color-text)',
-  },
+  statement: { margin: 0, fontSize: '1rem', lineHeight: 1.5, color: 'var(--color-text)' },
   options: {
     listStyle: 'none',
     padding: 0,
@@ -496,23 +305,10 @@ const s: Record<string, React.CSSProperties> = {
     gap: 10,
     transition: 'background 0.15s, border-color 0.15s',
   },
-  optionSelected: {
-    background: '#fef9c3',
-    border: `1px solid ${YELLOW}`,
-  },
-  optionCorrect: {
-    background: '#dcfce7',
-    border: `1px solid ${GREEN}`,
-  },
-  optionWrong: {
-    background: '#fee2e2',
-    border: `1px solid ${RED}`,
-  },
-  optionLetter: {
-    color: '#f97316',
-    fontWeight: 700,
-    minWidth: 20,
-  },
+  optionSelected: { background: '#fef9c3', border: `1px solid ${YELLOW}` },
+  optionCorrect: { background: '#dcfce7', border: `1px solid ${GREEN}` },
+  optionWrong: { background: '#fee2e2', border: `1px solid ${RED}` },
+  optionLetter: { color: '#f97316', fontWeight: 700, minWidth: 20 },
   revealBtn: {
     alignSelf: 'flex-start',
     background: 'transparent',
@@ -546,23 +342,26 @@ const s: Record<string, React.CSSProperties> = {
     padding: '10px 12px',
     fontSize: '0.95rem',
     fontFamily: 'inherit',
-    resize: 'vertical' as const,
+    resize: 'vertical',
     minHeight: 80,
+  },
+  errorBox: {
+    background: 'rgba(220,38,38,0.15)',
+    borderLeft: '4px solid #dc2626',
+    color: 'var(--color-error)',
+    padding: '12px 14px',
+    borderRadius: 8,
+    fontSize: '0.875rem',
   },
   verdictBox: {
     borderRadius: 8,
     padding: 14,
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     gap: 6,
     fontSize: '0.92rem',
     lineHeight: 1.5,
   },
-  verdictHeader: {
-    fontWeight: 700,
-    fontSize: '0.95rem',
-  },
-  verdictFeedback: {
-    color: 'var(--color-text)',
-  },
+  verdictHeader: { fontWeight: 700, fontSize: '0.95rem' },
+  verdictFeedback: { color: 'var(--color-text)' },
 };

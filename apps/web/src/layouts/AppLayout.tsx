@@ -61,9 +61,7 @@ function buildNavLinks(role: Role | undefined): NavLink[] {
   return [
     ...base,
     { to: '/subjects', label: '📚 Asignaturas' },
-    { to: '/exercises', label: '🧮 Ejercicios' },
-    { to: '/theory', label: '📖 Teoría' },
-    { to: '/my-exams', label: '🎓 Exámenes' },
+    { to: '/study', label: '🧠 Estudiar' },
     { to: '/challenges', label: '🏆 Retos' },
     { to: '/profile', label: '👤 Mi perfil' },
   ];

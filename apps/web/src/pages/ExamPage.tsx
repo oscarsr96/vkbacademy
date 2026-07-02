@@ -752,6 +752,7 @@ export default function ExamPage() {
   const courseId = searchParams.get('courseId') ?? undefined;
   const moduleId = searchParams.get('moduleId') ?? undefined;
   const aiBankId = searchParams.get('aiBankId') ?? undefined;
+  const returnTo = searchParams.get('returnTo') ?? '/study';
   const isAiMode = !!aiBankId;
 
   const [examState, setExamState] = useState<ExamState>(isAiMode ? 'in-progress' : 'config');
@@ -833,7 +834,7 @@ export default function ExamPage() {
 
   const handleBack = () => {
     if (isAiMode) {
-      navigate('/my-exams');
+      navigate(returnTo);
       return;
     }
     if (courseId) navigate(`/courses/${courseId}`);
@@ -858,7 +859,7 @@ export default function ExamPage() {
                 marginBottom: 14,
               }}
             >
-              Volver a mis exámenes
+              Volver
             </button>
           )}
           <h1 className="hero-title" style={{ fontSize: '1.6rem' }}>
@@ -878,9 +879,9 @@ export default function ExamPage() {
             <button
               className="btn btn-ghost"
               style={{ marginTop: 14 }}
-              onClick={() => navigate('/my-exams')}
+              onClick={() => navigate(returnTo)}
             >
-              Volver a mis exámenes
+              Volver
             </button>
           </div>
         )}

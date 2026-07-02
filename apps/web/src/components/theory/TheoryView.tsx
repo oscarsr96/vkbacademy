@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { theoryApi } from '../api/theory.api';
-import type { TheoryLesson, TheoryLessonKind, TheoryVideoCandidate } from '@vkbacademy/shared';
-import { TheoryMarkdown, THEORY_CALLOUT_CSS } from '../components/theory/theoryMarkdown';
-import TheorySlides from '../components/theory/TheorySlides';
-import { downloadTheoryPdf, shareTheoryPdf } from '../utils/theoryPdf';
+import type {
+  TheoryLesson,
+  TheoryLessonKind,
+  TheoryModuleWithLessons,
+  TheoryVideoCandidate,
+} from '@vkbacademy/shared';
+import { TheoryMarkdown, THEORY_CALLOUT_CSS } from './theoryMarkdown';
+import TheorySlides from './TheorySlides';
+import { downloadTheoryPdf, shareTheoryPdf } from '../../utils/theoryPdf';
 
 const KIND_ICON: Record<TheoryLessonKind, string> = {
   INTRO: '🧭',
@@ -14,33 +16,15 @@ const KIND_ICON: Record<TheoryLessonKind, string> = {
   VIDEO: '▶️',
 };
 
-export default function TheoryModulePage() {
-  const { id = '' } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['theory', id],
-    queryFn: () => theoryApi.getById(id),
-    enabled: !!id,
-  });
-
-  const remove = useMutation({
-    mutationFn: () => theoryApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['theory', 'mine'] });
-      navigate('/theory');
-    },
-  });
-
+export default function TheoryView({ module }: { module: TheoryModuleWithLessons }) {
   const [showSlides, setShowSlides] = useState(false);
   const [pdfBusy, setPdfBusy] = useState<'download' | 'share' | null>(null);
 
   async function handleDownload() {
-    if (!data || pdfBusy) return;
+    if (pdfBusy) return;
     setPdfBusy('download');
     try {
-      await downloadTheoryPdf(data);
+      await downloadTheoryPdf(module);
     } catch {
       window.alert('No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
@@ -49,10 +33,10 @@ export default function TheoryModulePage() {
   }
 
   async function handleShare() {
-    if (!data || pdfBusy) return;
+    if (pdfBusy) return;
     setPdfBusy('share');
     try {
-      await shareTheoryPdf(data);
+      await shareTheoryPdf(module);
     } catch {
       window.alert('No se pudo compartir el PDF. Inténtalo de nuevo.');
     } finally {
@@ -60,40 +44,12 @@ export default function TheoryModulePage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div style={s.page}>
-        <p style={s.muted}>Cargando temario…</p>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div style={s.page}>
-        <p style={s.muted}>No se encontró el temario.</p>
-        <Link to="/theory" style={s.backLink}>
-          ← Volver a Teoría
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div style={s.page}>
+    <div style={s.wrap}>
       <style>
         {ANIMATIONS}
         {THEORY_CALLOUT_CSS}
       </style>
-      <Link to="/theory" style={s.backLink}>
-        ← Volver a Teoría
-      </Link>
-
-      <header style={s.header}>
-        <span style={s.eyebrow}>Tema solicitado: {data.topic}</span>
-        <h1 style={s.title}>{data.title}</h1>
-        <p style={s.summary}>{data.summary}</p>
-      </header>
 
       <div style={s.actions}>
         <button
@@ -122,51 +78,23 @@ export default function TheoryModulePage() {
         </button>
       </div>
 
-      {showSlides && <TheorySlides module={data} onClose={() => setShowSlides(false)} />}
+      {showSlides && <TheorySlides module={module} onClose={() => setShowSlides(false)} />}
 
       <article style={s.article}>
-        {data.lessons.map((lesson, idx) => (
+        {module.lessons.map((lesson, idx) => (
           <LessonSection key={lesson.id} lesson={lesson} index={idx} />
         ))}
       </article>
-
-      <footer style={s.footer}>
-        <button
-          type="button"
-          onClick={() => navigate('/theory')}
-          className="btn btn-primary"
-          style={s.newBtn}
-        >
-          ✨ Nuevo temario
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm('¿Borrar este temario de tu biblioteca?')) remove.mutate();
-          }}
-          disabled={remove.isPending}
-          style={s.deleteBtn}
-        >
-          {remove.isPending ? 'Borrando…' : '🗑️ Borrar temario'}
-        </button>
-      </footer>
     </div>
   );
 }
 
 function LessonSection({ lesson, index }: { lesson: TheoryLesson; index: number }) {
   return (
-    <section
-      className="theory-section"
-      style={{
-        ...s.section,
-        animationDelay: `${index * 90}ms`,
-      }}
-    >
+    <section className="theory-section" style={{ ...s.section, animationDelay: `${index * 90}ms` }}>
       <h2 style={s.sectionTitle}>
         <span aria-hidden>{KIND_ICON[lesson.kind]}</span> {lesson.heading}
       </h2>
-
       {lesson.kind === 'VIDEO' ? (
         <VideoLesson lesson={lesson} />
       ) : (
@@ -178,8 +106,6 @@ function LessonSection({ lesson, index }: { lesson: TheoryLesson; index: number 
   );
 }
 
-// Animación de entrada de cada sección. Los estilos de callouts viven en
-// THEORY_CALLOUT_CSS (módulo compartido) y se inyectan junto a esto.
 const ANIMATIONS = `
   @keyframes theory-fade-in-up {
     from { opacity: 0; transform: translateY(16px); }
@@ -194,7 +120,6 @@ const ANIMATIONS = `
 `;
 
 function VideoLesson({ lesson }: { lesson: TheoryLesson }) {
-  // Compat: si la lección es de antes de añadir candidates, solo tiene youtubeId.
   const candidates: TheoryVideoCandidate[] =
     lesson.videoCandidates && lesson.videoCandidates.length > 0
       ? lesson.videoCandidates
@@ -230,7 +155,6 @@ function VideoLesson({ lesson }: { lesson: TheoryLesson }) {
           allowFullScreen
         />
       </div>
-
       {candidates.length > 1 && (
         <>
           <p style={s.candidatesLabel}>{candidates.length} vídeos sugeridos — pulsa para cambiar</p>
@@ -242,10 +166,7 @@ function VideoLesson({ lesson }: { lesson: TheoryLesson }) {
                   <button
                     type="button"
                     onClick={() => setSelected(idx)}
-                    style={{
-                      ...s.candidate,
-                      ...(isActive ? s.candidateActive : {}),
-                    }}
+                    style={{ ...s.candidate, ...(isActive ? s.candidateActive : {}) }}
                     aria-pressed={isActive}
                   >
                     <img src={c.thumbnailUrl} alt="" style={s.candidateThumb} loading="lazy" />
@@ -269,51 +190,14 @@ function VideoLesson({ lesson }: { lesson: TheoryLesson }) {
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
+  const sec = seconds % 60;
+  return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
 const s: Record<string, React.CSSProperties> = {
-  page: {
-    maxWidth: 820,
-    margin: '0 auto',
-    padding: '24px 16px 64px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 24,
-  },
-  backLink: {
-    color: '#f97316',
-    fontSize: '0.875rem',
-    textDecoration: 'none',
-    fontWeight: 600,
-  },
-  header: { display: 'flex', flexDirection: 'column', gap: 8 },
-  eyebrow: {
-    fontSize: '0.75rem',
-    fontWeight: 600,
-    color: 'var(--color-text-muted)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
-  title: { fontSize: '2rem', fontWeight: 800, margin: 0, lineHeight: 1.15 },
-  summary: {
-    fontSize: '1.05rem',
-    color: 'var(--color-text-muted)',
-    lineHeight: 1.6,
-    margin: 0,
-  },
-  actions: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 10,
-    alignItems: 'center',
-  },
-  presentBtn: {
-    padding: '10px 18px',
-    fontSize: '0.9rem',
-    fontWeight: 700,
-  },
+  wrap: { display: 'flex', flexDirection: 'column', gap: 24 },
+  actions: { display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
+  presentBtn: { padding: '10px 18px', fontSize: '0.9rem', fontWeight: 700 },
   secondaryBtn: {
     background: 'var(--color-surface)',
     border: '1px solid var(--color-border)',
@@ -336,6 +220,8 @@ const s: Record<string, React.CSSProperties> = {
   },
   sectionTitle: { fontSize: '1.25rem', fontWeight: 700, margin: 0 },
   markdown: { fontSize: '1rem', lineHeight: 1.7, color: 'var(--color-text)' },
+  muted: { color: 'var(--color-text-muted)', fontSize: '0.95rem', margin: 0 },
+  videoBlock: { display: 'flex', flexDirection: 'column', gap: 12 },
   videoWrapper: {
     position: 'relative',
     paddingTop: '56.25%',
@@ -343,20 +229,8 @@ const s: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     background: '#000',
   },
-  videoIframe: {
-    position: 'absolute',
-    inset: 0,
-    width: '100%',
-    height: '100%',
-    border: 0,
-  },
-  muted: { color: 'var(--color-text-muted)', fontSize: '0.95rem', margin: 0 },
-  videoBlock: { display: 'flex', flexDirection: 'column', gap: 12 },
-  candidatesLabel: {
-    fontSize: '0.8rem',
-    color: 'var(--color-text-muted)',
-    margin: '4px 0 0',
-  },
+  videoIframe: { position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 },
+  candidatesLabel: { fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: '4px 0 0' },
   candidatesList: {
     listStyle: 'none',
     padding: 0,
@@ -379,10 +253,7 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--color-text)',
     transition: 'border-color 0.15s, transform 0.15s',
   },
-  candidateActive: {
-    borderColor: '#f97316',
-    background: 'rgba(234,88,12,0.08)',
-  },
+  candidateActive: { borderColor: '#f97316', background: 'rgba(234,88,12,0.08)' },
   candidateThumb: {
     width: '100%',
     aspectRatio: '16 / 9',
@@ -400,24 +271,5 @@ const s: Record<string, React.CSSProperties> = {
     WebkitBoxOrient: 'vertical',
     overflow: 'hidden',
   },
-  candidateChannel: {
-    fontSize: '0.7rem',
-    color: 'var(--color-text-muted)',
-  },
-  footer: { display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
-  newBtn: {
-    padding: '10px 18px',
-    fontSize: '0.875rem',
-    fontWeight: 600,
-  },
-  deleteBtn: {
-    background: 'transparent',
-    border: '1px solid rgba(220,38,38,0.4)',
-    color: '#dc2626',
-    padding: '10px 18px',
-    borderRadius: 8,
-    fontSize: '0.875rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
+  candidateChannel: { fontSize: '0.7rem', color: 'var(--color-text-muted)' },
 };

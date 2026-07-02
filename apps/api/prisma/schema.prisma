@@ -111,6 +111,7 @@ model User {
   academyMembers    AcademyMember[]
   theoryModules     TheoryModule[]
   aiExamBanks       AiExamBank[]
+  studyUnits        StudyUnit[]
 }
 
 model RefreshToken {
@@ -152,6 +153,7 @@ model Course {
   tutorMessages TutorMessage[] @relation("TutorMessageCourse")
   theoryModules TheoryModule[] @relation("CourseTheoryModules")
   aiExamBanks   AiExamBank[]   @relation("CourseAiExamBanks")
+  studyUnits    StudyUnit[]    @relation("CourseStudyUnits")
 }
 
 // ─────────────────────────────────────────────────────────
@@ -581,6 +583,9 @@ model TheoryModule {
   course  Course         @relation("CourseTheoryModules", fields: [courseId], references: [id], onDelete: Cascade)
   lessons TheoryLesson[]
 
+  studyUnitId String?    @unique
+  studyUnit   StudyUnit? @relation(fields: [studyUnitId], references: [id], onDelete: Cascade)
+
   @@index([userId, courseId])
   @@index([userId, createdAt])
 }
@@ -627,6 +632,9 @@ model AiExamBank {
   questions AiExamQuestion[]
   attempts  ExamAttempt[]
 
+  studyUnitId String?    @unique
+  studyUnit   StudyUnit? @relation(fields: [studyUnitId], references: [id], onDelete: Cascade)
+
   @@index([userId, createdAt])
   @@index([userId, courseId])
 }
@@ -657,4 +665,30 @@ model AiExamAnswer {
   question AiExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@index([questionId, order])
+}
+
+// ─────────────────────────────────────────────────────────
+// UNIDAD DE ESTUDIO (alumno) — agrupa Teoría + Ejercicios + Examen
+// generados por IA a partir de un tema. Personal (scoped por userId).
+// ─────────────────────────────────────────────────────────
+model StudyUnit {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  topic     String // input crudo del alumno
+  title     String // título limpio (se toma de la teoría generada)
+  summary   String   @db.Text
+  /// Ejercicios generados por IA, persistidos como JSON. Estructura:
+  /// [{ statement, type: 'SINGLE'|'TRUE_FALSE'|'OPEN', options: string[], solution, explanation }]
+  exercises Json?
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation("CourseStudyUnits", fields: [courseId], references: [id], onDelete: Cascade)
+
+  theoryModule TheoryModule?
+  examBank     AiExamBank?
+
+  @@index([userId, createdAt])
+  @@index([userId, courseId])
 }
