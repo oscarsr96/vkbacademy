@@ -7,6 +7,7 @@ import {
   type StudentStats,
   type ActivityDay,
 } from '../api/tutors.api';
+import { getApiErrorMessage } from '../utils/errorMessage';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
@@ -618,7 +619,14 @@ function CourseProgressCard({ course }: { course: StudentStats['courses'][0] }) 
             )}
           </div>
           <div style={S.progressBarWrap}>
-            <div className="progress-bar" style={{ flex: 1 }}>
+            <div
+              className="progress-bar"
+              style={{ flex: 1 }}
+              role="progressbar"
+              aria-valuenow={pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
               <div
                 className="progress-fill"
                 style={{ width: `${pct}%`, background: fill === '#16a34a' ? fill : undefined }}
@@ -663,7 +671,14 @@ function CourseProgressCard({ course }: { course: StudentStats['courses'][0] }) 
                     {mod.completedLessons}/{mod.totalLessons}
                   </span>
                 </div>
-                <div className="progress-bar" style={{ height: 5 }}>
+                <div
+                  className="progress-bar"
+                  style={{ height: 5 }}
+                  role="progressbar"
+                  aria-valuenow={mPct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
                   <div
                     className="progress-fill"
                     style={{ width: `${mPct}%`, background: mPct === 100 ? '#16a34a' : undefined }}
@@ -693,6 +708,8 @@ function EnrollmentsSection({ studentId, hasLevel }: { studentId: string; hasLev
     enabled: hasLevel,
   });
 
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ['tutor', 'available-courses', studentId] });
     void qc.invalidateQueries({ queryKey: ['tutor', 'stats', studentId] });
@@ -701,12 +718,20 @@ function EnrollmentsSection({ studentId, hasLevel }: { studentId: string; hasLev
 
   const enrollMut = useMutation({
     mutationFn: (courseId: string) => tutorsApi.enroll(studentId, courseId),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setActionError(null);
+      invalidate();
+    },
+    onError: (err) => setActionError(getApiErrorMessage(err, 'Error al matricular al alumno.')),
   });
 
   const unenrollMut = useMutation({
     mutationFn: (courseId: string) => tutorsApi.unenroll(studentId, courseId),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setActionError(null);
+      invalidate();
+    },
+    onError: (err) => setActionError(getApiErrorMessage(err, 'Error al desmatricular al alumno.')),
   });
 
   if (!hasLevel) {
@@ -749,6 +774,11 @@ function EnrollmentsSection({ studentId, hasLevel }: { studentId: string; hasLev
       <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: 8 }}>
         {enrolledCount} de {courses.length} asignaturas matriculadas
       </div>
+      {actionError && (
+        <div className="vkb-card" style={{ color: '#dc2626', fontSize: '0.8rem', marginBottom: 8 }}>
+          {actionError}
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {courses.map((c) => (
           <div
@@ -855,6 +885,9 @@ export default function TutorStudentsPage() {
           {students?.map((st) => (
             <div
               key={st.id}
+              role="button"
+              tabIndex={0}
+              aria-pressed={selected?.id === st.id}
               style={{
                 ...S.studentItem,
                 ...(selected?.id === st.id ? S.studentItemActive : {}),
@@ -870,6 +903,12 @@ export default function TutorStudentsPage() {
                 }
               }}
               onClick={() => setSelected(st)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelected(st);
+                }
+              }}
             >
               <div style={S.studentAvatar}>{st.name.charAt(0).toUpperCase()}</div>
               <div style={{ minWidth: 0 }}>

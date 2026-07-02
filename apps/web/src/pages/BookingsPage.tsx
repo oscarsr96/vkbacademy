@@ -240,7 +240,7 @@ function StudentProgressPanel({ courseId, studentId }: { courseId: string; stude
 // ---------------------------------------------------------------------------
 
 function StudentView() {
-  const { data: bookings, isLoading } = useMyBookings();
+  const { data: bookings, isLoading, isError } = useMyBookings();
 
   const pending = bookings?.filter((b) => b.status === 'PENDING').length ?? 0;
   const confirmed = bookings?.filter((b) => b.status === 'CONFIRMED').length ?? 0;
@@ -294,7 +294,26 @@ function StudentView() {
       {isLoading && (
         <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', padding: '12px 0' }}>Cargando...</p>
       )}
-      {!isLoading && (!bookings || bookings.length === 0) && (
+      {isError && (
+        <div
+          style={{
+            textAlign: 'center' as const,
+            padding: '48px 24px',
+            background: 'var(--color-surface)',
+            borderRadius: 'var(--radius-xl)',
+            border: '1.5px solid rgba(220,38,38,0.30)',
+          }}
+        >
+          <div style={{ fontSize: '3rem', marginBottom: 12 }}>⚠️</div>
+          <div style={{ fontWeight: 600, color: '#dc2626', marginBottom: 6 }}>
+            Error al cargar tus reservas
+          </div>
+          <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
+            Inténtalo de nuevo más tarde.
+          </div>
+        </div>
+      )}
+      {!isLoading && !isError && (!bookings || bookings.length === 0) && (
         <div
           style={{
             textAlign: 'center' as const,
@@ -380,7 +399,7 @@ function StudentView() {
 // ---------------------------------------------------------------------------
 
 function TutorView() {
-  const { data: bookings, isLoading } = useMyBookings();
+  const { data: bookings, isLoading, isError } = useMyBookings();
   const { data: students, isLoading: loadingStudents } = useMyStudents();
   const createBooking = useCreateBooking();
   const cancelBooking = useCancelBooking();
@@ -478,7 +497,12 @@ function TutorView() {
         </div>
 
         {isLoading && <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Cargando...</p>}
-        {!isLoading && (!bookings || bookings.length === 0) && (
+        {isError && (
+          <p style={{ color: '#dc2626', fontSize: '0.9rem' }}>
+            Error al cargar las reservas. Inténtalo de nuevo más tarde.
+          </p>
+        )}
+        {!isLoading && !isError && (!bookings || bookings.length === 0) && (
           <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
             No hay reservas todavia.
           </p>
@@ -905,7 +929,7 @@ function TutorView() {
 // ---------------------------------------------------------------------------
 
 function TeacherView() {
-  const { data: bookings, isLoading } = useMyBookings();
+  const { data: bookings, isLoading, isError } = useMyBookings();
   const confirmBooking = useConfirmBooking();
   const cancelBooking = useCancelBooking();
   const { data: mySlots } = useMyAvailability();
@@ -980,7 +1004,12 @@ function TeacherView() {
           Mis reservas
         </h2>
         {isLoading && <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Cargando...</p>}
-        {!isLoading && (!bookings || bookings.length === 0) && (
+        {isError && (
+          <p style={{ color: '#dc2626', fontSize: '0.9rem' }}>
+            Error al cargar las reservas. Inténtalo de nuevo más tarde.
+          </p>
+        )}
+        {!isLoading && !isError && (!bookings || bookings.length === 0) && (
           <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No tienes reservas todavia.</p>
         )}
 
@@ -1211,7 +1240,7 @@ function TeacherView() {
 // ---------------------------------------------------------------------------
 
 function AdminView() {
-  const { data: bookings, isLoading } = useMyBookings();
+  const { data: bookings, isLoading, isError } = useMyBookings();
   const cancelBooking = useCancelBooking();
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
 
@@ -1239,7 +1268,12 @@ function AdminView() {
       </div>
 
       {isLoading && <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Cargando...</p>}
-      {!isLoading && (!bookings || bookings.length === 0) && (
+      {isError && (
+        <p style={{ color: '#dc2626', fontSize: '0.9rem' }}>
+          Error al cargar las reservas. Inténtalo de nuevo más tarde.
+        </p>
+      )}
+      {!isLoading && !isError && (!bookings || bookings.length === 0) && (
         <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
           No hay reservas en el sistema.
         </p>

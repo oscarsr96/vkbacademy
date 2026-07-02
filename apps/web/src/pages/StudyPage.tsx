@@ -50,6 +50,11 @@ export default function StudyPage() {
   )?.response?.data?.message;
   const apiErrorText = Array.isArray(apiError) ? apiError.join(' · ') : apiError;
 
+  const removeError = (
+    remove.error as { response?: { data?: { message?: string | string[] } } } | null
+  )?.response?.data?.message;
+  const removeErrorText = Array.isArray(removeError) ? removeError.join(' · ') : removeError;
+
   return (
     <div style={s.page}>
       <header style={s.header}>
@@ -196,6 +201,11 @@ export default function StudyPage() {
 
       <section style={s.results}>
         <h2 style={s.resultsTitle}>Mis cursos de estudio</h2>
+        {removeErrorText && (
+          <div style={s.errorBox}>
+            <strong>!</strong> {removeErrorText}
+          </div>
+        )}
         {unitsLoading && <p style={s.muted}>Cargando…</p>}
         {!unitsLoading && (units?.length ?? 0) === 0 && (
           <p style={s.muted}>

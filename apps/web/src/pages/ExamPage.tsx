@@ -11,6 +11,7 @@ import { useMyCertificates } from '../hooks/useCertificates';
 import { downloadCertificatePdf } from '../utils/certificatePdf';
 import type { ExamAttemptStarted, ExamAttemptResult, ExamQuestionPublic } from '@vkbacademy/shared';
 import { downloadExamPdf } from '../utils/examPdf';
+import { getApiErrorMessage } from '../utils/errorMessage';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
 
@@ -336,7 +337,14 @@ function InProgressStep({
       </div>
 
       {/* Barra de progreso */}
-      <div className="progress-bar" style={{ marginBottom: 28 }}>
+      <div
+        className="progress-bar"
+        style={{ marginBottom: 28 }}
+        role="progressbar"
+        aria-valuenow={Math.round(progressPct)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div className="progress-fill" style={{ width: `${progressPct}%` }} />
       </div>
 
@@ -759,6 +767,7 @@ export default function ExamPage() {
   const [currentAttempt, setCurrentAttempt] = useState<ExamAttemptStarted | null>(null);
   const [result, setResult] = useState<ExamAttemptResult | null>(null);
   const [aiStartError, setAiStartError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const aiStartedRef = useRef(false);
 
   const {
@@ -792,22 +801,32 @@ export default function ExamPage() {
   }, [aiBankId, isAiMode]);
 
   const handleStart = async (numQuestions: number, timeLimit?: number, onlyOnce?: boolean) => {
-    const attempt = await startMut.mutateAsync({
-      courseId,
-      moduleId,
-      numQuestions,
-      timeLimit,
-      onlyOnce,
-    });
-    setCurrentAttempt(attempt);
-    setExamState('in-progress');
+    setActionError(null);
+    try {
+      const attempt = await startMut.mutateAsync({
+        courseId,
+        moduleId,
+        numQuestions,
+        timeLimit,
+        onlyOnce,
+      });
+      setCurrentAttempt(attempt);
+      setExamState('in-progress');
+    } catch (err) {
+      setActionError(getApiErrorMessage(err, 'No se pudo iniciar el examen. Inténtalo de nuevo.'));
+    }
   };
 
   const handleSubmit = async (answers: { questionId: string; answerIds: string[] }[]) => {
     if (!currentAttempt) return;
-    const res = await submitMut.mutateAsync({ answers });
-    setResult(res);
-    setExamState('results');
+    setActionError(null);
+    try {
+      const res = await submitMut.mutateAsync({ answers });
+      setResult(res);
+      setExamState('results');
+    } catch (err) {
+      setActionError(getApiErrorMessage(err, 'No se pudo entregar el examen. Inténtalo de nuevo.'));
+    }
   };
 
   const handleRepeat = async () => {
@@ -1068,6 +1087,18 @@ export default function ExamPage() {
           {stepLabel} · {bankInfo.questionCount} preguntas disponibles
         </div>
       </div>
+
+      {/* Error de arranque/entrega — no bloquea, permite reintentar */}
+      {actionError && (
+        <div
+          className="vkb-card"
+          style={{ padding: '16px 20px', marginBottom: 16, borderColor: 'var(--color-error, #dc2626)' }}
+        >
+          <p style={{ color: 'var(--color-error, #dc2626)', margin: 0, fontSize: '0.9rem' }}>
+            {actionError}
+          </p>
+        </div>
+      )}
 
       {/* Contenido del paso activo */}
       {examState === 'config' && (

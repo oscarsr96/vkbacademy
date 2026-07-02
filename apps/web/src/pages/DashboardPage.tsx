@@ -109,7 +109,15 @@ export default function DashboardPage() {
                 key={label}
                 className="vkb-card"
                 style={S.quickCard}
+                role="button"
+                tabIndex={0}
                 onClick={() => navigate(to)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate(to);
+                  }
+                }}
               >
                 <span style={S.cardEmoji}>{emoji}</span>
                 <p style={S.cardLabel}>{label}</p>
@@ -180,7 +188,19 @@ function StudentMetricCard({ student, onClick }: { student: StudentSummary; onCl
   const examAvg = stats?.exams.avgScore != null ? `${stats.exams.avgScore}%` : '—';
 
   return (
-    <div className="vkb-card" style={S.studentCard} onClick={onClick}>
+    <div
+      className="vkb-card"
+      style={S.studentCard}
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
       <div style={S.studentCardHead}>
         <div style={S.studentAvatar}>{student.name.charAt(0).toUpperCase()}</div>
         <div style={{ minWidth: 0 }}>

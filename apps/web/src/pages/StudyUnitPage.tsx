@@ -10,6 +10,7 @@ import {
 } from '../hooks/useStudy';
 import TheoryView from '../components/theory/TheoryView';
 import ExercisePractice from '../components/exercises/ExercisePractice';
+import { getApiErrorMessage } from '../utils/errorMessage';
 
 type Tab = 'theory' | 'exercises' | 'exam';
 
@@ -111,14 +112,23 @@ function MissingSection({
   label,
   onRetry,
   retrying,
+  isError,
+  error,
 }: {
   label: string;
   onRetry: () => void;
   retrying: boolean;
+  isError?: boolean;
+  error?: unknown;
 }) {
   return (
     <div style={s.missing}>
       <p style={s.muted}>No se pudo generar {label}. Puedes reintentarlo.</p>
+      {isError && (
+        <p style={s.errorText}>
+          {getApiErrorMessage(error, 'Error al regenerar. Inténtalo de nuevo.')}
+        </p>
+      )}
       <button type="button" className="btn btn-primary" onClick={onRetry} disabled={retrying}>
         {retrying ? '⏳ Generando…' : '🔄 Reintentar generación'}
       </button>
@@ -130,7 +140,13 @@ function TheoryTab({ unit }: { unit: StudyUnitDetail }) {
   const regen = useRegenerateTheory(unit.id);
   if (!unit.theory) {
     return (
-      <MissingSection label="la teoría" onRetry={() => regen.mutate()} retrying={regen.isPending} />
+      <MissingSection
+        label="la teoría"
+        onRetry={() => regen.mutate()}
+        retrying={regen.isPending}
+        isError={regen.isError}
+        error={regen.error}
+      />
     );
   }
   return <TheoryView module={unit.theory} />;
@@ -144,6 +160,8 @@ function ExercisesTab({ unit }: { unit: StudyUnitDetail }) {
         label="los ejercicios"
         onRetry={() => regen.mutate(undefined)}
         retrying={regen.isPending}
+        isError={regen.isError}
+        error={regen.error}
       />
     );
   }
@@ -154,7 +172,13 @@ function ExamTab({ unit, onStart }: { unit: StudyUnitDetail; onStart: (bankId: s
   const regen = useRegenerateExam(unit.id);
   if (!unit.exam) {
     return (
-      <MissingSection label="el examen" onRetry={() => regen.mutate()} retrying={regen.isPending} />
+      <MissingSection
+        label="el examen"
+        onRetry={() => regen.mutate()}
+        retrying={regen.isPending}
+        isError={regen.isError}
+        error={regen.error}
+      />
     );
   }
   const { exam } = unit;
@@ -229,6 +253,7 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 12,
   },
   muted: { color: 'var(--color-text-muted)', fontSize: '0.95rem', margin: 0 },
+  errorText: { color: '#dc2626', fontSize: '0.875rem', margin: 0 },
   examCard: {
     display: 'flex',
     alignItems: 'center',
