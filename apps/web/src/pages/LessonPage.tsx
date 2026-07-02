@@ -9,6 +9,8 @@ import { coursesApi } from '../api/courses.api';
 import MatchLesson from '../components/lessons/MatchLesson';
 import SortLesson from '../components/lessons/SortLesson';
 import FillBlankLesson from '../components/lessons/FillBlankLesson';
+import Icon from '../components/ui/Icon';
+import { launchConfetti } from '../utils/confetti';
 
 const LESSON_TYPE_LABELS: Partial<Record<LessonType, string>> = {
   [LessonType.VIDEO]: 'Vídeo',
@@ -67,23 +69,25 @@ const S: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     letterSpacing: '0.05em',
     textTransform: 'uppercase' as const,
-    background: 'rgba(234,88,12,0.10)',
-    color: 'var(--color-primary)',
+    background: 'var(--brand-soft)',
+    color: 'var(--brand-deep)',
     marginBottom: 8,
     width: 'fit-content',
   },
   heading: {
-    fontSize: '1.4rem',
-    fontWeight: 800,
+    fontFamily: 'var(--font-display)',
+    fontSize: 'clamp(1.7rem, 4vw, 2.1rem)',
+    fontWeight: 400,
+    letterSpacing: '0.03em',
+    textTransform: 'uppercase' as const,
     color: 'var(--color-text)',
     marginBottom: 24,
-    lineHeight: 1.25,
-    letterSpacing: '-0.01em',
+    lineHeight: 1.1,
   },
 
   // Marco de contenido (vídeo / actividad interactiva)
   contentFrame: {
-    border: '2px solid rgba(234,88,12,0.20)',
+    border: '2px solid var(--brand-soft)',
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 24,
@@ -119,6 +123,7 @@ const S: Record<string, React.CSSProperties> = {
     fontSize: '0.9rem',
     fontWeight: 700,
     marginBottom: 24,
+    animation: 'popIn 0.35s cubic-bezier(0.18, 0.72, 0.24, 1.12) both',
   },
 
   // Quiz
@@ -144,8 +149,8 @@ const S: Record<string, React.CSSProperties> = {
     transition: 'border-color 0.15s, background 0.15s',
   },
   submitBtn: {
-    background: 'var(--color-primary)',
-    color: '#fff',
+    background: 'var(--gradient-orange)',
+    color: 'var(--brand-contrast)',
     border: 'none',
     borderRadius: 8,
     padding: '10px 24px',
@@ -166,10 +171,11 @@ const S: Record<string, React.CSSProperties> = {
     marginBottom: 24,
   },
   score: {
-    fontSize: '2.5rem',
-    fontWeight: 900,
-    color: 'var(--color-primary)',
-    letterSpacing: '-0.03em',
+    fontFamily: 'var(--font-display)',
+    fontSize: '2.9rem',
+    fontWeight: 400,
+    color: 'var(--brand-deep)',
+    letterSpacing: '0.03em',
     lineHeight: 1,
     marginBottom: 4,
   },
@@ -222,7 +228,7 @@ const S: Record<string, React.CSSProperties> = {
   // Placeholder (ejercicio / actividad no configurada)
   placeholder: {
     background: 'var(--color-surface)',
-    border: '2px solid rgba(234,88,12,0.15)',
+    border: '2px solid var(--brand-soft)',
     borderRadius: 16,
     padding: '2.5rem',
     textAlign: 'center' as const,
@@ -372,8 +378,8 @@ export default function LessonPage() {
               onClick={() => navigate(`/courses/${courseId}/lessons/${prevLesson.id}`)}
               onMouseEnter={(e) => {
                 const btn = e.currentTarget as HTMLButtonElement;
-                btn.style.borderColor = 'rgba(234,88,12,0.35)';
-                btn.style.background = 'rgba(234,88,12,0.04)';
+                btn.style.borderColor = 'var(--brand-glow)';
+                btn.style.background = 'var(--brand-faint)';
               }}
               onMouseLeave={(e) => {
                 const btn = e.currentTarget as HTMLButtonElement;
@@ -390,8 +396,8 @@ export default function LessonPage() {
               onClick={() => navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)}
               onMouseEnter={(e) => {
                 const btn = e.currentTarget as HTMLButtonElement;
-                btn.style.borderColor = 'rgba(234,88,12,0.35)';
-                btn.style.background = 'rgba(234,88,12,0.04)';
+                btn.style.borderColor = 'var(--brand-glow)';
+                btn.style.background = 'var(--brand-faint)';
               }}
               onMouseLeave={(e) => {
                 const btn = e.currentTarget as HTMLButtonElement;
@@ -453,7 +459,7 @@ export default function LessonPage() {
                             : 'var(--color-border)',
                         background:
                           selectedAnswers[question.id] === answer.id
-                            ? 'rgba(234,88,12,0.06)'
+                            ? 'var(--brand-faint)'
                             : 'transparent',
                       }}
                     >
@@ -497,7 +503,16 @@ export default function LessonPage() {
                   return (
                     <div key={correction.questionId} style={S.correctionItem}>
                       <div style={S.correctionRow}>
-                        <span style={{ flexShrink: 0, fontSize: '1rem' }}>{correction.isCorrect ? '✅' : '❌'}</span>
+                        <span
+                          style={{
+                            flexShrink: 0,
+                            display: 'inline-flex',
+                            color: correction.isCorrect ? '#16a34a' : 'var(--color-error)',
+                            marginTop: 2,
+                          }}
+                        >
+                          <Icon name={correction.isCorrect ? 'check' : 'close'} size={16} />
+                        </span>
                         <div>
                           <div style={{ fontWeight: 600, color: 'var(--color-text)', fontSize: '0.875rem' }}>
                             {question?.text}
@@ -528,8 +543,12 @@ export default function LessonPage() {
                 >
                   Intentar de nuevo
                 </button>
-                <button style={S.downloadBtn} onClick={handleDownloadCurrentPdf}>
-                  ⬇️ Descargar PDF
+                <button
+                  style={{ ...S.downloadBtn, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  onClick={handleDownloadCurrentPdf}
+                >
+                  <Icon name="download" size={13} />
+                  Descargar PDF
                 </button>
               </div>
 
@@ -566,7 +585,9 @@ export default function LessonPage() {
       {/* EXERCISE */}
       {lesson.type === 'EXERCISE' && (
         <div style={S.placeholder}>
-          <span style={{ fontSize: 40 }}>💪</span>
+          <span style={{ display: 'inline-flex', color: 'var(--brand)', opacity: 0.8 }}>
+            <Icon name="zap" size={40} strokeWidth={1.5} />
+          </span>
           <p style={{ marginTop: 12, fontWeight: 700, color: 'var(--color-text)' }}>Próximamente</p>
           <p style={{ fontSize: '0.875rem', marginTop: 6 }}>Los ejercicios estarán disponibles pronto.</p>
         </div>
@@ -611,7 +632,9 @@ export default function LessonPage() {
       {/* Lección interactiva sin contenido configurado todavía */}
       {isInteractiveType && !lesson.content && (
         <div style={S.placeholder}>
-          <span style={{ fontSize: 40 }}>⚡</span>
+          <span style={{ display: 'inline-flex', color: 'var(--brand)', opacity: 0.8 }}>
+            <Icon name="shapes" size={40} strokeWidth={1.5} />
+          </span>
           <p style={{ marginTop: 12, fontWeight: 700, color: 'var(--color-text)' }}>Actividad no configurada</p>
           <p style={{ fontSize: '0.875rem', marginTop: 6 }}>El administrador aún no ha añadido el contenido.</p>
         </div>
@@ -621,12 +644,17 @@ export default function LessonPage() {
       <div style={{ marginTop: 8, marginBottom: 16 }}>
         {isCompleted ? (
           <div style={S.completedBadge}>
-            <span>✓</span> Lección completada
+            <Icon name="check" size={16} /> Lección completada
           </div>
         ) : (
           <button
             className="btn btn-primary"
-            onClick={() => completeLesson.mutate(lessonId)}
+            onClick={() =>
+              completeLesson.mutate(lessonId, {
+                // Celebración: confeti con los colores del club al completar
+                onSuccess: () => launchConfetti(),
+              })
+            }
             disabled={completeLesson.isPending || (hasInteractiveContent && !interactiveCompleted)}
           >
             {completeLesson.isPending ? 'Guardando...' : 'Marcar como completada'}

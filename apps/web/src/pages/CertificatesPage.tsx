@@ -1,5 +1,9 @@
 import { useMyCertificates } from '../hooks/useCertificates';
 import { downloadCertificatePdf } from '../utils/certificatePdf';
+import { usePageZone } from '../hooks/usePageZone';
+import Icon from '../components/ui/Icon';
+import ScoreValue from '../components/ui/ScoreValue';
+import EmptyState from '../components/ui/EmptyState';
 import type { Certificate, CertificateType } from '@vkbacademy/shared';
 
 // ─── Metadatos por tipo ───────────────────────────────────────────────────────
@@ -10,50 +14,50 @@ const TYPE_LABELS: Record<
 > = {
   MODULE_COMPLETION: {
     label: 'Módulo completado',
-    icon: '📜',
+    icon: 'award',
     badgeBg: 'rgba(99,102,241,0.12)',
     badgeColor: '#6366f1',
   },
   COURSE_COMPLETION: {
     label: 'Curso completado',
-    icon: '🏆',
-    badgeBg: 'rgba(234,88,12,0.12)',
-    badgeColor: '#ea580c',
+    icon: 'trophy',
+    badgeBg: 'rgba(245,145,30,0.12)',
+    badgeColor: '#e07b06',
   },
   MODULE_EXAM: {
     label: 'Examen de módulo',
-    icon: '📝',
+    icon: 'check',
     badgeBg: 'rgba(59,130,246,0.12)',
     badgeColor: '#3b82f6',
   },
   COURSE_EXAM: {
     label: 'Examen de curso',
-    icon: '🎓',
+    icon: 'graduation',
     badgeBg: 'rgba(16,185,129,0.12)',
     badgeColor: '#10b981',
   },
 };
 
-// ─── Tarjeta de certificado ───────────────────────────────────────────────────
+// ─── Tarjeta de certificado (diploma sobre la sala oscura) ────────────────────
 
-function CertificateCard({ cert }: { cert: Certificate }) {
+function CertificateCard({ cert, index }: { cert: Certificate; index: number }) {
   const meta = TYPE_LABELS[cert.type];
 
   return (
     <div
-      className="animate-in"
       style={{
-        background: 'rgba(255,252,235,0.92)',
-        border: '1.5px solid rgba(245,158,11,0.35)',
+        background: 'rgba(255,252,235,0.96)',
+        border: '1.5px solid rgba(245,158,11,0.4)',
         borderRadius: 'var(--radius-lg)',
         padding: '24px',
         display: 'flex',
         flexDirection: 'column' as const,
         gap: 12,
-        boxShadow: '0 4px 20px rgba(245,158,11,0.12)',
+        boxShadow: '0 8px 32px rgba(255, 210, 77, 0.12), 0 4px 20px rgba(0,0,0,0.3)',
         transition: 'box-shadow 0.25s, transform 0.25s',
         position: 'relative' as const,
         overflow: 'hidden',
+        animation: `riseIn 0.5s cubic-bezier(0.18, 0.72, 0.24, 1.12) ${index * 60}ms both`,
       }}
     >
       {/* Franja decorativa superior dorada */}
@@ -71,7 +75,9 @@ function CertificateCard({ cert }: { cert: Certificate }) {
 
       {/* Cabecera: icono + badge de tipo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
-        <span style={{ fontSize: '1.75rem', lineHeight: 1 }}>{meta.icon}</span>
+        <span style={{ color: meta.badgeColor, display: 'inline-flex' }}>
+          <Icon name={meta.icon} size={26} />
+        </span>
         <span
           style={{
             fontSize: '0.72rem',
@@ -102,10 +108,10 @@ function CertificateCard({ cert }: { cert: Certificate }) {
             color: '#6b7280',
             display: 'flex',
             alignItems: 'center',
-            gap: 5,
+            gap: 6,
           }}
         >
-          <span>📚</span>
+          <Icon name="book" size={14} />
           <span>{cert.courseTitle}</span>
         </div>
       )}
@@ -138,10 +144,10 @@ function CertificateCard({ cert }: { cert: Certificate }) {
           color: '#6b7280',
           display: 'flex',
           alignItems: 'center',
-          gap: 5,
+          gap: 6,
         }}
       >
-        <span>📅</span>
+        <Icon name="calendar" size={14} />
         <span>
           Emitido el{' '}
           {new Date(cert.issuedAt).toLocaleDateString('es-ES', {
@@ -184,6 +190,7 @@ function CertificateCard({ cert }: { cert: Certificate }) {
         style={{ alignSelf: 'flex-start', padding: '9px 18px', fontSize: '0.85rem', marginTop: 4 }}
         onClick={() => downloadCertificatePdf(cert)}
       >
+        <Icon name="download" size={15} />
         Descargar PDF
       </button>
     </div>
@@ -194,11 +201,12 @@ function CertificateCard({ cert }: { cert: Certificate }) {
 
 export default function CertificatesPage() {
   const { data: certs, isLoading, isError } = useMyCertificates();
+  usePageZone('dark');
 
   if (isLoading) {
     return (
       <div style={{ maxWidth: 840, margin: '0 auto' }}>
-        <div className="page-hero animate-in">
+        <div className="page-hero court-lines sweep-light animate-in">
           <h1 className="hero-title">Mis Certificados</h1>
           <p className="hero-subtitle">Cargando certificados...</p>
         </div>
@@ -209,7 +217,7 @@ export default function CertificatesPage() {
   if (isError) {
     return (
       <div style={{ maxWidth: 840, margin: '0 auto' }}>
-        <div className="page-hero animate-in">
+        <div className="page-hero court-lines sweep-light animate-in">
           <h1 className="hero-title">Mis Certificados</h1>
           <p style={{ color: 'rgba(252,165,165,0.9)', marginTop: 8 }}>
             Error al cargar los certificados.
@@ -223,30 +231,25 @@ export default function CertificatesPage() {
 
   return (
     <div style={{ maxWidth: 840, margin: '0 auto' }}>
-      {/* Hero */}
-      <div className="page-hero animate-in">
+      {/* Hero — sala de trofeos */}
+      <div className="page-hero court-lines sweep-light animate-in">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
-          <span style={{ fontSize: '2.5rem' }}>📜</span>
+          <span style={{ color: 'var(--amber-led)', display: 'inline-flex' }}>
+            <Icon name="trophy" size={38} strokeWidth={1.6} />
+          </span>
           {total > 0 && (
             <div
-              className="stat-card"
-              style={{ padding: '8px 18px', display: 'inline-flex', gap: 6, alignItems: 'center' }}
+              className="panel-glass"
+              style={{
+                padding: '8px 18px',
+                display: 'inline-flex',
+                gap: 8,
+                alignItems: 'baseline',
+                border: '1px solid rgba(255, 210, 77, 0.25)',
+              }}
             >
-              <span
-                style={{
-                  fontSize: '1.4rem',
-                  fontWeight: 900,
-                  background: 'var(--gradient-orange)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                {total}
-              </span>
-              <span
-                style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500 }}
-              >
+              <ScoreValue value={total} size="1.5rem" />
+              <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
                 {total === 1 ? 'certificado' : 'certificados'}
               </span>
             </div>
@@ -260,38 +263,12 @@ export default function CertificatesPage() {
 
       {/* Estado vacío */}
       {(!certs || certs.length === 0) && (
-        <div
-          style={{
-            textAlign: 'center' as const,
-            padding: '56px 24px',
-            background: 'var(--color-surface)',
-            borderRadius: 'var(--radius-xl)',
-            border: '1.5px solid rgba(245,158,11,0.20)',
-            boxShadow: '0 4px 20px rgba(245,158,11,0.06)',
-          }}
-        >
-          <div style={{ fontSize: '4rem', marginBottom: 16 }}>📜</div>
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: '1.1rem',
-              color: 'var(--color-text)',
-              marginBottom: 8,
-            }}
-          >
-            Aun no tienes certificados
-          </div>
-          <div
-            style={{
-              fontSize: '0.9rem',
-              color: 'var(--color-text-muted)',
-              maxWidth: 400,
-              margin: '0 auto',
-              lineHeight: 1.6,
-            }}
-          >
-            Completa modulos o cursos enteros y aprueba examenes para obtener tus primeros diplomas.
-          </div>
+        <div className="panel-glass">
+          <EmptyState
+            icon="trophy"
+            title="Aún no tienes certificados"
+            message="Completa módulos o cursos enteros y aprueba exámenes para obtener tus primeros diplomas."
+          />
         </div>
       )}
 
@@ -300,8 +277,8 @@ export default function CertificatesPage() {
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 28 }}>
           {groupCertificatesByCourse(certs).map((group) => (
             <CourseGroup key={group.key} title={group.title} count={group.certs.length}>
-              {group.certs.map((cert) => (
-                <CertificateCard key={cert.id} cert={cert} />
+              {group.certs.map((cert, i) => (
+                <CertificateCard key={cert.id} cert={cert} index={i} />
               ))}
             </CourseGroup>
           ))}
@@ -358,7 +335,9 @@ function CourseGroup({
           marginBottom: 14,
         }}
       >
-        <span style={{ fontSize: '1.2rem' }}>📚</span>
+        <span style={{ color: 'var(--brand-light)', display: 'inline-flex' }}>
+          <Icon name="book" size={18} />
+        </span>
         <h2
           style={{
             margin: 0,
@@ -375,9 +354,9 @@ function CourseGroup({
             fontWeight: 700,
             padding: '2px 10px',
             borderRadius: 999,
-            background: 'rgba(234,88,12,0.12)',
-            color: '#ea580c',
-            border: '1px solid rgba(234,88,12,0.25)',
+            background: 'var(--brand-soft)',
+            color: 'var(--brand-light)',
+            border: '1px solid var(--brand-soft)',
             letterSpacing: '0.04em',
             textTransform: 'uppercase' as const,
           }}

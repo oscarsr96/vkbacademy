@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingsApi, type BookingWithRelations, type CreateSlotPayload } from '../api/bookings.api';
 import type { AvailabilitySlot } from '@vkbacademy/shared';
 import { useAuthStore } from '../store/auth.store';
+import Icon from '../components/ui/Icon';
+import EmptyState from '../components/ui/EmptyState';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-const ORANGE = '#ea580c';
+const ORANGE = 'var(--brand)';
 
 // ─── Colores de estado ──────────────────────────────────────────────────────────
 
@@ -29,7 +31,7 @@ function statusBadgeStyle(status: string): React.CSSProperties {
   };
   if (status === 'CONFIRMED') return { ...base, background: '#dcfce7', color: '#166534' };
   if (status === 'CANCELLED') return { ...base, background: '#f1f5f9', color: '#64748b' };
-  return { ...base, background: 'rgba(234,88,12,0.12)', color: '#c94e00', border: '1px solid rgba(234,88,12,0.3)' };
+  return { ...base, background: 'var(--brand-soft)', color: 'var(--brand-deep)', border: '1px solid var(--brand-glow)' };
 }
 
 function statusLabel(status: string) {
@@ -117,12 +119,7 @@ function BookingsTab() {
   }
 
   if (bookings.length === 0) {
-    return (
-      <div style={S.emptyState}>
-        <span style={{ fontSize: '2.5rem' }}>📅</span>
-        <p style={{ fontWeight: 600, color: '#64748b', margin: 0 }}>No tienes reservas aún.</p>
-      </div>
-    );
+    return <EmptyState icon="calendar" title="No tienes reservas aún." />;
   }
 
   return (
@@ -130,7 +127,7 @@ function BookingsTab() {
       {pending.length > 0 && (
         <>
           <h3 style={S.groupTitle}>
-            <span style={{ color: ORANGE }}>⏳</span> Pendientes ({pending.length})
+            <Icon name="clock" size={15} color={ORANGE} /> Pendientes ({pending.length})
           </h3>
           {pending.map((b) => <BookingCard key={b.id} b={b} />)}
         </>
@@ -138,7 +135,7 @@ function BookingsTab() {
       {confirmed.length > 0 && (
         <>
           <h3 style={{ ...S.groupTitle, marginTop: '1.75rem' }}>
-            <span style={{ color: '#16a34a' }}>✅</span> Confirmadas ({confirmed.length})
+            <Icon name="check" size={15} color="#16a34a" /> Confirmadas ({confirmed.length})
           </h3>
           {confirmed.map((b) => <BookingCard key={b.id} b={b} />)}
         </>
@@ -146,7 +143,7 @@ function BookingsTab() {
       {cancelled.length > 0 && (
         <>
           <h3 style={{ ...S.groupTitle, marginTop: '1.75rem', color: '#94a3b8' }}>
-            <span>❌</span> Canceladas ({cancelled.length})
+            <Icon name="close" size={15} /> Canceladas ({cancelled.length})
           </h3>
           {cancelled.map((b) => <BookingCard key={b.id} b={b} />)}
         </>
@@ -219,11 +216,11 @@ function AvailabilityTab() {
                     <div key={slot.id} style={S.slotRow}>
                       <span style={S.slotTime}>{slot.startTime} – {slot.endTime}</span>
                       <button
-                        style={{ ...S.btnSm, background: '#fee2e2', color: '#dc2626', padding: '4px 10px', fontSize: '0.78rem' }}
+                        style={{ ...S.btnSm, background: '#fee2e2', color: '#dc2626', padding: '4px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center' }}
                         onClick={() => deleteSlot(slot.id)}
                         title="Eliminar slot"
                       >
-                        ✕
+                        <Icon name="close" size={13} />
                       </button>
                     </div>
                   ))
@@ -296,8 +293,10 @@ export default function TeacherPortalPage() {
   return (
     <div style={S.page}>
       {/* Hero */}
-      <div className="page-hero animate-in">
-        <h1 className="hero-title">🏫 Portal Docente</h1>
+      <div className="page-hero court-lines sweep-light animate-in">
+        <h1 className="hero-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <Icon name="graduation" size={28} /> Portal Docente
+        </h1>
         {user && (
           <p className="hero-subtitle">
             Bienvenido, {user.name} — gestiona tus reservas y horario de disponibilidad
@@ -306,17 +305,15 @@ export default function TeacherPortalPage() {
       </div>
 
       {/* Tabs */}
-      <div style={S.tabs}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' as const }}>
         {(['bookings', 'availability'] as const).map((t) => (
           <button
             key={t}
-            style={{
-              ...S.tab,
-              ...(tab === t ? S.tabActive : S.tabInactive),
-            }}
+            className={`chip${tab === t ? ' active' : ''}`}
             onClick={() => setTab(t)}
           >
-            {t === 'bookings' ? '📅 Mis reservas' : '🗓 Mi disponibilidad'}
+            <Icon name={t === 'bookings' ? 'calendar' : 'clock'} size={15} />
+            {t === 'bookings' ? 'Mis reservas' : 'Mi disponibilidad'}
           </button>
         ))}
       </div>
@@ -333,36 +330,6 @@ export default function TeacherPortalPage() {
 
 const S: Record<string, React.CSSProperties> = {
   page: { display: 'flex', flexDirection: 'column', minHeight: '100%' },
-
-  // Tabs
-  tabs: {
-    display: 'flex',
-    gap: 8,
-    padding: '0 0 0',
-    marginBottom: 24,
-    borderBottom: '2px solid #e2e8f0',
-  },
-  tab: {
-    padding: '10px 20px',
-    cursor: 'pointer',
-    fontWeight: 700,
-    fontSize: '0.875rem',
-    border: 'none',
-    borderRadius: '8px 8px 0 0',
-    transition: 'background 0.15s, color 0.15s, box-shadow 0.15s',
-    letterSpacing: '0.01em',
-  },
-  tabActive: {
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
-    color: '#fff',
-    boxShadow: '0 4px 12px rgba(234,88,12,0.3)',
-  },
-  tabInactive: {
-    background: 'transparent',
-    color: '#64748b',
-    border: '1.5px solid #e2e8f0',
-    borderBottom: 'none',
-  },
 
   body: { flex: 1 },
 
@@ -416,7 +383,7 @@ const S: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     fontSize: '0.85rem',
     padding: '10px 14px',
-    borderBottom: '1px solid rgba(234,88,12,0.2)',
+    borderBottom: '1px solid var(--brand-soft)',
   },
   slotRow: {
     display: 'flex',
@@ -449,13 +416,4 @@ const S: Record<string, React.CSSProperties> = {
 
   // Estados vacíos
   empty: { color: '#94a3b8', fontStyle: 'italic', fontSize: '0.85rem', padding: '0.5rem 0' },
-  emptyState: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    padding: '4rem',
-    color: '#94a3b8',
-  },
 };

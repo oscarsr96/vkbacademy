@@ -291,7 +291,7 @@ export const TSLIDES_CSS = `
     display: flex;
     flex-direction: column;
     background:
-      radial-gradient(120% 80% at 50% -10%, rgba(234,88,12,0.22), transparent 60%),
+      radial-gradient(120% 80% at 50% -10%, var(--brand-glow), transparent 60%),
       linear-gradient(180deg, #080e1a 0%, #0d1b2a 60%, #152233 100%);
     color: #fff;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -306,7 +306,7 @@ export const TSLIDES_CSS = `
   .tslides-progress > span {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, #ea580c, #f97316);
+    background: linear-gradient(90deg, var(--brand), var(--brand-light));
     border-radius: 0 4px 4px 0;
     transition: width 0.35s cubic-bezier(0.2,0.8,0.25,1);
   }
@@ -344,7 +344,7 @@ export const TSLIDES_CSS = `
     place-items: center;
     transition: background 0.15s, transform 0.15s;
   }
-  .tslides-actions button:hover { background: rgba(234,88,12,0.35); transform: translateY(-1px); }
+  .tslides-actions button:hover { background: var(--brand-glow); transform: translateY(-1px); }
   .tslides-counter {
     font-variant-numeric: tabular-nums;
     font-size: 0.85rem;
@@ -413,7 +413,7 @@ export const TSLIDES_CSS = `
   .tsl-ball {
     font-size: clamp(48px, 9vw, 96px);
     animation: tsl-bounce 2.4s ease-in-out infinite;
-    filter: drop-shadow(0 14px 24px rgba(234,88,12,0.35));
+    filter: drop-shadow(0 14px 24px var(--brand-glow));
   }
   @keyframes tsl-bounce {
     0%, 100% { transform: translateY(0) rotate(-6deg); }
@@ -424,7 +424,7 @@ export const TSLIDES_CSS = `
     letter-spacing: 0.16em;
     font-size: clamp(0.75rem, 1.6vw, 0.95rem);
     font-weight: 700;
-    color: #fb923c;
+    color: var(--brand-light);
   }
   .tsl-cover-title {
     font-family: 'Unbounded', 'Inter', sans-serif;
@@ -432,7 +432,7 @@ export const TSLIDES_CSS = `
     font-size: clamp(2.2rem, 7vw, 4.6rem);
     line-height: 1.05;
     margin: 0;
-    background: linear-gradient(120deg, #fff 30%, #fdba74);
+    background: linear-gradient(120deg, #fff 30%, var(--brand-light));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -490,7 +490,7 @@ export const TSLIDES_CSS = `
   .tsl-body p { margin: 0 0 0.8em; }
   .tsl-body ul, .tsl-body ol { margin: 0 0 0.8em; padding-left: 1.4em; }
   .tsl-body li { margin: 0.3em 0; }
-  .tsl-body strong { color: #fdba74; }
+  .tsl-body strong { color: var(--brand-light); }
   .tsl-body h2, .tsl-body h3 {
     font-family: 'Unbounded', 'Inter', sans-serif;
     font-size: 1.1em;
@@ -548,7 +548,7 @@ export const TSLIDES_CSS = `
     flex-direction: column;
     gap: 6px;
   }
-  .tsl-candidate.is-active { border-color: #f97316; background: rgba(234,88,12,0.18); }
+  .tsl-candidate.is-active { border-color: var(--brand-light); background: var(--brand-soft); }
   .tsl-candidate img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; }
   .tsl-candidate span {
     font-size: 0.72rem;
@@ -569,8 +569,8 @@ export const TSLIDES_CSS = `
   }
   .tsl-video-card-play {
     font-size: 2rem;
-    color: #f97316;
-    background: rgba(234,88,12,0.18);
+    color: var(--brand-light);
+    background: var(--brand-soft);
     width: 64px;
     height: 64px;
     border-radius: 50%;
@@ -602,7 +602,7 @@ export const TSLIDES_CSS = `
     place-items: center;
     transition: background 0.15s, transform 0.15s;
   }
-  .tslides-arrow:hover:not(:disabled) { background: rgba(234,88,12,0.4); transform: scale(1.06); }
+  .tslides-arrow:hover:not(:disabled) { background: var(--brand-glow); transform: scale(1.06); }
   .tslides-arrow:disabled { opacity: 0.3; cursor: default; }
   .tslides-dots {
     display: flex;
@@ -622,7 +622,7 @@ export const TSLIDES_CSS = `
     transition: transform 0.15s, background 0.15s;
   }
   .tslides-dot:hover { background: rgba(255,255,255,0.5); }
-  .tslides-dot.is-active { background: #f97316; transform: scale(1.4); }
+  .tslides-dot.is-active { background: var(--brand-light); transform: scale(1.4); }
 
   .tslides-hint {
     flex: none;
@@ -676,14 +676,14 @@ export const TSLIDES_CSS = `
     font-size: 0.9rem;
   }
   .tslides-grid-panel button:hover { background: rgba(255,255,255,0.1); }
-  .tslides-grid-panel button.is-active { border-color: #f97316; background: rgba(234,88,12,0.18); }
+  .tslides-grid-panel button.is-active { border-color: var(--brand-light); background: var(--brand-soft); }
   .tslides-grid-panel .n {
     flex: none;
     width: 26px;
     height: 26px;
     border-radius: 7px;
-    background: rgba(234,88,12,0.3);
-    color: #fdba74;
+    background: var(--brand-glow);
+    color: var(--brand-light);
     font-weight: 700;
     font-size: 0.78rem;
     display: grid;

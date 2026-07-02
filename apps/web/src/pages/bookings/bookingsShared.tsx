@@ -98,9 +98,9 @@ export function StatusBadge({ status }: { status: string }) {
       borderRadius: 999,
       fontSize: '0.72rem',
       fontWeight: 700,
-      background: 'rgba(234,88,12,0.12)',
-      color: '#c2410c',
-      border: '1px solid rgba(234,88,12,0.28)',
+      background: 'var(--brand-soft)',
+      color: 'var(--brand-deep)',
+      border: '1px solid var(--brand-glow)',
       letterSpacing: '0.03em',
       textTransform: 'uppercase' as const,
     },
@@ -137,7 +137,7 @@ export function StatusBadge({ status }: { status: string }) {
 // ---------------------------------------------------------------------------
 
 export function bookingCardBorder(status: string): string {
-  if (status === 'PENDING') return 'rgba(234,88,12,0.35)';
+  if (status === 'PENDING') return 'var(--brand-glow)';
   if (status === 'CONFIRMED') return 'rgba(22,163,74,0.35)';
   return 'rgba(107,114,128,0.30)';
 }

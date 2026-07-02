@@ -5,7 +5,7 @@ import { useAcademyDomain } from '../contexts/AcademyContext';
 import { contrastText } from '../utils/color';
 
 /* ---------- Basketball SVG component ---------- */
-function Basketball({ size = 40, style, color = '#ea580c' }: { size?: number; style?: React.CSSProperties; color?: string }) {
+function Basketball({ size = 40, style, color = '#f5911e' }: { size?: number; style?: React.CSSProperties; color?: string }) {
   return (
     <svg
       width={size}
@@ -42,9 +42,9 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
 
   // Branding dinámico
-  const accentColor = domainAcademy?.primaryColor ?? '#ea580c';
+  const accentColor = domainAcademy?.primaryColor ?? '#f5911e';
   const academyName = domainAcademy?.name ?? 'VKB Academy';
-  const academyLogo = domainAcademy?.logoUrl ?? 'https://vallekasbasket.com/wp-content/uploads/2022/04/logotipo-vallekas-basket.png';
+  const academyLogo = domainAcademy?.logoUrl ?? '/brand/vkb-logo.png';
 
   const [balls] = useState<FloatingBall[]>(() =>
     Array.from({ length: 8 }, (_, i) => ({
@@ -70,7 +70,7 @@ export default function LoginPage() {
     (error as { response?: { data?: { message?: string } } } | null)?.response?.data?.message;
 
   return (
-    <div style={s.page}>
+    <div style={s.page} className="court-lines sweep-light">
       {/* Estilos de animación */}
       <style>{getAnimationCSS(accentColor)}</style>
 
@@ -269,7 +269,8 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '16px',
-    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+    background:
+      'radial-gradient(120% 80% at 50% -10%, rgba(245,145,30,0.14), transparent 55%), radial-gradient(80% 60% at 90% 110%, rgba(255,210,77,0.07), transparent 60%), linear-gradient(180deg, var(--navy-950) 0%, var(--navy-800) 100%)',
     position: 'relative',
     overflow: 'hidden',
   },
@@ -279,7 +280,7 @@ const s: Record<string, React.CSSProperties> = {
     right: '-10%',
     width: '600px',
     height: '600px',
-    background: 'radial-gradient(circle, rgba(234,88,12,0.12) 0%, transparent 60%)',
+    background: 'radial-gradient(circle, var(--brand-soft) 0%, transparent 60%)',
     pointerEvents: 'none',
     zIndex: 0,
   },
@@ -308,10 +309,10 @@ const s: Record<string, React.CSSProperties> = {
     background: 'rgba(8,14,26,0.92)',
     backdropFilter: 'blur(24px)',
     WebkitBackdropFilter: 'blur(24px)',
-    border: '1.5px solid rgba(234,88,12,0.22)',
+    border: '1.5px solid rgba(245,145,30,0.22)',
     borderRadius: '20px',
     padding: '40px 36px',
-    boxShadow: '0 24px 64px rgba(0,0,0,0.55), 0 0 80px rgba(234,88,12,0.08), 0 0 0 1px rgba(234,88,12,0.10)',
+    boxShadow: '0 24px 64px rgba(0,0,0,0.55), 0 0 80px rgba(245,145,30,0.08), 0 0 0 1px rgba(245,145,30,0.10)',
     display: 'flex',
     flexDirection: 'column',
     gap: '22px',
@@ -333,7 +334,9 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '1.6rem',
     fontWeight: 800,
     color: '#ffffff',
-    letterSpacing: '-0.01em',
+    fontFamily: 'var(--font-display)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.03em',
     lineHeight: 1.2,
   },
   subtitle: {
@@ -385,7 +388,7 @@ const s: Record<string, React.CSSProperties> = {
     color: 'rgba(255,255,255,0.55)',
   },
   link: {
-    color: '#f97316',
+    color: 'var(--brand-light)',
     fontWeight: 600,
     textDecoration: 'none',
   },

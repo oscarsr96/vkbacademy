@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 
 // Paleta naranja del club
-const ORANGE = { r: 234, g: 88, b: 12 } as const;   // #ea580c
+const ORANGE = { r: 245, g: 145, b: 30 } as const;   // #f5911e
 const DARK = { r: 30, g: 27, b: 24 } as const;
 const MUTED = { r: 120, g: 113, b: 108 } as const;
 const GREEN = { r: 5, g: 150, b: 105 } as const;

@@ -1,8 +1,12 @@
+import { useEffect } from 'react';
 import { useMyCertificates } from '../../hooks/useCertificates';
+import { usePageZone } from '../../hooks/usePageZone';
 import { downloadCertificatePdf } from '../../utils/certificatePdf';
 import { downloadExamPdf } from '../../utils/examPdf';
+import { launchConfetti } from '../../utils/confetti';
+import Icon from '../../components/ui/Icon';
 import type { ExamAttemptResult } from '@vkbacademy/shared';
-import { scoreColor, scoreGradient } from './examShared';
+import { scoreColor } from './examShared';
 
 // ─── Componente: Resultados ───────────────────────────────────────────────────
 
@@ -28,6 +32,8 @@ export function ResultsStep({
     submittedAt: string | null;
   }[];
 }) {
+  usePageZone('dark');
+
   const { data: certs } = useMyCertificates();
   const examCertType = courseId ? 'COURSE_EXAM' : 'MODULE_EXAM';
   const examScopeId = courseId ?? moduleId;
@@ -35,18 +41,23 @@ export function ResultsStep({
 
   const passed = result.score >= 50;
 
+  // Confeti de celebración: una sola vez al montar el resultado si esta aprobado.
+  useEffect(() => {
+    if (passed) launchConfetti();
+  }, [passed]);
+
   return (
     <div>
-      {/* Score grande */}
+      {/* Marcador de estadio */}
       <div
+        className="panel-glass animate-in"
         style={{
-          background: 'var(--gradient-hero)',
-          borderRadius: 'var(--radius-xl)',
-          padding: '40px 36px',
+          padding: '44px 36px',
           textAlign: 'center' as const,
           marginBottom: 24,
           position: 'relative' as const,
           overflow: 'hidden',
+          border: passed ? '1px solid rgba(255,210,77,0.28)' : '1px solid rgba(239,68,68,0.28)',
         }}
       >
         {/* Glow decorativo */}
@@ -57,61 +68,85 @@ export function ResultsStep({
             right: -80,
             width: 280,
             height: 280,
-            background: `radial-gradient(circle, ${scoreColor(result.score)}22 0%, transparent 70%)`,
+            background: `radial-gradient(circle, ${passed ? 'rgba(255,210,77,0.18)' : 'rgba(239,68,68,0.14)'} 0%, transparent 70%)`,
             pointerEvents: 'none',
           }}
         />
 
         <div
           style={{
-            fontSize: '5rem',
-            fontWeight: 900,
-            background: scoreGradient(result.score),
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase' as const,
+            color: 'rgba(255,255,255,0.45)',
+            marginBottom: 14,
+          }}
+        >
+          Resultado final
+        </div>
+
+        {/* Nota: decimal, se compone manualmente con .score-number */}
+        <div
+          className={`score-number${passed ? ' pulse' : ''}`}
+          style={{
+            fontSize: '4.5rem',
             lineHeight: 1,
-            letterSpacing: '-0.03em',
-            marginBottom: 8,
+            color: passed ? 'var(--amber-led)' : '#ef4444',
+            textShadow: passed ? 'var(--amber-glow)' : 'none',
           }}
         >
           {result.score.toFixed(1)}%
         </div>
 
-        <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.65)', marginBottom: 16 }}>
+        <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.65)', marginTop: 10, marginBottom: 18 }}>
           {result.correctCount} de {result.numQuestions} respuestas correctas
         </div>
 
-        {passed && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' as const }}>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              padding: '6px 18px',
+              padding: '7px 20px',
               borderRadius: 999,
-              background: 'rgba(22,163,74,0.15)',
-              border: '1px solid rgba(22,163,74,0.35)',
-              color: '#4ade80',
+              background: passed ? 'rgba(255,210,77,0.14)' : 'rgba(239,68,68,0.14)',
+              border: passed ? '1px solid rgba(255,210,77,0.4)' : '1px solid rgba(239,68,68,0.4)',
+              color: passed ? 'var(--amber-led)' : '#ef4444',
               fontWeight: 700,
               fontSize: '0.875rem',
             }}
           >
-            Certificado emitido
+            <Icon name={passed ? 'trophy' : 'close'} size={16} />
+            {passed ? 'Aprobado' : 'Suspendido'}
           </div>
-        )}
+
+          {passed && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '7px 18px',
+                borderRadius: 999,
+                background: 'rgba(22,163,74,0.15)',
+                border: '1px solid rgba(22,163,74,0.35)',
+                color: '#4ade80',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+              }}
+            >
+              <Icon name="award" size={14} />
+              Certificado emitido
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Correcciones */}
-      <div className="vkb-card" style={{ padding: '24px', marginBottom: 20 }}>
-        <h3
-          style={{
-            fontWeight: 700,
-            marginBottom: 16,
-            fontSize: '0.95rem',
-            color: 'var(--color-text)',
-          }}
-        >
+      <div className="panel-glass" style={{ padding: '24px', marginBottom: 20 }}>
+        <h3 className="section-label" style={{ marginBottom: 16 }}>
           Correcciones
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
@@ -122,13 +157,17 @@ export function ResultsStep({
                 borderRadius: 'var(--radius-sm)',
                 padding: '14px 16px',
                 borderLeft: `4px solid ${c.isCorrect ? '#16a34a' : '#dc2626'}`,
-                background: c.isCorrect ? 'rgba(22,163,74,0.05)' : 'rgba(220,38,38,0.04)',
-                border: `1px solid ${c.isCorrect ? 'rgba(22,163,74,0.20)' : 'rgba(220,38,38,0.18)'}`,
+                background: c.isCorrect ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)',
+                border: `1px solid ${c.isCorrect ? 'rgba(22,163,74,0.25)' : 'rgba(220,38,38,0.25)'}`,
                 borderLeftWidth: 4,
+                animation: `riseIn 0.4s cubic-bezier(0.18, 0.72, 0.24, 1.12) ${i * 40}ms both`,
               }}
             >
               <div
                 style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
                   fontWeight: 600,
                   marginBottom: 6,
                   fontSize: '0.9rem',
@@ -136,10 +175,19 @@ export function ResultsStep({
                   lineHeight: 1.4,
                 }}
               >
-                <span style={{ marginRight: 6, fontSize: '0.85rem' }}>
-                  {c.isCorrect ? '✓' : '✗'}
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    marginTop: 2,
+                    color: c.isCorrect ? '#4ade80' : '#f87171',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon name={c.isCorrect ? 'check' : 'close'} size={14} />
                 </span>
-                {i + 1}. {c.questionText}
+                <span>
+                  {i + 1}. {c.questionText}
+                </span>
               </div>
 
               {(() => {
@@ -163,7 +211,7 @@ export function ResultsStep({
                       <div
                         style={{
                           fontSize: '0.82rem',
-                          color: c.isCorrect ? 'var(--color-text-muted)' : '#dc2626',
+                          color: c.isCorrect ? 'var(--color-text-muted)' : '#f87171',
                           marginBottom: c.isCorrect ? 0 : 4,
                         }}
                       >
@@ -180,7 +228,7 @@ export function ResultsStep({
                       <div
                         style={{
                           fontSize: '0.82rem',
-                          color: '#16a34a',
+                          color: '#4ade80',
                           fontWeight: 600,
                           marginTop: 4,
                         }}
@@ -199,15 +247,8 @@ export function ResultsStep({
 
       {/* Historial */}
       {historyItems.filter((h) => h.submittedAt).length > 1 && (
-        <div className="vkb-card" style={{ padding: '24px', marginBottom: 24 }}>
-          <h4
-            style={{
-              fontWeight: 700,
-              marginBottom: 14,
-              fontSize: '0.9rem',
-              color: 'var(--color-text)',
-            }}
-          >
+        <div className="panel-glass" style={{ padding: '24px', marginBottom: 24 }}>
+          <h4 className="section-label" style={{ marginBottom: 14 }}>
             Historial de intentos
           </h4>
           {historyItems
@@ -228,11 +269,14 @@ export function ResultsStep({
                 <span style={{ color: 'var(--color-text-muted)' }}>
                   {new Date(h.submittedAt!).toLocaleDateString('es-ES')}
                 </span>
-                <span style={{ color: 'var(--color-text-muted)' }}>{h.numQuestions} preguntas</span>
+                <span style={{ color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                  {h.numQuestions} preguntas
+                </span>
                 <span
                   style={{
                     fontWeight: 800,
                     color: scoreColor(h.score ?? 0),
+                    fontVariantNumeric: 'tabular-nums',
                   }}
                 >
                   {h.score?.toFixed(1)}%
@@ -245,12 +289,15 @@ export function ResultsStep({
       {/* Acciones */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' as const }}>
         <button className="btn btn-ghost" onClick={onBack}>
+          <Icon name="chevron-left" size={16} />
           Volver al curso
         </button>
         <button className="btn btn-primary" onClick={onRepeat}>
+          <Icon name="play" size={16} />
           Repetir examen
         </button>
         <button className="btn btn-ghost" onClick={() => downloadExamPdf(result, scopeTitle)}>
+          <Icon name="download" size={16} />
           Descargar PDF examen
         </button>
         {examCert && (
@@ -263,6 +310,7 @@ export function ResultsStep({
             }}
             onClick={() => downloadCertificatePdf(examCert)}
           >
+            <Icon name="award" size={16} />
             Descargar certificado
           </button>
         )}

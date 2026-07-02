@@ -8,10 +8,11 @@ import {
   type ActivityDay,
 } from '../api/tutors.api';
 import { getApiErrorMessage } from '../utils/errorMessage';
+import Icon from '../components/ui/Icon';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
-const ORANGE = '#ea580c';
+const ORANGE = 'var(--brand)';
 
 const PERIODS = [
   { label: '7D', days: 7 },
@@ -38,21 +39,21 @@ const S: Record<string, React.CSSProperties> = {
     width: 268,
     flexShrink: 0,
     background: 'linear-gradient(180deg, #0d1b2a 0%, #152233 100%)',
-    borderRight: '1px solid rgba(234,88,12,0.15)',
+    borderRight: '1px solid var(--brand-soft)',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
   },
   sidebarHeader: {
     padding: '1.5rem 1.25rem 1rem',
-    borderBottom: '1px solid rgba(234,88,12,0.15)',
+    borderBottom: '1px solid var(--brand-soft)',
   },
   sidebarTitle: {
     fontSize: '1rem',
     fontWeight: 800,
     color: '#fff',
     margin: 0,
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    background: 'var(--gradient-orange)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
@@ -69,14 +70,14 @@ const S: Record<string, React.CSSProperties> = {
     transition: 'background 0.15s',
   },
   studentItemActive: {
-    background: 'rgba(234,88,12,0.15)',
+    background: 'var(--brand-soft)',
     borderRight: `3px solid ${ORANGE}`,
   },
   studentAvatar: {
     width: 38,
     height: 38,
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    background: 'var(--gradient-orange)',
     color: '#fff',
     fontWeight: 700,
     fontSize: '0.95rem',
@@ -84,11 +85,11 @@ const S: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    boxShadow: '0 2px 8px rgba(234,88,12,0.35)',
+    boxShadow: '0 2px 8px var(--brand-glow)',
   },
   studentName: { fontSize: '0.85rem', fontWeight: 600, color: '#fff', lineHeight: 1.2 },
   studentLevel: { fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 },
-  studentPts: { fontSize: '0.7rem', color: '#fb923c', fontWeight: 700, marginTop: 1 },
+  studentPts: { fontSize: '0.7rem', color: 'var(--brand-light)', fontWeight: 700, marginTop: 1 },
 
   // Panel de detalle
   detail: { flex: 1, overflowY: 'auto' as const, padding: '1.5rem 2rem' },
@@ -128,15 +129,15 @@ const S: Record<string, React.CSSProperties> = {
     right: -60,
     width: 260,
     height: 260,
-    background: 'radial-gradient(circle, rgba(234,88,12,0.18) 0%, transparent 70%)',
+    background: 'radial-gradient(circle, var(--brand-soft) 0%, transparent 70%)',
     pointerEvents: 'none' as const,
     borderRadius: '50%',
   },
   bigAvatarRing: {
     padding: 3,
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
-    boxShadow: '0 0 20px rgba(234,88,12,0.45)',
+    background: 'var(--gradient-orange)',
+    boxShadow: '0 0 20px var(--brand-glow)',
     flexShrink: 0,
     position: 'relative' as const,
     zIndex: 1,
@@ -146,7 +147,7 @@ const S: Record<string, React.CSSProperties> = {
     height: 58,
     borderRadius: '50%',
     background: '#0d1b2a',
-    color: '#f97316',
+    color: 'var(--brand-light)',
     fontWeight: 800,
     fontSize: '1.5rem',
     display: 'flex',
@@ -162,9 +163,9 @@ const S: Record<string, React.CSSProperties> = {
   },
   studentHeaderMeta: { fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 },
   streakBadge: {
-    background: 'rgba(234,88,12,0.22)',
-    border: '1px solid rgba(234,88,12,0.4)',
-    color: '#fdba74',
+    background: 'var(--brand-glow)',
+    border: '1px solid var(--brand-glow)',
+    color: 'var(--brand-light)',
     padding: '4px 12px',
     borderRadius: 999,
     fontSize: '0.78rem',
@@ -790,8 +791,8 @@ function EnrollmentsSection({ studentId, hasLevel }: { studentId: string; hasLev
               gap: 12,
               padding: '12px 14px',
               borderRadius: 12,
-              border: `1.5px solid ${c.enrolled ? 'rgba(234,88,12,0.3)' : 'var(--color-border)'}`,
-              background: c.enrolled ? 'rgba(234,88,12,0.06)' : '#fff',
+              border: `1.5px solid ${c.enrolled ? 'var(--brand-glow)' : 'var(--color-border)'}`,
+              background: c.enrolled ? 'var(--brand-faint)' : '#fff',
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -835,7 +836,7 @@ function EnrollmentsSection({ studentId, hasLevel }: { studentId: string; hasLev
                 color: '#fff',
                 background: c.enrolled
                   ? '#ef4444'
-                  : 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+                  : 'var(--gradient-orange)',
                 opacity: isPending ? 0.7 : 1,
               }}
             >
@@ -868,7 +869,9 @@ export default function TutorStudentsPage() {
       {/* ── Sidebar de alumnos ── */}
       <aside style={S.sidebar}>
         <div style={S.sidebarHeader}>
-          <div style={S.sidebarTitle}>👥 Mis Alumnos</div>
+          <div style={{ ...S.sidebarTitle, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="users" size={18} color="var(--brand-light)" /> Mis Alumnos
+          </div>
           <div style={S.sidebarSubtitle}>
             {isLoading ? 'Cargando...' : `${students?.length ?? 0} alumnos asignados`}
           </div>
@@ -928,7 +931,7 @@ export default function TutorStudentsPage() {
         <div style={{ ...S.empty, display: 'block', padding: '2rem' }}>
           <StudentAccessPanel />
           <div style={{ textAlign: 'center', marginTop: '2rem', color: '#94a3b8' }}>
-            <span style={{ fontSize: '2rem' }}>👈</span>
+            <Icon name="chevron-left" size={32} />
             <p style={{ ...S.emptyText, marginTop: '0.5rem' }}>
               Selecciona un alumno para ver sus métricas
             </p>
@@ -946,10 +949,10 @@ export default function TutorStudentsPage() {
                   ...S.periodBtn,
                   background:
                     i === periodIdx
-                      ? 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)'
+                      ? 'var(--gradient-orange)'
                       : '#f1f5f9',
                   color: i === periodIdx ? '#fff' : '#475569',
-                  boxShadow: i === periodIdx ? '0 4px 12px rgba(234,88,12,0.3)' : 'none',
+                  boxShadow: i === periodIdx ? '0 4px 12px var(--brand-glow)' : 'none',
                 }}
                 onClick={() => setPeriodIdx(i)}
               >

@@ -34,13 +34,17 @@ export default function ChangePasswordPage() {
 
   return (
     <div
+      className="court-lines sweep-light"
       style={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 16,
-        background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+        background:
+          'radial-gradient(120% 80% at 50% -10%, rgba(245,145,30,0.14), transparent 55%), radial-gradient(80% 60% at 90% 110%, rgba(255,210,77,0.07), transparent 60%), linear-gradient(180deg, var(--navy-950) 0%, var(--navy-800) 100%)',
       }}
     >
       <form
@@ -49,16 +53,28 @@ export default function ChangePasswordPage() {
           width: '100%',
           maxWidth: 420,
           background: 'rgba(8,14,26,0.88)',
-          border: '1.5px solid rgba(234,88,12,0.20)',
+          border: '1.5px solid rgba(245,145,30,0.20)',
           borderRadius: 20,
           padding: '36px 32px',
           display: 'flex',
           flexDirection: 'column',
           gap: 16,
+          position: 'relative',
+          zIndex: 1,
         }}
         noValidate
       >
-        <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>
+        <h1
+          style={{
+            color: '#fff',
+            fontSize: '1.4rem',
+            fontWeight: 800,
+            margin: 0,
+            fontFamily: 'var(--font-display)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.03em',
+          }}
+        >
           Crea tu contraseña
         </h1>
         <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.9rem', margin: 0 }}>

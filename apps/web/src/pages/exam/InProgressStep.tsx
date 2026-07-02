@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ExamAttemptStarted, ExamQuestionPublic } from '@vkbacademy/shared';
+import Icon from '../../components/ui/Icon';
+import ProgressBar from '../../components/ui/ProgressBar';
 
 // ─── Componente: Examen en progreso ───────────────────────────────────────────
 
@@ -37,7 +39,6 @@ export function InProgressStep({
 
   const answeredCount = Object.values(selectedAnswers).filter((ids) => ids.length > 0).length;
   const totalCount = attempt.questions.length;
-  const progressPct = (answeredCount / totalCount) * 100;
 
   const isTimeCritical = secondsLeft !== null && secondsLeft < 60;
 
@@ -66,62 +67,66 @@ export function InProgressStep({
 
   return (
     <div>
-      {/* Barra de estado */}
+      {/* Mini-marcador sticky: respondidas + temporizador + progreso */}
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 14,
-          gap: 12,
-          flexWrap: 'wrap' as const,
+          position: 'sticky' as const,
+          top: 0,
+          zIndex: 5,
+          background: 'var(--color-bg)',
+          paddingBottom: 10,
+          marginBottom: 18,
         }}
       >
-        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-          {answeredCount} de {totalCount} respondidas
-        </span>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 10,
+            gap: 12,
+            flexWrap: 'wrap' as const,
+          }}
+        >
+          <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+            {answeredCount} de {totalCount} respondidas
+          </span>
 
-        {/* Temporizador */}
-        {secondsLeft !== null && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 16px',
-              borderRadius: 'var(--radius-md)',
-              background: isTimeCritical ? 'rgba(220,38,38,0.12)' : 'var(--color-surface)',
-              border: isTimeCritical
-                ? '1.5px solid rgba(220,38,38,0.35)'
-                : '1.5px solid var(--color-border)',
-              animation: isTimeCritical ? 'pulse-glow 0.8s ease-in-out infinite' : 'none',
-            }}
-          >
-            <span style={{ fontSize: '1rem' }}>⏱</span>
-            <span
+          {/* Temporizador */}
+          {secondsLeft !== null && (
+            <div
               style={{
-                fontSize: '1.1rem',
-                fontWeight: 800,
-                color: isTimeCritical ? '#dc2626' : 'var(--color-text)',
-                letterSpacing: '0.05em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '7px 18px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--navy-800)',
+                border: isTimeCritical
+                  ? '1px solid rgba(203,32,39,0.5)'
+                  : '1px solid rgba(255,255,255,0.09)',
+                animation: isTimeCritical ? 'pulse-glow 0.8s ease-in-out infinite' : 'none',
               }}
             >
-              {formatTime(secondsLeft)}
-            </span>
-          </div>
-        )}
-      </div>
+              <Icon name="clock" size={15} color={isTimeCritical ? '#cb2027' : 'var(--amber-led)'} />
+              <span
+                className={isTimeCritical ? undefined : 'score-number'}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '1.15rem',
+                  letterSpacing: '0.04em',
+                  fontVariantNumeric: 'tabular-nums',
+                  color: isTimeCritical ? '#cb2027' : undefined,
+                }}
+              >
+                {formatTime(secondsLeft)}
+              </span>
+            </div>
+          )}
+        </div>
 
-      {/* Barra de progreso */}
-      <div
-        className="progress-bar"
-        style={{ marginBottom: 28 }}
-        role="progressbar"
-        aria-valuenow={Math.round(progressPct)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+        {/* Barra de progreso */}
+        <ProgressBar value={answeredCount} max={totalCount} variant="brand" label="Progreso del examen" />
       </div>
 
       {/* Preguntas */}
@@ -139,9 +144,7 @@ export function InProgressStep({
                 lineHeight: 1.4,
               }}
             >
-              <span style={{ color: 'var(--color-primary)', marginRight: 8, fontWeight: 900 }}>
-                {idx + 1}.
-              </span>
+              <span style={{ color: 'var(--brand)', marginRight: 8, fontWeight: 900 }}>{idx + 1}.</span>
               {q.text}
             </div>
 
@@ -149,15 +152,19 @@ export function InProgressStep({
             {isMultiple && (
               <div
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
                   fontSize: '0.72rem',
                   fontWeight: 700,
-                  color: 'var(--color-primary)',
+                  color: 'var(--brand-deep)',
                   marginBottom: 12,
                   letterSpacing: '0.04em',
                   textTransform: 'uppercase' as const,
                 }}
               >
-                ☑ Selecciona todas las correctas
+                <Icon name="check" size={13} />
+                Selecciona todas las correctas
               </div>
             )}
 
@@ -181,11 +188,9 @@ export function InProgressStep({
                       textAlign: 'left' as const,
                       padding: '11px 16px',
                       borderRadius: 'var(--radius-sm)',
-                      border: isSelected
-                        ? '1.5px solid var(--color-primary)'
-                        : '1.5px solid rgba(234,88,12,0.20)',
-                      background: isSelected ? 'rgba(234,88,12,0.12)' : 'var(--color-bg)',
-                      color: isSelected ? 'var(--color-primary)' : 'var(--color-text)',
+                      border: isSelected ? '1.5px solid var(--brand)' : '1.5px solid var(--color-border)',
+                      background: isSelected ? 'var(--brand-faint)' : 'var(--color-bg)',
+                      color: isSelected ? 'var(--brand-deep)' : 'var(--color-text)',
                       cursor: locked && !isSelected ? 'not-allowed' : 'pointer',
                       opacity: locked && !isSelected ? 0.5 : 1,
                       fontSize: '0.9rem',
@@ -194,21 +199,18 @@ export function InProgressStep({
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected && !(locked && !isSelected)) {
-                        (e.currentTarget as HTMLButtonElement).style.background =
-                          'rgba(234,88,12,0.06)';
-                        (e.currentTarget as HTMLButtonElement).style.borderColor =
-                          'rgba(234,88,12,0.40)';
+                        (e.currentTarget as HTMLButtonElement).style.background = 'var(--brand-faint)';
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--brand-glow)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) {
                         (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg)';
-                        (e.currentTarget as HTMLButtonElement).style.borderColor =
-                          'rgba(234,88,12,0.20)';
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-border)';
                       }
                     }}
                   >
-                    {/* Marcador: ☑ en MULTIPLE, ◉ en SINGLE/TRUE_FALSE */}
+                    {/* Marcador: check en MULTIPLE, punto relleno en SINGLE/TRUE_FALSE */}
                     <span
                       aria-hidden
                       style={{
@@ -216,20 +218,26 @@ export function InProgressStep({
                         width: 18,
                         height: 18,
                         borderRadius: isMultiple ? 4 : '50%',
-                        border: isSelected
-                          ? '2px solid var(--color-primary)'
-                          : '2px solid rgba(234,88,12,0.30)',
-                        background: isSelected ? 'var(--color-primary)' : 'transparent',
+                        border: isSelected ? '2px solid var(--brand)' : '2px solid var(--color-border)',
+                        background: isSelected ? 'var(--brand)' : 'transparent',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#fff',
-                        fontSize: '0.7rem',
-                        fontWeight: 900,
-                        lineHeight: 1,
                       }}
                     >
-                      {isSelected ? (isMultiple ? '✓' : '●') : ''}
+                      {isSelected &&
+                        (isMultiple ? (
+                          <Icon name="check" size={11} color="var(--brand-contrast)" strokeWidth={3.5} />
+                        ) : (
+                          <span
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: '50%',
+                              background: 'var(--brand-contrast)',
+                            }}
+                          />
+                        ))}
                     </span>
                     <span>{a.text}</span>
                   </button>
@@ -253,7 +261,14 @@ export function InProgressStep({
           disabled={answeredCount < totalCount || isLoading}
           onClick={handleSubmit}
         >
-          {isLoading ? 'Entregando...' : 'Entregar examen'}
+          {isLoading ? (
+            'Entregando...'
+          ) : (
+            <>
+              <Icon name="check" size={16} />
+              Entregar examen
+            </>
+          )}
         </button>
       </div>
     </div>

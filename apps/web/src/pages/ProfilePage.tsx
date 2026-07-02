@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '../store/auth.store';
 import { usersApi } from '../api/users.api';
 import type { User } from '@vkbacademy/shared';
+import Icon from '../components/ui/Icon';
 
 // ─── Mapa de etiquetas de rol ───────────────────────────────────────────────
 
@@ -46,7 +47,9 @@ function PersonalDataSection({ user }: { user: User }) {
   return (
     <div className="vkb-card animate-in" style={{ marginBottom: 20 }}>
       <div style={S.cardHeader}>
-        <span style={S.cardIcon}>👤</span>
+        <span style={{ ...S.cardIcon, color: 'var(--brand-deep)', display: 'inline-flex' }}>
+          <Icon name="user" size={20} />
+        </span>
         <span style={S.cardTitle}>Información personal</span>
       </div>
       <form onSubmit={handleSubmit} noValidate style={{ marginTop: 20 }}>
@@ -134,7 +137,9 @@ function ChangePasswordSection() {
   return (
     <div className="vkb-card animate-in" style={{ marginBottom: 20 }}>
       <div style={S.cardHeader}>
-        <span style={S.cardIcon}>🔐</span>
+        <span style={{ ...S.cardIcon, color: 'var(--brand-deep)', display: 'inline-flex' }}>
+          <Icon name="lock" size={20} />
+        </span>
         <span style={S.cardTitle}>Cambiar contraseña</span>
       </div>
       <form onSubmit={handleSubmit} noValidate style={{ marginTop: 20 }}>
@@ -205,7 +210,7 @@ export default function ProfilePage() {
   return (
     <div style={S.page}>
       {/* Hero */}
-      <div className="page-hero animate-in" style={{ marginBottom: 28 }}>
+      <div className="page-hero court-lines sweep-light animate-in" style={{ marginBottom: 28 }}>
         <div style={S.heroInner}>
           {/* Avatar circular */}
           <div style={S.avatarRing}>
@@ -249,8 +254,8 @@ const S: Record<string, React.CSSProperties> = {
   avatarRing: {
     padding: 3,
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
-    boxShadow: '0 0 24px rgba(234,88,12,0.45)',
+    background: 'var(--gradient-orange)',
+    boxShadow: '0 0 24px var(--brand-glow)',
     flexShrink: 0,
   },
   avatarInner: {
@@ -259,7 +264,7 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: '50%',
     background: '#0d1b2a',
     border: '2px solid #152233',
-    color: '#f97316',
+    color: 'var(--brand-light)',
     fontSize: '2rem',
     fontWeight: 800,
     display: 'flex',
@@ -281,9 +286,9 @@ const S: Record<string, React.CSSProperties> = {
   rolePill: {
     display: 'inline-block',
     marginTop: 6,
-    background: 'rgba(234,88,12,0.18)',
-    border: '1px solid rgba(234,88,12,0.35)',
-    color: '#fb923c',
+    background: 'var(--brand-soft)',
+    border: '1px solid var(--brand-glow)',
+    color: 'var(--brand-light)',
     borderRadius: 999,
     padding: '3px 12px',
     fontSize: '0.78rem',

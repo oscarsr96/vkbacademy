@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { BookingWithRelations } from '../../api/bookings.api';
 import { useMyBookings, useCancelBooking } from '../../hooks/useBookings';
 import { formatDate, formatTime, base, StatusBadge } from './bookingsShared';
+import Icon from '../../components/ui/Icon';
+import EmptyState from '../../components/ui/EmptyState';
 
 // ---------------------------------------------------------------------------
 // Vista ADMIN
@@ -29,8 +31,10 @@ export function AdminView() {
   return (
     <div>
       {/* Hero */}
-      <div className="page-hero animate-in">
-        <span style={{ fontSize: '2.2rem', display: 'block', marginBottom: 12 }}>📅</span>
+      <div className="page-hero court-lines sweep-light animate-in">
+        <span style={{ color: 'var(--brand-deep)', display: 'inline-flex', marginBottom: 12 }}>
+          <Icon name="calendar" size={32} />
+        </span>
         <h1 className="hero-title">Todas las Reservas</h1>
         <p className="hero-subtitle">Vista administrativa de todas las reservas del sistema.</p>
       </div>
@@ -42,9 +46,7 @@ export function AdminView() {
         </p>
       )}
       {!isLoading && !isError && (!bookings || bookings.length === 0) && (
-        <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-          No hay reservas en el sistema.
-        </p>
+        <EmptyState icon="calendar" title="No hay reservas en el sistema." />
       )}
 
       {bookings && bookings.length > 0 && (

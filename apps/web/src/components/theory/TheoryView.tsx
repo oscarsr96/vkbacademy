@@ -253,7 +253,7 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--color-text)',
     transition: 'border-color 0.15s, transform 0.15s',
   },
-  candidateActive: { borderColor: '#f97316', background: 'rgba(234,88,12,0.08)' },
+  candidateActive: { borderColor: 'var(--brand-deep)', background: 'var(--brand-soft)' },
   candidateThumb: {
     width: '100%',
     aspectRatio: '16 / 9',

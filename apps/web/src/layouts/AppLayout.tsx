@@ -3,67 +3,67 @@ import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { useLogout } from '../hooks/useAuth';
 import { useAcademyDomain } from '../contexts/AcademyContext';
-import { contrastText } from '../utils/color';
 import { Role } from '@vkbacademy/shared';
 import TutorWidget from '../components/TutorWidget';
+import Icon from '../components/ui/Icon';
 
-type NavLink = { to: string; label: string; end?: boolean; divider?: boolean };
+type NavItem = { to: string; label: string; icon: string; end?: boolean; divider?: boolean };
 
-function buildNavLinks(role: Role | undefined): NavLink[] {
-  const base: NavLink[] = [{ to: '/dashboard', label: '🏠 Inicio', end: true }];
+function buildNavLinks(role: Role | undefined): NavItem[] {
+  const base: NavItem[] = [{ to: '/dashboard', label: 'Inicio', icon: 'home', end: true }];
 
   if (role === Role.TUTOR) {
     return [
       ...base,
-      { to: '/tutor/students', label: '👥 Mis alumnos' },
-      { to: '/bookings', label: '📅 Reservas' },
-      { to: '/profile', label: '👤 Mi perfil' },
+      { to: '/tutor/students', label: 'Mis alumnos', icon: 'users' },
+      { to: '/bookings', label: 'Reservas', icon: 'calendar' },
+      { to: '/profile', label: 'Mi perfil', icon: 'user' },
     ];
   }
 
   if (role === Role.SUPER_ADMIN) {
     return [
       ...base,
-      { to: '/admin', label: '⚙️ Dashboard', end: true, divider: true },
-      { to: '/admin/academies', label: '🏫 Academias' },
-      { to: '/admin/users', label: '👥 Usuarios' },
-      { to: '/admin/courses', label: '📚 Cursos' },
-      { to: '/admin/billing', label: '💳 Facturación' },
-      { to: '/admin/challenges', label: '🎯 Retos' },
-      { to: '/admin/redemptions', label: '🎁 Canjes' },
-      { to: '/profile', label: '👤 Mi perfil', divider: true },
+      { to: '/admin', label: 'Dashboard', icon: 'settings', end: true, divider: true },
+      { to: '/admin/academies', label: 'Academias', icon: 'school' },
+      { to: '/admin/users', label: 'Usuarios', icon: 'users' },
+      { to: '/admin/courses', label: 'Cursos', icon: 'book' },
+      { to: '/admin/billing', label: 'Facturación', icon: 'credit-card' },
+      { to: '/admin/challenges', label: 'Retos', icon: 'target' },
+      { to: '/admin/redemptions', label: 'Canjes', icon: 'gift' },
+      { to: '/profile', label: 'Mi perfil', icon: 'user', divider: true },
     ];
   }
 
   if (role === Role.ADMIN) {
     return [
       ...base,
-      { to: '/admin', label: '⚙️ Dashboard', end: true, divider: true },
-      { to: '/admin/users', label: '👥 Usuarios' },
-      { to: '/admin/courses', label: '📚 Cursos' },
-      { to: '/admin/billing', label: '💳 Facturación' },
-      { to: '/admin/challenges', label: '🎯 Retos' },
-      { to: '/admin/redemptions', label: '🎁 Canjes' },
-      { to: '/profile', label: '👤 Mi perfil', divider: true },
+      { to: '/admin', label: 'Dashboard', icon: 'settings', end: true, divider: true },
+      { to: '/admin/users', label: 'Usuarios', icon: 'users' },
+      { to: '/admin/courses', label: 'Cursos', icon: 'book' },
+      { to: '/admin/billing', label: 'Facturación', icon: 'credit-card' },
+      { to: '/admin/challenges', label: 'Retos', icon: 'target' },
+      { to: '/admin/redemptions', label: 'Canjes', icon: 'gift' },
+      { to: '/profile', label: 'Mi perfil', icon: 'user', divider: true },
     ];
   }
 
   if (role === Role.TEACHER) {
     return [
       ...base,
-      { to: '/teacher', label: '🏫 Portal Docente' },
-      { to: '/courses', label: '📚 Cursos' },
-      { to: '/profile', label: '👤 Mi perfil' },
+      { to: '/teacher', label: 'Portal Docente', icon: 'school' },
+      { to: '/courses', label: 'Cursos', icon: 'book' },
+      { to: '/profile', label: 'Mi perfil', icon: 'user' },
     ];
   }
 
   // STUDENT por defecto
   return [
     ...base,
-    { to: '/subjects', label: '📚 Asignaturas' },
-    { to: '/study', label: '🧠 Estudiar' },
-    { to: '/challenges', label: '🏆 Retos' },
-    { to: '/profile', label: '👤 Mi perfil' },
+    { to: '/subjects', label: 'Asignaturas', icon: 'book' },
+    { to: '/study', label: 'Estudiar', icon: 'brain' },
+    { to: '/challenges', label: 'Retos', icon: 'trophy' },
+    { to: '/profile', label: 'Mi perfil', icon: 'user' },
   ];
 }
 
@@ -79,9 +79,9 @@ export default function AppLayout() {
 
   // Prioridad: auth store (post-login) > domain context > fallback VKB
   const academy = storeAcademy ?? domainAcademy;
-  const c = academy?.primaryColor ?? '#ea580c'; // color acento
   const brandName = academy?.name ?? 'VKB Academy';
-  const brandLogo = academy?.logoUrl ?? null;
+  // Sin academia → logo VKB local; con academia sin logo → inicial con color de marca
+  const brandLogo = academy ? academy.logoUrl : '/brand/vkb-logo.png';
   const links = buildNavLinks(user?.role);
 
   return (
@@ -89,7 +89,7 @@ export default function AppLayout() {
       {/* Barra superior móvil */}
       <div className="app-topbar">
         <button className="app-hamburger" onClick={() => setMenuOpen(true)} aria-label="Abrir menú">
-          ☰
+          <Icon name="menu" size={22} />
         </button>
         <span className="app-topbar-brand">
           {brandLogo ? (
@@ -102,109 +102,67 @@ export default function AppLayout() {
               }}
             />
           ) : (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 28,
-                height: 28,
-                borderRadius: 8,
-                background: `linear-gradient(135deg, ${c}, ${c}cc)`,
-                color: contrastText(c),
-                fontWeight: 800,
-                fontSize: '0.9rem',
-              }}
-            >
-              {brandName.charAt(0)}
-            </span>
+            <span style={S.topbarInitial}>{brandName.charAt(0)}</span>
           )}
-          <span style={{ fontWeight: 700 }}>{brandName}</span>
+          <span style={{ fontFamily: 'var(--font-brand)', fontWeight: 700, fontSize: '0.8rem' }}>
+            {brandName}
+          </span>
         </span>
         <button
           className="app-topbar-logout"
           onClick={() => logout()}
           disabled={isPending}
           title="Cerrar sesión"
+          aria-label="Cerrar sesión"
         >
-          ↩
+          <Icon name="logout" size={20} />
         </button>
       </div>
 
       {menuOpen && <div className="app-overlay" onClick={() => setMenuOpen(false)} />}
 
       {/* Sidebar */}
-      <aside
-        className={`app-sidebar${menuOpen ? ' open' : ''}`}
-        style={{ ...baseStyles.sidebar, borderRight: `1px solid ${c}26` }}
-      >
+      <aside className={`app-sidebar${menuOpen ? ' open' : ''}`} style={S.sidebar}>
         <button
           className="app-sidebar-close"
           onClick={() => setMenuOpen(false)}
           aria-label="Cerrar menú"
         >
-          ✕
+          <Icon name="close" size={20} />
         </button>
 
         {/* Brand */}
-        <div style={{ ...baseStyles.brand, borderBottom: `1px solid ${c}1f` }}>
+        <div style={S.brand}>
           {brandLogo ? (
             <img
               src={brandLogo}
               alt={brandName}
-              style={baseStyles.brandLogo}
+              style={S.brandLogo}
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).style.display = 'none';
               }}
             />
           ) : (
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 12,
-                background: `linear-gradient(135deg, ${c}, ${c}cc)`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: contrastText(c),
-                fontWeight: 800,
-                fontSize: '1.5rem',
-                boxShadow: `0 4px 16px ${c}44`,
-              }}
-            >
-              {brandName.charAt(0)}
-            </div>
+            <div style={S.brandInitial}>{brandName.charAt(0)}</div>
           )}
-          <span style={{ color: c, fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>
-            {brandName}
-          </span>
+          <span style={S.brandName}>{brandName}</span>
         </div>
 
         {/* Navegación */}
-        <nav style={baseStyles.nav}>
-          {links.map(({ to, label, end, divider }, i) => (
+        <nav style={S.nav}>
+          {links.map(({ to, label, icon, end, divider }, i) => (
             <div key={to}>
-              {divider && i > 0 && (
-                <div style={{ height: 1, background: `${c}1a`, margin: '8px 6px' }} />
-              )}
+              {divider && i > 0 && <div style={S.navDivider} />}
               <NavLink
                 to={to}
                 end={end}
                 onClick={() => setMenuOpen(false)}
                 style={({ isActive }) => ({
-                  ...baseStyles.navItem,
-                  ...(isActive
-                    ? {
-                        background: `linear-gradient(90deg, ${c}38 0%, ${c}0f 100%)`,
-                        color: '#fff',
-                        fontWeight: 600,
-                        borderLeftColor: c,
-                        boxShadow: `inset 0 0 12px ${c}14`,
-                      }
-                    : {}),
+                  ...S.navItem,
+                  ...(isActive ? S.navItemActive : {}),
                 })}
               >
+                <Icon name={icon} size={17} style={{ flexShrink: 0 }} />
                 {label}
               </NavLink>
             </div>
@@ -212,42 +170,26 @@ export default function AppLayout() {
         </nav>
 
         {/* Usuario / logout */}
-        <div style={{ ...baseStyles.userSection, borderTop: `1px solid ${c}1f` }}>
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: '50%',
-              background: `linear-gradient(135deg, ${c} 0%, ${c}cc 100%)`,
-              color: contrastText(c),
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              fontSize: '0.9375rem',
-              boxShadow: `0 0 0 3px ${c}40`,
-            }}
-          >
-            {user?.name.charAt(0).toUpperCase()}
-          </div>
-          <div style={baseStyles.userInfo}>
-            <span style={baseStyles.userName}>{user?.name}</span>
+        <div style={S.userSection}>
+          <div style={S.avatar}>{user?.name.charAt(0).toUpperCase()}</div>
+          <div style={S.userInfo}>
+            <span style={S.userName}>{user?.name}</span>
             <span className={`role-badge ${user?.role}`}>{user?.role}</span>
           </div>
           <button
             onClick={() => logout()}
             disabled={isPending}
-            style={baseStyles.logoutBtn}
+            style={S.logoutBtn}
             title="Cerrar sesión"
+            aria-label="Cerrar sesión"
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = c;
+              (e.currentTarget as HTMLButtonElement).style.color = 'var(--brand)';
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)';
             }}
           >
-            ↩
+            <Icon name="logout" size={18} />
           </button>
         </div>
       </aside>
@@ -261,16 +203,17 @@ export default function AppLayout() {
   );
 }
 
-const baseStyles: Record<string, React.CSSProperties> = {
+const S: Record<string, React.CSSProperties> = {
   sidebar: {
     width: 248,
     flexShrink: 0,
-    background: 'linear-gradient(180deg, #080e1a 0%, #0d1b2a 100%)',
+    background: 'var(--gradient-sidebar)',
     display: 'flex',
     flexDirection: 'column',
     padding: '24px 14px',
     gap: 6,
-    height: '100vh',
+    height: '100%',
+    borderRight: '1px solid var(--brand-soft)',
   },
   brand: {
     display: 'flex',
@@ -279,11 +222,49 @@ const baseStyles: Record<string, React.CSSProperties> = {
     padding: '0 8px 20px',
     marginBottom: 8,
     flexDirection: 'column',
+    borderBottom: '1px solid rgba(255,255,255,0.08)',
   },
   brandLogo: { width: '100%', maxWidth: 148, objectFit: 'contain' as const },
+  brandInitial: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    background: 'var(--gradient-orange)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'var(--brand-contrast)',
+    fontWeight: 800,
+    fontSize: '1.5rem',
+    boxShadow: '0 4px 16px var(--brand-glow)',
+  },
+  brandName: {
+    color: 'var(--brand)',
+    fontFamily: 'var(--font-brand)',
+    fontWeight: 700,
+    fontSize: '0.72rem',
+    letterSpacing: '0.04em',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  topbarInitial: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    background: 'var(--gradient-orange)',
+    color: 'var(--brand-contrast)',
+    fontWeight: 800,
+    fontSize: '0.9rem',
+  },
   nav: { flex: 1, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' },
+  navDivider: { height: 1, background: 'rgba(255,255,255,0.08)', margin: '8px 6px' },
   navItem: {
-    display: 'block',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 11,
     padding: '10px 14px',
     borderRadius: '8px',
     color: 'rgba(255,255,255,0.60)',
@@ -293,12 +274,34 @@ const baseStyles: Record<string, React.CSSProperties> = {
     transition: 'background 0.18s, color 0.18s, box-shadow 0.18s',
     borderLeft: '3px solid transparent',
   },
+  navItemActive: {
+    background: 'linear-gradient(90deg, var(--brand-soft) 0%, transparent 100%)',
+    color: '#fff',
+    fontWeight: 600,
+    borderLeftColor: 'var(--brand)',
+    boxShadow: 'inset 0 0 14px var(--brand-faint), 0 0 10px var(--brand-faint)',
+  },
   userSection: {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
     padding: '14px 8px 0',
     marginTop: 8,
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+  },
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: '50%',
+    background: 'var(--gradient-orange)',
+    color: 'var(--brand-contrast)',
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    fontSize: '0.9375rem',
+    boxShadow: '0 0 0 3px var(--brand-glow)',
   },
   userInfo: {
     flex: 1,
@@ -320,10 +323,10 @@ const baseStyles: Record<string, React.CSSProperties> = {
     border: 'none',
     color: 'rgba(255,255,255,0.45)',
     cursor: 'pointer',
-    fontSize: '1.125rem',
     padding: 4,
     borderRadius: 6,
     flexShrink: 0,
+    display: 'inline-flex',
     transition: 'color 0.18s',
   },
 };

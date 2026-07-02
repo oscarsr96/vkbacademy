@@ -9,6 +9,8 @@ import {
   useDeleteSlot,
 } from '../../hooks/useBookings';
 import { formatDate, formatTime, base, StatusBadge, bookingCardBorder, StudentProgressPanel } from './bookingsShared';
+import Icon from '../../components/ui/Icon';
+import EmptyState from '../../components/ui/EmptyState';
 
 // ---------------------------------------------------------------------------
 // Vista TEACHER
@@ -78,8 +80,10 @@ export function TeacherView() {
   return (
     <div>
       {/* Hero */}
-      <div className="page-hero animate-in">
-        <span style={{ fontSize: '2.2rem', display: 'block', marginBottom: 12 }}>📅</span>
+      <div className="page-hero court-lines sweep-light animate-in">
+        <span style={{ color: 'var(--brand-deep)', display: 'inline-flex', marginBottom: 12 }}>
+          <Icon name="calendar" size={32} />
+        </span>
         <h1 className="hero-title">Mis Reservas</h1>
         <p className="hero-subtitle">Gestiona tus clases y disponibilidad horaria.</p>
       </div>
@@ -96,7 +100,7 @@ export function TeacherView() {
           </p>
         )}
         {!isLoading && !isError && (!bookings || bookings.length === 0) && (
-          <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No tienes reservas todavia.</p>
+          <EmptyState icon="calendar" title="No tienes reservas todavia." />
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
@@ -228,9 +232,7 @@ export function TeacherView() {
           Mi disponibilidad
         </h2>
         {(!mySlots || mySlots.length === 0) && (
-          <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem', marginBottom: 12 }}>
-            No tienes slots de disponibilidad configurados.
-          </p>
+          <EmptyState icon="clock" title="No tienes slots de disponibilidad configurados." />
         )}
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
           {mySlots?.map((slot) => (
