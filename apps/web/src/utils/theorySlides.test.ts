@@ -193,6 +193,16 @@ describe('buildSlides — estructura Winston', () => {
     expect(slides.find((s) => s.kind === 'content')!.variant).toBe('takeaways');
   });
 
+  it('la promesa no se pagina aunque supere el presupuesto de caracteres', () => {
+    const body = `frase de arranque\n\n- **Sabrás** ${'x'.repeat(300)}\n- **Sabrás** ${'y'.repeat(300)}\n\n> 💡 **Tip:** entiende la regla única.`;
+    const slides = buildSlides(
+      moduleWith([lesson({ kind: 'INTRO', heading: 'Qué vas a conseguir', body })]),
+    );
+    const content = slides.filter((s) => s.kind === 'content');
+    expect(content).toHaveLength(1);
+    expect(content[0].blocks).toHaveLength(3);
+  });
+
   it('compat: una INTRO clásica no lleva variante', () => {
     const slides = buildSlides(
       moduleWith([lesson({ kind: 'INTRO', heading: 'Introducción', body: 'hola' })]),

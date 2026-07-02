@@ -281,7 +281,10 @@ export function buildSlides(module: TheoryModuleWithLessons): Slide[] {
 
     const variant = contentVariant(lesson);
     const blocks = splitMarkdownBlocks(lesson.body ?? '');
-    const pages = blocks.length > 0 ? paginateBlocks(blocks) : [['']];
+    // La promesa y el cierre son checklists cortas y autocontenidas: siempre en
+    // una sola slide (paginarlas deja el callout huérfano en una slide "cont.").
+    const pages =
+      blocks.length === 0 ? [['']] : variant ? [blocks] : paginateBlocks(blocks);
     pages.forEach((pageBlocks, i) => {
       slides.push({
         id: `${lesson.id}-${i}`,
