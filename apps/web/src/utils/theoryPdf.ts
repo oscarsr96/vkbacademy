@@ -22,7 +22,7 @@ const PAGE_H = 720;
 // escalado del contenido, así aparece siempre y sin recortes).
 const FOOTER_MARGIN = 64;
 const FOOTER_BASELINE = PAGE_H - 26; // línea de texto del pie
-const ORANGE = { r: 234, g: 88, b: 12 } as const; // #ea580c
+const ORANGE = { r: 245, g: 145, b: 30 } as const; // #f5911e
 const FOOTER_MUTED = { r: 148, g: 163, b: 184 } as const; // slate-400, legible sobre fondo oscuro
 
 function drawFooter(doc: JsPdf, pageNum: number, totalPages: number): void {
@@ -59,7 +59,7 @@ const PAGE_STYLE: React.CSSProperties = {
   overflow: 'hidden',
   color: '#fff',
   background:
-    'radial-gradient(120% 80% at 50% -10%, rgba(234,88,12,0.22), transparent 60%), linear-gradient(180deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+    'radial-gradient(120% 80% at 50% -10%, rgba(245,145,30,0.22), transparent 60%), linear-gradient(180deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
 };
 
 // html2canvas no ejecuta animaciones CSS y no soporta background-clip:text.

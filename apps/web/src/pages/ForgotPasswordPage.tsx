@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '../api/auth.api';
+import Icon from '../components/ui/Icon';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -21,7 +22,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div style={s.page}>
+    <div style={s.page} className="court-lines sweep-light">
       {/* Glow decorativo fondo */}
       <div style={s.bgGlow} />
 
@@ -29,7 +30,7 @@ export default function ForgotPasswordPage() {
         {/* Encabezado */}
         <div style={s.header}>
           <div style={s.logoWrap}>
-            <span style={s.logoEmoji}>🔑</span>
+            <Icon name="basketball" size={32} color="var(--brand-contrast)" />
           </div>
           <h1 style={s.title}>Recuperar contraseña</h1>
           <p style={s.subtitle}>
@@ -41,7 +42,7 @@ export default function ForgotPasswordPage() {
           /* Estado de éxito */
           <div style={s.successBox}>
             <div style={s.successIconWrap}>
-              <span style={s.successEmoji}>✉️</span>
+              <Icon name="check" size={32} color="#16a34a" />
             </div>
             <p style={s.successTitle}>Correo enviado</p>
             <p style={s.successText}>
@@ -105,7 +106,8 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '16px',
-    background: 'linear-gradient(135deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+    background:
+      'radial-gradient(120% 80% at 50% -10%, rgba(245,145,30,0.14), transparent 55%), radial-gradient(80% 60% at 90% 110%, rgba(255,210,77,0.07), transparent 60%), linear-gradient(180deg, var(--navy-950) 0%, var(--navy-800) 100%)',
     position: 'relative',
     overflow: 'hidden',
   },
@@ -115,7 +117,7 @@ const s: Record<string, React.CSSProperties> = {
     right: '-10%',
     width: '600px',
     height: '600px',
-    background: 'radial-gradient(circle, rgba(234,88,12,0.12) 0%, transparent 60%)',
+    background: 'radial-gradient(circle, var(--brand-soft) 0%, transparent 60%)',
     pointerEvents: 'none',
     zIndex: 0,
   },
@@ -127,10 +129,10 @@ const s: Record<string, React.CSSProperties> = {
     background: 'rgba(8,14,26,0.88)',
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
-    border: '1.5px solid rgba(234,88,12,0.20)',
+    border: '1.5px solid rgba(245,145,30,0.20)',
     borderRadius: '20px',
     padding: '40px 36px',
-    boxShadow: '0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(234,88,12,0.10)',
+    boxShadow: '0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,145,30,0.10)',
     display: 'flex',
     flexDirection: 'column',
     gap: '22px',
@@ -146,22 +148,20 @@ const s: Record<string, React.CSSProperties> = {
     width: '68px',
     height: '68px',
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
+    background: 'var(--gradient-orange)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 8px 32px rgba(234,88,12,0.35)',
+    boxShadow: '0 8px 32px rgba(245,145,30,0.35)',
     flexShrink: 0,
-  },
-  logoEmoji: {
-    fontSize: '30px',
-    lineHeight: 1,
   },
   title: {
     fontSize: '1.6rem',
     fontWeight: 800,
     color: '#ffffff',
-    letterSpacing: '-0.01em',
+    fontFamily: 'var(--font-display)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.03em',
     lineHeight: 1.2,
   },
   subtitle: {
@@ -205,7 +205,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
   },
   link: {
-    color: '#f97316',
+    color: 'var(--brand-light)',
     fontWeight: 600,
     textDecoration: 'none',
   },
@@ -228,10 +228,6 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  successEmoji: {
-    fontSize: '34px',
-    lineHeight: 1,
-  },
   successTitle: {
     fontSize: '1.2rem',
     fontWeight: 700,
@@ -243,7 +239,7 @@ const s: Record<string, React.CSSProperties> = {
     lineHeight: 1.6,
   },
   successLink: {
-    color: '#f97316',
+    color: 'var(--brand-light)',
     fontWeight: 600,
     textDecoration: 'none',
     fontSize: '0.9rem',

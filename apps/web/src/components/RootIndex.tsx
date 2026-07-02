@@ -30,7 +30,7 @@ function LoadingSpinner() {
           width: 48,
           height: 48,
           border: '4px solid rgba(255,255,255,0.1)',
-          borderTop: '4px solid #ea580c',
+          borderTop: '4px solid var(--brand)',
           borderRadius: '50%',
           animation: 'rootSpin 0.8s linear infinite',
         }}

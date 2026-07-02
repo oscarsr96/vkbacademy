@@ -76,7 +76,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
           position: 'absolute',
           inset: 0,
           background:
-            'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(234, 88, 12, 0.12) 0%, transparent 70%)',
+            'radial-gradient(ellipse 80% 60% at 50% 50%, var(--brand-soft) 0%, transparent 70%)',
           animation: 'splashPulse 3s ease-in-out infinite',
         }}
       />
@@ -93,11 +93,11 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
             height: p.size,
             borderRadius: '50%',
             background:
-              p.id % 3 === 0 ? '#ea580c' : p.id % 3 === 1 ? '#f97316' : 'rgba(255,255,255,0.6)',
+              p.id % 3 === 0 ? 'var(--brand)' : p.id % 3 === 1 ? 'var(--brand-light)' : 'rgba(255,255,255,0.6)',
             opacity: phase === 'enter' ? 0 : p.opacity,
             animation: `splashFloat ${p.duration}s ease-in-out ${p.delay}s infinite alternate`,
             transition: 'opacity 1s ease',
-            boxShadow: p.id % 3 !== 2 ? `0 0 ${p.size * 3}px rgba(234, 88, 12, 0.4)` : 'none',
+            boxShadow: p.id % 3 !== 2 ? `0 0 ${p.size * 3}px var(--brand-glow)` : 'none',
           }}
         />
       ))}
@@ -109,7 +109,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
           width: 'min(500px, 80vmin)',
           height: 'min(500px, 80vmin)',
           borderRadius: '50%',
-          border: '1px solid rgba(234, 88, 12, 0.15)',
+          border: '1px solid rgba(245, 145, 30, 0.15)',
           opacity: phase === 'enter' ? 0 : 0.6,
           animation: 'splashRingExpand 3s ease-out infinite',
           transition: 'opacity 0.5s',
@@ -121,7 +121,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
           width: 'min(500px, 80vmin)',
           height: 'min(500px, 80vmin)',
           borderRadius: '50%',
-          border: '1px solid rgba(249, 115, 22, 0.1)',
+          border: '1px solid rgba(251, 176, 74, 0.1)',
           opacity: phase === 'enter' ? 0 : 0.4,
           animation: 'splashRingExpand 3s ease-out 0.8s infinite',
           transition: 'opacity 0.5s',
@@ -148,7 +148,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
           style={{
             position: 'absolute',
             inset: -60,
-            background: 'radial-gradient(circle, rgba(234, 88, 12, 0.35) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(245, 145, 30, 0.35) 0%, transparent 70%)',
             borderRadius: '50%',
             animation: 'splashGlow 2s ease-in-out infinite alternate',
           }}
@@ -212,9 +212,9 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
           {/* Gradientes */}
           <defs>
             <radialGradient id="ballGrad" cx="40%" cy="35%">
-              <stop offset="0%" stopColor="#f97316" />
-              <stop offset="50%" stopColor="#ea580c" />
-              <stop offset="100%" stopColor="#c2410c" />
+              <stop offset="0%" stopColor="#fbb04a" />
+              <stop offset="50%" stopColor="#f5911e" />
+              <stop offset="100%" stopColor="#e07b06" />
             </radialGradient>
             <radialGradient id="ballShine" cx="35%" cy="30%">
               <stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
@@ -222,7 +222,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
             </radialGradient>
             <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="transparent" />
-              <stop offset="50%" stopColor="#ea580c" />
+              <stop offset="50%" stopColor="#f5911e" />
               <stop offset="100%" stopColor="transparent" />
             </linearGradient>
           </defs>
@@ -251,7 +251,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
             fontWeight: 900,
             letterSpacing: '-0.03em',
             lineHeight: 1,
-            background: 'linear-gradient(135deg, #ea580c 0%, #f97316 40%, #fbbf24 100%)',
+            background: 'linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 40%, #fbbf24 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -290,9 +290,9 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
           style={{
             height: '100%',
             borderRadius: 999,
-            background: 'linear-gradient(90deg, #ea580c, #f97316, #fbbf24)',
+            background: 'linear-gradient(90deg, var(--brand), var(--brand-light), #fbbf24)',
             animation: 'splashLoader 2.8s ease-in-out forwards',
-            boxShadow: '0 0 12px rgba(234, 88, 12, 0.6)',
+            boxShadow: '0 0 12px rgba(245, 145, 30, 0.6)',
           }}
         />
       </div>
