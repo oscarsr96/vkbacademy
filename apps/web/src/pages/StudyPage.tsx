@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { StudyDifficulty } from '@vkbacademy/shared';
 import { useCourses } from '../hooks/useCourses';
 import { useMyStudyUnits, useCreateStudyUnit, useDeleteStudyUnit } from '../hooks/useStudy';
+import PageHeader from '../components/ui/PageHeader';
+import Icon from '../components/ui/Icon';
+import EmptyState from '../components/ui/EmptyState';
 
 const DIFFICULTIES: { value: StudyDifficulty; label: string }[] = [
   { value: 'EASY', label: 'Fácil' },
@@ -57,15 +60,13 @@ export default function StudyPage() {
 
   return (
     <div style={s.page}>
-      <header style={s.header}>
-        <h1 style={s.title}>🧠 Estudiar</h1>
-        <p style={s.subtitle}>
-          Escribe un tema de una de tus asignaturas y se creará un curso con teoría, ejercicios y un
-          examen, todo generado para ti.
-        </p>
-      </header>
+      <PageHeader
+        variant="light"
+        title="Estudiar"
+        subtitle="Escribe un tema de una de tus asignaturas y se creará un curso con teoría, ejercicios y un examen, todo generado para ti."
+      />
 
-      <form onSubmit={handleSubmit} style={s.form}>
+      <form onSubmit={handleSubmit} className="vkb-card" style={s.form}>
         {/* Asignatura + tema */}
         <div className="field">
           <label htmlFor="courseId">Asignatura</label>
@@ -99,7 +100,10 @@ export default function StudyPage() {
 
         {/* Ejercicios */}
         <div style={s.section}>
-          <h3 style={s.sectionTitle}>🧮 Ejercicios</h3>
+          <h3 style={s.sectionTitle}>
+            <Icon name="target" size={16} color="var(--brand-deep)" />
+            Ejercicios
+          </h3>
           <div style={s.row}>
             <div className="field" style={{ flex: 1 }}>
               <label htmlFor="numExercises">Nº de ejercicios</label>
@@ -122,7 +126,8 @@ export default function StudyPage() {
                     key={d.value}
                     type="button"
                     onClick={() => setDifficulty(d.value)}
-                    style={{ ...s.pill, ...(difficulty === d.value ? s.pillActive : {}) }}
+                    className={`chip${difficulty === d.value ? ' active' : ''}`}
+                    style={s.chipFlex}
                   >
                     {d.label}
                   </button>
@@ -134,7 +139,10 @@ export default function StudyPage() {
 
         {/* Examen */}
         <div style={s.section}>
-          <h3 style={s.sectionTitle}>🎓 Examen</h3>
+          <h3 style={s.sectionTitle}>
+            <Icon name="graduation" size={16} color="var(--brand-deep)" />
+            Examen
+          </h3>
           <div className="field">
             <label>Preguntas del examen</label>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -143,7 +151,8 @@ export default function StudyPage() {
                   key={n}
                   type="button"
                   onClick={() => setNumQuestions(n)}
-                  style={{ ...s.pill, ...(numQuestions === n ? s.pillActive : {}) }}
+                  className={`chip${numQuestions === n ? ' active' : ''}`}
+                  style={s.chipFlex}
                 >
                   {n} preguntas
                 </button>
@@ -157,7 +166,8 @@ export default function StudyPage() {
               checked={useTimer}
               onChange={(e) => setUseTimer(e.target.checked)}
             />
-            <span>⏱ Límite de tiempo</span>
+            <Icon name="clock" size={15} color="var(--color-text-muted)" />
+            <span>Límite de tiempo</span>
             {useTimer && (
               <input
                 type="number"
@@ -179,15 +189,12 @@ export default function StudyPage() {
               checked={onlyOnce}
               onChange={(e) => setOnlyOnce(e.target.checked)}
             />
-            <span>🔒 Examen de un solo intento</span>
+            <Icon name="lock" size={15} color="var(--color-text-muted)" />
+            <span>Examen de un solo intento</span>
           </label>
         </div>
 
-        {apiErrorText && (
-          <div style={s.errorBox}>
-            <strong>!</strong> {apiErrorText}
-          </div>
-        )}
+        {apiErrorText && <div className="alert alert-error">{apiErrorText}</div>}
 
         <button
           type="submit"
@@ -195,52 +202,70 @@ export default function StudyPage() {
           disabled={create.isPending || !courseId || topic.trim().length < 3}
           style={{ alignSelf: 'flex-start', padding: '12px 24px' }}
         >
-          {create.isPending ? '⏳ Generando tu curso…' : '✨ Crear curso de estudio'}
+          {create.isPending ? (
+            <span className="spinner" />
+          ) : (
+            <>
+              <Icon name="zap" size={16} />
+              Crear curso de estudio
+            </>
+          )}
         </button>
       </form>
 
       <section style={s.results}>
-        <h2 style={s.resultsTitle}>Mis cursos de estudio</h2>
+        <h2 className="section-label">Mis cursos de estudio</h2>
         {removeErrorText && (
-          <div style={s.errorBox}>
-            <strong>!</strong> {removeErrorText}
+          <div className="alert alert-error" style={{ marginTop: 14 }}>
+            {removeErrorText}
           </div>
         )}
         {unitsLoading && <p style={s.muted}>Cargando…</p>}
         {!unitsLoading && (units?.length ?? 0) === 0 && (
-          <p style={s.muted}>
-            Aún no has creado ningún curso. Escribe un tema arriba para empezar.
-          </p>
+          <EmptyState
+            icon="brain"
+            title="Aún no has creado ningún curso"
+            message="Escribe un tema arriba para empezar."
+          />
         )}
-        <ul style={s.list}>
-          {(units ?? []).map((u) => (
-            <li key={u.id} style={s.item}>
-              <Link to={`/study/${u.id}`} style={s.itemLink}>
-                <strong>{u.title}</strong>
-                <span style={s.itemMeta}>
-                  {u.course.title} · Tema: {u.topic}
-                </span>
-                <span style={s.itemDate}>
-                  {new Date(u.createdAt).toLocaleDateString('es-ES', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </span>
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm(`¿Borrar "${u.title}"?`)) remove.mutate(u.id);
+        {!unitsLoading && (units?.length ?? 0) > 0 && (
+          <div className="numbered-grid" style={s.list}>
+            {(units ?? []).map((u, i) => (
+              <article
+                key={u.id}
+                className="vkb-card numbered-card"
+                style={{
+                  ...s.item,
+                  animation: `riseIn 0.5s cubic-bezier(0.18, 0.72, 0.24, 1.12) ${i * 60}ms both`,
                 }}
-                style={s.deleteBtn}
-                aria-label="Borrar unidad"
               >
-                🗑️
-              </button>
-            </li>
-          ))}
-        </ul>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`¿Borrar "${u.title}"?`)) remove.mutate(u.id);
+                  }}
+                  style={s.deleteBtn}
+                  aria-label="Borrar unidad"
+                >
+                  <Icon name="close" size={16} />
+                </button>
+                <Link to={`/study/${u.id}`} style={s.itemLink}>
+                  <strong style={s.itemTitle}>{u.title}</strong>
+                  <span style={s.itemMeta}>
+                    {u.course.title} · Tema: {u.topic}
+                  </span>
+                  <span style={s.itemDate}>
+                    {new Date(u.createdAt).toLocaleDateString('es-ES', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </Link>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -255,17 +280,10 @@ const s: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 32,
   },
-  header: { display: 'flex', flexDirection: 'column', gap: 8 },
-  title: { fontSize: '1.8rem', fontWeight: 800, margin: 0 },
-  subtitle: { color: 'var(--color-text-muted)', fontSize: '0.95rem', lineHeight: 1.5, margin: 0 },
   form: {
     display: 'flex',
     flexDirection: 'column',
     gap: 16,
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 14,
-    padding: 24,
   },
   row: { display: 'flex', gap: 16, flexWrap: 'wrap' },
   section: {
@@ -277,7 +295,15 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 10,
     background: 'var(--color-bg)',
   },
-  sectionTitle: { margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text)' },
+  sectionTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    margin: 0,
+    fontSize: '0.95rem',
+    fontWeight: 700,
+    color: 'var(--color-text)',
+  },
   textarea: {
     width: '100%',
     background: 'var(--color-surface)',
@@ -289,22 +315,7 @@ const s: Record<string, React.CSSProperties> = {
     fontFamily: 'inherit',
     resize: 'vertical',
   },
-  pill: {
-    flex: 1,
-    padding: '10px 16px',
-    borderRadius: 8,
-    border: '1.5px solid var(--color-border)',
-    background: 'var(--color-bg)',
-    color: 'var(--color-text)',
-    fontSize: '0.9rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
-  pillActive: {
-    border: '2px solid var(--color-primary)',
-    background: 'rgba(234,88,12,0.10)',
-    color: 'var(--color-primary)',
-  },
+  chipFlex: { flex: 1 },
   toggle: {
     display: 'flex',
     alignItems: 'center',
@@ -321,49 +332,36 @@ const s: Record<string, React.CSSProperties> = {
     padding: '6px 10px',
   },
   muted: { color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: 0 },
-  errorBox: {
-    background: 'rgba(220,38,38,0.15)',
-    borderLeft: '4px solid #dc2626',
-    color: 'var(--color-error)',
-    padding: '12px 14px',
-    borderRadius: 8,
-    fontSize: '0.875rem',
-  },
-  results: { display: 'flex', flexDirection: 'column', gap: 12 },
-  resultsTitle: { fontSize: '1.2rem', fontWeight: 700, margin: 0 },
+  results: { display: 'flex', flexDirection: 'column', gap: 16 },
   list: {
-    listStyle: 'none',
-    padding: 0,
-    margin: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: 18,
   },
   item: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 12,
-    display: 'flex',
-    alignItems: 'stretch',
-    gap: 8,
+    position: 'relative',
   },
   itemLink: {
-    flex: 1,
     display: 'flex',
     flexDirection: 'column',
     gap: 4,
-    padding: '14px 16px',
+    paddingRight: 28,
     color: 'var(--color-text)',
     textDecoration: 'none',
   },
+  itemTitle: { fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.3 },
   itemMeta: { fontSize: '0.875rem', color: 'var(--color-text-muted)', lineHeight: 1.4 },
   itemDate: { fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 2 },
   deleteBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    display: 'inline-flex',
     background: 'transparent',
     border: 'none',
     color: 'var(--color-text-muted)',
-    padding: '0 14px',
+    padding: 4,
+    borderRadius: 6,
     cursor: 'pointer',
-    fontSize: '1.1rem',
   },
 };

@@ -418,6 +418,26 @@ body {
   color: var(--brand-light);
 }
 
+/* ── Numeración editorial de cards (Swiss): 01, 02, 03… ── */
+.numbered-grid {
+  counter-reset: card;
+}
+
+.numbered-card {
+  counter-increment: card;
+}
+
+.numbered-card::before {
+  content: counter(card, decimal-leading-zero);
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  color: var(--brand);
+  line-height: 1;
+  display: block;
+  margin-bottom: 10px;
+  letter-spacing: 0.04em;
+}
+
 /* ── Tarjeta de estadística con glow pulsante ── */
 .stat-card {
   background: var(--color-surface);

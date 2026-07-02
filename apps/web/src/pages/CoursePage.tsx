@@ -3,15 +3,19 @@ import { useCourse, useCourseProgress } from '../hooks/useCourses';
 import { useExamBankInfo } from '../hooks/useExams';
 import { useMyCertificates } from '../hooks/useCertificates';
 import { downloadCertificatePdf } from '../utils/certificatePdf';
+import PageHeader from '../components/ui/PageHeader';
+import Icon from '../components/ui/Icon';
+import ProgressBar from '../components/ui/ProgressBar';
+import EmptyState from '../components/ui/EmptyState';
 import type { LessonType } from '@vkbacademy/shared';
 
 const LESSON_ICONS: Record<LessonType, string> = {
-  VIDEO: '🎬',
-  QUIZ: '📝',
-  EXERCISE: '💪',
-  MATCH: '🔗',
-  SORT: '↕️',
-  FILL_BLANK: '✏️',
+  VIDEO: 'video',
+  QUIZ: 'target',
+  EXERCISE: 'zap',
+  MATCH: 'shapes',
+  SORT: 'chart',
+  FILL_BLANK: 'brain',
 };
 
 const S: Record<string, React.CSSProperties> = {
@@ -24,20 +28,20 @@ const S: Record<string, React.CSSProperties> = {
     gap: 6,
     marginBottom: 14,
     fontSize: '0.8rem',
-    color: 'rgba(255,255,255,0.45)',
+    color: 'var(--color-text-muted)',
   },
   breadcrumbLink: {
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    color: 'rgba(255,255,255,0.55)',
+    color: 'var(--color-text-muted)',
     fontSize: '0.8rem',
     padding: 0,
     fontFamily: 'inherit',
     transition: 'color 0.15s',
   },
   breadcrumbCurrent: {
-    color: 'rgba(255,255,255,0.85)',
+    color: 'var(--color-text)',
     fontWeight: 600,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -55,7 +59,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   heroMetaItem: {
     fontSize: '0.85rem',
-    color: 'rgba(255,255,255,0.60)',
+    color: 'var(--color-text-muted)',
     display: 'flex',
     alignItems: 'center',
     gap: 5,
@@ -74,12 +78,12 @@ const S: Record<string, React.CSSProperties> = {
   },
   heroProgressLabel: {
     fontSize: '0.8rem',
-    color: 'rgba(255,255,255,0.65)',
+    color: 'var(--color-text-muted)',
     fontWeight: 600,
   },
   heroProgressPct: {
     fontSize: '0.8rem',
-    color: '#f97316',
+    color: 'var(--brand-deep)',
     fontWeight: 700,
   },
 
@@ -102,8 +106,19 @@ const S: Record<string, React.CSSProperties> = {
     background: '#f0fdf4',
     border: '1.5px solid #86efac',
   },
-  certBannerText: { fontWeight: 600, color: '#16a34a', fontSize: '0.95rem', margin: 0 },
+  certBannerText: {
+    fontWeight: 600,
+    color: '#16a34a',
+    fontSize: '0.95rem',
+    margin: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
   certBannerBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
     padding: '6px 14px',
     borderRadius: 8,
     border: 'none',
@@ -147,8 +162,11 @@ const S: Record<string, React.CSSProperties> = {
     margin: 0,
   },
   moduleExamBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
     background: 'none',
-    border: '1.5px solid rgba(234,88,12,0.35)',
+    border: '1.5px solid var(--brand-glow)',
     cursor: 'pointer',
     color: 'var(--color-primary)',
     fontSize: '0.8rem',
@@ -169,18 +187,22 @@ const S: Record<string, React.CSSProperties> = {
     color: 'var(--color-text)',
     fontSize: '0.9rem',
   },
-  lessonIcon: { fontSize: '1rem', width: 22, textAlign: 'center' as const, flexShrink: 0 },
+  lessonIcon: {
+    width: 22,
+    flexShrink: 0,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'var(--color-text-muted)',
+  },
   lessonTitle: { flex: 1, fontWeight: 500 },
   checkmark: {
-    color: 'var(--color-primary)',
-    fontWeight: 800,
-    fontSize: '1rem',
+    display: 'inline-flex',
     flexShrink: 0,
   },
 
   error: { color: 'var(--color-error)', padding: '1rem' },
   skeleton: { background: 'var(--color-border)', borderRadius: 8 },
-  emptyModules: { color: 'var(--color-text-muted)', fontStyle: 'italic' },
 };
 
 export default function CoursePage() {
@@ -219,37 +241,36 @@ export default function CoursePage() {
 
   return (
     <div style={S.page}>
-      {/* Hero oscuro con breadcrumb, título y progreso */}
-      <div className="page-hero animate-in" style={{ marginBottom: 24 }}>
-        {/* Breadcrumb */}
-        <div style={S.breadcrumb}>
-          <button
-            style={S.breadcrumbLink}
-            onClick={() => navigate('/courses')}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#f97316'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.55)'; }}
-          >
-            Cursos
-          </button>
-          <span>/</span>
-          <span style={S.breadcrumbCurrent}>{course.title}</span>
-        </div>
+      {/* Breadcrumb */}
+      <div className="animate-in" style={S.breadcrumb}>
+        <button
+          style={S.breadcrumbLink}
+          onClick={() => navigate('/courses')}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--brand-deep)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-muted)'; }}
+        >
+          Cursos
+        </button>
+        <span>/</span>
+        <span style={S.breadcrumbCurrent}>{course.title}</span>
+      </div>
 
-        {/* Título */}
-        <h1 className="hero-title">{course.title}</h1>
-
-        {/* Meta */}
+      {/* Cabecera editorial light: título, metadatos y progreso */}
+      <PageHeader variant="light" title={course.title}>
         <div style={S.heroMeta}>
           {course.schoolYear && (
             <span style={S.heroMetaItem}>
-              🎓 {course.schoolYear.label}
+              <Icon name="graduation" size={15} />
+              {course.schoolYear.label}
             </span>
           )}
           <span style={S.heroMetaItem}>
-            📦 {course.modules?.length ?? 0} módulos
+            <Icon name="shapes" size={15} />
+            {course.modules?.length ?? 0} módulos
           </span>
           <span style={S.heroMetaItem}>
-            📄 {totalLessons} lecciones
+            <Icon name="book" size={15} />
+            {totalLessons} lecciones
           </span>
         </div>
 
@@ -260,12 +281,10 @@ export default function CoursePage() {
               <span style={S.heroProgressLabel}>Progreso del curso</span>
               <span style={S.heroProgressPct}>{percentage}%</span>
             </div>
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${percentage}%` }} />
-            </div>
+            <ProgressBar value={percentage} variant="brand" label="Progreso del curso" />
           </div>
         )}
-      </div>
+      </PageHeader>
 
       {/* Contenido */}
       <div style={S.content}>
@@ -273,13 +292,15 @@ export default function CoursePage() {
         {percentage === 100 && courseCert && (
           <div style={S.certBanner}>
             <p style={S.certBannerText}>
-              📜 ¡Certificado de curso disponible!
+              <Icon name="award" size={18} />
+              ¡Certificado de curso disponible!
             </p>
             <button
               style={S.certBannerBtn}
               onClick={() => downloadCertificatePdf(courseCert)}
             >
-              ⬇️ Descargar PDF
+              <Icon name="download" size={14} />
+              Descargar PDF
             </button>
           </div>
         )}
@@ -287,7 +308,8 @@ export default function CoursePage() {
         {percentage === 100 && !courseCert && (
           <div style={{ ...S.certBanner, background: '#fefce8', border: '1.5px solid #fde047' }}>
             <p style={{ ...S.certBannerText, color: '#854d0e' }}>
-              🏆 ¡Curso completado al 100%! El certificado se generará en breve.
+              <Icon name="trophy" size={18} />
+              ¡Curso completado al 100%! El certificado se generará en breve.
             </p>
             <button
               style={{ ...S.certBannerBtn, background: '#ca8a04' }}
@@ -305,7 +327,8 @@ export default function CoursePage() {
               className="btn btn-primary"
               onClick={() => navigate(`/exam?courseId=${courseId}`)}
             >
-              🎓 Examen del curso
+              <Icon name="graduation" size={16} />
+              Examen del curso
               <span style={{ fontWeight: 400, opacity: 0.8, fontSize: '0.8rem' }}>
                 ({courseExamInfo.questionCount} preguntas)
               </span>
@@ -315,17 +338,18 @@ export default function CoursePage() {
 
         {/* Módulos */}
         {course.modules?.length ? (
-          course.modules.map((module) => (
+          course.modules.map((module, idx) => (
             <ModuleRow
               key={module.id}
               module={module}
+              index={idx}
               courseId={courseId!}
               completedSet={completedSet}
               navigate={navigate}
             />
           ))
         ) : (
-          <p style={S.emptyModules}>Este curso aún no tiene lecciones.</p>
+          <EmptyState icon="book" title="Este curso aún no tiene lecciones." />
         )}
       </div>
     </div>
@@ -336,11 +360,13 @@ export default function CoursePage() {
 
 function ModuleRow({
   module,
+  index,
   courseId,
   completedSet,
   navigate,
 }: {
   module: { id: string; title: string; lessons?: { id: string; type: string; title: string }[] };
+  index: number;
   courseId: string;
   completedSet: Set<string>;
   navigate: (path: string) => void;
@@ -350,7 +376,12 @@ function ModuleRow({
   const completedCount = lessons.filter((l) => completedSet.has(l.id)).length;
 
   return (
-    <div style={S.moduleCard}>
+    <div
+      style={{
+        ...S.moduleCard,
+        animation: `riseIn 0.5s cubic-bezier(0.18, 0.72, 0.24, 1.12) ${index * 60}ms both`,
+      }}
+    >
       {/* Cabecera del módulo */}
       <div style={S.moduleHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -377,16 +408,17 @@ function ModuleRow({
             }}
             onMouseEnter={(e) => {
               const btn = e.currentTarget as HTMLButtonElement;
-              btn.style.background = 'rgba(234,88,12,0.08)';
-              btn.style.borderColor = 'rgba(234,88,12,0.6)';
+              btn.style.background = 'var(--brand-faint)';
+              btn.style.borderColor = 'var(--brand)';
             }}
             onMouseLeave={(e) => {
               const btn = e.currentTarget as HTMLButtonElement;
               btn.style.background = 'none';
-              btn.style.borderColor = 'rgba(234,88,12,0.35)';
+              btn.style.borderColor = 'var(--brand-glow)';
             }}
           >
-            🎓 Examinarse
+            <Icon name="graduation" size={14} />
+            Examinarse
           </button>
         )}
       </div>
@@ -404,14 +436,14 @@ function ModuleRow({
             }}
             onClick={() => navigate(`/courses/${courseId}/lessons/${lesson.id}`)}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLDivElement).style.background = 'rgba(234,88,12,0.04)';
+              (e.currentTarget as HTMLDivElement).style.background = 'var(--brand-faint)';
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLDivElement).style.background = 'transparent';
             }}
           >
             <span style={S.lessonIcon}>
-              {LESSON_ICONS[lesson.type as LessonType] ?? '📄'}
+              <Icon name={LESSON_ICONS[lesson.type as LessonType] ?? 'book'} size={16} />
             </span>
             <span style={{
               ...S.lessonTitle,
@@ -421,7 +453,9 @@ function ModuleRow({
               {lesson.title}
             </span>
             {completed && (
-              <span style={S.checkmark}>✓</span>
+              <span style={S.checkmark}>
+                <Icon name="check" size={16} color="var(--color-primary)" />
+              </span>
             )}
           </div>
         );

@@ -1,5 +1,7 @@
 import { useSubjects, useEnrollSelf, useUnenrollSelf } from '../hooks/useCourses';
 import type { SubjectCourse } from '../api/courses.api';
+import PageHeader from '../components/ui/PageHeader';
+import EmptyState from '../components/ui/EmptyState';
 
 const SUBJECT_ICONS: Record<string, string> = {
   Matemáticas: '📐',
@@ -12,7 +14,7 @@ function iconFor(subject: string | null): string {
   return SUBJECT_ICONS[subject] ?? '📚';
 }
 
-function SubjectCard({ course }: { course: SubjectCourse }) {
+function SubjectCard({ course, index }: { course: SubjectCourse; index: number }) {
   const enroll = useEnrollSelf();
   const unenroll = useUnenrollSelf();
 
@@ -27,13 +29,14 @@ function SubjectCard({ course }: { course: SubjectCourse }) {
 
   return (
     <div
-      className="vkb-card animate-in"
+      className="vkb-card numbered-card"
       style={{
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
         padding: '20px 22px',
         position: 'relative',
+        animation: `riseIn 0.5s cubic-bezier(0.18, 0.72, 0.24, 1.12) ${index * 60}ms both`,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -113,16 +116,11 @@ export default function SubjectsPage() {
 
   return (
     <div style={{ maxWidth: 840, margin: '0 auto' }}>
-      <div className="page-hero animate-in">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
-          <span style={{ fontSize: '2.4rem' }}>📚</span>
-        </div>
-        <h1 className="hero-title">Asignaturas</h1>
-        <p className="hero-subtitle">
-          Matricúlate en las asignaturas que quieras seguir. Puedes darte de alta o de baja en
-          cualquier momento.
-        </p>
-      </div>
+      <PageHeader
+        variant="light"
+        title="Asignaturas"
+        subtitle="Matricúlate en las asignaturas que quieras seguir. Puedes darte de alta o de baja en cualquier momento."
+      />
 
       {isLoading && (
         <p style={{ color: 'var(--color-text-muted)', marginTop: 24 }}>Cargando asignaturas…</p>
@@ -135,43 +133,16 @@ export default function SubjectsPage() {
       )}
 
       {!isLoading && !isError && subjects && subjects.length === 0 && (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '56px 24px',
-            background: 'var(--color-surface)',
-            borderRadius: 'var(--radius-xl)',
-            border: '1.5px solid var(--color-border)',
-            marginTop: 24,
-          }}
-        >
-          <div style={{ fontSize: '4rem', marginBottom: 16 }}>📚</div>
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: '1.05rem',
-              color: 'var(--color-text)',
-              marginBottom: 8,
-            }}
-          >
-            No hay asignaturas disponibles
-          </div>
-          <div
-            style={{
-              fontSize: '0.9rem',
-              color: 'var(--color-text-muted)',
-              maxWidth: 380,
-              margin: '0 auto',
-              lineHeight: 1.6,
-            }}
-          >
-            El administrador aún no ha publicado ninguna asignatura.
-          </div>
-        </div>
+        <EmptyState
+          icon="book"
+          title="No hay asignaturas disponibles"
+          message="El administrador aún no ha publicado ninguna asignatura."
+        />
       )}
 
       {subjects && subjects.length > 0 && (
         <div
+          className="numbered-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
@@ -179,8 +150,8 @@ export default function SubjectsPage() {
             marginTop: 24,
           }}
         >
-          {subjects.map((c) => (
-            <SubjectCard key={c.id} course={c} />
+          {subjects.map((c, i) => (
+            <SubjectCard key={c.id} course={c} index={i} />
           ))}
         </div>
       )}

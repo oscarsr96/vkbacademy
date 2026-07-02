@@ -11,13 +11,16 @@ import {
 import TheoryView from '../components/theory/TheoryView';
 import ExercisePractice from '../components/exercises/ExercisePractice';
 import { getApiErrorMessage } from '../utils/errorMessage';
+import PageHeader from '../components/ui/PageHeader';
+import Icon from '../components/ui/Icon';
+import EmptyState from '../components/ui/EmptyState';
 
 type Tab = 'theory' | 'exercises' | 'exam';
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'theory', label: '📖 Teoría' },
-  { key: 'exercises', label: '🧮 Ejercicios' },
-  { key: 'exam', label: '🎓 Examen' },
+const TABS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'theory', label: 'Teoría', icon: 'book' },
+  { key: 'exercises', label: 'Ejercicios', icon: 'target' },
+  { key: 'exam', label: 'Examen', icon: 'graduation' },
 ];
 
 export default function StudyUnitPage() {
@@ -37,10 +40,16 @@ export default function StudyUnitPage() {
   if (error || !data) {
     return (
       <div style={s.page}>
-        <p style={s.muted}>No se encontró la unidad de estudio.</p>
-        <Link to="/study" style={s.backLink}>
-          ← Volver a Estudiar
-        </Link>
+        <EmptyState
+          icon="brain"
+          title="No se encontró la unidad de estudio"
+          action={
+            <Link to="/study" className="btn btn-ghost">
+              <Icon name="chevron-left" size={14} />
+              Volver a Estudiar
+            </Link>
+          }
+        />
       </div>
     );
   }
@@ -48,16 +57,15 @@ export default function StudyUnitPage() {
   return (
     <div style={s.page}>
       <Link to="/study" style={s.backLink}>
-        ← Volver a Estudiar
+        <Icon name="chevron-left" size={14} color="var(--brand-deep)" />
+        Volver a Estudiar
       </Link>
 
-      <header style={s.header}>
-        <span style={s.eyebrow}>
-          {data.course.title} · Tema: {data.topic}
-        </span>
-        <h1 style={s.title}>{data.title}</h1>
-        {data.summary && <p style={s.summary}>{data.summary}</p>}
-      </header>
+      <span style={s.eyebrow}>
+        {data.course.title} · Tema: {data.topic}
+      </span>
+
+      <PageHeader variant="light" title={data.title} subtitle={data.summary} />
 
       <nav style={s.tabs}>
         {TABS.map((t) => (
@@ -65,13 +73,13 @@ export default function StudyUnitPage() {
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            style={{ ...s.tab, ...(tab === t.key ? s.tabActive : {}) }}
+            className={`chip${tab === t.key ? ' active' : ''}`}
             aria-pressed={tab === t.key}
           >
+            <Icon name={t.icon} size={14} />
             {t.label}
             {!data.sections[t.key] && (
               <span style={s.tabWarn} title="Sección no generada">
-                {' '}
                 !
               </span>
             )}
@@ -101,7 +109,14 @@ export default function StudyUnitPage() {
           disabled={remove.isPending}
           style={s.deleteBtn}
         >
-          {remove.isPending ? 'Borrando…' : '🗑️ Borrar unidad'}
+          {remove.isPending ? (
+            <span className="spinner" />
+          ) : (
+            <>
+              <Icon name="close" size={14} />
+              Borrar unidad
+            </>
+          )}
         </button>
       </footer>
     </div>
@@ -110,28 +125,42 @@ export default function StudyUnitPage() {
 
 function MissingSection({
   label,
+  icon,
   onRetry,
   retrying,
   isError,
   error,
 }: {
   label: string;
+  icon: string;
   onRetry: () => void;
   retrying: boolean;
   isError?: boolean;
   error?: unknown;
 }) {
   return (
-    <div style={s.missing}>
-      <p style={s.muted}>No se pudo generar {label}. Puedes reintentarlo.</p>
-      {isError && (
-        <p style={s.errorText}>
-          {getApiErrorMessage(error, 'Error al regenerar. Inténtalo de nuevo.')}
-        </p>
-      )}
-      <button type="button" className="btn btn-primary" onClick={onRetry} disabled={retrying}>
-        {retrying ? '⏳ Generando…' : '🔄 Reintentar generación'}
-      </button>
+    <div className="vkb-card">
+      <EmptyState
+        icon={icon}
+        title={`No se pudo generar ${label}`}
+        message={
+          isError
+            ? getApiErrorMessage(error, 'Error al regenerar. Inténtalo de nuevo.')
+            : 'Puedes reintentarlo.'
+        }
+        action={
+          <button type="button" className="btn btn-primary" onClick={onRetry} disabled={retrying}>
+            {retrying ? (
+              <span className="spinner" />
+            ) : (
+              <>
+                <Icon name="zap" size={16} />
+                Reintentar generación
+              </>
+            )}
+          </button>
+        }
+      />
     </div>
   );
 }
@@ -142,6 +171,7 @@ function TheoryTab({ unit }: { unit: StudyUnitDetail }) {
     return (
       <MissingSection
         label="la teoría"
+        icon="book"
         onRetry={() => regen.mutate()}
         retrying={regen.isPending}
         isError={regen.isError}
@@ -158,6 +188,7 @@ function ExercisesTab({ unit }: { unit: StudyUnitDetail }) {
     return (
       <MissingSection
         label="los ejercicios"
+        icon="target"
         onRetry={() => regen.mutate(undefined)}
         retrying={regen.isPending}
         isError={regen.isError}
@@ -174,6 +205,7 @@ function ExamTab({ unit, onStart }: { unit: StudyUnitDetail; onStart: (bankId: s
     return (
       <MissingSection
         label="el examen"
+        icon="graduation"
         onRetry={() => regen.mutate()}
         retrying={regen.isPending}
         isError={regen.isError}
@@ -188,11 +220,32 @@ function ExamTab({ unit, onStart }: { unit: StudyUnitDetail; onStart: (bankId: s
       <div>
         <div style={s.examTitle}>{exam.title}</div>
         <div style={s.examMeta}>
-          {exam.questions.length} preguntas
-          {timeMinutes !== null && ` · ⏱ ${timeMinutes} min`}
-          {exam.onlyOnce && ' · 🔒 1 intento'}
-          {exam.attemptCount > 0 &&
-            ` · ${exam.attemptCount} ${exam.attemptCount === 1 ? 'intento' : 'intentos'}`}
+          <span>{exam.questions.length} preguntas</span>
+          {timeMinutes !== null && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span style={s.examMetaItem}>
+                <Icon name="clock" size={12} />
+                {timeMinutes} min
+              </span>
+            </>
+          )}
+          {exam.onlyOnce && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span style={s.examMetaItem}>
+                <Icon name="lock" size={12} />1 intento
+              </span>
+            </>
+          )}
+          {exam.attemptCount > 0 && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>
+                {exam.attemptCount} {exam.attemptCount === 1 ? 'intento' : 'intentos'}
+              </span>
+            </>
+          )}
         </div>
       </div>
       <button className="btn btn-primary" style={s.examStart} onClick={() => onStart(exam.id)}>
@@ -209,10 +262,18 @@ const s: Record<string, React.CSSProperties> = {
     padding: '24px 16px 64px',
     display: 'flex',
     flexDirection: 'column',
-    gap: 20,
+    gap: 12,
   },
-  backLink: { color: '#f97316', fontSize: '0.875rem', textDecoration: 'none', fontWeight: 600 },
-  header: { display: 'flex', flexDirection: 'column', gap: 8 },
+  backLink: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    color: 'var(--brand-deep)',
+    fontSize: '0.875rem',
+    textDecoration: 'none',
+    fontWeight: 600,
+    width: 'fit-content',
+  },
   eyebrow: {
     fontSize: '0.75rem',
     fontWeight: 600,
@@ -220,40 +281,15 @@ const s: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
-  title: { fontSize: '2rem', fontWeight: 800, margin: 0, lineHeight: 1.15 },
-  summary: { fontSize: '1.05rem', color: 'var(--color-text-muted)', lineHeight: 1.6, margin: 0 },
   tabs: {
     display: 'flex',
     gap: 8,
     flexWrap: 'wrap',
-    borderBottom: '1px solid var(--color-border)',
-    paddingBottom: 4,
+    marginTop: 4,
   },
-  tab: {
-    background: 'transparent',
-    border: 'none',
-    borderBottom: '2px solid transparent',
-    color: 'var(--color-text-muted)',
-    padding: '8px 12px',
-    fontSize: '0.95rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  tabActive: { color: '#f97316', borderBottomColor: '#f97316' },
-  tabWarn: { color: '#dc2626', fontWeight: 800 },
-  content: { display: 'flex', flexDirection: 'column', gap: 16 },
-  missing: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-    alignItems: 'flex-start',
-    padding: 24,
-    background: 'var(--color-surface)',
-    border: '1px dashed var(--color-border)',
-    borderRadius: 12,
-  },
+  tabWarn: { color: 'var(--color-error)', fontWeight: 800 },
+  content: { display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 },
   muted: { color: 'var(--color-text-muted)', fontSize: '0.95rem', margin: 0 },
-  errorText: { color: '#dc2626', fontSize: '0.875rem', margin: 0 },
   examCard: {
     display: 'flex',
     alignItems: 'center',
@@ -263,13 +299,24 @@ const s: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
   },
   examTitle: { fontWeight: 700, color: 'var(--color-text)', marginBottom: 6, fontSize: '1rem' },
-  examMeta: { fontSize: '0.8rem', color: 'var(--color-text-muted)' },
+  examMeta: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    fontSize: '0.8rem',
+    color: 'var(--color-text-muted)',
+  },
+  examMetaItem: { display: 'inline-flex', alignItems: 'center', gap: 4 },
   examStart: { padding: '9px 20px', fontSize: '0.875rem', flexShrink: 0 },
   footer: { display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' },
   deleteBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
     background: 'transparent',
     border: '1px solid rgba(220,38,38,0.4)',
-    color: '#dc2626',
+    color: 'var(--color-error)',
     padding: '10px 18px',
     borderRadius: 8,
     fontSize: '0.875rem',

@@ -4,6 +4,9 @@ import { useCourses, useSchoolYears } from '../hooks/useCourses';
 import { useAuthStore } from '../store/auth.store';
 import { Role } from '@vkbacademy/shared';
 import type { Course } from '@vkbacademy/shared';
+import PageHeader from '../components/ui/PageHeader';
+import Icon from '../components/ui/Icon';
+import EmptyState from '../components/ui/EmptyState';
 
 // Asignaturas predefinidas para baloncesto (mismo orden que la imagen de referencia)
 const SUBJECTS = [
@@ -18,8 +21,6 @@ const SUBJECTS = [
 ];
 
 // ─── Constantes de color ───────────────────────────────────────────────────────
-
-const ORANGE = '#ea580c';
 
 // Franja de color por nivel educativo (acento superior de la card)
 const LEVEL_COLOR: Record<string, string> = {
@@ -40,7 +41,7 @@ const LEVEL_GRADIENT: Record<string, string> = {
   '1bach': 'linear-gradient(135deg, #92400e 0%, #d97706 100%)',
   '2bach': 'linear-gradient(135deg, #881337 0%, #e11d48 100%)',
 };
-const DEFAULT_GRADIENT = 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)';
+const DEFAULT_GRADIENT = 'var(--gradient-orange)';
 
 // ─── Estilos ───────────────────────────────────────────────────────────────────
 
@@ -69,16 +70,6 @@ const S: Record<string, React.CSSProperties> = {
     color: 'var(--color-text-muted)',
     width: 80,
     flexShrink: 0,
-  },
-  chip: {
-    padding: '6px 16px',
-    borderRadius: 999,
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-    border: 'none',
-    transition: 'background 0.15s, color 0.15s, transform 0.1s',
-    letterSpacing: '0.01em',
   },
 
   // Grid
@@ -118,11 +109,6 @@ const S: Record<string, React.CSSProperties> = {
     height: '100%',
     objectFit: 'cover',
   },
-  thumbIcon: {
-    fontSize: '2.5rem',
-    opacity: 0.45,
-    userSelect: 'none',
-  },
   thumbBadge: {
     position: 'absolute',
     top: 9,
@@ -150,8 +136,8 @@ const S: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     letterSpacing: '0.05em',
     textTransform: 'uppercase' as const,
-    color: ORANGE,
-    background: 'rgba(234,88,12,0.09)',
+    color: 'var(--brand-deep)',
+    background: 'var(--brand-soft)',
     borderRadius: 6,
     padding: '2px 8px',
     width: 'fit-content',
@@ -189,15 +175,6 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: 6,
   },
 
-  empty: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '4rem 0',
-    gap: 12,
-    color: '#94a3b8',
-  },
   error: { color: '#dc2626', padding: '1rem 0' },
 };
 
@@ -218,19 +195,30 @@ function SkeletonCard() {
 
 // ─── Tarjeta de curso ──────────────────────────────────────────────────────────
 
-function CourseCard({ course, onClick }: { course: Course; onClick: () => void }) {
+function CourseCard({
+  course,
+  index,
+  onClick,
+}: {
+  course: Course;
+  index: number;
+  onClick: () => void;
+}) {
   const gradient = LEVEL_GRADIENT[course.schoolYear?.name ?? ''] ?? DEFAULT_GRADIENT;
-  const stripeColor = LEVEL_COLOR[course.schoolYear?.name ?? ''] ?? ORANGE;
+  const stripeColor = LEVEL_COLOR[course.schoolYear?.name ?? ''] ?? 'var(--brand)';
 
   return (
     <div
-      style={S.card}
+      style={{
+        ...S.card,
+        animation: `riseIn 0.5s cubic-bezier(0.18, 0.72, 0.24, 1.12) ${index * 60}ms both`,
+      }}
       onClick={onClick}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.transform = 'translateY(-4px)';
         el.style.boxShadow = 'var(--shadow-card-hover)';
-        el.style.borderColor = 'rgba(234,88,12,0.25)';
+        el.style.borderColor = 'var(--brand-glow)';
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement;
@@ -247,7 +235,7 @@ function CourseCard({ course, onClick }: { course: Course; onClick: () => void }
         {course.coverUrl ? (
           <img src={course.coverUrl} alt={course.title} style={S.thumbImg} />
         ) : (
-          <span style={S.thumbIcon}>🏀</span>
+          <Icon name="basketball" size={44} color="#fff" strokeWidth={1.4} style={{ opacity: 0.45 }} />
         )}
         {course.schoolYear && (
           <span style={S.thumbBadge}>{course.schoolYear.label}</span>
@@ -314,16 +302,17 @@ export default function CoursesPage() {
 
   return (
     <div style={S.page}>
-      {/* Hero oscuro */}
-      <div className="page-hero animate-in">
-        <h1 className="hero-title">📚 Mis Cursos</h1>
-        <p className="hero-subtitle">
-          {isLoading
+      {/* Cabecera editorial light */}
+      <PageHeader
+        variant="light"
+        title="Mis Cursos"
+        subtitle={
+          isLoading
             ? 'Cargando tu biblioteca...'
-            : `${totalCourses} ${totalCourses === 1 ? 'curso disponible' : 'cursos disponibles'} · Tu biblioteca de formación técnica y táctica`}
-        </p>
-
-        {/* Buscador dark */}
+            : `${totalCourses} ${totalCourses === 1 ? 'curso disponible' : 'cursos disponibles'} · Tu biblioteca de formación técnica y táctica`
+        }
+      >
+        {/* Buscador */}
         <div style={searchStyles.row}>
           <div style={searchStyles.wrap}>
             <span style={searchStyles.icon}>🔍</span>
@@ -336,20 +325,16 @@ export default function CoursesPage() {
             />
           </div>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Barra de filtros */}
       <div style={S.filtersBar}>
         {/* Fila 1: Asignaturas */}
         {allSubjects.length > 0 && (
           <div style={S.filtersRow}>
-            <span style={S.filterLabel}>Asignatura</span>
+            <span className="section-label" style={S.filterLabel}>Asignatura</span>
             <button
-              style={{
-                ...S.chip,
-                background: activeSubject === null ? ORANGE : '#f1f5f9',
-                color: activeSubject === null ? '#fff' : '#475569',
-              }}
+              className={`chip${activeSubject === null ? ' active' : ''}`}
               onClick={() => setActiveSubject(null)}
             >
               Todas
@@ -357,11 +342,7 @@ export default function CoursesPage() {
             {allSubjects.map((subj) => (
               <button
                 key={subj}
-                style={{
-                  ...S.chip,
-                  background: activeSubject === subj ? ORANGE : '#f1f5f9',
-                  color: activeSubject === subj ? '#fff' : '#1e293b',
-                }}
+                className={`chip${activeSubject === subj ? ' active' : ''}`}
                 onClick={() => setActiveSubject(activeSubject === subj ? null : subj)}
               >
                 {subj}
@@ -373,13 +354,9 @@ export default function CoursesPage() {
         {/* Fila 2: Nivel educativo */}
         {schoolYears && schoolYears.length > 0 && (
           <div style={S.filtersRow}>
-            <span style={S.filterLabel}>Nivel</span>
+            <span className="section-label" style={S.filterLabel}>Nivel</span>
             <button
-              style={{
-                ...S.chip,
-                background: activeYear === null ? ORANGE : '#f1f5f9',
-                color: activeYear === null ? '#fff' : '#475569',
-              }}
+              className={`chip${activeYear === null ? ' active' : ''}`}
               onClick={() => setActiveYear(null)}
             >
               Todos
@@ -387,11 +364,7 @@ export default function CoursesPage() {
             {schoolYears.map((sy) => (
               <button
                 key={sy.id}
-                style={{
-                  ...S.chip,
-                  background: activeYear === sy.id ? ORANGE : '#f1f5f9',
-                  color: activeYear === sy.id ? '#fff' : '#475569',
-                }}
+                className={`chip${activeYear === sy.id ? ' active' : ''}`}
                 onClick={() => setActiveYear(activeYear === sy.id ? null : sy.id)}
               >
                 {sy.label}
@@ -409,22 +382,23 @@ export default function CoursesPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div style={S.empty}>
-          <span style={{ fontSize: 48 }}>📚</span>
-          <p style={{ fontWeight: 600, color: '#475569' }}>
-            {search
+        <EmptyState
+          icon="book"
+          title={
+            search
               ? 'No se encontraron cursos con esa búsqueda.'
               : isStudentWithoutLevel
                 ? 'Cuando un administrador asigne tu nivel educativo, aquí aparecerán tus cursos.'
-                : 'No hay cursos disponibles todavía.'}
-          </p>
-        </div>
+                : 'No hay cursos disponibles todavía.'
+          }
+        />
       ) : (
         <div style={S.grid}>
-          {filtered.map((course) => (
+          {filtered.map((course, i) => (
             <CourseCard
               key={course.id}
               course={course}
+              index={i}
               onClick={() => navigate(`/courses/${course.id}`)}
             />
           ))}
@@ -434,14 +408,14 @@ export default function CoursesPage() {
   );
 }
 
-// Estilos del buscador dark (dentro del hero)
+// Estilos del buscador (dentro de la cabecera light)
 const searchStyles: Record<string, React.CSSProperties> = {
   row: {
     display: 'flex',
     gap: 10,
     alignItems: 'center',
-    maxWidth: 620,
-    marginTop: 20,
+    maxWidth: 480,
+    marginTop: 4,
   },
   wrap: {
     flex: 1,
@@ -453,7 +427,7 @@ const searchStyles: Record<string, React.CSSProperties> = {
     position: 'absolute',
     left: 14,
     fontSize: '1rem',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'var(--color-text-muted)',
     pointerEvents: 'none',
   },
   input: {
@@ -461,10 +435,10 @@ const searchStyles: Record<string, React.CSSProperties> = {
     height: 46,
     padding: '0 1rem 0 2.6rem',
     borderRadius: 10,
-    border: '1.5px solid rgba(255,255,255,0.15)',
+    border: '1.5px solid var(--color-border)',
     fontSize: '0.9rem',
-    background: 'rgba(255,255,255,0.07)',
-    color: '#ffffff',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
     outline: 'none',
     boxSizing: 'border-box',
   },
