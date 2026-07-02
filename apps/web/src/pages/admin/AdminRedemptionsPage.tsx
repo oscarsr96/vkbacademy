@@ -9,7 +9,8 @@ export default function AdminRedemptionsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'redemptions', selectedAcademyId],
-    queryFn: () => adminApi.listRedemptions(),
+    // Límite alto: la página muestra el listado completo, no pagina en la UI
+    queryFn: () => adminApi.listRedemptions({ limit: 1000 }),
   });
 
   const deliverMutation = useMutation({
@@ -17,10 +18,11 @@ export default function AdminRedemptionsPage() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin', 'redemptions'] }),
   });
 
-  const list = data ?? [];
-  const totalPointsSpent = list.reduce((acc, r) => acc + r.cost, 0);
-  const pendingCount = list.filter((r) => !r.delivered).length;
-  const distinctStudents = new Set(list.map((r) => r.userId)).size;
+  const list = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const totalPointsSpent = data?.stats.totalPointsSpent ?? 0;
+  const pendingCount = data?.stats.pendingCount ?? 0;
+  const distinctStudents = data?.stats.distinctStudents ?? 0;
 
   const thStyle: React.CSSProperties = {
     textAlign: 'left',
@@ -65,7 +67,7 @@ export default function AdminRedemptionsPage() {
           <div>
             <h1 className="hero-title">Canjes</h1>
             <p className="hero-subtitle">
-              {list.length} canjes totales
+              {total} canjes totales
               {pendingCount > 0 && (
                 <span style={{
                   marginLeft: '0.75rem',
@@ -90,7 +92,7 @@ export default function AdminRedemptionsPage() {
         <div className="stat-card">
           <div style={{ fontSize: '1.6rem', marginBottom: '0.4rem' }}>🎁</div>
           <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-text)', lineHeight: 1, marginBottom: 4 }}>
-            {list.length}
+            {total}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>Canjes totales</div>
         </div>

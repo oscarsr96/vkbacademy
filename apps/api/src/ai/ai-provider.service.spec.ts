@@ -1,20 +1,27 @@
 import { ConfigService } from '@nestjs/config';
+import { GoogleGenerativeAIAbortError } from '@google/generative-ai';
+import { APIConnectionTimeoutError } from '@anthropic-ai/sdk';
 import { AiProviderService } from './ai-provider.service';
 
-// Mock de @google/generative-ai
+// Mock de @google/generative-ai. Conserva las clases de error reales (p. ej.
+// GoogleGenerativeAIAbortError) vía requireActual — solo se mockea el
+// constructor principal.
 const mockGeminiGenerateContent = jest.fn();
 const mockGeminiGetGenerativeModel = jest.fn(() => ({
   generateContent: mockGeminiGenerateContent,
 }));
 jest.mock('@google/generative-ai', () => ({
+  ...jest.requireActual('@google/generative-ai'),
   GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
     getGenerativeModel: mockGeminiGetGenerativeModel,
   })),
 }));
 
-// Mock de @anthropic-ai/sdk (default export)
+// Mock de @anthropic-ai/sdk (default export). Conserva las clases de error
+// reales (p. ej. APIConnectionTimeoutError) vía requireActual.
 const mockAnthropicCreate = jest.fn();
 jest.mock('@anthropic-ai/sdk', () => ({
+  ...jest.requireActual('@anthropic-ai/sdk'),
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({
     messages: { create: mockAnthropicCreate },
@@ -168,6 +175,52 @@ describe('AiProviderService', () => {
 
       expect(result).toBe('{"direct":true}');
       expect(mockGeminiGenerateContent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('timeout (AI_TIMEOUT_MS)', () => {
+    it('pasa el timeout configurado a Gemini y a Haiku', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: { text: () => '{"ok":true}' },
+      });
+      mockAnthropicCreate.mockResolvedValue({
+        content: [{ type: 'text', text: '{"ok":true}' }],
+      });
+
+      const provider = createProvider({ AI_TIMEOUT_MS: '5000', AI_PROVIDER: 'gemini' });
+      await provider.generate('prompt', 512);
+      expect(mockGeminiGenerateContent).toHaveBeenCalledWith('prompt', { timeout: 5000 });
+
+      const haikuProvider = createProvider({ AI_TIMEOUT_MS: '5000', AI_PROVIDER: 'haiku' });
+      await haikuProvider.generate('prompt', 512);
+      expect(mockAnthropicCreate).toHaveBeenCalledWith(expect.anything(), { timeout: 5000 });
+    });
+
+    it('usa 60000ms por defecto si AI_TIMEOUT_MS no está configurado', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: { text: () => '{"ok":true}' },
+      });
+
+      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+      await provider.generate('prompt', 512);
+
+      expect(mockGeminiGenerateContent).toHaveBeenCalledWith('prompt', { timeout: 60000 });
+    });
+
+    it('convierte un timeout de Gemini en un error descriptivo', async () => {
+      mockGeminiGenerateContent.mockRejectedValue(
+        new GoogleGenerativeAIAbortError('Request aborted'),
+      );
+
+      const provider = createProvider({ AI_PROVIDER: 'gemini', AI_TIMEOUT_MS: '5000' });
+      await expect(provider.generate('prompt', 512)).rejects.toThrow(/5000ms.*timeout/i);
+    });
+
+    it('convierte un timeout de Haiku en un error descriptivo', async () => {
+      mockAnthropicCreate.mockRejectedValue(new APIConnectionTimeoutError());
+
+      const provider = createProvider({ AI_PROVIDER: 'haiku', AI_TIMEOUT_MS: '5000' });
+      await expect(provider.generate('prompt', 512)).rejects.toThrow(/5000ms.*timeout/i);
     });
   });
 });

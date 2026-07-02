@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/auth.store';
 import { Role } from '@vkbacademy/shared';
@@ -8,34 +9,55 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import ProfilePage from './pages/ProfilePage';
-import TeacherPortalPage from './pages/TeacherPortalPage';
 import DashboardPage from './pages/DashboardPage';
 import CoursesPage from './pages/CoursesPage';
 import CoursePage from './pages/CoursePage';
 import LessonPage from './pages/LessonPage';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage';
-import AdminUsersPage from './pages/admin/AdminUsersPage';
-import AdminCoursesPage from './pages/admin/AdminCoursesPage';
-import AdminCourseDetailPage from './pages/admin/AdminCourseDetailPage';
-import AdminBillingPage from './pages/admin/AdminBillingPage';
-import AdminChallengesPage from './pages/admin/AdminChallengesPage';
-import AdminRedemptionsPage from './pages/admin/AdminRedemptionsPage';
 import ChallengesPage from './pages/ChallengesPage';
 import BookingsPage from './pages/BookingsPage';
 import TutorStudentsPage from './pages/TutorStudentsPage';
-import ExamPage from './pages/ExamPage';
-import StudyPage from './pages/StudyPage';
-import StudyUnitPage from './pages/StudyUnitPage';
-import AdminExamBankPage from './pages/admin/AdminExamBankPage';
 import CertificatesPage from './pages/CertificatesPage';
 import SubjectsPage from './pages/SubjectsPage';
-import AdminAcademiesPage from './pages/admin/AdminAcademiesPage';
 import AcademyLandingPage from './pages/marketing/AcademyLandingPage';
 import AppLayout from './layouts/AppLayout';
 import PublicLayout from './layouts/PublicLayout';
 import AboutPage from './pages/marketing/AboutPage';
 import PricingPage from './pages/marketing/PricingPage';
 import RootIndex from './components/RootIndex';
+
+// Rutas pesadas o de uso poco frecuente (panel admin, portal docente, estudio con IA) —
+// carga diferida para reducir el bundle inicial que descarga un alumno normal.
+const TeacherPortalPage = lazy(() => import('./pages/TeacherPortalPage'));
+const ExamPage = lazy(() => import('./pages/ExamPage'));
+const StudyPage = lazy(() => import('./pages/StudyPage'));
+const StudyUnitPage = lazy(() => import('./pages/StudyUnitPage'));
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
+const AdminCoursesPage = lazy(() => import('./pages/admin/AdminCoursesPage'));
+const AdminCourseDetailPage = lazy(() => import('./pages/admin/AdminCourseDetailPage'));
+const AdminBillingPage = lazy(() => import('./pages/admin/AdminBillingPage'));
+const AdminChallengesPage = lazy(() => import('./pages/admin/AdminChallengesPage'));
+const AdminRedemptionsPage = lazy(() => import('./pages/admin/AdminRedemptionsPage'));
+const AdminExamBankPage = lazy(() => import('./pages/admin/AdminExamBankPage'));
+const AdminAcademiesPage = lazy(() => import('./pages/admin/AdminAcademiesPage'));
+
+// Fallback de carga mientras se descarga el chunk de una ruta diferida
+function RouteLoadingFallback() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '60vh',
+        color: 'var(--color-text-muted)',
+        fontSize: '0.95rem',
+      }}
+    >
+      Cargando...
+    </div>
+  );
+}
 
 // Guarda: redirige a /dashboard si ya está autenticado
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -60,6 +82,7 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    <Suspense fallback={<RouteLoadingFallback />}>
     <Routes>
       {/* ── Ruta raíz: si dominio de academia, renderiza sin PublicLayout ── */}
       <Route path="/" element={<RootIndex />} />
@@ -225,5 +248,6 @@ export default function App() {
       {/* Fallback — cualquier ruta desconocida va al inicio */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }

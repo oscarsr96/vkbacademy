@@ -8,6 +8,7 @@ import {
 import { QuestionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
+import { generateAiJson } from '../ai/ai-json';
 import { GenerateAiExamDto } from './dto/generate-ai-exam.dto';
 
 // ─── Tipos del payload IA ────────────────────────────────────────────────────
@@ -115,8 +116,18 @@ export class AiExamsService {
     );
 
     const maxTokens = Math.min(8000, 600 + dto.numQuestions * 350);
-    const text = await this.ai.generate(prompt, maxTokens);
-    const payload = this.parseAndValidate(text, dto.numQuestions);
+
+    // Reintento automático ante JSON inválido: ver `ai-json.ts`.
+    let parsed: unknown;
+    try {
+      parsed = await generateAiJson(this.ai, prompt, maxTokens, { attempts: 2, logger: this.logger });
+    } catch (err) {
+      this.logger.error('Error al parsear JSON de IA (examen) tras reintentos:', err);
+      throw new InternalServerErrorException(
+        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
+      );
+    }
+    const payload = this.validatePayload(parsed, dto.numQuestions);
 
     // Persistir banco + preguntas + respuestas en una transacción
     const bank = await this.prisma.aiExamBank.create({
@@ -341,21 +352,7 @@ export class AiExamsService {
     };
   }
 
-  private parseAndValidate(text: string, expectedCount: number): AiExamPayload {
-    let parsed: unknown;
-    try {
-      const raw = text
-        .trim()
-        .replace(/^```json\n?/, '')
-        .replace(/\n?```$/, '');
-      parsed = JSON.parse(raw);
-    } catch (err) {
-      this.logger.error('Error al parsear JSON de IA (examen):', text);
-      throw new InternalServerErrorException(
-        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
-      );
-    }
-
+  private validatePayload(parsed: unknown, expectedCount: number): AiExamPayload {
     const p = parsed as Partial<AiExamPayload>;
     if (!p || typeof p.title !== 'string' || !Array.isArray(p.questions)) {
       throw new InternalServerErrorException(

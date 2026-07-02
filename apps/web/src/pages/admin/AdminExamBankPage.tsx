@@ -44,7 +44,8 @@ function useExamBank(courseId?: string, moduleId?: string) {
 
   const attempts = useQuery({
     queryKey: ['admin', 'exam-attempts', courseId ?? moduleId],
-    queryFn: () => adminApi.listExamAttempts({ courseId, moduleId }),
+    // Límite alto: la pestaña de historial muestra el listado completo
+    queryFn: () => adminApi.listExamAttempts({ courseId, moduleId, limit: 1000 }),
     enabled: !!(courseId || moduleId),
   });
 
@@ -467,7 +468,8 @@ export default function AdminExamBankPage() {
   };
 
   const questionList = questions.data ?? [];
-  const attemptList = attempts.data ?? [];
+  const attemptList = attempts.data?.data ?? [];
+  const attemptsTotal = attempts.data?.total ?? 0;
 
   // Estilos de tabs con indicador naranja activo
   const tabBarStyle: React.CSSProperties = {
@@ -576,7 +578,7 @@ export default function AdminExamBankPage() {
           <div>
             <h1 className="hero-title">Banco de Examen</h1>
             <p className="hero-subtitle">
-              {scopeLabel} · {questionList.length} preguntas · {attemptList.length} intentos registrados
+              {scopeLabel} · {questionList.length} preguntas · {attemptsTotal} intentos registrados
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' as const }}>
@@ -616,8 +618,8 @@ export default function AdminExamBankPage() {
             {tab === 'questions' && questionList.length > 0 && (
               <span style={{ ...badgeStyle, marginLeft: 8 }}>{questionList.length}</span>
             )}
-            {tab === 'history' && attemptList.length > 0 && (
-              <span style={{ ...badgeStyle, marginLeft: 8 }}>{attemptList.length}</span>
+            {tab === 'history' && attemptsTotal > 0 && (
+              <span style={{ ...badgeStyle, marginLeft: 8 }}>{attemptsTotal}</span>
             )}
           </button>
         ))}

@@ -112,6 +112,9 @@ model User {
   theoryModules     TheoryModule[]
   aiExamBanks       AiExamBank[]
   studyUnits        StudyUnit[]
+
+  @@index([schoolYearId])
+  @@index([tutorId])
 }
 
 model RefreshToken {
@@ -154,6 +157,8 @@ model Course {
   theoryModules TheoryModule[] @relation("CourseTheoryModules")
   aiExamBanks   AiExamBank[]   @relation("CourseAiExamBanks")
   studyUnits    StudyUnit[]    @relation("CourseStudyUnits")
+
+  @@index([schoolYearId])
 }
 
 // ─────────────────────────────────────────────────────────

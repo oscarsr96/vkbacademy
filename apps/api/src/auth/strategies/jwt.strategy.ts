@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { JwtPayload } from '@vkbacademy/shared';
+import type { AuthenticatedUser } from '../types/authenticated-user';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -18,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
       include: {
@@ -34,9 +35,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Adjuntar academyId desde JWT payload o primera membresía
     const membership = user.academyMembers[0];
-    (user as any).academyId = payload.academyId ?? membership?.academyId ?? null;
-    (user as any).academy = membership?.academy ?? null;
-
-    return user;
+    return Object.assign(user, {
+      academyId: payload.academyId ?? membership?.academyId ?? null,
+      academy: membership?.academy ?? null,
+    });
   }
 }

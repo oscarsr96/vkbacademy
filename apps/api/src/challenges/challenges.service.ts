@@ -172,45 +172,66 @@ export class ChallengesService {
         where: { isActive: true, type: { in: eventTypes } },
       });
 
-      for (const challenge of challenges) {
-        // 3. Calcular progreso actual
-        const progress = await this.calculateProgress(userId, challenge.type);
+      if (challenges.length === 0) return;
 
-        // 4. Obtener o crear el UserChallenge
-        const existing = await this.prisma.userChallenge.findUnique({
-          where: { userId_challengeId: { userId, challengeId: challenge.id } },
-        });
+      // 3. Progreso por tipo único (varios retos pueden compartir tipo; se calcula una sola vez)
+      const uniqueTypes = [...new Set(challenges.map((c) => c.type))];
+      const progressEntries = await Promise.all(
+        uniqueTypes.map(
+          async (type) => [type, await this.calculateProgress(userId, type)] as const,
+        ),
+      );
+      const progressByType = new Map(progressEntries);
 
-        // Si ya está completado, no tocar
-        if (existing?.completed) continue;
+      // 4. UserChallenge existentes en una sola consulta (en vez de un findUnique por reto)
+      const existingList = await this.prisma.userChallenge.findMany({
+        where: { userId, challengeId: { in: challenges.map((c) => c.id) } },
+      });
+      const existingMap = new Map(existingList.map((uc) => [uc.challengeId, uc]));
 
-        const completed = progress >= challenge.target;
+      let pointsToAward = 0;
 
-        await this.prisma.userChallenge.upsert({
-          where: { userId_challengeId: { userId, challengeId: challenge.id } },
-          update: {
-            progress,
-            ...(completed && !existing?.completed
-              ? { completed: true, completedAt: new Date(), awardedPoints: challenge.points }
-              : {}),
-          },
-          create: {
-            userId,
-            challengeId: challenge.id,
-            progress,
-            completed,
-            completedAt: completed ? new Date() : null,
-            awardedPoints: completed ? challenge.points : 0,
-          },
-        });
+      // 5. Upserts en paralelo (cada uno afecta a un challengeId distinto, sin condición de carrera entre sí)
+      await Promise.all(
+        challenges.map(async (challenge) => {
+          const existing = existingMap.get(challenge.id);
 
-        // 5. Si se completó ahora, incrementar totalPoints en User
-        if (completed && !existing?.completed) {
-          await this.prisma.user.update({
-            where: { id: userId },
-            data: { totalPoints: { increment: challenge.points } },
+          // Si ya está completado, no tocar
+          if (existing?.completed) return;
+
+          const progress = progressByType.get(challenge.type) ?? 0;
+          const completed = progress >= challenge.target;
+
+          await this.prisma.userChallenge.upsert({
+            where: { userId_challengeId: { userId, challengeId: challenge.id } },
+            update: {
+              progress,
+              ...(completed && !existing?.completed
+                ? { completed: true, completedAt: new Date(), awardedPoints: challenge.points }
+                : {}),
+            },
+            create: {
+              userId,
+              challengeId: challenge.id,
+              progress,
+              completed,
+              completedAt: completed ? new Date() : null,
+              awardedPoints: completed ? challenge.points : 0,
+            },
           });
-        }
+
+          if (completed && !existing?.completed) {
+            pointsToAward += challenge.points;
+          }
+        }),
+      );
+
+      // 6. Un único incremento de totalPoints en vez de uno por reto completado
+      if (pointsToAward > 0) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { totalPoints: { increment: pointsToAward } },
+        });
       }
     } catch (err) {
       this.logger.error(`Error en checkAndAward para userId=${userId}`, err);

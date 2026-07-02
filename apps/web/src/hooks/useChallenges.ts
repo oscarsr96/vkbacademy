@@ -33,7 +33,8 @@ export function useMyChallenges() {
 export function useAdminChallenges(selectedAcademyId?: string | null) {
   return useQuery({
     queryKey: ['admin', 'challenges', selectedAcademyId],
-    queryFn: () => adminApi.listChallenges(),
+    // Límite alto: la página muestra el listado completo, no pagina en la UI
+    queryFn: () => adminApi.listChallenges({ limit: 500 }),
   });
 }
 

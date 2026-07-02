@@ -90,12 +90,30 @@ export class BookingsService {
       }
     }
 
-    // Verificar que el profesor existe
+    // ADMIN / SUPER_ADMIN: el alumno debe pertenecer a la academia del contexto
+    // (para SUPER_ADMIN, la resuelta vía X-Academy-Id; para ADMIN, la suya).
+    if (creatorRole === Role.ADMIN || creatorRole === Role.SUPER_ADMIN) {
+      if (!academyId) {
+        throw new ForbiddenException('No hay una academia en contexto para crear la reserva');
+      }
+      const membership = await this.prisma.academyMember.findFirst({
+        where: { userId: dto.studentId, academyId },
+        select: { id: true },
+      });
+      if (!membership) {
+        throw new ForbiddenException('El alumno no pertenece a tu academia');
+      }
+    }
+
+    // Verificar que el profesor existe y que corresponde a un usuario TEACHER
     const teacher = await this.prisma.teacherProfile.findUnique({
       where: { id: dto.teacherId },
-      include: { user: { select: { name: true, email: true } } },
+      include: { user: { select: { name: true, email: true, role: true } } },
     });
     if (!teacher) throw new NotFoundException('Profesor no encontrado');
+    if (teacher.user.role !== Role.TEACHER) {
+      throw new ForbiddenException('El profesor indicado no es válido');
+    }
 
     // Verificar que el curso existe si se ha indicado
     let courseName: string | undefined;

@@ -1,5 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Role } from '@prisma/client';
+import type { AuthenticatedUser } from '../types/authenticated-user';
 
 /**
  * Guard que resuelve el academyId y lo adjunta a request.academyId.
@@ -13,7 +14,11 @@ import { Role } from '@prisma/client';
 @Injectable()
 export class AcademyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<{
+      user?: AuthenticatedUser;
+      headers: Record<string, string | undefined>;
+      academyId?: string | null;
+    }>();
     const user = request.user;
 
     if (!user) return true;

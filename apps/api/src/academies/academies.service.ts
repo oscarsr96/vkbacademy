@@ -4,10 +4,22 @@ import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAcademyDto, UpdateAcademyDto } from './dto/create-academy.dto';
+import { TtlCache } from '../common/ttl-cache';
+
+type PublicAcademy = {
+  id: string;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  primaryColor: string | null;
+  isActive: boolean;
+};
 
 @Injectable()
 export class AcademiesService {
   private readonly logger = new Logger(AcademiesService.name);
+  // findBySlug es público y se golpea en cada carga del portal de la academia
+  private readonly bySlugCache = new TtlCache<string, PublicAcademy>(5 * 60 * 1000);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -55,6 +67,9 @@ export class AcademiesService {
   }
 
   async findBySlug(slug: string) {
+    const cached = this.bySlugCache.get(slug);
+    if (cached) return cached;
+
     const academy = await this.prisma.academy.findUnique({
       where: { slug },
       select: {
@@ -67,6 +82,8 @@ export class AcademiesService {
       },
     });
     if (!academy) throw new NotFoundException('Academia no encontrada');
+
+    this.bySlugCache.set(slug, academy);
     return academy;
   }
 
@@ -150,6 +167,9 @@ export class AcademiesService {
       where: { id },
       data: dto,
     });
+
+    // El slug no es editable, así que basta con invalidar la entrada actual
+    this.bySlugCache.delete(current.slug);
 
     // Si cambió el dominio, registrar el nuevo y quitar el viejo
     if (dto.domain && dto.domain !== current.domain) {

@@ -13,7 +13,11 @@ import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { AdminService } from './admin.service';
+import { AdminUsersService } from './admin-users.service';
+import { AdminContentService } from './admin-content.service';
+import { AdminAnalyticsService } from './admin-analytics.service';
+import { AdminGamificationService } from './admin-gamification.service';
+import { AdminExamsService } from './admin-exams.service';
 import { CourseGeneratorService } from './course-generator.service';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { GenerateCourseDto } from './dto/generate-course.dto';
@@ -49,62 +53,77 @@ import { CurrentAcademy } from '../auth/decorators/current-academy.decorator';
 @Roles(Role.ADMIN)
 export class AdminController {
   constructor(
-    private readonly adminService: AdminService,
+    private readonly adminUsersService: AdminUsersService,
+    private readonly adminContentService: AdminContentService,
+    private readonly adminAnalyticsService: AdminAnalyticsService,
+    private readonly adminGamificationService: AdminGamificationService,
+    private readonly adminExamsService: AdminExamsService,
     private readonly courseGeneratorService: CourseGeneratorService,
     private readonly billingService: BillingService,
     private readonly certificatesService: CertificatesService,
   ) {}
 
   @Get('users')
-  getUsers(@CurrentAcademy() academyId: string | null) {
-    return this.adminService.getUsers(academyId);
+  getUsers(
+    @CurrentAcademy() academyId: string | null,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+    @Query('role') role?: Role,
+  ) {
+    return this.adminUsersService.getUsers(academyId, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      search,
+      role,
+    });
   }
 
   @Patch('users/:id/role')
   updateRole(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
-    return this.adminService.updateRole(id, dto.role);
+    return this.adminUsersService.updateRole(id, dto.role);
   }
 
   @Patch('users/:id/tutor')
   assignTutor(@Param('id') id: string, @Body() dto: AssignTutorDto) {
-    return this.adminService.assignTutor(id, dto.tutorId);
+    return this.adminUsersService.assignTutor(id, dto.tutorId);
   }
 
   @Post('users')
   createUser(@Body() dto: CreateAdminUserDto, @CurrentAcademy() academyId: string | null) {
-    return this.adminService.createUser(dto, academyId);
+    return this.adminUsersService.createUser(dto, academyId);
   }
 
   @Patch('users/:id')
   updateUser(@Param('id') id: string, @Body() dto: UpdateAdminUserDto) {
-    return this.adminService.updateUser(id, dto);
+    return this.adminUsersService.updateUser(id, dto);
   }
 
   @Delete('users/:id')
   deleteUser(@Param('id') id: string) {
-    return this.adminService.deleteUser(id);
+    return this.adminUsersService.deleteUser(id);
   }
 
   // ─── Matrículas manuales ──────────────────────────────────────────────────
 
   @Get('users/:id/enrollments')
   getEnrollments(@Param('id') id: string) {
-    return this.adminService.getEnrollments(id);
+    return this.adminUsersService.getEnrollments(id);
   }
 
   @Post('users/:id/enrollments')
   enroll(@Param('id') id: string, @Body() dto: EnrollUserDto) {
-    return this.adminService.enroll(id, dto.courseId);
+    return this.adminUsersService.enroll(id, dto.courseId);
   }
 
   @Delete('users/:id/enrollments/:courseId')
   unenroll(@Param('id') id: string, @Param('courseId') courseId: string) {
-    return this.adminService.unenroll(id, courseId);
+    return this.adminUsersService.unenroll(id, courseId);
   }
 
   @Get('metrics')
   getMetrics() {
-    return this.adminService.getMetrics();
+    return this.adminAnalyticsService.getMetrics();
   }
 
   // ─── Facturación ──────────────────────────────────────────────────────────
@@ -124,7 +143,7 @@ export class AdminController {
 
   @Get('analytics')
   getAnalytics(@Query() query: AnalyticsQueryDto) {
-    return this.adminService.getAnalytics(query);
+    return this.adminAnalyticsService.getAnalytics(query);
   }
 
   @Get('courses')
@@ -134,7 +153,7 @@ export class AdminController {
     @Query('schoolYearId') schoolYearId?: string,
     @Query('search') search?: string,
   ) {
-    return this.adminService.listCourses({
+    return this.adminContentService.listCourses({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       schoolYearId,
@@ -145,7 +164,7 @@ export class AdminController {
   // Debe declararse ANTES que DELETE /admin/courses/:id para evitar conflictos de rutas
   @Get('courses/:courseId/detail')
   getCourseDetail(@Param('courseId') courseId: string) {
-    return this.adminService.getCourseDetail(courseId);
+    return this.adminContentService.getCourseDetail(courseId);
   }
 
   @Post('courses/generate')
@@ -155,12 +174,12 @@ export class AdminController {
 
   @Post('courses/import')
   importCourse(@Body() dto: ImportCourseDto) {
-    return this.adminService.importCourse(dto);
+    return this.adminContentService.importCourse(dto);
   }
 
   @Delete('courses/:id')
   deleteCourse(@Param('id') id: string) {
-    return this.adminService.deleteCourse(id);
+    return this.adminContentService.deleteCourse(id);
   }
 
   // ─── Módulos ──────────────────────────────────────────────────────────────
@@ -173,17 +192,17 @@ export class AdminController {
 
   @Post('courses/:courseId/modules')
   createModule(@Param('courseId') courseId: string, @Body() dto: CreateModuleDto) {
-    return this.adminService.createModule(courseId, dto);
+    return this.adminContentService.createModule(courseId, dto);
   }
 
   @Patch('modules/:moduleId')
   updateModule(@Param('moduleId') moduleId: string, @Body() dto: UpdateModuleDto) {
-    return this.adminService.updateModule(moduleId, dto);
+    return this.adminContentService.updateModule(moduleId, dto);
   }
 
   @Delete('modules/:moduleId')
   deleteModule(@Param('moduleId') moduleId: string) {
-    return this.adminService.deleteModule(moduleId);
+    return this.adminContentService.deleteModule(moduleId);
   }
 
   // ─── Lecciones ────────────────────────────────────────────────────────────
@@ -196,30 +215,30 @@ export class AdminController {
 
   @Post('modules/:moduleId/lessons')
   createLesson(@Param('moduleId') moduleId: string, @Body() dto: CreateLessonDto) {
-    return this.adminService.createLesson(moduleId, dto);
+    return this.adminContentService.createLesson(moduleId, dto);
   }
 
   @Patch('lessons/:lessonId')
   updateLesson(@Param('lessonId') lessonId: string, @Body() dto: UpdateLessonDto) {
-    return this.adminService.updateLesson(lessonId, dto);
+    return this.adminContentService.updateLesson(lessonId, dto);
   }
 
   @Delete('lessons/:lessonId')
   deleteLesson(@Param('lessonId') lessonId: string) {
-    return this.adminService.deleteLesson(lessonId);
+    return this.adminContentService.deleteLesson(lessonId);
   }
 
   @Get('lessons/:lessonId/youtube-candidates')
   getYoutubeCandidates(@Param('lessonId') lessonId: string, @Query('exclude') exclude?: string) {
     const excludeIds = exclude ? exclude.split(',').filter(Boolean) : [];
-    return this.adminService.getYoutubeCandidates(lessonId, excludeIds);
+    return this.adminContentService.getYoutubeCandidates(lessonId, excludeIds);
   }
 
   // ─── Quiz ─────────────────────────────────────────────────────────────────
 
   @Post('lessons/:lessonId/quiz')
   initQuiz(@Param('lessonId') lessonId: string) {
-    return this.adminService.initQuiz(lessonId);
+    return this.adminContentService.initQuiz(lessonId);
   }
 
   // ─── Preguntas ────────────────────────────────────────────────────────────
@@ -232,69 +251,79 @@ export class AdminController {
 
   @Post('quizzes/:quizId/questions')
   createQuestion(@Param('quizId') quizId: string, @Body() dto: CreateQuestionDto) {
-    return this.adminService.createQuestion(quizId, dto);
+    return this.adminContentService.createQuestion(quizId, dto);
   }
 
   @Patch('questions/:questionId')
   updateQuestion(@Param('questionId') questionId: string, @Body() dto: UpdateQuestionDto) {
-    return this.adminService.updateQuestion(questionId, dto);
+    return this.adminContentService.updateQuestion(questionId, dto);
   }
 
   @Delete('questions/:questionId')
   deleteQuestion(@Param('questionId') questionId: string) {
-    return this.adminService.deleteQuestion(questionId);
+    return this.adminContentService.deleteQuestion(questionId);
   }
 
   // ─── Canjes ───────────────────────────────────────────────────────────────
 
   @Get('redemptions')
-  listRedemptions(@CurrentAcademy() academyId: string | null) {
-    return this.adminService.listRedemptions(academyId);
+  listRedemptions(
+    @CurrentAcademy() academyId: string | null,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.adminGamificationService.listRedemptions(academyId, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
   }
 
   @Patch('redemptions/:id/deliver')
   markRedemptionDelivered(@Param('id') id: string) {
-    return this.adminService.markRedemptionDelivered(id);
+    return this.adminGamificationService.markRedemptionDelivered(id);
   }
 
   // ─── Retos ────────────────────────────────────────────────────────────────
 
   @Get('challenges')
-  listChallenges() {
-    return this.adminService.listChallenges();
+  listChallenges(@Query('page') page = '1', @Query('limit') limit = '20') {
+    return this.adminGamificationService.listChallenges({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
   }
 
   @Post('challenges')
   createChallenge(@Body() dto: CreateChallengeDto) {
-    return this.adminService.createChallenge(dto);
+    return this.adminGamificationService.createChallenge(dto);
   }
 
   @Patch('challenges/:challengeId')
   updateChallenge(@Param('challengeId') id: string, @Body() dto: UpdateChallengeDto) {
-    return this.adminService.updateChallenge(id, dto);
+    return this.adminGamificationService.updateChallenge(id, dto);
   }
 
   @Delete('challenges/:challengeId')
   deleteChallenge(@Param('challengeId') id: string) {
-    return this.adminService.deleteChallenge(id);
+    return this.adminGamificationService.deleteChallenge(id);
   }
 
   @Patch('challenges/:challengeId/toggle')
   toggleChallenge(@Param('challengeId') id: string) {
-    return this.adminService.toggleChallenge(id);
+    return this.adminGamificationService.toggleChallenge(id);
   }
 
   // ─── Banco de preguntas de examen ──────────────────────────────────────────
 
   @Get('exam-questions')
   getExamQuestions(@Query('courseId') courseId?: string, @Query('moduleId') moduleId?: string) {
-    return this.adminService.getExamQuestions(courseId, moduleId);
+    return this.adminExamsService.getExamQuestions(courseId, moduleId);
   }
 
   // Debe declararse ANTES que POST /admin/exam-questions para evitar conflictos de ruta
   @Post('exam-questions/import')
   importExamQuestions(@Body() dto: ImportExamQuestionsDto) {
-    return this.adminService.importExamQuestions(dto);
+    return this.adminExamsService.importExamQuestions(dto);
   }
 
   @Post('exam-questions/generate')
@@ -307,29 +336,40 @@ export class AdminController {
 
   @Post('exam-questions')
   createExamQuestion(@Body() dto: CreateExamQuestionDto) {
-    return this.adminService.createExamQuestion(dto);
+    return this.adminExamsService.createExamQuestion(dto);
   }
 
   @Patch('exam-questions/:id')
   updateExamQuestion(@Param('id') id: string, @Body() dto: UpdateExamQuestionDto) {
-    return this.adminService.updateExamQuestion(id, dto);
+    return this.adminExamsService.updateExamQuestion(id, dto);
   }
 
   @Delete('exam-questions/:id')
   deleteExamQuestion(@Param('id') id: string) {
-    return this.adminService.deleteExamQuestion(id);
+    return this.adminExamsService.deleteExamQuestion(id);
   }
 
   @Get('exam-attempts')
-  getExamAttempts(@Query('courseId') courseId?: string, @Query('moduleId') moduleId?: string) {
-    return this.adminService.getExamAttempts(courseId, moduleId);
+  getExamAttempts(
+    @Query('courseId') courseId?: string,
+    @Query('moduleId') moduleId?: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.adminExamsService.getExamAttempts(courseId, moduleId, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
   }
 
   // ─── Certificados ─────────────────────────────────────────────────────────
 
   @Get('certificates')
-  getAllCertificates() {
-    return this.certificatesService.getAllCertificates();
+  getAllCertificates(@Query('page') page = '1', @Query('limit') limit = '10') {
+    return this.certificatesService.getAllCertificates({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
   }
 
   @Post('certificates')

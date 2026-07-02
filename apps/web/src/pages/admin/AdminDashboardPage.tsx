@@ -100,9 +100,10 @@ export default function AdminDashboardPage() {
     queryFn: () => adminApi.listCourses({ limit: 200 }),
   });
 
-  const { data: certs = [] } = useQuery({
+  const { data: certsPage } = useQuery({
     queryKey: ['admin', 'certificates', selectedAcademyId],
-    queryFn: adminApi.listCertificates,
+    // Solo necesitamos los 10 más recientes para la tabla; los conteos por tipo llegan en `stats`
+    queryFn: () => adminApi.listCertificates({ limit: 10 }),
     staleTime: 60_000,
   });
 
@@ -118,10 +119,10 @@ export default function AdminDashboardPage() {
   const pendingBookings =
     data?.bookings.byStatus.find((b) => b.status === 'PENDING')?.count ?? 0;
 
-  // Conteo de certificados por tipo
-  const certByType = (type: AdminCertificateType) =>
-    certs.filter((c) => c.type === type).length;
-  const recentCerts = certs.slice(0, 10);
+  // Conteo de certificados por tipo (ya agregado por el backend, no por la página cargada)
+  const certByType = (type: AdminCertificateType) => certsPage?.stats.byType[type] ?? 0;
+  const recentCerts = certsPage?.data ?? [];
+  const certsTotal = certsPage?.total ?? 0;
 
   return (
     <div style={s.page}>
@@ -250,7 +251,7 @@ export default function AdminDashboardPage() {
             <KpiCard label="Reservas creadas" value={kpis.newBookings} color="var(--color-primary)" icon="📅" />
             <KpiCard label="Confirmadas" value={kpis.confirmedBookings} color="#10b981" icon="✔️" />
             <KpiCard label="Canceladas" value={kpis.cancelledBookings} color="#ef4444" icon="❌" />
-            <KpiCard label="Certificados emitidos" value={certs.length} color="#7c3aed" icon="📜" subtitle="Total histórico" />
+            <KpiCard label="Certificados emitidos" value={certsTotal} color="#7c3aed" icon="📜" subtitle="Total histórico" />
             <KpiCard label="Cursos completados" value={certByType('COURSE_COMPLETION')} color="#0891b2" icon="🏆" subtitle="Certificados" />
           </div>
 
@@ -508,16 +509,16 @@ export default function AdminDashboardPage() {
 
         {/* Tabla de últimos certificados */}
         <div className="vkb-card" style={{ padding: '20px 24px' }}>
-          {certs.length === 0 ? (
+          {certsTotal === 0 ? (
             <p style={s.empty}>Aún no se han emitido certificados</p>
           ) : (
             <>
               {recentCerts.map((c) => (
                 <CertRow key={c.id} cert={c} />
               ))}
-              {certs.length > 10 && (
+              {certsTotal > 10 && (
                 <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.5rem', textAlign: 'center' as const }}>
-                  Mostrando los 10 más recientes de {certs.length} totales
+                  Mostrando los 10 más recientes de {certsTotal} totales
                 </p>
               )}
             </>

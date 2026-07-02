@@ -1,16 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { AdminService } from './admin.service';
+import { AdminUsersService } from './admin-users.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { YoutubeService } from '../youtube/youtube.service';
 
 // Mockear bcrypt para evitar el coste de rondas reales en los tests
 jest.mock('bcrypt');
 const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
-describe('AdminService', () => {
-  let service: AdminService;
+describe('AdminUsersService', () => {
+  let service: AdminUsersService;
   let mockPrisma: {
     user: {
       findMany: jest.Mock;
@@ -62,14 +61,10 @@ describe('AdminService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AdminService,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: YoutubeService, useValue: { findCandidates: jest.fn() } },
-      ],
+      providers: [AdminUsersService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
 
-    service = module.get<AdminService>(AdminService);
+    service = module.get<AdminUsersService>(AdminUsersService);
     jest.clearAllMocks();
     mockedBcrypt.hash.mockResolvedValue('$2b$10$hashedpassword' as never);
   });

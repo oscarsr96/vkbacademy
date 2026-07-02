@@ -264,7 +264,7 @@ describe('ChallengesService', () => {
       };
       mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
       mockPrisma.userProgress.count.mockResolvedValue(5); // exactamente el target
-      mockPrisma.userChallenge.findUnique.mockResolvedValue(null); // no existía
+      mockPrisma.userChallenge.findMany.mockResolvedValue([]); // no existía
       mockPrisma.userChallenge.upsert.mockResolvedValue({});
       mockPrisma.user.update.mockResolvedValue({});
 
@@ -294,7 +294,7 @@ describe('ChallengesService', () => {
       };
       mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
       mockPrisma.userProgress.count.mockResolvedValue(3); // por debajo del target
-      mockPrisma.userChallenge.findUnique.mockResolvedValue(null);
+      mockPrisma.userChallenge.findMany.mockResolvedValue([]);
       mockPrisma.userChallenge.upsert.mockResolvedValue({});
 
       await service.checkAndAward('user1', ChallengeType.EXERCISE_COMPLETED);
@@ -317,7 +317,7 @@ describe('ChallengesService', () => {
       };
       mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
       mockPrisma.userProgress.count.mockResolvedValue(10); // supera target
-      mockPrisma.userChallenge.findUnique.mockResolvedValue({ completed: true }); // ya completado
+      mockPrisma.userChallenge.findMany.mockResolvedValue([{ challengeId: 'ch1', completed: true }]); // ya completado
 
       await service.checkAndAward('user1', ChallengeType.EXERCISE_COMPLETED);
 
@@ -335,10 +335,9 @@ describe('ChallengesService', () => {
       };
       mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
       mockPrisma.userProgress.count.mockResolvedValue(8);
-      mockPrisma.userChallenge.findUnique.mockResolvedValue({
-        completed: false,
-        progress: 5,
-      });
+      mockPrisma.userChallenge.findMany.mockResolvedValue([
+        { challengeId: 'ch1', completed: false, progress: 5 },
+      ]);
       mockPrisma.userChallenge.upsert.mockResolvedValue({});
 
       await service.checkAndAward('user1', ChallengeType.EXERCISE_COMPLETED);

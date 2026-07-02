@@ -207,7 +207,7 @@ function ChallengeForm({ initial, onSubmit, onCancel, isPending, title }: Challe
 
 export default function AdminChallengesPage() {
   const selectedAcademyId = useAcademyFilterStore((s) => s.selectedAcademyId);
-  const { data: challenges, isLoading } = useAdminChallenges(selectedAcademyId);
+  const { data: challengesPage, isLoading } = useAdminChallenges(selectedAcademyId);
   const createMutation = useCreateChallenge();
   const updateMutation = useUpdateChallenge();
   const deleteMutation = useDeleteChallenge();
@@ -230,8 +230,8 @@ export default function AdminChallengesPage() {
     deleteMutation.mutate(id, { onSuccess: () => setConfirmDelete(null) });
   };
 
-  const list = challenges ?? [];
-  const activeCount = list.filter((c) => c.isActive).length;
+  const list = challengesPage?.data ?? [];
+  const activeCount = challengesPage?.stats.activeCount ?? 0;
 
   const thStyle: React.CSSProperties = {
     textAlign: 'left',
