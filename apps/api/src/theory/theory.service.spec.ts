@@ -229,6 +229,34 @@ describe('TheoryService', () => {
       expect(prompt).toContain('3º ESO');
       expect(prompt).toContain('propiedades de logaritmos');
     });
+
+    it('el prompt exige la estructura Winston (promesa, cycling, fencing, ejemplos paso a paso, cierre)', async () => {
+      prisma.course.findUnique.mockResolvedValue(baseCourse);
+      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
+      ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
+      youtube.findCandidates.mockResolvedValue([]);
+      prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
+
+      await service.generate('user-1', { courseId: 'course-1', topic: 't' });
+
+      const prompt = ai.generate.mock.calls[0][0] as string;
+      // Promesa de empoderamiento (W-OPEN-1) como primera lección
+      expect(prompt).toContain('Qué vas a conseguir');
+      expect(prompt).toContain('**Sabrás**');
+      // Cycling y fencing (W-TEACH-1 / W-TEACH-2)
+      expect(prompt).toContain('Cycling');
+      expect(prompt).toContain('🚧 **Esto SÍ / esto NO:**');
+      // Ejemplos paso a paso con estructura parseable
+      expect(prompt).toContain('MÍNIMO 3 ejemplos');
+      expect(prompt).toContain('**Enunciado:**');
+      expect(prompt).toContain('**Resultado:**');
+      expect(prompt).toContain('**Por qué funciona:**');
+      // Cierre de contribuciones (W-CLOSE-1), nunca despedidas
+      expect(prompt).toContain('Lo que te llevas');
+      expect(prompt).toContain('**Ya sabes**');
+      // Presupuesto ampliado para la estructura nueva
+      expect(ai.generate.mock.calls[0][1]).toBe(6000);
+    });
   });
 
   describe('listMine', () => {

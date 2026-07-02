@@ -513,6 +513,111 @@ export const TSLIDES_CSS = `
     border-left-color: rgba(255,255,255,0.28);
   }
 
+  /* ── Variantes Winston: promesa (objetivos) y cierre (lo que te llevas) ── */
+  .tsl-content--objectives .tsl-body ul,
+  .tsl-content--takeaways .tsl-body ul {
+    list-style: none;
+    margin: 0 0 0.8em;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .tsl-content--objectives .tsl-body li,
+  .tsl-content--takeaways .tsl-body li {
+    position: relative;
+    margin: 0;
+    padding: 14px 18px 14px 58px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 14px;
+    line-height: 1.5;
+  }
+  .tsl-content--objectives .tsl-body li::before,
+  .tsl-content--takeaways .tsl-body li::before {
+    content: '✓';
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--brand-glow);
+    color: var(--brand-light);
+    font-weight: 800;
+    font-size: 0.95rem;
+    display: grid;
+    place-items: center;
+  }
+  .tsl-content--takeaways .tsl-body li {
+    background: var(--brand-soft);
+    border-color: var(--brand);
+  }
+
+  /* ── Slide de ejemplo paso a paso ── */
+  .tsl-example .tsl-body { font-size: clamp(0.95rem, 1.9vw, 1.2rem); }
+  .tsl-ex-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--brand-light);
+    margin-bottom: 6px;
+  }
+  .tsl-ex-statement, .tsl-ex-result, .tsl-ex-why {
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin: 0 0 12px;
+  }
+  .tsl-ex-statement, .tsl-ex-result, .tsl-ex-why, .tsl-ex-step-body { line-height: 1.55; }
+  .tsl-ex-statement p, .tsl-ex-result p, .tsl-ex-why p, .tsl-ex-step-body p { margin: 0; }
+  .tsl-ex-statement {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.16);
+  }
+  .tsl-ex-result {
+    background: var(--brand-soft);
+    border: 1px solid var(--brand);
+  }
+  .tsl-ex-why {
+    background: rgba(255,255,255,0.04);
+    border-left: 4px solid var(--brand-light);
+    border-radius: 6px 14px 14px 6px;
+  }
+  .tsl-ex-steps {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .tsl-ex-steps li { margin: 0; }
+  .tsl-ex-step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 12px 16px;
+  }
+  .tsl-ex-num {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-family: 'Unbounded', 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--brand-light);
+    background: var(--brand-glow);
+    border: 1px solid var(--brand);
+  }
+  .tsl-ex-step-body { flex: 1; min-width: 0; }
+
   /* ── Slide de vídeo ── */
   .tsl-video-frame {
     position: relative;
