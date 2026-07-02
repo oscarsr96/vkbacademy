@@ -50,6 +50,13 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+// Guía de dificultad inyectada en el prompt de generación del examen.
+const DIFFICULTY_GUIDANCE: Record<'EASY' | 'MEDIUM' | 'HARD', string> = {
+  EASY: 'Fácil: conceptos básicos y preguntas directas de una sola idea.',
+  MEDIUM: 'Media: aplicación de conceptos, con algún paso intermedio.',
+  HARD: 'Difícil: razonamiento avanzado, varios pasos y distractores plausibles.',
+};
+
 /**
  * Servicio de exámenes generados por IA por el propio alumno.
  *
@@ -100,6 +107,7 @@ export class AiExamsService {
       moduleTitle,
       dto.topic,
       dto.numQuestions,
+      dto.difficulty ?? 'MEDIUM',
     );
 
     this.logger.log(
@@ -439,6 +447,7 @@ export class AiExamsService {
     moduleTitle: string | undefined,
     topic: string,
     count: number,
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD',
   ): string {
     const dist = this.getTypeDistribution(count);
     return `Genera un examen en español sobre el tema "${topic}".
@@ -446,6 +455,7 @@ export class AiExamsService {
 Curso: "${courseTitle}"
 ${schoolYearLabel ? `Nivel educativo: "${schoolYearLabel}" (sistema educativo español)` : ''}
 ${moduleTitle ? `Módulo: "${moduleTitle}"` : ''}
+Dificultad: ${DIFFICULTY_GUIDANCE[difficulty]}
 Número total de preguntas: ${count}
 
 ⚠️ DISTRIBUCIÓN POR TIPO — OBLIGATORIA, NO NEGOCIABLE:

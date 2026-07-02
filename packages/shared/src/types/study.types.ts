@@ -1,5 +1,8 @@
 import type { TheoryModuleWithLessons } from './theory.types';
 
+// Dificultad de la unidad de estudio. Gobierna la generación de ejercicios y examen.
+export type StudyDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
+
 // Ejercicio persistido en la unidad (misma forma que genera ExercisesService).
 export type StudyExerciseType = 'SINGLE' | 'TRUE_FALSE' | 'OPEN';
 
@@ -65,6 +68,7 @@ export interface CreateStudyUnitRequest {
   courseId: string;
   topic: string;
   numExercises: number;
+  difficulty: StudyDifficulty; // aplica a ejercicios y examen
   numQuestions: 5 | 10;
   timeLimit?: number; // segundos
   onlyOnce?: boolean;

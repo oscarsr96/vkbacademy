@@ -1,4 +1,4 @@
-import { IsInt, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class GenerateExercisesDto {
   @IsString()
@@ -13,4 +13,9 @@ export class GenerateExercisesDto {
   @Min(1)
   @Max(20)
   count: number;
+
+  /// Dificultad del contenido a generar. Opcional (por defecto MEDIUM en el servicio).
+  @IsIn(['EASY', 'MEDIUM', 'HARD'])
+  @IsOptional()
+  difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
 }

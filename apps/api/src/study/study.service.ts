@@ -42,7 +42,14 @@ export class StudyService {
 
     // Unidad "cáscara": título/summary provisionales, se completan desde la teoría.
     const unit = await this.prisma.studyUnit.create({
-      data: { userId, courseId: dto.courseId, topic: dto.topic, title: dto.topic, summary: '' },
+      data: {
+        userId,
+        courseId: dto.courseId,
+        topic: dto.topic,
+        title: dto.topic,
+        summary: '',
+        difficulty: dto.difficulty,
+      },
     });
 
     // Las 3 secciones a la vez. allSettled: una que falle no tumba las demás.
@@ -52,6 +59,7 @@ export class StudyService {
         courseId: dto.courseId,
         topic: dto.topic,
         count: dto.numExercises,
+        difficulty: dto.difficulty,
       }),
       this.aiExams.generate(userId, {
         courseId: dto.courseId,
@@ -59,6 +67,7 @@ export class StudyService {
         numQuestions: dto.numQuestions,
         timeLimit: dto.timeLimit,
         onlyOnce: dto.onlyOnce,
+        difficulty: dto.difficulty,
       }),
     ]);
 
@@ -215,6 +224,7 @@ export class StudyService {
       courseId: unit.courseId,
       topic: unit.topic,
       count,
+      difficulty: unit.difficulty as 'EASY' | 'MEDIUM' | 'HARD',
     });
     await this.prisma.studyUnit.update({
       where: { id: unit.id },
@@ -232,6 +242,7 @@ export class StudyService {
       numQuestions: dto.numQuestions ?? 5,
       timeLimit: dto.timeLimit,
       onlyOnce: dto.onlyOnce,
+      difficulty: unit.difficulty as 'EASY' | 'MEDIUM' | 'HARD',
     });
     await this.prisma.aiExamBank.update({
       where: { id: bank.id },
