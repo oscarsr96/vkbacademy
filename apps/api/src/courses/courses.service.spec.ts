@@ -2,7 +2,20 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { CoursesService } from './courses.service';
+
+// Construye un solicitante mínimo con la forma que consume el service.
+function requester(
+  role: Role,
+  opts: { id?: string; academyId?: string | null } = {},
+): AuthenticatedUser {
+  return {
+    id: opts.id ?? 'req1',
+    role,
+    academyId: opts.academyId ?? null,
+  } as unknown as AuthenticatedUser;
+}
 
 // ---------------------------------------------------------------------------
 // Fixture
@@ -45,6 +58,12 @@ const mockPrisma = {
   },
   userProgress: {
     findMany: jest.fn(),
+  },
+  user: {
+    findUnique: jest.fn(),
+  },
+  academyMember: {
+    findFirst: jest.fn(),
   },
 };
 
@@ -254,6 +273,81 @@ describe('CoursesService', () => {
 
       expect(result.completedLessonIds).toEqual(['l1']);
       expect(result.courseId).toBe('course1');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getStudentCourseProgress — ownership por rol (SEG-01)
+  // -------------------------------------------------------------------------
+
+  describe('getStudentCourseProgress', () => {
+    beforeEach(() => {
+      mockPrisma.course.findUnique.mockResolvedValue(fakeCourse);
+      mockPrisma.userProgress.findMany.mockResolvedValue([]);
+    });
+
+    it('TEACHER: accede sin comprobar ownership (ve resultados de todos)', async () => {
+      const result = await service.getStudentCourseProgress(
+        'course1',
+        'student1',
+        requester(Role.TEACHER, { id: 'teacher1' }),
+      );
+
+      expect(result.courseId).toBe('course1');
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockPrisma.academyMember.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('TUTOR con alumno propio: accede', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ tutorId: 'tutor1' });
+
+      const result = await service.getStudentCourseProgress(
+        'course1',
+        'student1',
+        requester(Role.TUTOR, { id: 'tutor1' }),
+      );
+
+      expect(result.courseId).toBe('course1');
+    });
+
+    it('TUTOR con alumno ajeno: lanza ForbiddenException', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ tutorId: 'otroTutor' });
+
+      await expect(
+        service.getStudentCourseProgress(
+          'course1',
+          'student1',
+          requester(Role.TUTOR, { id: 'tutor1' }),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('ADMIN con alumno de su academia: accede', async () => {
+      mockPrisma.academyMember.findFirst.mockResolvedValue({ id: 'am1' });
+
+      const result = await service.getStudentCourseProgress(
+        'course1',
+        'student1',
+        requester(Role.ADMIN, { id: 'admin1', academyId: 'ac1' }),
+      );
+
+      expect(mockPrisma.academyMember.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'student1', academyId: 'ac1' },
+        select: { id: true },
+      });
+      expect(result.courseId).toBe('course1');
+    });
+
+    it('ADMIN con alumno de otra academia: lanza ForbiddenException', async () => {
+      mockPrisma.academyMember.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getStudentCourseProgress(
+          'course1',
+          'student1',
+          requester(Role.ADMIN, { id: 'admin1', academyId: 'ac1' }),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

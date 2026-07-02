@@ -27,6 +27,9 @@ describe('BookingsService', () => {
     course: {
       findUnique: jest.fn(),
     },
+    academyMember: {
+      findFirst: jest.fn(),
+    },
   };
 
   const mockDaily = {
@@ -142,6 +145,8 @@ describe('BookingsService', () => {
     beforeEach(() => {
       jest.useFakeTimers();
       jest.setSystemTime(new Date('2026-01-15T12:00:00Z'));
+      // Por defecto el alumno pertenece a la academia del contexto (SEG-06)
+      mockPrisma.academyMember.findFirst.mockResolvedValue({ id: 'am1' });
     });
 
     afterEach(() => {
@@ -167,7 +172,7 @@ describe('BookingsService', () => {
     it('lanza NotFoundException si el profesor no existe', async () => {
       mockPrisma.teacherProfile.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(validDto, 'admin1', Role.ADMIN)).rejects.toThrow(
+      await expect(service.create(validDto, 'admin1', Role.ADMIN, 'academy1')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -175,19 +180,19 @@ describe('BookingsService', () => {
     it('lanza NotFoundException si el courseId indicado no existe', async () => {
       mockPrisma.teacherProfile.findUnique.mockResolvedValue({
         id: 'tp1',
-        user: { name: 'Profesor', email: 'profesor@test.com' },
+        user: { name: 'Profesor', email: 'profesor@test.com', role: Role.TEACHER },
       });
       mockPrisma.course.findUnique.mockResolvedValue(null);
 
       const dto = { ...validDto, courseId: 'nonexistent-course' };
 
-      await expect(service.create(dto, 'admin1', Role.ADMIN)).rejects.toThrow(NotFoundException);
+      await expect(service.create(dto, 'admin1', Role.ADMIN, 'academy1')).rejects.toThrow(NotFoundException);
     });
 
     it('lanza BadRequestException si startAt >= endAt', async () => {
       mockPrisma.teacherProfile.findUnique.mockResolvedValue({
         id: 'tp1',
-        user: { name: 'Profesor', email: 'profesor@test.com' },
+        user: { name: 'Profesor', email: 'profesor@test.com', role: Role.TEACHER },
       });
 
       const dto = {
@@ -196,13 +201,13 @@ describe('BookingsService', () => {
         endAt: '2026-01-20T10:00:00Z',
       };
 
-      await expect(service.create(dto, 'admin1', Role.ADMIN)).rejects.toThrow(BadRequestException);
+      await expect(service.create(dto, 'admin1', Role.ADMIN, 'academy1')).rejects.toThrow(BadRequestException);
     });
 
     it('lanza BadRequestException si startAt es en el pasado', async () => {
       mockPrisma.teacherProfile.findUnique.mockResolvedValue({
         id: 'tp1',
-        user: { name: 'Profesor', email: 'profesor@test.com' },
+        user: { name: 'Profesor', email: 'profesor@test.com', role: Role.TEACHER },
       });
 
       const dto = {
@@ -211,17 +216,17 @@ describe('BookingsService', () => {
         endAt: '2026-01-10T11:00:00Z',
       };
 
-      await expect(service.create(dto, 'admin1', Role.ADMIN)).rejects.toThrow(BadRequestException);
+      await expect(service.create(dto, 'admin1', Role.ADMIN, 'academy1')).rejects.toThrow(BadRequestException);
     });
 
     it('lanza BadRequestException si hay conflicto de horario con otra reserva', async () => {
       mockPrisma.teacherProfile.findUnique.mockResolvedValue({
         id: 'tp1',
-        user: { name: 'Profesor', email: 'profesor@test.com' },
+        user: { name: 'Profesor', email: 'profesor@test.com', role: Role.TEACHER },
       });
       mockPrisma.booking.findFirst.mockResolvedValue({ id: 'existing-booking' });
 
-      await expect(service.create(validDto, 'admin1', Role.ADMIN)).rejects.toThrow(
+      await expect(service.create(validDto, 'admin1', Role.ADMIN, 'academy1')).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -229,7 +234,7 @@ describe('BookingsService', () => {
     it('crea la reserva correctamente en el happy path', async () => {
       mockPrisma.teacherProfile.findUnique.mockResolvedValue({
         id: 'tp1',
-        user: { name: 'Profesor Test', email: 'profesor@test.com' },
+        user: { name: 'Profesor Test', email: 'profesor@test.com', role: Role.TEACHER },
       });
       mockPrisma.booking.findFirst.mockResolvedValue(null);
       const createdBooking = { id: 'new-booking', studentId: 'student1', teacherId: 'tp1' };
@@ -238,7 +243,7 @@ describe('BookingsService', () => {
         .mockResolvedValueOnce({ name: 'Admin User' }) // creador
         .mockResolvedValueOnce({ name: 'Alumno Test' }); // alumno
 
-      const result = await service.create(validDto, 'admin1', Role.ADMIN);
+      const result = await service.create(validDto, 'admin1', Role.ADMIN, 'academy1');
 
       expect(mockPrisma.booking.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -255,7 +260,7 @@ describe('BookingsService', () => {
     it('llama a notifications.sendBookingCreated tras crear la reserva', async () => {
       mockPrisma.teacherProfile.findUnique.mockResolvedValue({
         id: 'tp1',
-        user: { name: 'Profesor Test', email: 'profesor@test.com' },
+        user: { name: 'Profesor Test', email: 'profesor@test.com', role: Role.TEACHER },
       });
       mockPrisma.booking.findFirst.mockResolvedValue(null);
       mockPrisma.booking.create.mockResolvedValue({ id: 'new-booking' });
@@ -276,6 +281,57 @@ describe('BookingsService', () => {
           mode: BookingMode.IN_PERSON,
         }),
       );
+    });
+
+    // ─── SEG-06: el ADMIN no puede reservar para alumnos/profesores arbitrarios ──
+
+    it('ADMIN: lanza ForbiddenException si el alumno no pertenece a su academia', async () => {
+      mockPrisma.academyMember.findFirst.mockResolvedValue(null);
+
+      await expect(service.create(validDto, 'admin1', Role.ADMIN, 'academy1')).rejects.toThrow(
+        ForbiddenException,
+      );
+      // No debe llegar siquiera a comprobar el profesor
+      expect(mockPrisma.teacherProfile.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('ADMIN: lanza ForbiddenException si no hay academia en contexto', async () => {
+      await expect(service.create(validDto, 'admin1', Role.ADMIN, null)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('ADMIN: lanza ForbiddenException si el teacherId no corresponde a un TEACHER', async () => {
+      mockPrisma.teacherProfile.findUnique.mockResolvedValue({
+        id: 'tp1',
+        user: { name: 'No Profesor', email: 'x@test.com', role: Role.STUDENT },
+      });
+
+      await expect(service.create(validDto, 'admin1', Role.ADMIN, 'academy1')).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockPrisma.booking.create).not.toHaveBeenCalled();
+    });
+
+    it('SUPER_ADMIN: crea la reserva validando la academia del contexto', async () => {
+      mockPrisma.teacherProfile.findUnique.mockResolvedValue({
+        id: 'tp1',
+        user: { name: 'Profesor Test', email: 'profesor@test.com', role: Role.TEACHER },
+      });
+      mockPrisma.booking.findFirst.mockResolvedValue(null);
+      const created = { id: 'new-booking', studentId: 'student1', teacherId: 'tp1' };
+      mockPrisma.booking.create.mockResolvedValue(created);
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ name: 'Super Admin' }) // creador
+        .mockResolvedValueOnce({ name: 'Alumno Test' }); // alumno
+
+      const result = await service.create(validDto, 'super1', Role.SUPER_ADMIN, 'academy1');
+
+      expect(mockPrisma.academyMember.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'student1', academyId: 'academy1' },
+        select: { id: true },
+      });
+      expect(result).toBe(created);
     });
   });
 
