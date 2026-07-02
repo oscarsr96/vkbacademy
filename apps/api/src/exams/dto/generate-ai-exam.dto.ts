@@ -39,4 +39,9 @@ export class GenerateAiExamDto {
   @IsBoolean()
   @IsOptional()
   onlyOnce?: boolean;
+
+  /// Dificultad del examen a generar. Opcional (por defecto MEDIUM en el servicio).
+  @IsIn(['EASY', 'MEDIUM', 'HARD'])
+  @IsOptional()
+  difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
 }

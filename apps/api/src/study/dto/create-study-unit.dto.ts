@@ -24,6 +24,9 @@ export class CreateStudyUnitDto {
   @Max(20, { message: 'Máximo 20 ejercicios' })
   numExercises: number;
 
+  @IsIn(['EASY', 'MEDIUM', 'HARD'], { message: 'difficulty debe ser EASY, MEDIUM o HARD' })
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+
   @IsInt()
   @IsIn([5, 10], { message: 'numQuestions debe ser 5 o 10' })
   numQuestions: 5 | 10;

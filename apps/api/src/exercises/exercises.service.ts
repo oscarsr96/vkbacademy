@@ -33,6 +33,13 @@ export interface EvaluationResult {
 
 const VALID_VERDICTS: EvaluationVerdict[] = ['correct', 'partial', 'incorrect'];
 
+// Guía de dificultad inyectada en el prompt de generación.
+const DIFFICULTY_GUIDANCE: Record<'EASY' | 'MEDIUM' | 'HARD', string> = {
+  EASY: 'Fácil: conceptos básicos y ejercicios directos de una sola idea.',
+  MEDIUM: 'Media: aplicación de conceptos, con algún paso intermedio.',
+  HARD: 'Difícil: razonamiento avanzado, varios pasos y casos menos evidentes.',
+};
+
 /**
  * Genera ejercicios de práctica bajo demanda para un alumno matriculado
  * en un curso. Los ejercicios NO se persisten en BD — son efímeros, solo
@@ -75,6 +82,7 @@ export class ExercisesService {
       course.schoolYear?.label ?? '',
       dto.topic,
       dto.count,
+      dto.difficulty ?? 'MEDIUM',
     );
 
     this.logger.log(
@@ -95,7 +103,9 @@ export class ExercisesService {
 
   async evaluate(dto: EvaluateExerciseDto): Promise<EvaluationResult> {
     const prompt = this.buildEvaluationPrompt(dto);
-    this.logger.log(`Evaluando respuesta abierta para enunciado: "${dto.statement.slice(0, 60)}..."`);
+    this.logger.log(
+      `Evaluando respuesta abierta para enunciado: "${dto.statement.slice(0, 60)}..."`,
+    );
 
     const text = await this.ai.generate(prompt, 400);
 
@@ -152,11 +162,13 @@ El feedback debe ser pedagógico, directo y en segunda persona ("Has olvidado si
     schoolYearLabel: string,
     topic: string,
     count: number,
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD',
   ): string {
     return `Genera ${count} ejercicios de práctica en español sobre el tema "${topic}".
 
 Curso: "${courseTitle}"
 ${schoolYearLabel ? `Nivel educativo: "${schoolYearLabel}" (sistema educativo español)` : ''}
+Dificultad: ${DIFFICULTY_GUIDANCE[difficulty]}
 
 Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, sin explicaciones adicionales fuera del JSON):
 {

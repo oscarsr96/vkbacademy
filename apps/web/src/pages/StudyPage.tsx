@@ -1,7 +1,14 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import type { StudyDifficulty } from '@vkbacademy/shared';
 import { useCourses } from '../hooks/useCourses';
 import { useMyStudyUnits, useCreateStudyUnit, useDeleteStudyUnit } from '../hooks/useStudy';
+
+const DIFFICULTIES: { value: StudyDifficulty; label: string }[] = [
+  { value: 'EASY', label: 'Fácil' },
+  { value: 'MEDIUM', label: 'Media' },
+  { value: 'HARD', label: 'Difícil' },
+];
 
 export default function StudyPage() {
   const navigate = useNavigate();
@@ -15,6 +22,7 @@ export default function StudyPage() {
   const [courseId, setCourseId] = useState('');
   const [topic, setTopic] = useState('');
   const [numExercises, setNumExercises] = useState(5);
+  const [difficulty, setDifficulty] = useState<StudyDifficulty>('MEDIUM');
   const [numQuestions, setNumQuestions] = useState<5 | 10>(5);
   const [useTimer, setUseTimer] = useState(false);
   const [timerMins, setTimerMins] = useState(15);
@@ -28,6 +36,7 @@ export default function StudyPage() {
         courseId,
         topic: topic.trim(),
         numExercises,
+        difficulty,
         numQuestions,
         timeLimit: useTimer ? Math.round(timerMins * 60) : undefined,
         onlyOnce,
@@ -52,36 +61,22 @@ export default function StudyPage() {
       </header>
 
       <form onSubmit={handleSubmit} style={s.form}>
-        <div style={s.row}>
-          <div className="field" style={{ flex: 2 }}>
-            <label htmlFor="courseId">Asignatura</label>
-            <select
-              id="courseId"
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-              required
-            >
-              <option value="">Selecciona una asignatura</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field" style={{ flex: 1 }}>
-            <label htmlFor="numExercises">Nº de ejercicios</label>
-            <input
-              id="numExercises"
-              type="number"
-              min={1}
-              max={20}
-              value={numExercises}
-              onChange={(e) =>
-                setNumExercises(Math.max(1, Math.min(20, Number(e.target.value) || 1)))
-              }
-            />
-          </div>
+        {/* Asignatura + tema */}
+        <div className="field">
+          <label htmlFor="courseId">Asignatura</label>
+          <select
+            id="courseId"
+            value={courseId}
+            onChange={(e) => setCourseId(e.target.value)}
+            required
+          >
+            <option value="">Selecciona una asignatura</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="field">
@@ -97,52 +92,91 @@ export default function StudyPage() {
           />
         </div>
 
-        <div className="field">
-          <label>Preguntas del examen</label>
-          <div style={{ display: 'flex', gap: 10 }}>
-            {([5, 10] as const).map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setNumQuestions(n)}
-                style={{ ...s.pill, ...(numQuestions === n ? s.pillActive : {}) }}
-              >
-                {n} preguntas
-              </button>
-            ))}
+        {/* Ejercicios */}
+        <div style={s.section}>
+          <h3 style={s.sectionTitle}>🧮 Ejercicios</h3>
+          <div style={s.row}>
+            <div className="field" style={{ flex: 1 }}>
+              <label htmlFor="numExercises">Nº de ejercicios</label>
+              <input
+                id="numExercises"
+                type="number"
+                min={1}
+                max={20}
+                value={numExercises}
+                onChange={(e) =>
+                  setNumExercises(Math.max(1, Math.min(20, Number(e.target.value) || 1)))
+                }
+              />
+            </div>
+            <div className="field" style={{ flex: 2 }}>
+              <label>Dificultad</label>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {DIFFICULTIES.map((d) => (
+                  <button
+                    key={d.value}
+                    type="button"
+                    onClick={() => setDifficulty(d.value)}
+                    style={{ ...s.pill, ...(difficulty === d.value ? s.pillActive : {}) }}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        <label style={s.toggle}>
-          <input
-            type="checkbox"
-            checked={useTimer}
-            onChange={(e) => setUseTimer(e.target.checked)}
-          />
-          <span>⏱ Límite de tiempo</span>
-          {useTimer && (
-            <input
-              type="number"
-              min={1}
-              max={180}
-              value={timerMins}
-              onChange={(e) =>
-                setTimerMins(Math.min(180, Math.max(1, Number(e.target.value) || 1)))
-              }
-              style={s.timerInput}
-            />
-          )}
-          {useTimer && <span style={s.muted}>minutos</span>}
-        </label>
+        {/* Examen */}
+        <div style={s.section}>
+          <h3 style={s.sectionTitle}>🎓 Examen</h3>
+          <div className="field">
+            <label>Preguntas del examen</label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {([5, 10] as const).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setNumQuestions(n)}
+                  style={{ ...s.pill, ...(numQuestions === n ? s.pillActive : {}) }}
+                >
+                  {n} preguntas
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <label style={s.toggle}>
-          <input
-            type="checkbox"
-            checked={onlyOnce}
-            onChange={(e) => setOnlyOnce(e.target.checked)}
-          />
-          <span>🔒 Examen de un solo intento</span>
-        </label>
+          <label style={s.toggle}>
+            <input
+              type="checkbox"
+              checked={useTimer}
+              onChange={(e) => setUseTimer(e.target.checked)}
+            />
+            <span>⏱ Límite de tiempo</span>
+            {useTimer && (
+              <input
+                type="number"
+                min={1}
+                max={180}
+                value={timerMins}
+                onChange={(e) =>
+                  setTimerMins(Math.min(180, Math.max(1, Number(e.target.value) || 1)))
+                }
+                style={s.timerInput}
+              />
+            )}
+            {useTimer && <span style={s.muted}>minutos</span>}
+          </label>
+
+          <label style={s.toggle}>
+            <input
+              type="checkbox"
+              checked={onlyOnce}
+              onChange={(e) => setOnlyOnce(e.target.checked)}
+            />
+            <span>🔒 Examen de un solo intento</span>
+          </label>
+        </div>
 
         {apiErrorText && (
           <div style={s.errorBox}>
@@ -224,6 +258,16 @@ const s: Record<string, React.CSSProperties> = {
     padding: 24,
   },
   row: { display: 'flex', gap: 16, flexWrap: 'wrap' },
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+    padding: 16,
+    border: '1px solid var(--color-border)',
+    borderRadius: 10,
+    background: 'var(--color-bg)',
+  },
+  sectionTitle: { margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text)' },
   textarea: {
     width: '100%',
     background: 'var(--color-surface)',
