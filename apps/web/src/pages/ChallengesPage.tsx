@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useMyChallenges, useRedeemItem } from '../hooks/useChallenges';
 import type { ChallengeWithProgress } from '../api/challenges.api';
+import { usePageZone } from '../hooks/usePageZone';
+import { launchConfetti } from '../utils/confetti';
+import Icon from '../components/ui/Icon';
+import ScoreValue from '../components/ui/ScoreValue';
+import ProgressBar from '../components/ui/ProgressBar';
+import EmptyState from '../components/ui/EmptyState';
 
 // ─── Artículos de merchandising ───────────────────────────────────────────────
 
@@ -16,7 +22,7 @@ interface MerchItem {
 const MERCH_ITEMS: MerchItem[] = [
   {
     id: 'stickers',
-    icon: '🎨',
+    icon: 'sticker',
     name: 'Pack de stickers VKB',
     description: 'Set de 10 pegatinas exclusivas del club con los logos y jugadores.',
     cost: 100,
@@ -24,35 +30,35 @@ const MERCH_ITEMS: MerchItem[] = [
   },
   {
     id: 'bottle',
-    icon: '💧',
+    icon: 'bottle',
     name: 'Botella termo del club',
     description: 'Botella de acero inoxidable con el escudo de Vallekas Basket. 500 ml.',
     cost: 200,
-    color: '#3b82f6',
+    color: '#13aff0',
   },
   {
     id: 'cap',
-    icon: '🧢',
+    icon: 'cap',
     name: 'Gorra oficial VKB',
     description: 'Gorra snapback con bordado del logo. Talla única ajustable.',
     cost: 350,
-    color: '#f59e0b',
+    color: '#ffd24d',
   },
   {
     id: 'shirt',
-    icon: '👕',
+    icon: 'shirt',
     name: 'Camiseta oficial del club',
     description: 'Camiseta de entrenamiento con tu nombre y el número que elijas.',
     cost: 500,
-    color: '#6366f1',
+    color: '#f5911e',
   },
   {
     id: 'ball',
-    icon: '🏀',
+    icon: 'basketball',
     name: 'Balón firmado por el equipo',
     description: 'Balón de baloncesto oficial firmado por todos los jugadores de la plantilla.',
     cost: 1000,
-    color: '#ef4444',
+    color: '#cb2027',
   },
 ];
 
@@ -62,27 +68,21 @@ type FilterTab = 'all' | 'in-progress' | 'completed';
 
 // ─── Subcomponentes ───────────────────────────────────────────────────────────
 
-function ChallengeCard({ c }: { c: ChallengeWithProgress }) {
-  const pct = c.target > 0 ? Math.min((c.progress / c.target) * 100, 100) : 0;
-
+function ChallengeCard({ c, index }: { c: ChallengeWithProgress; index: number }) {
   const cardStyle: React.CSSProperties = {
-    background: c.completed ? 'rgba(245,158,11,0.05)' : 'var(--color-surface)',
     border: c.completed
-      ? '1.5px solid rgba(245,158,11,0.4)'
-      : '1.5px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)',
+      ? '1.5px solid rgba(255, 210, 77, 0.35)'
+      : '1px solid var(--panel-border)',
     padding: '20px 24px',
     display: 'flex',
     gap: 20,
     alignItems: 'flex-start',
-    boxShadow: c.completed
-      ? '0 4px 20px rgba(245,158,11,0.10)'
-      : 'var(--shadow-card)',
-    transition: 'box-shadow 0.25s, transform 0.25s, border-color 0.25s',
+    boxShadow: c.completed ? '0 4px 20px rgba(255, 210, 77, 0.08)' : undefined,
+    animation: `riseIn 0.5s cubic-bezier(0.18, 0.72, 0.24, 1.12) ${index * 50}ms both`,
   };
 
   return (
-    <div className="vkb-card animate-in" style={cardStyle}>
+    <div className="panel-glass" style={cardStyle}>
       {/* Icono grande del reto */}
       <div
         style={{
@@ -93,8 +93,8 @@ function ChallengeCard({ c }: { c: ChallengeWithProgress }) {
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          background: c.completed ? c.badgeColor : 'rgba(234,88,12,0.10)',
-          border: c.completed ? 'none' : '1.5px solid rgba(234,88,12,0.18)',
+          background: c.completed ? c.badgeColor : 'var(--brand-soft)',
+          border: c.completed ? 'none' : '1.5px solid var(--brand-soft)',
           boxShadow: c.completed ? `0 4px 16px ${c.badgeColor}44` : 'none',
         }}
       >
@@ -103,7 +103,15 @@ function ChallengeCard({ c }: { c: ChallengeWithProgress }) {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Cabecera */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' as const }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            marginBottom: 6,
+            flexWrap: 'wrap' as const,
+          }}
+        >
           <span style={{ fontWeight: 700, color: 'var(--color-text)', fontSize: '1rem' }}>
             {c.title}
           </span>
@@ -114,10 +122,11 @@ function ChallengeCard({ c }: { c: ChallengeWithProgress }) {
                 fontWeight: 700,
                 padding: '3px 10px',
                 borderRadius: 20,
-                background: 'rgba(245,158,11,0.15)',
-                color: '#b45309',
-                border: '1px solid rgba(245,158,11,0.35)',
+                background: 'rgba(255, 210, 77, 0.14)',
+                color: 'var(--amber-led)',
+                border: '1px solid rgba(255, 210, 77, 0.35)',
                 letterSpacing: '0.03em',
+                textTransform: 'uppercase' as const,
               }}
             >
               Completado
@@ -131,10 +140,23 @@ function ChallengeCard({ c }: { c: ChallengeWithProgress }) {
 
         {/* Barra de progreso */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div className="progress-bar" style={{ flex: 1 }}>
-            <div className="progress-fill" style={{ width: `${pct}%` }} />
+          <div style={{ flex: 1 }}>
+            <ProgressBar
+              value={c.progress}
+              max={c.target}
+              variant={c.completed ? 'amber' : 'brand'}
+              label={`Progreso del reto ${c.title}`}
+            />
           </div>
-          <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' as const, fontWeight: 600 }}>
+          <span
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--color-text-muted)',
+              whiteSpace: 'nowrap' as const,
+              fontWeight: 600,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {c.progress}/{c.target}
           </span>
         </div>
@@ -143,15 +165,16 @@ function ChallengeCard({ c }: { c: ChallengeWithProgress }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span
             style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
               fontSize: '0.875rem',
               fontWeight: 700,
-              background: 'var(--gradient-orange)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
+              color: 'var(--brand-light)',
             }}
           >
-            ⭐ {c.points} pts
+            <Icon name="star" size={14} />
+            {c.points} pts
           </span>
           {c.completedAt && (
             <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
@@ -196,13 +219,21 @@ function MerchCard({ item, userPoints, onRedeem }: MerchCardProps) {
           justifyContent: 'center',
           background: item.color + '18',
           border: `1.5px solid ${item.color}44`,
+          color: item.color,
         }}
       >
-        <span style={{ fontSize: '2.2rem', lineHeight: 1 }}>{item.icon}</span>
+        <Icon name={item.icon} size={28} />
       </div>
 
       <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text)', marginBottom: 6 }}>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: '0.95rem',
+            color: 'var(--color-text)',
+            marginBottom: 6,
+          }}
+        >
           {item.name}
         </div>
         <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
@@ -210,9 +241,21 @@ function MerchCard({ item, userPoints, onRedeem }: MerchCardProps) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontWeight: 800, fontSize: '1.05rem', color: item.color }}>
-          ⭐ {item.cost} pts
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+      >
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontWeight: 800,
+            fontSize: '1.05rem',
+            color: item.color,
+          }}
+        >
+          <Icon name="star" size={16} />
+          {item.cost} pts
         </span>
         <button
           className={canAfford ? 'btn btn-primary' : 'btn'}
@@ -265,21 +308,36 @@ function ConfirmModal({ item, userPoints, isPending, onConfirm, onCancel }: Conf
     >
       <div
         style={{
-          background: 'var(--color-surface)',
-          border: '1.5px solid var(--color-border)',
+          background: 'var(--navy-800)',
+          border: '1px solid var(--panel-border)',
           borderRadius: 'var(--radius-xl)',
           padding: '36px 32px',
           width: '100%',
           maxWidth: 440,
           textAlign: 'center' as const,
-          boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+          animation: 'popIn 0.25s cubic-bezier(0.18, 0.72, 0.24, 1.12) both',
         }}
       >
-        <div style={{ fontSize: '3.5rem', textAlign: 'center', marginBottom: 16 }}>{item.icon}</div>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text)', margin: '0 0 8px' }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 76,
+            height: 76,
+            borderRadius: 20,
+            background: item.color + '22',
+            color: item.color,
+            marginBottom: 16,
+          }}
+        >
+          <Icon name={item.icon} size={38} />
+        </div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 8px' }}>
           Confirmar canje
         </h2>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', margin: '0 0 24px' }}>
+        <p style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.95rem', margin: '0 0 24px' }}>
           {item.name}
         </p>
 
@@ -289,21 +347,27 @@ function ConfirmModal({ item, userPoints, isPending, onConfirm, onCancel }: Conf
             alignItems: 'center',
             justifyContent: 'center',
             gap: 20,
-            background: 'rgba(234,88,12,0.06)',
-            border: '1px solid rgba(234,88,12,0.15)',
+            background: 'var(--brand-faint)',
+            border: '1px solid var(--brand-soft)',
             borderRadius: 'var(--radius-md)',
             padding: '14px 20px',
             marginBottom: 20,
           }}
         >
           <div style={{ textAlign: 'center' as const }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: 2 }}>Tus puntos</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text)' }}>{userPoints}</div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(241,245,249,0.6)', marginBottom: 2 }}>
+              Tus puntos
+            </div>
+            <div className="score-number" style={{ fontSize: '1.4rem' }}>
+              {userPoints}
+            </div>
           </div>
-          <div style={{ color: 'var(--color-text-muted)', fontSize: '1.2rem' }}>→</div>
+          <div style={{ color: 'rgba(241,245,249,0.6)', fontSize: '1.2rem' }}>→</div>
           <div style={{ textAlign: 'center' as const }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: 2 }}>Quedarán</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(241,245,249,0.6)', marginBottom: 2 }}>
+              Quedarán
+            </div>
+            <div className="score-number" style={{ fontSize: '1.4rem' }}>
               {userPoints - item.cost}
             </div>
           </div>
@@ -312,8 +376,8 @@ function ConfirmModal({ item, userPoints, isPending, onConfirm, onCancel }: Conf
         <p
           style={{
             fontSize: '0.8rem',
-            color: 'var(--color-text-muted)',
-            background: 'var(--color-bg)',
+            color: 'rgba(241,245,249,0.6)',
+            background: 'rgba(255,255,255,0.05)',
             borderRadius: 'var(--radius-sm)',
             padding: '10px 14px',
             margin: '0 0 24px',
@@ -326,7 +390,7 @@ function ConfirmModal({ item, userPoints, isPending, onConfirm, onCancel }: Conf
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
           <button
-            className="btn btn-ghost"
+            className="btn btn-dark"
             onClick={onCancel}
             disabled={isPending}
             style={{ padding: '10px 22px' }}
@@ -337,7 +401,7 @@ function ConfirmModal({ item, userPoints, isPending, onConfirm, onCancel }: Conf
             className="btn btn-primary"
             onClick={onConfirm}
             disabled={isPending}
-            style={{ padding: '10px 22px', background: item.color }}
+            style={{ padding: '10px 22px' }}
           >
             {isPending ? 'Canjeando...' : `Confirmar (−${item.cost} pts)`}
           </button>
@@ -367,14 +431,25 @@ function SuccessToast({ message, onClose }: { message: string; onClose: () => vo
         gap: 12,
         boxShadow: '0 8px 32px rgba(16,185,129,0.35)',
         zIndex: 2000,
+        animation: 'riseIn 0.35s ease both',
       }}
     >
-      <span>✅ {message}</span>
+      <Icon name="check" size={18} />
+      <span>{message}</span>
       <button
         onClick={onClose}
-        style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '0.9rem', padding: 0, lineHeight: 1 }}
+        aria-label="Cerrar aviso"
+        style={{
+          background: 'transparent',
+          border: 'none',
+          color: '#fff',
+          cursor: 'pointer',
+          padding: 0,
+          lineHeight: 1,
+          display: 'inline-flex',
+        }}
       >
-        ✕
+        <Icon name="close" size={16} />
       </button>
     </div>
   );
@@ -388,6 +463,7 @@ export default function ChallengesPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const { data, isLoading, isError } = useMyChallenges();
   const redeemMutation = useRedeemItem();
+  usePageZone('dark');
 
   const totalPoints = data?.meta.totalPoints ?? 0;
   const currentStreak = data?.meta.currentStreak ?? 0;
@@ -409,6 +485,7 @@ export default function ChallengesPage() {
         onSuccess: (result) => {
           setConfirmItem(null);
           setSuccessMsg(result.message);
+          launchConfetti();
           setTimeout(() => setSuccessMsg(null), 5000);
         },
       },
@@ -417,28 +494,25 @@ export default function ChallengesPage() {
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
-
-      {/* Hero */}
-      <div className="page-hero animate-in">
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 32, flexWrap: 'wrap' as const }}>
-          {/* Puntos totales muy grandes */}
+      {/* Hero marcador */}
+      <div className="page-hero court-lines sweep-light animate-in">
+        <div
+          style={{ display: 'flex', alignItems: 'flex-end', gap: 32, flexWrap: 'wrap' as const }}
+        >
+          {/* Puntos totales en marcador LED */}
           <div>
+            <ScoreValue value={totalPoints} size="3.6rem" pulse suffix="pts" />
             <div
               style={{
-                fontSize: '3.5rem',
-                fontWeight: 900,
-                background: 'var(--gradient-orange)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                lineHeight: 1,
-                letterSpacing: '-0.03em',
+                color: 'rgba(255,255,255,0.55)',
+                fontSize: '0.75rem',
+                marginTop: 6,
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase' as const,
               }}
             >
-              {totalPoints.toLocaleString('es-ES')}
-            </div>
-            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.85rem', marginTop: 4, fontWeight: 500 }}>
-              puntos totales
+              Puntos totales
             </div>
           </div>
 
@@ -447,50 +521,20 @@ export default function ChallengesPage() {
 
           {/* Stats secundarias */}
           <div style={{ display: 'flex', gap: 28 }}>
-            <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>
-                🔥 {currentStreak}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-                semanas racha
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>
-                ✅ {completedCount}/{totalCount}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-                retos completados
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>
-                🏅 {longestStreak}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-                mejor racha
-              </div>
-            </div>
+            <HeroStat icon="flame" value={String(currentStreak)} label="semanas racha" />
+            <HeroStat icon="check" value={`${completedCount}/${totalCount}`} label="retos completados" />
+            <HeroStat icon="medal" value={String(longestStreak)} label="mejor racha" />
           </div>
         </div>
 
-        <h1 className="hero-title" style={{ marginTop: 20, fontSize: '1.6rem' }}>
+        <h1 className="hero-title" style={{ marginTop: 22, fontSize: '1.8rem' }}>
           Mis Retos
         </h1>
         <p className="hero-subtitle">Tu progreso en retos y tienda de merchandising</p>
       </div>
 
       {/* ── Tienda de canje ──────────────────────────────────────────────── */}
-      <div
-        style={{
-          background: 'var(--color-surface)',
-          border: '1.5px solid var(--color-border)',
-          borderRadius: 'var(--radius-xl)',
-          padding: '28px 28px 24px',
-          marginBottom: 40,
-          boxShadow: 'var(--shadow-card)',
-        }}
-      >
+      <div className="panel-glass" style={{ padding: '28px 28px 24px', marginBottom: 40 }}>
         {/* Cabecera tienda */}
         <div
           style={{
@@ -503,8 +547,19 @@ export default function ChallengesPage() {
           }}
         >
           <div>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-text)', margin: '0 0 4px' }}>
-              🛍️ Tienda del club
+            <h2
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                fontSize: '1.15rem',
+                fontWeight: 800,
+                color: 'var(--color-text)',
+                margin: '0 0 4px',
+              }}
+            >
+              <Icon name="gift" size={20} color="var(--brand-light)" />
+              Tienda del club
             </h2>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 }}>
               Canjea tus puntos por merchandising oficial de Vallekas Basket
@@ -512,21 +567,23 @@ export default function ChallengesPage() {
           </div>
 
           {/* Puntos disponibles */}
-          <div className="stat-card" style={{ padding: '12px 20px', textAlign: 'center' as const }}>
+          <div
+            className="panel-glass"
+            style={{
+              padding: '12px 20px',
+              textAlign: 'center' as const,
+              border: '1px solid rgba(255, 210, 77, 0.25)',
+            }}
+          >
+            <ScoreValue value={totalPoints} size="1.75rem" />
             <div
               style={{
-                fontSize: '1.75rem',
-                fontWeight: 900,
-                background: 'var(--gradient-orange)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                lineHeight: 1,
+                fontSize: '0.72rem',
+                color: 'var(--color-text-muted)',
+                marginTop: 2,
+                fontWeight: 500,
               }}
             >
-              {totalPoints}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: 2, fontWeight: 500 }}>
               pts disponibles
             </div>
           </div>
@@ -541,18 +598,22 @@ export default function ChallengesPage() {
           }}
         >
           {MERCH_ITEMS.map((item) => (
-            <MerchCard
-              key={item.id}
-              item={item}
-              userPoints={totalPoints}
-              onRedeem={setConfirmItem}
-            />
+            <MerchCard key={item.id} item={item} userPoints={totalPoints} onRedeem={setConfirmItem} />
           ))}
         </div>
       </div>
 
       {/* ── Retos ────────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: 12 }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap' as const,
+          gap: 12,
+        }}
+      >
         <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-text)', margin: 0 }}>
           Mis retos
         </h2>
@@ -562,19 +623,8 @@ export default function ChallengesPage() {
           {(['all', 'in-progress', 'completed'] as FilterTab[]).map((tab) => (
             <button
               key={tab}
+              className={`chip${filter === tab ? ' active' : ''}`}
               onClick={() => setFilter(tab)}
-              style={{
-                padding: '7px 16px',
-                borderRadius: 20,
-                border: filter === tab ? 'none' : '1.5px solid var(--color-border)',
-                background: filter === tab ? 'var(--gradient-orange)' : 'transparent',
-                color: filter === tab ? '#fff' : 'var(--color-text-muted)',
-                cursor: 'pointer',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                boxShadow: filter === tab ? 'var(--shadow-orange)' : 'none',
-                transition: 'all 0.15s',
-              }}
             >
               {tab === 'all' ? 'Todos' : tab === 'in-progress' ? 'En progreso' : 'Completados'}
             </button>
@@ -583,7 +633,13 @@ export default function ChallengesPage() {
       </div>
 
       {isLoading && (
-        <p style={{ color: 'var(--color-text-muted)', padding: '32px 0', textAlign: 'center' as const }}>
+        <p
+          style={{
+            color: 'var(--color-text-muted)',
+            padding: '32px 0',
+            textAlign: 'center' as const,
+          }}
+        >
           Cargando retos...
         </p>
       )}
@@ -593,14 +649,16 @@ export default function ChallengesPage() {
         </p>
       )}
       {!isLoading && !isError && filtered.length === 0 && (
-        <p style={{ color: 'var(--color-text-muted)', padding: '32px 0', textAlign: 'center' as const }}>
-          No hay retos en esta categoría.
-        </p>
+        <EmptyState
+          icon="target"
+          title="No hay retos en esta categoría"
+          message="Cambia de filtro o sigue completando lecciones para desbloquear nuevos retos."
+        />
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
-        {filtered.map((c) => (
-          <ChallengeCard key={c.id} c={c} />
+        {filtered.map((c, i) => (
+          <ChallengeCard key={c.id} c={c} index={i} />
         ))}
       </div>
 
@@ -616,9 +674,30 @@ export default function ChallengesPage() {
       )}
 
       {/* Toast de éxito */}
-      {successMsg && (
-        <SuccessToast message={successMsg} onClose={() => setSuccessMsg(null)} />
-      )}
+      {successMsg && <SuccessToast message={successMsg} onClose={() => setSuccessMsg(null)} />}
+    </div>
+  );
+}
+
+function HeroStat({ icon, value, label }: { icon: string; value: string; label: string }) {
+  return (
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          color: 'var(--amber-led)',
+        }}
+      >
+        <Icon name={icon} size={17} />
+        <span className="score-number" style={{ fontSize: '1.5rem' }}>
+          {value}
+        </span>
+      </div>
+      <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+        {label}
+      </div>
     </div>
   );
 }
