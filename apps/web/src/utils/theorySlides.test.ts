@@ -4,7 +4,9 @@ import {
   buildSlides,
   fragmentCount,
   paginateBlocks,
+  parseExample,
   resolveVideoCandidates,
+  splitExampleChunks,
   splitMarkdownBlocks,
 } from './theorySlides';
 
@@ -128,7 +130,116 @@ describe('buildSlides', () => {
   });
 });
 
+const EXAMPLE_MD = `### 💪 Ejemplo 1: descuento de rebajas
+**Enunciado:** Unas zapatillas de 60 € tienen un 25 % de descuento. ¿Cuánto pagas?
+1. Calcula el 25 % de 60: $60 \\cdot 0{,}25 = 15$.
+2. Resta el descuento al precio: $60 - 15 = 45$.
+3. Comprueba que el resultado es menor que el original.
+**Resultado:** Pagas 45 €.
+**Por qué funciona:** El porcentaje es una fracción del total, así que multiplicar y restar equivale a quedarte con el 75 %.`;
+
+describe('splitExampleChunks', () => {
+  it('separa por encabezados ### conservando el preámbulo', () => {
+    const chunks = splitExampleChunks(`intro suelta\n\n### 💪 Ejemplo 1: a\ncuerpo\n### 💪 Ejemplo 2: b\ncuerpo`);
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0]).toBe('intro suelta');
+    expect(chunks[1].startsWith('### 💪 Ejemplo 1')).toBe(true);
+  });
+});
+
+describe('parseExample', () => {
+  it('parsea título, enunciado, pasos, resultado y porqué', () => {
+    const parsed = parseExample(EXAMPLE_MD)!;
+    expect(parsed).not.toBeNull();
+    expect(parsed.title).toBe('💪 Ejemplo 1: descuento de rebajas');
+    expect(parsed.statement).toContain('zapatillas');
+    expect(parsed.steps).toHaveLength(3);
+    expect(parsed.steps[1]).toContain('Resta el descuento');
+    expect(parsed.result).toBe('Pagas 45 €.');
+    expect(parsed.why).toContain('porcentaje');
+  });
+
+  it('une líneas de continuación al bloque activo', () => {
+    const md = `### Ejemplo\n**Enunciado:** primera línea\nsegunda línea\n1. paso uno\ncontinuación del paso\n2. paso dos\n**Resultado:** listo`;
+    const parsed = parseExample(md)!;
+    expect(parsed.statement).toBe('primera línea segunda línea');
+    expect(parsed.steps[0]).toBe('paso uno continuación del paso');
+  });
+
+  it('devuelve null sin encabezado ###', () => {
+    expect(parseExample('**Enunciado:** x\n1. a\n2. b\n**Resultado:** y')).toBeNull();
+  });
+
+  it('devuelve null con menos de 2 pasos o sin resultado (degrada a contenido)', () => {
+    expect(parseExample('### E\n**Enunciado:** x\n1. solo un paso\n**Resultado:** y')).toBeNull();
+    expect(parseExample('### E\n**Enunciado:** x\n1. a\n2. b')).toBeNull();
+  });
+});
+
+describe('buildSlides — estructura Winston', () => {
+  it('marca la INTRO "Qué vas a conseguir" como variante objectives con icono 🎯', () => {
+    const slides = buildSlides(
+      moduleWith([lesson({ kind: 'INTRO', heading: 'Qué vas a conseguir', body: '- **Sabrás** x' })]),
+    );
+    const intro = slides.find((s) => s.kind === 'content')!;
+    expect(intro.variant).toBe('objectives');
+    expect(intro.icon).toBe('🎯');
+  });
+
+  it('marca "Lo que te llevas" como variante takeaways', () => {
+    const slides = buildSlides(
+      moduleWith([lesson({ kind: 'CONTENT', heading: 'Lo que te llevas', body: '- **Ya sabes** x' })]),
+    );
+    expect(slides.find((s) => s.kind === 'content')!.variant).toBe('takeaways');
+  });
+
+  it('la promesa no se pagina aunque supere el presupuesto de caracteres', () => {
+    const body = `frase de arranque\n\n- **Sabrás** ${'x'.repeat(300)}\n- **Sabrás** ${'y'.repeat(300)}\n\n> 💡 **Tip:** entiende la regla única.`;
+    const slides = buildSlides(
+      moduleWith([lesson({ kind: 'INTRO', heading: 'Qué vas a conseguir', body })]),
+    );
+    const content = slides.filter((s) => s.kind === 'content');
+    expect(content).toHaveLength(1);
+    expect(content[0].blocks).toHaveLength(3);
+  });
+
+  it('compat: una INTRO clásica no lleva variante', () => {
+    const slides = buildSlides(
+      moduleWith([lesson({ kind: 'INTRO', heading: 'Introducción', body: 'hola' })]),
+    );
+    expect(slides.find((s) => s.kind === 'content')!.variant).toBeUndefined();
+  });
+
+  it('convierte una lección EXAMPLE estructurada en slides example con pasos', () => {
+    const body = `${EXAMPLE_MD}\n${EXAMPLE_MD.replace('Ejemplo 1', 'Ejemplo 2')}`;
+    const slides = buildSlides(moduleWith([lesson({ kind: 'EXAMPLE', heading: 'Ejemplos', body })]));
+    const examples = slides.filter((s) => s.kind === 'example');
+    expect(examples).toHaveLength(2);
+    expect(examples[0].steps).toHaveLength(3);
+    expect(examples[0].statement).toContain('zapatillas');
+    expect(examples[1].heading).toContain('Ejemplo 2');
+  });
+
+  it('compat: una lección EXAMPLE sin estructura degrada a slides de contenido', () => {
+    const slides = buildSlides(
+      moduleWith([lesson({ kind: 'EXAMPLE', heading: 'Ejemplos', body: 'log(100) = 2 porque 10^2 = 100.' })]),
+    );
+    expect(slides.filter((s) => s.kind === 'example')).toHaveLength(0);
+    const content = slides.filter((s) => s.kind === 'content');
+    expect(content).toHaveLength(1);
+    expect(content[0].blocks).toEqual(['log(100) = 2 porque 10^2 = 100.']);
+  });
+});
+
 describe('fragmentCount', () => {
+  it('en slides example cuenta enunciado + pasos + resultado + porqué', () => {
+    const slides = buildSlides(
+      moduleWith([lesson({ kind: 'EXAMPLE', heading: 'Ejemplos', body: EXAMPLE_MD })]),
+    );
+    const ex = slides.find((s) => s.kind === 'example')!;
+    expect(fragmentCount(ex)).toBe(1 + 3 + 1 + 1);
+  });
+
   it('cuenta los bloques de una slide de contenido', () => {
     const slides = buildSlides(moduleWith([lesson({ kind: 'CONTENT', body: 'uno\n\ndos' })]));
     const content = slides.find((s) => s.kind === 'content')!;

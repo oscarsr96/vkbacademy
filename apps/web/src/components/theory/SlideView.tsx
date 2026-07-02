@@ -24,9 +24,33 @@ export function SlideView({ slide, revealed, forPdf = false }: SlideViewProps) {
       return <ClosingSlide />;
     case 'video':
       return <VideoSlide slide={slide} forPdf={forPdf} />;
+    case 'example':
+      return <ExampleSlide slide={slide} revealed={revealed} forPdf={forPdf} />;
     default:
       return <ContentSlide slide={slide} revealed={revealed} forPdf={forPdf} />;
   }
+}
+
+/** Fragmento revelable (mismo mecanismo que usa el override del PDF). */
+function Frag({
+  shown,
+  delayIndex,
+  forPdf,
+  children,
+}: {
+  shown: boolean;
+  delayIndex: number;
+  forPdf: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`tslides-frag${shown ? ' tslides-frag--shown' : ''}`}
+      style={{ transitionDelay: shown && !forPdf ? `${delayIndex * 40}ms` : undefined }}
+    >
+      {children}
+    </div>
+  );
 }
 
 function CoverSlide({ slide }: { slide: Slide }) {
@@ -53,7 +77,7 @@ function ContentSlide({
 }) {
   const blocks = slide.blocks ?? [];
   return (
-    <div className="tsl-content">
+    <div className={`tsl-content${slide.variant ? ` tsl-content--${slide.variant}` : ''}`}>
       <h2 className="tsl-heading">
         <span className="tsl-icon" aria-hidden>
           {slide.icon}
@@ -62,18 +86,75 @@ function ContentSlide({
         {slide.continued && <span className="tsl-cont">cont.</span>}
       </h2>
       <div className="tsl-body">
-        {blocks.map((block, i) => {
-          const shown = forPdf || i < revealed;
-          return (
-            <div
-              key={i}
-              className={`tslides-frag${shown ? ' tslides-frag--shown' : ''}`}
-              style={{ transitionDelay: shown && !forPdf ? `${i * 40}ms` : undefined }}
-            >
-              <TheoryMarkdown>{block}</TheoryMarkdown>
+        {blocks.map((block, i) => (
+          <Frag key={i} shown={forPdf || i < revealed} delayIndex={i} forPdf={forPdf}>
+            <TheoryMarkdown>{block}</TheoryMarkdown>
+          </Frag>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ejemplo resuelto paso a paso: enunciado, pasos como tarjetas con número
+ * grande, resultado destacado y conexión con la teoría. Cada pieza es un
+ * fragmento revelable.
+ */
+function ExampleSlide({
+  slide,
+  revealed,
+  forPdf,
+}: {
+  slide: Slide;
+  revealed: number;
+  forPdf: boolean;
+}) {
+  const steps = slide.steps ?? [];
+  const resultIndex = 1 + steps.length;
+  const whyIndex = resultIndex + 1;
+  const shown = (i: number) => forPdf || i < revealed;
+
+  return (
+    <div className="tsl-content tsl-example">
+      <h2 className="tsl-heading">{slide.heading}</h2>
+      <div className="tsl-body">
+        <Frag shown={shown(0)} delayIndex={0} forPdf={forPdf}>
+          <div className="tsl-ex-statement">
+            <span className="tsl-ex-label">Enunciado</span>
+            <TheoryMarkdown>{slide.statement ?? ''}</TheoryMarkdown>
+          </div>
+        </Frag>
+        <ol className="tsl-ex-steps">
+          {steps.map((step, i) => (
+            <li key={i}>
+              <Frag shown={shown(i + 1)} delayIndex={i + 1} forPdf={forPdf}>
+                <div className="tsl-ex-step">
+                  <span className="tsl-ex-num" aria-hidden>
+                    {i + 1}
+                  </span>
+                  <div className="tsl-ex-step-body">
+                    <TheoryMarkdown>{step}</TheoryMarkdown>
+                  </div>
+                </div>
+              </Frag>
+            </li>
+          ))}
+        </ol>
+        <Frag shown={shown(resultIndex)} delayIndex={resultIndex} forPdf={forPdf}>
+          <div className="tsl-ex-result">
+            <span className="tsl-ex-label">Resultado</span>
+            <TheoryMarkdown>{slide.result ?? ''}</TheoryMarkdown>
+          </div>
+        </Frag>
+        {slide.why && (
+          <Frag shown={shown(whyIndex)} delayIndex={whyIndex} forPdf={forPdf}>
+            <div className="tsl-ex-why">
+              <span className="tsl-ex-label">Por qué funciona</span>
+              <TheoryMarkdown>{slide.why}</TheoryMarkdown>
             </div>
-          );
-        })}
+          </Frag>
+        )}
       </div>
     </div>
   );

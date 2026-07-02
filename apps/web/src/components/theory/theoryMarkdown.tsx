@@ -10,13 +10,14 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 
-type CalloutKind = 'tip' | 'remember' | 'warning' | 'question' | 'default';
+type CalloutKind = 'tip' | 'remember' | 'warning' | 'question' | 'fence' | 'default';
 
 const CALLOUT_RULES: Array<{ test: RegExp; kind: CalloutKind }> = [
   { test: /^\s*💡/, kind: 'tip' },
   { test: /^\s*🧠/, kind: 'remember' },
   { test: /^\s*⚠️|^\s*⚠/, kind: 'warning' },
   { test: /^\s*❓/, kind: 'question' },
+  { test: /^\s*🚧/, kind: 'fence' },
 ];
 
 function flattenText(node: ReactNode): string {
@@ -84,6 +85,8 @@ export const THEORY_CALLOUT_CSS = `
   .theory-callout-warning::before   { content: '⚠️'; }
   .theory-callout-question  { background: rgba(20,184,166,0.10); border-left-color: #14b8a6; }
   .theory-callout-question::before  { content: '❓'; }
+  .theory-callout-fence     { background: var(--brand-soft); border-left-color: var(--brand); }
+  .theory-callout-fence::before     { content: '🚧'; }
   .theory-callout-default   {
     background: var(--color-bg);
     border-left-color: var(--color-border);

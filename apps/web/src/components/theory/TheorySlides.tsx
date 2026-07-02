@@ -290,9 +290,12 @@ export const TSLIDES_CSS = `
     z-index: 1000;
     display: flex;
     flex-direction: column;
+    /* Fondo "modo estadio" del design system: focos + dot-grid LED + navy */
     background:
-      radial-gradient(120% 80% at 50% -10%, var(--brand-glow), transparent 60%),
-      linear-gradient(180deg, #080e1a 0%, #0d1b2a 60%, #152233 100%);
+      radial-gradient(120% 80% at 50% -10%, var(--brand-soft), transparent 55%),
+      radial-gradient(80% 60% at 90% 110%, rgba(255, 210, 77, 0.08), transparent 60%),
+      radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1.4px) 0 0 / 15px 15px,
+      linear-gradient(180deg, var(--navy-950, #080e1a) 0%, var(--navy-800, #0d1b2a) 100%);
     color: #fff;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -306,7 +309,7 @@ export const TSLIDES_CSS = `
   .tslides-progress > span {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, var(--brand), var(--brand-light));
+    background: var(--gradient-signature, linear-gradient(90deg, var(--brand), var(--brand-light)));
     border-radius: 0 4px 4px 0;
     transition: width 0.35s cubic-bezier(0.2,0.8,0.25,1);
   }
@@ -346,9 +349,13 @@ export const TSLIDES_CSS = `
   }
   .tslides-actions button:hover { background: var(--brand-glow); transform: translateY(-1px); }
   .tslides-counter {
+    /* Marcador del estadio: display + ámbar LED */
+    font-family: var(--font-display, 'Inter');
     font-variant-numeric: tabular-nums;
-    font-size: 0.85rem;
-    color: rgba(255,255,255,0.65);
+    font-size: 1.1rem;
+    letter-spacing: 0.08em;
+    color: var(--amber-led, #ffd24d);
+    text-shadow: 0 0 14px rgba(255, 210, 77, 0.45);
     min-width: 54px;
     text-align: center;
   }
@@ -361,6 +368,17 @@ export const TSLIDES_CSS = `
     justify-content: center;
     overflow: hidden;
     padding: 8px 5vw;
+  }
+  /* Media cancha tenue al pie del escenario (textura del design system) */
+  .tslides-stage::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 46%;
+    background: var(--court-lines) bottom center / min(640px, 80vw) auto no-repeat;
+    pointer-events: none;
   }
   .tslides-zone {
     position: absolute;
@@ -512,6 +530,112 @@ export const TSLIDES_CSS = `
     background: rgba(255,255,255,0.06);
     border-left-color: rgba(255,255,255,0.28);
   }
+
+  /* ── Variantes Winston: promesa (objetivos) y cierre (lo que te llevas) ── */
+  .tsl-content--objectives .tsl-body ul,
+  .tsl-content--takeaways .tsl-body ul {
+    list-style: none;
+    margin: 0 0 0.8em;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .tsl-content--objectives .tsl-body li,
+  .tsl-content--takeaways .tsl-body li {
+    position: relative;
+    margin: 0;
+    padding: 14px 18px 14px 58px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 14px;
+    line-height: 1.5;
+  }
+  .tsl-content--objectives .tsl-body li::before,
+  .tsl-content--takeaways .tsl-body li::before {
+    content: '✓';
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--brand-glow);
+    color: var(--brand-light);
+    font-weight: 800;
+    font-size: 0.95rem;
+    display: grid;
+    place-items: center;
+  }
+  .tsl-content--takeaways .tsl-body li {
+    background: var(--brand-soft);
+    border-color: var(--brand);
+  }
+
+  /* ── Slide de ejemplo paso a paso ── */
+  .tsl-example .tsl-body { font-size: clamp(0.95rem, 1.9vw, 1.2rem); }
+  .tsl-ex-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--brand-light);
+    margin-bottom: 6px;
+  }
+  .tsl-ex-statement, .tsl-ex-result, .tsl-ex-why {
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin: 0 0 12px;
+  }
+  .tsl-ex-statement, .tsl-ex-result, .tsl-ex-why, .tsl-ex-step-body { line-height: 1.55; }
+  .tsl-ex-statement p, .tsl-ex-result p, .tsl-ex-why p, .tsl-ex-step-body p { margin: 0; }
+  .tsl-ex-statement {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.16);
+  }
+  .tsl-ex-result {
+    background: var(--brand-soft);
+    border: 1px solid var(--brand);
+  }
+  .tsl-ex-why {
+    background: rgba(19, 175, 240, 0.07);
+    border-left: 4px solid var(--accent-cyan, #13aff0);
+    border-radius: 6px 14px 14px 6px;
+  }
+  .tsl-ex-why .tsl-ex-label { color: var(--accent-cyan-light, #46d4fe); }
+  .tsl-ex-steps {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .tsl-ex-steps li { margin: 0; }
+  .tsl-ex-step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 12px 16px;
+  }
+  .tsl-ex-num {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-family: 'Unbounded', 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--brand-light);
+    background: var(--brand-glow);
+    border: 1px solid var(--brand);
+  }
+  .tsl-ex-step-body { flex: 1; min-width: 0; }
 
   /* ── Slide de vídeo ── */
   .tsl-video-frame {

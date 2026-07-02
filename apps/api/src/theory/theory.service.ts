@@ -85,7 +85,7 @@ export class TheoryService {
     // casi siempre lo arregla). Ver `ai-json.ts`.
     let parsed: unknown;
     try {
-      parsed = await generateAiJson(this.ai, prompt, 4000, { attempts: 2, logger: this.logger });
+      parsed = await generateAiJson(this.ai, prompt, 6000, { attempts: 2, logger: this.logger });
     } catch (err) {
       this.logger.error('Error al parsear JSON de IA (teoría) tras reintentos:', err);
       throw new InternalServerErrorException(
@@ -93,6 +93,12 @@ export class TheoryService {
       );
     }
     const payload = this.validatePayload(parsed);
+
+    // Estructura Winston deseada pero no bloqueante: si la IA no la respeta se
+    // persiste igualmente (el deck degrada a slides normales) y queda traza.
+    if (payload.lessons[0]?.kind !== TheoryLessonKind.INTRO) {
+      this.logger.warn(`Temario sobre "${dto.topic}" sin promesa INTRO como primera lección`);
+    }
 
     // Resolver vídeo de YouTube para lecciones VIDEO. Para cada VIDEO pedimos
     // hasta 5 candidatos (ordenados por engagement+whitelist) y los guardamos
@@ -218,42 +224,58 @@ Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, si
   "title": "título limpio del temario (no repitas el tema literal)",
   "summary": "resumen del temario en 1-2 frases",
   "lessons": [
-    {
-      "kind": "INTRO",
-      "heading": "Introducción",
-      "body": "explicación introductoria en markdown (2-3 párrafos)"
-    },
-    {
-      "kind": "CONTENT",
-      "heading": "título de la sección de desarrollo",
-      "body": "explicación detallada en markdown (3-5 párrafos, puede usar listas y negritas)"
-    },
-    {
-      "kind": "EXAMPLE",
-      "heading": "Ejemplos",
-      "body": "ejemplos resueltos en markdown (al menos 2 ejemplos con paso a paso)"
-    },
-    {
-      "kind": "VIDEO",
-      "heading": "Vídeo recomendado",
-      "ytQuery": "consulta optimizada para buscar el mejor vídeo en YouTube sobre este tema"
-    }
+    { "kind": "INTRO", "heading": "Qué vas a conseguir", "body": "la promesa (ver ESTRUCTURA)" },
+    { "kind": "CONTENT", "heading": "título de la sección de desarrollo", "body": "desarrollo (ver ESTRUCTURA)" },
+    { "kind": "EXAMPLE", "heading": "Ejemplos paso a paso", "body": "mínimo 3 ejemplos resueltos (ver ESTRUCTURA)" },
+    { "kind": "VIDEO", "heading": "Vídeo recomendado", "ytQuery": "consulta optimizada para buscar el mejor vídeo en YouTube sobre este tema" },
+    { "kind": "CONTENT", "heading": "Lo que te llevas", "body": "cierre espejo de la promesa (ver ESTRUCTURA)" }
   ]
 }
 
-Reglas:
-- Mínimo 3 lecciones, máximo 6.
-- Estructura recomendada: 1 INTRO + 1-3 CONTENT + 1 EXAMPLE + 1 VIDEO (último).
+ESTRUCTURA — metodología Winston de enseñanza, OBLIGATORIA:
+- Entre 5 y 8 lecciones, en este orden: 1 INTRO "Qué vas a conseguir" (SIEMPRE la primera) + 1-3 CONTENT de desarrollo + 1 EXAMPLE + 1 VIDEO + 1 CONTENT "Lo que te llevas" (SIEMPRE la última).
+
+- INTRO "Qué vas a conseguir" — promesa de empoderamiento: qué sabrá HACER el alumno al final que no sabe ahora, y para qué le sirve. Formato: 1 frase corta que enganche + lista de 3-4 items con el formato exacto "- **Sabrás** [habilidad concreta]: te servirá para [uso real: el examen, el deporte o la vida diaria]". Sin definiciones todavía, sin índice.
+
+- CONTENT de desarrollo — en CADA lección de este tipo:
+  - Abre situando al alumno (puntuación verbal): "Ya tienes [lo anterior]. Ahora, bloque N: [lo que viene]." (1 frase).
+  - Cycling: el concepto central explicado 3 veces seguidas de forma distinta: (1) definición precisa, (2) analogía cotidiana o deportiva, (3) mini-ejemplo con números o caso concreto.
+  - Fencing: exactamente 1 callout \`> 🚧 **Esto SÍ / esto NO:** [concepto] ES [definición corta]. NO lo confundas con [concepto parecido]: [diferencia en 1 frase].\`
+  - Exactamente 1 callout ❓ con una pregunta que el alumno pueda intentar responder antes de seguir.
+  - Párrafos CORTOS (máximo ~40 palabras) separados por línea en blanco: cada párrafo se convierte en un fragmento de diapositiva.
+
+- EXAMPLE "Ejemplos paso a paso" — MÍNIMO 3 ejemplos resueltos, de dificultad creciente. CADA ejemplo con esta estructura markdown EXACTA:
+### 💪 Ejemplo N: [título corto]
+**Enunciado:** [planteamiento concreto]
+1. [primer paso: qué se hace y por qué, en 1-2 frases]
+2. [segundo paso]
+3. [tercer paso]
+(mínimo 3 pasos por ejemplo; añade más si el problema lo pide)
+**Resultado:** [solución final]
+**Por qué funciona:** [1-2 frases conectando el procedimiento con la teoría]
+
+- CONTENT "Lo que te llevas" — cierre de contribuciones, espejo de la promesa inicial: lista de 3-4 items "- **Ya sabes** [la misma habilidad prometida al inicio]" + 1 frase final que empuje al siguiente paso (practicar con ejercicios o hacer el test). PROHIBIDO cerrar con "gracias", "espero que" o despedidas.
+
+VOZ Y ESTILO (anti patrón-IA) — escribe como un entrenador cercano en el vestuario, no como un manual:
+- Tutea siempre y habla directo al alumno ("mira", "ojo con esto", "ahora te toca a ti").
+- Varía el ritmo: frases cortas y punzantes mezcladas con alguna más larga. Nada de párrafos clónicos.
+- PROHIBIDO el relleno típico de IA: "En resumen", "En conclusión", "Es importante destacar", "cabe mencionar", "juega un papel crucial/fundamental", "sumérgete", "el fascinante mundo de", "no es solo X, es Y".
+- PROHIBIDO inflar la importancia del tema ("marca un antes y un después", "es clave para tu futuro").
+- Nada de guiones largos (—) como puntuación: usa coma, paréntesis o dos puntos.
+- Concreto siempre: números, objetos y situaciones reales de un adolescente (la paga, los entrenos, los videojuegos, las notas) antes que abstracciones.
+
+Reglas de formato:
 - INTRO/CONTENT/EXAMPLE: campo "body" obligatorio en markdown. NO incluir "ytQuery".
 - VIDEO: campo "ytQuery" obligatorio. NO incluir "body".
 - El markdown puede usar **negritas**, *cursivas*, listas con guiones, encabezados con ##.
 - Para fórmulas matemáticas USA SIEMPRE LaTeX: inline con $...$ (ej. $\\log_a b = c$) y bloques con $$...$$ para derivaciones o ecuaciones destacadas. NO escribas fórmulas en texto plano (NUNCA "log_a b = c"; SIEMPRE "$\\log_a b = c$").
-- **DIDÁCTICA — incluye callouts pedagógicos** intercalados en el body para hacer la lectura más activa. Formato OBLIGATORIO con blockquote markdown, emoji al inicio, etiqueta en negrita:
+- **DIDÁCTICA — callouts pedagógicos** intercalados en el body, con blockquote markdown, emoji al inicio y etiqueta en negrita:
   - \`> 💡 **Tip:** consejo práctico que ayude a recordar o aplicar el concepto.\`
   - \`> 🧠 **Recuerda:** dato/fórmula/regla clave que el alumno debe memorizar.\`
   - \`> ⚠️ **Cuidado:** error común a evitar o trampa habitual del tema.\`
   - \`> ❓ **Pregunta:** pregunta retórica para que el alumno se pare a pensar antes de seguir.\`
-  Mete entre 2 y 4 callouts en CADA lección INTRO/CONTENT/EXAMPLE, mezclando tipos. Cada callout en su propio párrafo (separado por línea en blanco). NO los pongas todos juntos al final — repártelos donde encajen pedagógicamente.
+  - \`> 🚧 **Esto SÍ / esto NO:** delimitación del concepto frente a otro parecido.\`
+  Mete entre 2 y 4 callouts en CADA lección INTRO/CONTENT/EXAMPLE (los 🚧 y ❓ obligatorios de cada CONTENT cuentan). Cada callout en su propio párrafo (separado por línea en blanco). NO los pongas todos juntos al final — repártelos donde encajen pedagógicamente.
 - Contenido curricular real y riguroso, adaptado al nivel ${schoolYearLabel || 'del curso'}.
 - "ytQuery" debe ser una búsqueda específica y descriptiva (ej. "demostración propiedades logaritmos bachillerato").
 - Solo devuelve JSON puro, sin markdown alrededor del JSON.`;

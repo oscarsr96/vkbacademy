@@ -6,6 +6,14 @@
 //   sobrecarguen. Cada bloque es un "fragmento" que se revela progresivamente.
 // - Las lecciones VIDEO se convierten en una slide de vídeo.
 // - Se añade una portada al principio y una slide de cierre al final.
+//
+// Estructura Winston (temarios nuevos, con fallback para los antiguos):
+// - La lección INTRO "Qué vas a conseguir" (promesa) y la CONTENT "Lo que te
+//   llevas" (cierre) se marcan con `variant` para renderizarse como checklist.
+// - Las lecciones EXAMPLE con la estructura pactada con la IA (### 💪 Ejemplo N +
+//   Enunciado + pasos numerados + Resultado + Por qué funciona) se convierten en
+//   slides `example` con pasos estructurados; si un bloque no parsea, degrada a
+//   slide de contenido normal.
 
 import type {
   TheoryLesson,
@@ -14,7 +22,10 @@ import type {
   TheoryVideoCandidate,
 } from '@vkbacademy/shared';
 
-export type SlideKind = 'cover' | 'content' | 'video' | 'closing';
+export type SlideKind = 'cover' | 'content' | 'video' | 'closing' | 'example';
+
+/** Variante visual de una slide de contenido (checklist Winston). */
+export type ContentVariant = 'objectives' | 'takeaways';
 
 export interface Slide {
   id: string;
@@ -34,6 +45,13 @@ export interface Slide {
   blocks?: string[];
   /** true si es continuación de una lección dividida en varias slides. */
   continued?: boolean;
+  /** Promesa inicial u "objetivos" / cierre "lo que te llevas". */
+  variant?: ContentVariant;
+  // example (ejercicio resuelto paso a paso)
+  statement?: string;
+  steps?: string[];
+  result?: string;
+  why?: string;
   // video
   candidates?: TheoryVideoCandidate[];
 }
@@ -86,6 +104,92 @@ export function paginateBlocks(blocks: string[], budget = MAX_SLIDE_CHARS): stri
   return pages;
 }
 
+const OBJECTIVES_RE = /qu[eé] vas a conseguir/i;
+const TAKEAWAYS_RE = /lo que te llevas/i;
+
+/**
+ * Detecta si una lección es la promesa inicial o el cierre Winston por su
+ * heading. Los temarios antiguos ("Introducción", …) no matchean y se
+ * renderizan como contenido normal.
+ */
+export function contentVariant(lesson: TheoryLesson): ContentVariant | undefined {
+  if (lesson.kind === 'INTRO' && OBJECTIVES_RE.test(lesson.heading)) return 'objectives';
+  if (TAKEAWAYS_RE.test(lesson.heading)) return 'takeaways';
+  return undefined;
+}
+
+export interface ParsedExample {
+  title: string;
+  statement: string;
+  steps: string[];
+  result: string;
+  why: string;
+}
+
+/** Divide el body de una lección EXAMPLE en trozos, uno por encabezado "###". */
+export function splitExampleChunks(md: string): string[] {
+  return md
+    .replace(/\r\n/g, '\n')
+    .split(/\n(?=###\s)/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Parsea un ejemplo con la estructura pactada con la IA (### título +
+ * **Enunciado:** + pasos numerados + **Resultado:** + **Por qué funciona:**).
+ * Devuelve null si el trozo no cumple lo mínimo (título, enunciado, ≥2 pasos y
+ * resultado) para que el llamador degrade a slide de contenido normal.
+ */
+export function parseExample(chunk: string): ParsedExample | null {
+  const lines = chunk.replace(/\r\n/g, '\n').split('\n');
+  const headingMatch = lines[0]?.match(/^###\s+(.+)$/);
+  if (!headingMatch) return null;
+
+  const title = headingMatch[1].trim();
+  let statement = '';
+  const steps: string[] = [];
+  let result = '';
+  let why = '';
+  let target: 'statement' | 'steps' | 'result' | 'why' | null = null;
+
+  const append = (acc: string, text: string) => (acc ? `${acc} ${text}` : text);
+
+  for (const raw of lines.slice(1)) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    const labeled = line.match(/^\*\*(Enunciado|Resultado|Por qué funciona)[:.]?\*\*[:.]?\s*(.*)$/i);
+    if (labeled) {
+      const label = labeled[1].toLowerCase();
+      target = label.startsWith('enunciado') ? 'statement' : label.startsWith('resultado') ? 'result' : 'why';
+      const rest = labeled[2].trim();
+      if (rest) {
+        if (target === 'statement') statement = append(statement, rest);
+        else if (target === 'result') result = append(result, rest);
+        else why = append(why, rest);
+      }
+      continue;
+    }
+
+    const stepMatch = line.match(/^\d+[.)]\s+(.*)$/);
+    if (stepMatch) {
+      steps.push(stepMatch[1].trim());
+      target = 'steps';
+      continue;
+    }
+
+    // Línea suelta: continuación del bloque activo (párrafos multilínea).
+    if (target === 'steps' && steps.length > 0) steps[steps.length - 1] = append(steps[steps.length - 1], line);
+    else if (target === 'statement') statement = append(statement, line);
+    else if (target === 'result') result = append(result, line);
+    else if (target === 'why') why = append(why, line);
+  }
+
+  if (!statement || steps.length < 2 || !result) return null;
+  return { title, statement, steps, result, why };
+}
+
 /**
  * Resuelve los candidatos de vídeo de una lección. Compat: lecciones antiguas
  * solo tienen youtubeId (sin lista de candidatos).
@@ -132,16 +236,64 @@ export function buildSlides(module: TheoryModuleWithLessons): Slide[] {
       continue;
     }
 
+    if (lesson.kind === 'EXAMPLE') {
+      let emitted = 0;
+      for (const [i, chunk] of splitExampleChunks(lesson.body ?? '').entries()) {
+        const parsed = parseExample(chunk);
+        if (parsed) {
+          slides.push({
+            id: `${lesson.id}-ex${i}`,
+            kind: 'example',
+            heading: parsed.title,
+            statement: parsed.statement,
+            steps: parsed.steps,
+            result: parsed.result,
+            why: parsed.why,
+          });
+          emitted++;
+          continue;
+        }
+        // Trozo sin estructura de ejemplo (preámbulo o temario antiguo): paginar como contenido.
+        const pages = paginateBlocks(splitMarkdownBlocks(chunk));
+        pages.forEach((pageBlocks, j) => {
+          slides.push({
+            id: `${lesson.id}-${i}-${j}`,
+            kind: 'content',
+            icon: KIND_ICON.EXAMPLE,
+            heading: lesson.heading,
+            blocks: pageBlocks,
+            continued: emitted > 0 || j > 0,
+          });
+          emitted++;
+        });
+      }
+      if (emitted === 0) {
+        slides.push({
+          id: `${lesson.id}-0`,
+          kind: 'content',
+          icon: KIND_ICON.EXAMPLE,
+          heading: lesson.heading,
+          blocks: [''],
+        });
+      }
+      continue;
+    }
+
+    const variant = contentVariant(lesson);
     const blocks = splitMarkdownBlocks(lesson.body ?? '');
-    const pages = blocks.length > 0 ? paginateBlocks(blocks) : [['']];
+    // La promesa y el cierre son checklists cortas y autocontenidas: siempre en
+    // una sola slide (paginarlas deja el callout huérfano en una slide "cont.").
+    const pages =
+      blocks.length === 0 ? [['']] : variant ? [blocks] : paginateBlocks(blocks);
     pages.forEach((pageBlocks, i) => {
       slides.push({
         id: `${lesson.id}-${i}`,
         kind: 'content',
-        icon: KIND_ICON[lesson.kind],
+        icon: variant === 'objectives' ? '🎯' : variant === 'takeaways' ? '🏆' : KIND_ICON[lesson.kind],
         heading: lesson.heading,
         blocks: pageBlocks,
         continued: i > 0,
+        variant,
       });
     });
   }
@@ -163,7 +315,11 @@ function slideLabel(slide: Omit<Slide, 'index' | 'label'>, i: number): string {
   return slide.continued ? `${base} (cont.)` : base;
 }
 
-/** Nº de fragmentos revelables de una slide (los bloques de contenido). */
+/** Nº de fragmentos revelables de una slide (bloques o piezas del ejemplo). */
 export function fragmentCount(slide: Slide): number {
+  if (slide.kind === 'example') {
+    // enunciado + pasos + resultado + porqué (si existe)
+    return 1 + (slide.steps?.length ?? 0) + 1 + (slide.why ? 1 : 0);
+  }
   return slide.kind === 'content' ? (slide.blocks?.length ?? 0) : 0;
 }
