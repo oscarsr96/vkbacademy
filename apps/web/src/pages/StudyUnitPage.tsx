@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { StudyUnitDetail } from '@vkbacademy/shared';
 import {
@@ -17,11 +17,61 @@ import EmptyState from '../components/ui/EmptyState';
 
 type Tab = 'theory' | 'exercises' | 'exam';
 
-const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'theory', label: 'Teoría', icon: 'book' },
-  { key: 'exercises', label: 'Ejercicios', icon: 'target' },
-  { key: 'exam', label: 'Examen', icon: 'graduation' },
+// Itinerario secuencial de la unidad: primero apuntes, luego práctica, luego examen.
+const STEPS: { key: Tab; label: string; icon: string; desc: string }[] = [
+  { key: 'theory', label: 'Apuntes', icon: 'book', desc: 'Estudia el temario con la presentación' },
+  { key: 'exercises', label: 'Ejercicios', icon: 'target', desc: 'Practica lo que acabas de aprender' },
+  { key: 'exam', label: 'Examen', icon: 'graduation', desc: 'Demuestra lo que sabes' },
 ];
+
+const STEPPER_CSS = `
+  .unit-steps { display: flex; align-items: stretch; gap: 6px; margin-top: 10px; }
+  .unit-step {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
+    border-radius: 14px;
+    cursor: pointer;
+    text-align: left;
+    color: var(--color-text);
+    font-family: inherit;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  }
+  .unit-step:hover { border-color: var(--brand); transform: translateY(-2px); }
+  .unit-step.is-active {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+    box-shadow: 0 0 0 3px var(--brand-soft);
+  }
+  .unit-step-num {
+    flex: none;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--brand-deep);
+    background: var(--brand-soft);
+    border: 1px solid var(--brand);
+    transition: background 0.15s, color 0.15s;
+  }
+  .unit-step.is-active .unit-step-num { background: var(--brand); color: #fff; }
+  .unit-step-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .unit-step-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 1rem; }
+  .unit-step-desc { font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.35; }
+  .unit-step-arrow { align-self: center; color: var(--color-text-muted); flex: none; display: grid; place-items: center; }
+  @media (max-width: 720px) {
+    .unit-steps { flex-direction: column; }
+    .unit-step-arrow { transform: rotate(90deg); }
+  }
+`;
 
 export default function StudyUnitPage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -67,23 +117,38 @@ export default function StudyUnitPage() {
 
       <PageHeader variant="light" title={data.title} subtitle={data.summary} />
 
-      <nav style={s.tabs}>
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={`chip${tab === t.key ? ' active' : ''}`}
-            aria-pressed={tab === t.key}
-          >
-            <Icon name={t.icon} size={14} />
-            {t.label}
-            {!data.sections[t.key] && (
-              <span style={s.tabWarn} title="Sección no generada">
-                !
+      <style>{STEPPER_CSS}</style>
+      <nav className="unit-steps" aria-label="Itinerario de la unidad">
+        {STEPS.map((t, i) => (
+          <Fragment key={t.key}>
+            {i > 0 && (
+              <span className="unit-step-arrow" aria-hidden="true">
+                <Icon name="chevron-right" size={20} />
               </span>
             )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`unit-step${tab === t.key ? ' is-active' : ''}`}
+              aria-current={tab === t.key ? 'step' : undefined}
+            >
+              <span className="unit-step-num" aria-hidden="true">
+                {i + 1}
+              </span>
+              <span className="unit-step-body">
+                <span className="unit-step-title">
+                  <Icon name={t.icon} size={16} />
+                  {t.label}
+                  {!data.sections[t.key] && (
+                    <span style={s.tabWarn} title="Sección no generada">
+                      !
+                    </span>
+                  )}
+                </span>
+                <span className="unit-step-desc">{t.desc}</span>
+              </span>
+            </button>
+          </Fragment>
         ))}
       </nav>
 
@@ -257,7 +322,7 @@ function ExamTab({ unit, onStart }: { unit: StudyUnitDetail; onStart: (bankId: s
 
 const s: Record<string, React.CSSProperties> = {
   page: {
-    maxWidth: 900,
+    maxWidth: 1040,
     margin: '0 auto',
     padding: '24px 16px 64px',
     display: 'flex',
@@ -280,12 +345,6 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--color-text-muted)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-  },
-  tabs: {
-    display: 'flex',
-    gap: 8,
-    flexWrap: 'wrap',
-    marginTop: 4,
   },
   tabWarn: { color: 'var(--color-error)', fontWeight: 800 },
   content: { display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 },

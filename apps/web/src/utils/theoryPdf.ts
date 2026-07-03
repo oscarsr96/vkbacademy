@@ -1,10 +1,12 @@
-// Exportación del temario a PDF (una imagen por diapositiva, fidelidad visual
-// total: fórmulas KaTeX, colores y diseño VKB) y compartición por WhatsApp.
+// Exportación del temario a PDF imprimible (una imagen por diapositiva, con
+// fórmulas KaTeX) y compartición por WhatsApp. El PDF usa fondo blanco y paleta
+// casi blanco y negro (el deck en pantalla es oscuro, pero imprimirlo gasta
+// tinta y sale mal): la marca naranja queda solo en el pie de página.
 //
 // Estrategia: se renderiza un árbol React con TODAS las slides a tamaño fijo en
 // un contenedor fuera de pantalla, se captura cada página con html2canvas y se
 // componen en un jsPDF con páginas 16:9. Reutiliza SlideView (mismo render que
-// el deck) para no duplicar el diseño.
+// el deck) y se re-tematiza en claro vía PDF_OVERRIDE_CSS.
 
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -23,7 +25,7 @@ const PAGE_H = 720;
 const FOOTER_MARGIN = 64;
 const FOOTER_BASELINE = PAGE_H - 26; // línea de texto del pie
 const ORANGE = { r: 245, g: 145, b: 30 } as const; // #f5911e
-const FOOTER_MUTED = { r: 148, g: 163, b: 184 } as const; // slate-400, legible sobre fondo oscuro
+const FOOTER_MUTED = { r: 71, g: 85, b: 105 } as const; // slate-600, legible sobre fondo blanco
 
 function drawFooter(doc: JsPdf, pageNum: number, totalPages: number): void {
   // Línea fina naranja separando el pie del contenido
@@ -57,15 +59,16 @@ const PAGE_STYLE: React.CSSProperties = {
   padding: '56px 80px',
   boxSizing: 'border-box',
   overflow: 'hidden',
-  color: '#fff',
-  background:
-    'radial-gradient(120% 80% at 50% -10%, rgba(245,145,30,0.22), transparent 60%), linear-gradient(180deg, #080e1a 0%, #0d1b2a 60%, #152233 100%)',
+  color: '#111827',
+  background: '#ffffff',
 };
 
 // html2canvas no ejecuta animaciones CSS y no soporta background-clip:text.
 // Para el PDF: desactivamos animaciones/transiciones (callouts y fragmentos
 // quedarían en opacidad 0), forzamos todo visible y damos color sólido al
 // título de portada (el degradado-sobre-texto saldría como una caja).
+// Además, re-tematizamos en claro TODO el CSS del deck (pensado para fondo
+// navy): texto casi negro, tarjetas y callouts en grises, sin glows.
 const PDF_OVERRIDE_CSS = `
   .tslides-pdf-page *,
   .tslides-pdf-page *::before,
@@ -78,11 +81,47 @@ const PDF_OVERRIDE_CSS = `
     opacity: 1 !important;
     transform: none !important;
   }
+  .tslides-pdf-page { color: #111827; }
   .tslides-pdf-page .tsl-cover-title {
     background: none !important;
-    -webkit-text-fill-color: #fff !important;
-    color: #fff !important;
+    -webkit-text-fill-color: #111827 !important;
+    color: #111827 !important;
   }
+  .tslides-pdf-page .tsl-cover-eyebrow { color: #475569; }
+  .tslides-pdf-page .tsl-cover-sub,
+  .tslides-pdf-page .tsl-closing-sub { color: #475569; }
+  .tslides-pdf-page .tsl-closing-title { color: #111827; }
+  .tslides-pdf-page .tsl-ball { filter: none; }
+  .tslides-pdf-page .tsl-heading { color: #111827; }
+  .tslides-pdf-page .tsl-cont { color: #475569; border-color: #cbd5e1; }
+  .tslides-pdf-page .tsl-body { color: #111827; }
+  .tslides-pdf-page .tsl-body strong { color: #000; }
+  .tslides-pdf-page .tsl-body code { background: #f1f5f9; color: #111827; }
+  .tslides-pdf-page .tsl-muted { color: #475569; }
+  .tslides-pdf-page .theory-callout {
+    color: #111827;
+    background: #f8fafc !important;
+    border-left-color: #94a3b8 !important;
+  }
+  .tslides-pdf-page .tsl-content--objectives .tsl-body li,
+  .tslides-pdf-page .tsl-content--takeaways .tsl-body li {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+  .tslides-pdf-page .tsl-content--objectives .tsl-body li::before,
+  .tslides-pdf-page .tsl-content--takeaways .tsl-body li::before {
+    background: #e2e8f0;
+    color: #111827;
+  }
+  .tslides-pdf-page .tsl-ex-label { color: #334155; }
+  .tslides-pdf-page .tsl-ex-statement { background: #f8fafc; border-color: #cbd5e1; }
+  .tslides-pdf-page .tsl-ex-step { background: #f8fafc; border-color: #cbd5e1; }
+  .tslides-pdf-page .tsl-ex-num { background: #e2e8f0; border-color: #94a3b8; color: #111827; }
+  .tslides-pdf-page .tsl-ex-result { background: #f1f5f9; border: 1px solid #64748b; }
+  .tslides-pdf-page .tsl-ex-why { background: #f8fafc; border-left-color: #64748b; }
+  .tslides-pdf-page .tsl-ex-why .tsl-ex-label { color: #334155; }
+  .tslides-pdf-page .tsl-video-card { background: #f8fafc; border-color: #cbd5e1; }
+  .tslides-pdf-page .tsl-video-card-play { background: #e2e8f0; color: #111827; box-shadow: none; }
 `;
 
 function PdfPages({ slides }: { slides: Slide[] }) {
@@ -123,7 +162,7 @@ async function generateTheoryPdf(module: TheoryModuleWithLessons): Promise<JsPdf
     top: '0',
     width: `${PAGE_W}px`,
     display: 'block',
-    background: '#0d1b2a',
+    background: '#ffffff',
   } satisfies Partial<CSSStyleDeclaration>);
   document.body.appendChild(host);
 
@@ -153,7 +192,7 @@ async function generateTheoryPdf(module: TheoryModuleWithLessons): Promise<JsPdf
       }
       const canvas = await html2canvas(pages[i], {
         scale: 2,
-        backgroundColor: '#0d1b2a',
+        backgroundColor: '#ffffff',
         useCORS: true,
         logging: false,
         windowWidth: PAGE_W,

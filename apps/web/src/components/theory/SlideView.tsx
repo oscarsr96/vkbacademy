@@ -241,8 +241,8 @@ function ClosingSlide() {
       </span>
       <h2 className="tsl-closing-title">¡Bien jugado!</h2>
       <p className="tsl-closing-sub">
-        Has terminado el temario. Descárgalo en PDF o envíatelo a WhatsApp para repasarlo cuando
-        quieras.
+        Apuntes completados. Ahora te toca: practica con los ejercicios y remata con el examen.
+        Descarga el PDF si quieres repasar sobre papel.
       </p>
     </div>
   );
