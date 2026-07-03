@@ -244,7 +244,7 @@ function TheoryTab({ unit }: { unit: StudyUnitDetail }) {
       />
     );
   }
-  return <TheoryView module={unit.theory} />;
+  return <TheoryView module={unit.theory} courseTitle={unit.course.title} />;
 }
 
 function ExercisesTab({ unit }: { unit: StudyUnitDetail }) {

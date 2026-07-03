@@ -1,23 +1,21 @@
 import { useMemo, useState } from 'react';
 import type {
   TheoryLesson,
-  TheoryLessonKind,
   TheoryModuleWithLessons,
   TheoryVideoCandidate,
 } from '@vkbacademy/shared';
 import { TheoryMarkdown, THEORY_CALLOUT_CSS } from './theoryMarkdown';
 import TheorySlides from './TheorySlides';
-import { buildSlides } from '../../utils/theorySlides';
+import { buildSlides, stripLeadingEmoji } from '../../utils/theorySlides';
 import { downloadTheoryPdf, shareTheoryPdf } from '../../utils/theoryPdf';
 
-const KIND_ICON: Record<TheoryLessonKind, string> = {
-  INTRO: '🧭',
-  CONTENT: '📚',
-  EXAMPLE: '💡',
-  VIDEO: '▶️',
-};
+interface TheoryViewProps {
+  module: TheoryModuleWithLessons;
+  /** Título del curso: cabecera y nombre de fichero del PDF. */
+  courseTitle: string;
+}
 
-export default function TheoryView({ module }: { module: TheoryModuleWithLessons }) {
+export default function TheoryView({ module, courseTitle }: TheoryViewProps) {
   const [showSlides, setShowSlides] = useState(false);
   // La presentación es la fuente; los apuntes en texto quedan colapsados por defecto.
   const [showArticle, setShowArticle] = useState(false);
@@ -28,7 +26,7 @@ export default function TheoryView({ module }: { module: TheoryModuleWithLessons
     if (pdfBusy) return;
     setPdfBusy('download');
     try {
-      await downloadTheoryPdf(module);
+      await downloadTheoryPdf(module, courseTitle);
     } catch {
       window.alert('No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
@@ -40,7 +38,7 @@ export default function TheoryView({ module }: { module: TheoryModuleWithLessons
     if (pdfBusy) return;
     setPdfBusy('share');
     try {
-      await shareTheoryPdf(module);
+      await shareTheoryPdf(module, courseTitle);
     } catch {
       window.alert('No se pudo compartir el PDF. Inténtalo de nuevo.');
     } finally {
@@ -120,9 +118,7 @@ export default function TheoryView({ module }: { module: TheoryModuleWithLessons
 function LessonSection({ lesson, index }: { lesson: TheoryLesson; index: number }) {
   return (
     <section className="theory-section" style={{ ...s.section, animationDelay: `${index * 90}ms` }}>
-      <h2 style={s.sectionTitle}>
-        <span aria-hidden>{KIND_ICON[lesson.kind]}</span> {lesson.heading}
-      </h2>
+      <h2 style={s.sectionTitle}>{stripLeadingEmoji(lesson.heading)}</h2>
       {lesson.kind === 'VIDEO' ? (
         <VideoLesson lesson={lesson} />
       ) : (

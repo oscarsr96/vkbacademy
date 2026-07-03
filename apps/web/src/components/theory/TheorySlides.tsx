@@ -428,14 +428,15 @@ export const TSLIDES_CSS = `
     align-items: center;
     gap: 14px;
   }
-  .tsl-ball {
-    font-size: clamp(48px, 9vw, 96px);
-    animation: tsl-bounce 2.4s ease-in-out infinite;
+  .tsl-logo {
+    width: clamp(110px, 18vw, 170px);
+    height: auto;
     filter: drop-shadow(0 14px 24px var(--brand-glow));
+    animation: tsl-float 3.2s ease-in-out infinite;
   }
-  @keyframes tsl-bounce {
-    0%, 100% { transform: translateY(0) rotate(-6deg); }
-    50% { transform: translateY(-16px) rotate(6deg); }
+  @keyframes tsl-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
   }
   .tsl-cover-eyebrow {
     text-transform: uppercase;
@@ -488,7 +489,6 @@ export const TSLIDES_CSS = `
     gap: 12px;
     flex-wrap: wrap;
   }
-  .tsl-icon { font-size: 1.1em; }
   .tsl-cont {
     font-family: 'Inter', sans-serif;
     font-size: 0.6em;
@@ -826,7 +826,7 @@ export const TSLIDES_CSS = `
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .tslides-slide, .tsl-ball, .tslides-frag, .tslides-grid { animation: none; transition: none; }
+    .tslides-slide, .tsl-logo, .tslides-frag, .tslides-grid { animation: none; transition: none; }
     .tslides-frag { opacity: 1; transform: none; }
   }
 `;
