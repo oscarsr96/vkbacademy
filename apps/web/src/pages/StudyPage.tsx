@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { StudyDifficulty } from '@vkbacademy/shared';
 import { useCourses } from '../hooks/useCourses';
 import { useMyStudyUnits, useCreateStudyUnit, useDeleteStudyUnit } from '../hooks/useStudy';
+import { useMyStudyPlans, useDeleteStudyPlan } from '../hooks/useStudyPlans';
+import { getApiErrorMessage } from '../utils/errorMessage';
 import PageHeader from '../components/ui/PageHeader';
 import Icon from '../components/ui/Icon';
 import EmptyState from '../components/ui/EmptyState';
@@ -21,6 +23,9 @@ export default function StudyPage() {
   const { data: units, isLoading: unitsLoading } = useMyStudyUnits();
   const create = useCreateStudyUnit();
   const remove = useDeleteStudyUnit();
+
+  const { data: plans, isLoading: plansLoading } = useMyStudyPlans();
+  const removePlan = useDeleteStudyPlan();
 
   const [courseId, setCourseId] = useState('');
   const [topic, setTopic] = useState('');
@@ -65,6 +70,19 @@ export default function StudyPage() {
         title="Estudiar"
         subtitle="Escribe un tema de una de tus asignaturas y se creará un curso con teoría, ejercicios y un examen, todo generado para ti."
       />
+
+      <Link to="/study/plan/new" className="vkb-card" style={s.planCta}>
+        <span style={s.planCtaIcon}>
+          <Icon name="shapes" size={26} />
+        </span>
+        <span style={s.planCtaBody}>
+          <strong style={s.planCtaTitle}>Simulacro multi-tema</strong>
+          <span style={s.planCtaSubtitle}>
+            Combina varios temas como en un examen real
+          </span>
+        </span>
+        <Icon name="chevron-right" size={18} color="var(--brand-deep)" />
+      </Link>
 
       <form onSubmit={handleSubmit} className="vkb-card" style={s.form}>
         {/* Asignatura + tema */}
@@ -267,6 +285,68 @@ export default function StudyPage() {
           </div>
         )}
       </section>
+
+      <section style={s.results}>
+        <h2 className="section-label">Mis simulacros multi-tema</h2>
+        {removePlan.isError && (
+          <div className="alert alert-error" style={{ marginTop: 14 }}>
+            {getApiErrorMessage(removePlan.error, 'No se pudo borrar el plan. Inténtalo de nuevo.')}
+          </div>
+        )}
+        {plansLoading && <p style={s.muted}>Cargando…</p>}
+        {!plansLoading && (plans?.length ?? 0) === 0 && (
+          <EmptyState
+            icon="shapes"
+            title="Aún no has creado ningún simulacro multi-tema"
+            message="Pulsa arriba en «Simulacro multi-tema» para combinar varios temas."
+          />
+        )}
+        {!plansLoading && (plans?.length ?? 0) > 0 && (
+          <div className="numbered-grid" style={s.list}>
+            {(plans ?? []).map((p, i) => (
+              <article
+                key={p.id}
+                className="vkb-card numbered-card"
+                style={{
+                  ...s.item,
+                  animation: `riseIn 0.5s cubic-bezier(0.18, 0.72, 0.24, 1.12) ${i * 60}ms both`,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`¿Borrar "${p.title}"?`)) removePlan.mutate(p.id);
+                  }}
+                  style={s.deleteBtn}
+                  aria-label="Borrar plan"
+                >
+                  <Icon name="close" size={16} />
+                </button>
+                <Link to={`/study/plan/${p.id}`} style={s.itemLink}>
+                  <strong style={s.itemTitle}>{p.title}</strong>
+                  <span style={s.itemMeta}>
+                    {p.course.title} · {p.topics.length} temas
+                  </span>
+                  <span style={s.planSections}>
+                    <span style={p.sections.theory ? s.sectionOk : s.sectionMissing}>Apuntes</span>
+                    <span style={p.sections.exercises ? s.sectionOk : s.sectionMissing}>
+                      Ejercicios
+                    </span>
+                    <span style={p.sections.exam ? s.sectionOk : s.sectionMissing}>Examen</span>
+                  </span>
+                  <span style={s.itemDate}>
+                    {new Date(p.createdAt).toLocaleDateString('es-ES', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </Link>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -280,6 +360,27 @@ const s: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 32,
   },
+  planCta: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    padding: '18px 22px',
+    textDecoration: 'none',
+    cursor: 'pointer',
+  },
+  planCtaIcon: {
+    flex: 'none',
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    display: 'grid',
+    placeItems: 'center',
+    color: 'var(--brand-deep)',
+    background: 'var(--brand-soft)',
+  },
+  planCtaBody: { flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 },
+  planCtaTitle: { fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-text)' },
+  planCtaSubtitle: { fontSize: '0.875rem', color: 'var(--color-text-muted)' },
   form: {
     display: 'flex',
     flexDirection: 'column',
@@ -352,6 +453,23 @@ const s: Record<string, React.CSSProperties> = {
   itemTitle: { fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.3 },
   itemMeta: { fontSize: '0.875rem', color: 'var(--color-text-muted)', lineHeight: 1.4 },
   itemDate: { fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 2 },
+  planSections: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  sectionOk: {
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    color: 'var(--brand-deep)',
+    background: 'var(--brand-soft)',
+    padding: '2px 8px',
+    borderRadius: 999,
+  },
+  sectionMissing: {
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    color: 'var(--color-error)',
+    background: 'rgba(220,38,38,0.08)',
+    padding: '2px 8px',
+    borderRadius: 999,
+  },
   deleteBtn: {
     position: 'absolute',
     top: 16,

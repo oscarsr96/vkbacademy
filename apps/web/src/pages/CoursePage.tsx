@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCourse, useCourseProgress } from '../hooks/useCourses';
 import { useExamBankInfo } from '../hooks/useExams';
 import { useMyCertificates } from '../hooks/useCertificates';
@@ -335,6 +335,14 @@ export default function CoursePage() {
             </button>
           </div>
         )}
+
+        {/* CTA: generar plan de estudio multi-tema a partir de este temario */}
+        <div style={S.examCourseBtn}>
+          <Link to={`/study/plan/new?courseId=${courseId}`} className="btn btn-ghost">
+            <Icon name="shapes" size={16} />
+            Generar curso de estudio de este temario
+          </Link>
+        </div>
 
         {/* Módulos */}
         {course.modules?.length ? (
