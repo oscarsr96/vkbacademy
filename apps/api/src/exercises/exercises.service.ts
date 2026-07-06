@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { generateAiJson } from '../ai/ai-json';
+import { splitAcrossTopics } from '../ai/topic-distribution';
 import { GenerateExercisesDto } from './dto/generate-exercises.dto';
 import { EvaluateExerciseDto } from './dto/evaluate-exercise.dto';
 
@@ -23,6 +24,22 @@ export interface GeneratedExercise {
 
 export interface GenerateExercisesResult {
   exercises: GeneratedExercise[];
+}
+
+// Ejercicio del flujo multi-tema (StudyPlan): etiquetado con su tema.
+export interface GeneratedTopicExercise extends GeneratedExercise {
+  topicLabel: string;
+}
+
+export interface GenerateTopicExercisesResult {
+  exercises: GeneratedTopicExercise[];
+}
+
+export interface GenerateExercisesForTopicsParams {
+  courseId: string;
+  topics: string[];
+  count: number;
+  difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
 }
 
 export type EvaluationVerdict = 'correct' | 'partial' | 'incorrect';
@@ -106,6 +123,56 @@ export class ExercisesService {
     return this.validateExercisesResult(parsed);
   }
 
+  /**
+   * Variante multi-tema (flujo StudyPlan): una sola llamada IA que reparte
+   * `count` ejercicios entre los temas (base floor(count/T), resto a los
+   * primeros) y etiqueta cada uno con su `topicLabel` para agrupar en UI.
+   */
+  async generateForTopics(
+    userId: string,
+    params: GenerateExercisesForTopicsParams,
+  ): Promise<GenerateTopicExercisesResult> {
+    const course = await this.prisma.course.findUnique({
+      where: { id: params.courseId },
+      include: { schoolYear: true },
+    });
+    if (!course) {
+      throw new NotFoundException(`Curso "${params.courseId}" no encontrado`);
+    }
+
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { userId, courseId: params.courseId },
+    });
+    if (!enrollment) {
+      throw new ForbiddenException('No estás matriculado en este curso');
+    }
+
+    const prompt = this.buildMultiTopicPrompt(
+      course.title,
+      course.schoolYear?.label ?? '',
+      params.topics,
+      params.count,
+      params.difficulty ?? 'MEDIUM',
+    );
+
+    this.logger.log(
+      `Generando ${params.count} ejercicios multi-tema (${params.topics.length} temas) para curso "${course.title}"`,
+    );
+
+    const maxTokens = Math.min(8000, 200 + params.count * 250);
+
+    let parsed: unknown;
+    try {
+      parsed = await generateAiJson(this.ai, prompt, maxTokens, { attempts: 2, logger: this.logger });
+    } catch (err) {
+      this.logger.error('Error al parsear JSON de IA (ejercicios multi-tema) tras reintentos:', err);
+      throw new InternalServerErrorException(
+        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
+      );
+    }
+    return this.validateTopicExercisesResult(parsed, params.topics);
+  }
+
   async evaluate(dto: EvaluateExerciseDto): Promise<EvaluationResult> {
     const prompt = this.buildEvaluationPrompt(dto);
     this.logger.log(
@@ -129,6 +196,24 @@ export class ExercisesService {
       throw new InternalServerErrorException('La respuesta no contiene un array `exercises`');
     }
     return parsed as GenerateExercisesResult;
+  }
+
+  private validateTopicExercisesResult(
+    parsed: unknown,
+    topics: string[],
+  ): GenerateTopicExercisesResult {
+    const result = this.validateExercisesResult(parsed);
+    const validLabels = new Set(topics.map((t) => t.trim()));
+    for (const [idx, ex] of (result.exercises as GeneratedTopicExercise[]).entries()) {
+      const label = typeof ex.topicLabel === 'string' ? ex.topicLabel.trim() : '';
+      if (!validLabels.has(label)) {
+        throw new InternalServerErrorException(
+          `Ejercicio ${idx + 1}: topicLabel inválido "${ex.topicLabel ?? ''}" (debe ser uno de los temas pedidos)`,
+        );
+      }
+      ex.topicLabel = label;
+    }
+    return result as GenerateTopicExercisesResult;
   }
 
   private validateEvaluationResult(parsed: unknown): EvaluationResult {
@@ -210,6 +295,72 @@ Reglas:
 - OPEN: campo "options" vacío []; "solution" contiene la respuesta o pasos resueltos
 - Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}
 - Contenido curricular real relacionado con "${topic}"
+- "explanation" debe ayudar al alumno a entender por qué la respuesta es correcta
+- Solo devuelve JSON puro, sin markdown ni texto adicional`;
+  }
+
+  private buildMultiTopicPrompt(
+    courseTitle: string,
+    schoolYearLabel: string,
+    topics: string[],
+    count: number,
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD',
+  ): string {
+    const perTopic = splitAcrossTopics(count, topics.length);
+    const repartoLines = topics
+      .map((t, i) => `- "${t}": ${perTopic[i]} ejercicio${perTopic[i] === 1 ? '' : 's'}`)
+      .join('\n');
+
+    return `Genera ${count} ejercicios de práctica en español que combinen VARIOS temas, como en un examen real.
+
+Curso: "${courseTitle}"
+${schoolYearLabel ? `Nivel educativo: "${schoolYearLabel}" (sistema educativo español)` : ''}
+Dificultad: ${DIFFICULTY_GUIDANCE[difficulty]}
+
+⚠️ REPARTO POR TEMA — OBLIGATORIO, NO NEGOCIABLE:
+${repartoLines}
+
+Cada ejercicio lleva un campo "topicLabel" con el tema al que pertenece, copiado EXACTAMENTE de la lista anterior (mismas mayúsculas, tildes y espacios). Si un topicLabel no coincide con un tema de la lista, la respuesta será RECHAZADA.
+
+Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, sin explicaciones adicionales fuera del JSON):
+{
+  "exercises": [
+    {
+      "topicLabel": "${topics[0]}",
+      "statement": "enunciado del ejercicio",
+      "type": "SINGLE",
+      "options": ["opción A", "opción B", "opción C"],
+      "solution": "opción A",
+      "explanation": "por qué la opción A es correcta"
+    },
+    {
+      "topicLabel": "${topics[0]}",
+      "statement": "enunciado",
+      "type": "TRUE_FALSE",
+      "options": ["Verdadero", "Falso"],
+      "solution": "Verdadero",
+      "explanation": "explicación de por qué es verdadero"
+    },
+    {
+      "topicLabel": "${topics[topics.length - 1]}",
+      "statement": "enunciado de un ejercicio abierto",
+      "type": "OPEN",
+      "options": [],
+      "solution": "respuesta correcta o pasos resueltos",
+      "explanation": "explicación detallada del razonamiento"
+    }
+  ]
+}
+
+Reglas:
+- Respeta el reparto exacto de ejercicios por tema indicado arriba
+- Agrupa los ejercicios por tema en el orden de la lista
+- Mezcla los 3 tipos (SINGLE, TRUE_FALSE, OPEN) cuando sea apropiado para cada tema
+- SINGLE: 3-4 opciones, exactamente 1 correcta (la propiedad "solution" debe coincidir con una de las opciones)
+- TRUE_FALSE: opciones siempre ["Verdadero", "Falso"], solución coincide
+- OPEN: campo "options" vacío []; "solution" contiene la respuesta o pasos resueltos
+- Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}
+- Contenido curricular real relacionado con cada tema
 - "explanation" debe ayudar al alumno a entender por qué la respuesta es correcta
 - Solo devuelve JSON puro, sin markdown ni texto adicional`;
   }

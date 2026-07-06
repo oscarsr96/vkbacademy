@@ -9,6 +9,7 @@ import { QuestionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { generateAiJson } from '../ai/ai-json';
+import { splitAcrossTopics } from '../ai/topic-distribution';
 import { GenerateAiExamDto } from './dto/generate-ai-exam.dto';
 
 // ─── Tipos del payload IA ────────────────────────────────────────────────────
@@ -25,11 +26,22 @@ interface AiQuestionPayload {
   type: AiExamQuestionType;
   answers: AiAnswerPayload[];
   explanation?: string;
+  // Solo en el flujo multi-tema (StudyPlan): tema al que pertenece la pregunta.
+  topicLabel?: string;
 }
 
 interface AiExamPayload {
   title: string;
   questions: AiQuestionPayload[];
+}
+
+export interface GenerateAiExamForTopicsParams {
+  courseId: string;
+  topics: string[];
+  numQuestions: number;
+  timeLimit?: number;
+  onlyOnce?: boolean;
+  difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
 }
 
 // ─── Snapshot que vive dentro de ExamAttempt.questionsSnapshot ──────────────
@@ -38,6 +50,8 @@ interface QuestionSnapshot {
   id: string;
   text: string;
   type: string;
+  // Tema de la pregunta en exámenes multi-tema; ausente en el resto.
+  topicLabel?: string | null;
   answers: { id: string; text: string; isCorrect: boolean }[];
 }
 
@@ -162,6 +176,98 @@ export class AiExamsService {
     return this.serializeBank(bank, { includeIsCorrect: false, attemptCount: 0 });
   }
 
+  /**
+   * Variante multi-tema (flujo StudyPlan): una sola llamada IA que reparte las
+   * preguntas entre los temas (base floor(N/T), resto a los primeros)
+   * manteniendo la distribución global de tipos, y etiqueta cada pregunta con
+   * su `topicLabel`. La validación exige cobertura ≥1 pregunta por tema; si la
+   * IA no la respeta, se regenera (hasta 2 generaciones en total).
+   */
+  async generateForTopics(userId: string, params: GenerateAiExamForTopicsParams) {
+    const course = await this.prisma.course.findUnique({
+      where: { id: params.courseId },
+      include: { schoolYear: true },
+    });
+    if (!course) throw new NotFoundException(`Curso "${params.courseId}" no encontrado`);
+
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { userId, courseId: params.courseId },
+    });
+    if (!enrollment) throw new ForbiddenException('No estás matriculado en este curso');
+
+    const prompt = this.buildMultiTopicPrompt(
+      course.title,
+      course.schoolYear?.label ?? '',
+      params.topics,
+      params.numQuestions,
+      params.difficulty ?? 'MEDIUM',
+    );
+
+    this.logger.log(
+      `Generando examen IA multi-tema: ${params.numQuestions} preguntas sobre ${params.topics.length} temas (curso "${course.title}")`,
+    );
+
+    const maxTokens = Math.min(8000, 600 + params.numQuestions * 350);
+
+    // El reparto por tema es más frágil que el examen un-tema, así que aquí la
+    // validación semántica (cobertura/etiquetas) también reintenta, no solo el parseo.
+    let payload: AiExamPayload | null = null;
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= 2 && !payload; attempt++) {
+      try {
+        const parsed = await generateAiJson(this.ai, prompt, maxTokens, {
+          attempts: 1,
+          logger: this.logger,
+        });
+        payload = this.validateTopicsPayload(parsed, params.numQuestions, params.topics);
+      } catch (err) {
+        lastErr = err;
+        this.logger.warn(
+          `Examen multi-tema inválido (generación ${attempt}/2): ${err instanceof Error ? err.message : 'desconocido'}`,
+        );
+      }
+    }
+    if (!payload) {
+      this.logger.error('Error al generar examen multi-tema tras reintentos:', lastErr);
+      throw new InternalServerErrorException(
+        `El agente IA devolvió un formato inválido: ${lastErr instanceof Error ? lastErr.message : 'desconocido'}`,
+      );
+    }
+
+    const joinedTopics = params.topics.join(' · ');
+    const bank = await this.prisma.aiExamBank.create({
+      data: {
+        userId,
+        courseId: params.courseId,
+        moduleId: null,
+        topic: joinedTopics.slice(0, 500),
+        title: payload.title.trim().slice(0, 200) || joinedTopics.slice(0, 200),
+        numQuestions: params.numQuestions,
+        timeLimit: params.timeLimit ?? null,
+        onlyOnce: params.onlyOnce ?? false,
+        questions: {
+          create: payload.questions.map((q, qIdx) => ({
+            text: q.text,
+            type: q.type as QuestionType,
+            order: qIdx,
+            explanation: q.explanation ?? null,
+            topicLabel: q.topicLabel?.trim() ?? null,
+            answers: {
+              create: q.answers.map((a, aIdx) => ({
+                text: a.text,
+                isCorrect: a.isCorrect,
+                order: aIdx,
+              })),
+            },
+          })),
+        },
+      },
+      include: this.bankInclude(),
+    });
+
+    return this.serializeBank(bank, { includeIsCorrect: false, attemptCount: 0 });
+  }
+
   // ─── Listar bancos del alumno ───────────────────────────────────────────
 
   async listMyBanks(userId: string) {
@@ -254,6 +360,7 @@ export class AiExamsService {
       id: q.id,
       text: q.text,
       type: q.type,
+      topicLabel: q.topicLabel ?? null,
       answers: shuffle(q.answers.map((a) => ({ id: a.id, text: a.text, isCorrect: a.isCorrect }))),
     }));
 
@@ -320,6 +427,7 @@ export class AiExamsService {
         type: string;
         order: number;
         explanation: string | null;
+        topicLabel: string | null;
         answers: { id: string; text: string; isCorrect: boolean; order: number }[];
       }[];
     },
@@ -341,6 +449,7 @@ export class AiExamsService {
         text: q.text,
         type: q.type,
         order: q.order,
+        topicLabel: q.topicLabel,
         ...(opts.includeIsCorrect && { explanation: q.explanation }),
         answers: q.answers.map((a) => ({
           id: a.id,
@@ -418,6 +527,42 @@ export class AiExamsService {
     }
 
     return p as AiExamPayload;
+  }
+
+  /**
+   * Validación del examen multi-tema: todo lo del examen normal + cada
+   * pregunta lleva un topicLabel EXACTO de la lista y todo tema tiene ≥1
+   * pregunta (cobertura obligatoria).
+   */
+  private validateTopicsPayload(
+    parsed: unknown,
+    expectedCount: number,
+    topics: string[],
+  ): AiExamPayload {
+    const payload = this.validatePayload(parsed, expectedCount);
+
+    const perTopicCount = new Map<string, number>(topics.map((t) => [t.trim(), 0]));
+    for (const [idx, q] of payload.questions.entries()) {
+      const label = typeof q.topicLabel === 'string' ? q.topicLabel.trim() : '';
+      if (!perTopicCount.has(label)) {
+        throw new InternalServerErrorException(
+          `Pregunta ${idx + 1}: topicLabel inválido "${q.topicLabel ?? ''}" (debe ser uno de los temas pedidos)`,
+        );
+      }
+      q.topicLabel = label;
+      perTopicCount.set(label, perTopicCount.get(label)! + 1);
+    }
+
+    const uncovered = [...perTopicCount.entries()]
+      .filter(([, count]) => count === 0)
+      .map(([topic]) => topic);
+    if (uncovered.length > 0) {
+      throw new InternalServerErrorException(
+        `El examen no cubre todos los temas: faltan preguntas de ${uncovered.join(', ')}`,
+      );
+    }
+
+    return payload;
   }
 
   /**
@@ -510,6 +655,94 @@ Reglas estrictas:
 - TRUE_FALSE: exactamente 2 opciones ["Verdadero", "Falso"], solo una con isCorrect=true.
 - Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}.
 - Contenido curricular real relacionado con "${topic}".
+- "explanation" pedagógica y breve (1-2 frases) — el alumno la verá tras corregir.
+- Solo devuelve JSON puro, sin markdown ni texto adicional.`;
+  }
+
+  private buildMultiTopicPrompt(
+    courseTitle: string,
+    schoolYearLabel: string,
+    topics: string[],
+    count: number,
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD',
+  ): string {
+    const dist = this.getTypeDistribution(count);
+    const perTopic = splitAcrossTopics(count, topics.length);
+    const repartoLines = topics
+      .map((t, i) => `- "${t}": ${perTopic[i]} pregunta${perTopic[i] === 1 ? '' : 's'}`)
+      .join('\n');
+
+    return `Genera un examen en español que COMBINE varios temas, como un examen real de evaluación.
+
+Curso: "${courseTitle}"
+${schoolYearLabel ? `Nivel educativo: "${schoolYearLabel}" (sistema educativo español)` : ''}
+Dificultad: ${DIFFICULTY_GUIDANCE[difficulty]}
+Número total de preguntas: ${count}
+
+⚠️ REPARTO POR TEMA — OBLIGATORIO, NO NEGOCIABLE:
+${repartoLines}
+
+Cada pregunta lleva un campo "topicLabel" con el tema al que pertenece, copiado EXACTAMENTE de la lista anterior (mismas mayúsculas, tildes y espacios). Si un topicLabel no coincide con un tema de la lista, o algún tema se queda sin preguntas, la respuesta será RECHAZADA.
+
+⚠️ DISTRIBUCIÓN POR TIPO (sobre el total) — OBLIGATORIA, NO NEGOCIABLE:
+- ${dist.single} preguntas de tipo "SINGLE" (una sola respuesta correcta entre 3-4 opciones)
+- ${dist.multiple} preguntas de tipo "MULTIPLE" (varias respuestas correctas, entre 4 opciones)
+- ${dist.trueFalse} preguntas de tipo "TRUE_FALSE" (verdadero/falso)
+
+Si devuelves todas las preguntas del mismo tipo, la respuesta será RECHAZADA.
+Si no respetas el reparto exacto, la respuesta será RECHAZADA.
+
+Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, sin explicaciones adicionales fuera del JSON):
+{
+  "title": "Título breve del examen (máx. 80 caracteres)",
+  "questions": [
+    {
+      "topicLabel": "${topics[0]}",
+      "text": "Enunciado claro de la pregunta",
+      "type": "SINGLE",
+      "answers": [
+        { "text": "opción A", "isCorrect": true },
+        { "text": "opción B", "isCorrect": false },
+        { "text": "opción C", "isCorrect": false },
+        { "text": "opción D", "isCorrect": false }
+      ],
+      "explanation": "Por qué la opción correcta es la correcta (1-2 frases pedagógicas)"
+    },
+    {
+      "topicLabel": "${topics[0]}",
+      "text": "Enunciado de pregunta de respuesta múltiple — usa fórmulas como 'selecciona TODAS las que apliquen' o '¿cuáles de las siguientes...?'",
+      "type": "MULTIPLE",
+      "answers": [
+        { "text": "opción A", "isCorrect": true },
+        { "text": "opción B", "isCorrect": true },
+        { "text": "opción C", "isCorrect": false },
+        { "text": "opción D", "isCorrect": false }
+      ],
+      "explanation": "Justificación pedagógica"
+    },
+    {
+      "topicLabel": "${topics[topics.length - 1]}",
+      "text": "Afirmación a juzgar como verdadera o falsa",
+      "type": "TRUE_FALSE",
+      "answers": [
+        { "text": "Verdadero", "isCorrect": true },
+        { "text": "Falso", "isCorrect": false }
+      ],
+      "explanation": "Por qué es verdadera (o falsa)"
+    }
+  ]
+}
+
+Reglas estrictas:
+- Devuelve EXACTAMENTE ${count} preguntas — ni una más, ni una menos.
+- Respeta exactamente el reparto por tema indicado arriba: cada tema con su número de preguntas.
+- Respeta exactamente el reparto por tipo: ${dist.single} SINGLE + ${dist.multiple} MULTIPLE + ${dist.trueFalse} TRUE_FALSE (sobre el total, no por tema).
+- Mezcla temas y tipos en orden variado (no agrupar todas las preguntas de un tema juntas).
+- SINGLE: 3 o 4 opciones, exactamente 1 con isCorrect=true.
+- MULTIPLE: 4 opciones, 2 o 3 con isCorrect=true. El enunciado debe dejar claro que hay varias correctas.
+- TRUE_FALSE: exactamente 2 opciones ["Verdadero", "Falso"], solo una con isCorrect=true.
+- Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}.
+- Contenido curricular real relacionado con cada tema.
 - "explanation" pedagógica y breve (1-2 frases) — el alumno la verá tras corregir.
 - Solo devuelve JSON puro, sin markdown ni texto adicional.`;
   }

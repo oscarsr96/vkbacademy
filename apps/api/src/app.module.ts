@@ -28,6 +28,7 @@ import { ExercisesModule } from './exercises/exercises.module';
 import { TheoryModule } from './theory/theory.module';
 import { UsernameModule } from './username/username.module';
 import { StudyModule } from './study/study.module';
+import { StudyPlansModule } from './study-plans/study-plans.module';
 import { MustChangePasswordInterceptor } from './auth/interceptors/must-change-password.interceptor';
 
 @Module({
@@ -76,6 +77,7 @@ import { MustChangePasswordInterceptor } from './auth/interceptors/must-change-p
     ExercisesModule,
     TheoryModule,
     StudyModule,
+    StudyPlansModule,
     UsernameModule,
   ],
   providers: [
