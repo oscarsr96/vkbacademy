@@ -112,6 +112,7 @@ model User {
   theoryModules     TheoryModule[]
   aiExamBanks       AiExamBank[]
   studyUnits        StudyUnit[]
+  studyPlans        StudyPlan[]
 
   @@index([schoolYearId])
   @@index([tutorId])
@@ -157,6 +158,7 @@ model Course {
   theoryModules TheoryModule[] @relation("CourseTheoryModules")
   aiExamBanks   AiExamBank[]   @relation("CourseAiExamBanks")
   studyUnits    StudyUnit[]    @relation("CourseStudyUnits")
+  studyPlans    StudyPlan[]    @relation("CourseStudyPlans")
 
   @@index([schoolYearId])
 }
@@ -187,12 +189,13 @@ model Module {
   order    Int
   courseId String
 
-  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons       Lesson[]
-  examQuestions ExamQuestion[] @relation("ModuleExamQuestions")
-  examAttempts  ExamAttempt[]  @relation("ModuleExamAttempts")
-  certificates  Certificate[]  @relation("ModuleCertificates")
-  aiExamBanks   AiExamBank[]   @relation("ModuleAiExamBanks")
+  course          Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons         Lesson[]
+  examQuestions   ExamQuestion[]   @relation("ModuleExamQuestions")
+  examAttempts    ExamAttempt[]    @relation("ModuleExamAttempts")
+  certificates    Certificate[]    @relation("ModuleCertificates")
+  aiExamBanks     AiExamBank[]     @relation("ModuleAiExamBanks")
+  studyPlanTopics StudyPlanTopic[] @relation("ModuleStudyPlanTopics")
 
   @@index([courseId, order])
 }
@@ -591,6 +594,10 @@ model TheoryModule {
   studyUnitId String?    @unique
   studyUnit   StudyUnit? @relation(fields: [studyUnitId], references: [id], onDelete: Cascade)
 
+  // Tema de un plan de estudio multi-tema: cada tema tiene su propio deck 1:1
+  studyPlanTopicId String?         @unique
+  studyPlanTopic   StudyPlanTopic? @relation(fields: [studyPlanTopicId], references: [id], onDelete: Cascade)
+
   @@index([userId, courseId])
   @@index([userId, createdAt])
 }
@@ -640,6 +647,10 @@ model AiExamBank {
   studyUnitId String?    @unique
   studyUnit   StudyUnit? @relation(fields: [studyUnitId], references: [id], onDelete: Cascade)
 
+  // Examen combinado de un plan de estudio multi-tema (1:1 con el plan)
+  studyPlanId String?    @unique
+  studyPlan   StudyPlan? @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+
   @@index([userId, createdAt])
   @@index([userId, courseId])
 }
@@ -652,6 +663,9 @@ model AiExamQuestion {
   order       Int
   /// Explicación pedagógica generada por la IA, mostrada tras submit.
   explanation String?      @db.Text
+  /// Tema del plan multi-tema al que pertenece la pregunta (cobertura por tema
+  /// y "pregunta del tema X" en correcciones). Null en bancos del flujo un-tema.
+  topicLabel  String?
 
   bank    AiExamBank     @relation(fields: [bankId], references: [id], onDelete: Cascade)
   answers AiExamAnswer[]
@@ -699,4 +713,55 @@ model StudyUnit {
 
   @@index([userId, createdAt])
   @@index([userId, courseId])
+}
+
+// ─────────────────────────────────────────────────────────
+// PLAN DE ESTUDIO MULTI-TEMA (alumno) — combina N temas
+// (oficiales del temario o libres) en teoría por tema +
+// ejercicios y examen combinados. Personal (scoped por userId).
+// Flujo adicional: no sustituye a StudyUnit (un-tema).
+// ─────────────────────────────────────────────────────────
+
+enum StudyTopicSource {
+  OFFICIAL // Module del temario oficial del curso
+  CUSTOM // texto libre del alumno
+}
+
+model StudyPlan {
+  id       String @id @default(cuid())
+  userId   String
+  courseId String // asignatura base (curso matriculado desde el que se crea el plan)
+  title    String // "Simulacro: Fracciones · Ecuaciones · Proporcionalidad" (generado)
+  summary  String @db.Text @default("")
+  /// Dificultad elegida por el alumno (EASY | MEDIUM | HARD).
+  difficulty String @default("MEDIUM")
+  /// Ejercicios combinados generados por IA; cada item lleva topicLabel para agrupar en UI.
+  exercises Json?
+  createdAt DateTime @default(now())
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course   Course           @relation("CourseStudyPlans", fields: [courseId], references: [id], onDelete: Cascade)
+  topics   StudyPlanTopic[]
+  examBank AiExamBank? // vía AiExamBank.studyPlanId
+
+  @@index([userId, createdAt])
+  @@index([userId, courseId])
+}
+
+model StudyPlanTopic {
+  id       String           @id @default(cuid())
+  planId   String
+  order    Int
+  source   StudyTopicSource
+  moduleId String? // source=OFFICIAL: Module del temario oficial
+  title    String // título del tema (copiado del Module o texto libre del alumno)
+  subject  String? // source=CUSTOM fuera de asignatura: subject declarado
+  /// Curso usado como contexto de generación (module.course | curso base | curso matriculado del subject)
+  contextCourseId String
+
+  plan         StudyPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  module       Module?       @relation("ModuleStudyPlanTopics", fields: [moduleId], references: [id], onDelete: SetNull)
+  theoryModule TheoryModule? // vía TheoryModule.studyPlanTopicId
+
+  @@index([planId, order])
 }
