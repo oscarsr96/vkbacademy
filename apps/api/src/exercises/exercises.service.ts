@@ -8,7 +8,6 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { generateAiJson } from '../ai/ai-json';
-import { splitAcrossTopics } from '../ai/topic-distribution';
 import { GenerateExercisesDto } from './dto/generate-exercises.dto';
 import { EvaluateExerciseDto } from './dto/evaluate-exercise.dto';
 
@@ -26,20 +25,29 @@ export interface GenerateExercisesResult {
   exercises: GeneratedExercise[];
 }
 
-// Ejercicio del flujo multi-tema (StudyPlan): etiquetado con su tema.
+export type ExerciseDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
+
+// Ejercicio del flujo multi-tema (StudyPlan): etiquetado con su tema y dificultad.
 export interface GeneratedTopicExercise extends GeneratedExercise {
   topicLabel: string;
+  difficulty: ExerciseDifficulty;
 }
 
 export interface GenerateTopicExercisesResult {
   exercises: GeneratedTopicExercise[];
 }
 
+// Reparto de ejercicios POR TEMA: cada tema recibe easy+medium+hard.
+export interface ExerciseDifficultySplit {
+  easy: number;
+  medium: number;
+  hard: number;
+}
+
 export interface GenerateExercisesForTopicsParams {
   courseId: string;
   topics: string[];
-  count: number;
-  difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+  perTopic: ExerciseDifficultySplit;
 }
 
 export type EvaluationVerdict = 'correct' | 'partial' | 'incorrect';
@@ -124,9 +132,10 @@ export class ExercisesService {
   }
 
   /**
-   * Variante multi-tema (flujo StudyPlan): una sola llamada IA que reparte
-   * `count` ejercicios entre los temas (base floor(count/T), resto a los
-   * primeros) y etiqueta cada uno con su `topicLabel` para agrupar en UI.
+   * Variante multi-tema (flujo StudyPlan): una llamada IA POR TEMA, cada una
+   * con el reparto de dificultad pedido (easy/medium/hard). El `topicLabel` se
+   * asigna localmente (no se confía a la IA) y la validación exige el conteo
+   * exacto por dificultad; ante fallo semántico se regenera ese tema (2x).
    */
   async generateForTopics(
     userId: string,
@@ -147,45 +156,60 @@ export class ExercisesService {
       throw new ForbiddenException('No estás matriculado en este curso');
     }
 
-    const prompt = this.buildMultiTopicPrompt(
-      course.title,
-      course.schoolYear?.label ?? '',
-      params.topics,
-      params.count,
-      params.difficulty ?? 'MEDIUM',
-    );
-
+    const total = params.perTopic.easy + params.perTopic.medium + params.perTopic.hard;
     this.logger.log(
-      `Generando ${params.count} ejercicios multi-tema (${params.topics.length} temas) para curso "${course.title}"`,
+      `Generando ${total} ejercicios por tema (${params.topics.length} temas, ` +
+        `${params.perTopic.easy}F/${params.perTopic.medium}M/${params.perTopic.hard}D) para curso "${course.title}"`,
     );
 
-    const maxTokens = Math.min(8000, 200 + params.count * 250);
+    // Un tema que falle tumba la sección entera (regenerable), igual que antes.
+    const perTopicResults = await Promise.all(
+      params.topics.map((topic) =>
+        this.generateSplitForTopic(
+          course.title,
+          course.schoolYear?.label ?? '',
+          topic,
+          params.perTopic,
+        ),
+      ),
+    );
 
-    // Como en el examen multi-tema: el reparto por tema es frágil, así que la
-    // validación semántica (etiquetas + cobertura) también reintenta, no solo el parseo.
-    let result: GenerateTopicExercisesResult | null = null;
+    return { exercises: perTopicResults.flat() };
+  }
+
+  /** Genera los ejercicios de UN tema con reparto exacto de dificultad (reintento semántico 2x). */
+  private async generateSplitForTopic(
+    courseTitle: string,
+    schoolYearLabel: string,
+    topic: string,
+    split: ExerciseDifficultySplit,
+  ): Promise<GeneratedTopicExercise[]> {
+    const total = split.easy + split.medium + split.hard;
+    const prompt = this.buildSplitPrompt(courseTitle, schoolYearLabel, topic, split);
+    const maxTokens = Math.min(8000, 200 + total * 250);
+
     let lastErr: unknown;
-    for (let attempt = 1; attempt <= 2 && !result; attempt++) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const parsed = await generateAiJson(this.ai, prompt, maxTokens, {
           attempts: 1,
           logger: this.logger,
         });
-        result = this.validateTopicExercisesResult(parsed, params.topics, params.count);
+        return this.validateSplitExercises(parsed, split).map((ex) => ({
+          ...ex,
+          topicLabel: topic,
+        }));
       } catch (err) {
         lastErr = err;
         this.logger.warn(
-          `Ejercicios multi-tema inválidos (generación ${attempt}/2): ${err instanceof Error ? err.message : 'desconocido'}`,
+          `Ejercicios de "${topic}" inválidos (generación ${attempt}/2): ${err instanceof Error ? err.message : 'desconocido'}`,
         );
       }
     }
-    if (!result) {
-      this.logger.error('Error al generar ejercicios multi-tema tras reintentos:', lastErr);
-      throw new InternalServerErrorException(
-        `El agente IA devolvió un formato inválido: ${lastErr instanceof Error ? lastErr.message : 'desconocido'}`,
-      );
-    }
-    return result;
+    this.logger.error(`Error al generar ejercicios de "${topic}" tras reintentos:`, lastErr);
+    throw new InternalServerErrorException(
+      `El agente IA devolvió un formato inválido: ${lastErr instanceof Error ? lastErr.message : 'desconocido'}`,
+    );
   }
 
   async evaluate(dto: EvaluateExerciseDto): Promise<EvaluationResult> {
@@ -213,37 +237,35 @@ export class ExercisesService {
     return parsed as GenerateExercisesResult;
   }
 
-  private validateTopicExercisesResult(
+  /** Valida el conteo exacto por dificultad del lote de UN tema y normaliza el campo. */
+  private validateSplitExercises(
     parsed: unknown,
-    topics: string[],
-    count: number,
-  ): GenerateTopicExercisesResult {
+    split: ExerciseDifficultySplit,
+  ): (GeneratedExercise & { difficulty: ExerciseDifficulty })[] {
     const result = this.validateExercisesResult(parsed);
-    const perTopicCount = new Map<string, number>(topics.map((t) => [t.trim(), 0]));
-    for (const [idx, ex] of (result.exercises as GeneratedTopicExercise[]).entries()) {
-      const label = typeof ex.topicLabel === 'string' ? ex.topicLabel.trim() : '';
-      if (!perTopicCount.has(label)) {
+    const exercises = result.exercises as (GeneratedExercise & { difficulty?: string })[];
+
+    const counts: Record<ExerciseDifficulty, number> = { EASY: 0, MEDIUM: 0, HARD: 0 };
+    for (const [idx, ex] of exercises.entries()) {
+      const difficulty = (ex.difficulty ?? '').toUpperCase() as ExerciseDifficulty;
+      if (!(difficulty in counts)) {
         throw new InternalServerErrorException(
-          `Ejercicio ${idx + 1}: topicLabel inválido "${ex.topicLabel ?? ''}" (debe ser uno de los temas pedidos)`,
+          `Ejercicio ${idx + 1}: difficulty inválida "${ex.difficulty ?? ''}" (debe ser EASY, MEDIUM o HARD)`,
         );
       }
-      ex.topicLabel = label;
-      perTopicCount.set(label, perTopicCount.get(label)! + 1);
+      ex.difficulty = difficulty;
+      counts[difficulty]++;
     }
 
-    // Cobertura: si hay ejercicios suficientes, ningún tema puede quedarse a cero
-    // (misma regla que el examen multi-tema).
-    if (count >= topics.length) {
-      const uncovered = [...perTopicCount.entries()]
-        .filter(([, n]) => n === 0)
-        .map(([topic]) => topic);
-      if (uncovered.length > 0) {
+    const expected = { EASY: split.easy, MEDIUM: split.medium, HARD: split.hard };
+    for (const level of Object.keys(expected) as ExerciseDifficulty[]) {
+      if (counts[level] !== expected[level]) {
         throw new InternalServerErrorException(
-          `Los ejercicios no cubren todos los temas: faltan ejercicios de ${uncovered.join(', ')}`,
+          `Reparto de dificultad incumplido: se pidieron ${expected[level]} ejercicios ${level} y llegaron ${counts[level]}`,
         );
       }
     }
-    return result as GenerateTopicExercisesResult;
+    return exercises as (GeneratedExercise & { difficulty: ExerciseDifficulty })[];
   }
 
   private validateEvaluationResult(parsed: unknown): EvaluationResult {
@@ -329,34 +351,42 @@ Reglas:
 - Solo devuelve JSON puro, sin markdown ni texto adicional`;
   }
 
-  private buildMultiTopicPrompt(
+  private buildSplitPrompt(
     courseTitle: string,
     schoolYearLabel: string,
-    topics: string[],
-    count: number,
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD',
+    topic: string,
+    split: ExerciseDifficultySplit,
   ): string {
-    const perTopic = splitAcrossTopics(count, topics.length);
-    const repartoLines = topics
-      .map((t, i) => `- "${t}": ${perTopic[i]} ejercicio${perTopic[i] === 1 ? '' : 's'}`)
+    const total = split.easy + split.medium + split.hard;
+    const repartoLines = (
+      [
+        ['EASY', split.easy],
+        ['MEDIUM', split.medium],
+        ['HARD', split.hard],
+      ] as const
+    )
+      .filter(([, n]) => n > 0)
+      .map(
+        ([level, n]) =>
+          `- ${n} ejercicio${n === 1 ? '' : 's'} con "difficulty": "${level}" — ${DIFFICULTY_GUIDANCE[level]}`,
+      )
       .join('\n');
 
-    return `Genera ${count} ejercicios de práctica en español que combinen VARIOS temas, como en un examen real.
+    return `Genera ${total} ejercicios de práctica en español sobre el tema "${topic}".
 
 Curso: "${courseTitle}"
 ${schoolYearLabel ? `Nivel educativo: "${schoolYearLabel}" (sistema educativo español)` : ''}
-Dificultad: ${DIFFICULTY_GUIDANCE[difficulty]}
 
-⚠️ REPARTO POR TEMA — OBLIGATORIO, NO NEGOCIABLE:
+⚠️ REPARTO POR DIFICULTAD — OBLIGATORIO, NO NEGOCIABLE:
 ${repartoLines}
 
-Cada ejercicio lleva un campo "topicLabel" con el tema al que pertenece, copiado EXACTAMENTE de la lista anterior (mismas mayúsculas, tildes y espacios). Si un topicLabel no coincide con un tema de la lista, la respuesta será RECHAZADA.
+Cada ejercicio lleva un campo "difficulty" con su nivel exacto ("EASY", "MEDIUM" o "HARD"). Si el conteo por dificultad no coincide con el reparto anterior, la respuesta será RECHAZADA.
 
 Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, sin explicaciones adicionales fuera del JSON):
 {
   "exercises": [
     {
-      "topicLabel": "${topics[0]}",
+      "difficulty": "EASY",
       "statement": "enunciado del ejercicio",
       "type": "SINGLE",
       "options": ["opción A", "opción B", "opción C"],
@@ -364,7 +394,7 @@ Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, si
       "explanation": "por qué la opción A es correcta"
     },
     {
-      "topicLabel": "${topics[0]}",
+      "difficulty": "MEDIUM",
       "statement": "enunciado",
       "type": "TRUE_FALSE",
       "options": ["Verdadero", "Falso"],
@@ -372,7 +402,7 @@ Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, si
       "explanation": "explicación de por qué es verdadero"
     },
     {
-      "topicLabel": "${topics[topics.length - 1]}",
+      "difficulty": "HARD",
       "statement": "enunciado de un ejercicio abierto",
       "type": "OPEN",
       "options": [],
@@ -383,14 +413,13 @@ Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, si
 }
 
 Reglas:
-- Respeta el reparto exacto de ejercicios por tema indicado arriba
-- Agrupa los ejercicios por tema en el orden de la lista
-- Mezcla los 3 tipos (SINGLE, TRUE_FALSE, OPEN) cuando sea apropiado para cada tema
+- Respeta el reparto exacto por dificultad indicado arriba y ordena de fácil a difícil
+- Mezcla los 3 tipos (SINGLE, TRUE_FALSE, OPEN) cuando sea apropiado para el tema
 - SINGLE: 3-4 opciones, exactamente 1 correcta (la propiedad "solution" debe coincidir con una de las opciones)
 - TRUE_FALSE: opciones siempre ["Verdadero", "Falso"], solución coincide
 - OPEN: campo "options" vacío []; "solution" contiene la respuesta o pasos resueltos
 - Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}
-- Contenido curricular real relacionado con cada tema
+- Contenido curricular real relacionado con "${topic}"
 - "explanation" debe ayudar al alumno a entender por qué la respuesta es correcta
 - Solo devuelve JSON puro, sin markdown ni texto adicional`;
   }

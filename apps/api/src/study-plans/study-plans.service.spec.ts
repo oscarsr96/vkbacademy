@@ -21,28 +21,20 @@ describe('StudyPlansService', () => {
     };
     theoryModule: { update: jest.Mock; delete: jest.Mock };
     aiExamBank: { update: jest.Mock; delete: jest.Mock };
+    examAttempt: { groupBy: jest.Mock };
     $transaction: jest.Mock;
   };
   let theory: { generate: jest.Mock; getById: jest.Mock; deleteById: jest.Mock };
   let exercises: { generateForTopics: jest.Mock };
-  let aiExams: { generateForTopics: jest.Mock; getBank: jest.Mock; deleteBank: jest.Mock };
+  let aiExams: { generateForTopics: jest.Mock };
   let service: StudyPlansService;
 
   const theoryResult = { id: 'tm-1', title: 'Fracciones', summary: 'resumen', lessons: [] };
-  const examResult = {
-    id: 'bank-1',
-    title: 'Simulacro',
-    topic: 'Fracciones · Ecuaciones',
-    numQuestions: 5,
-    timeLimit: null,
-    onlyOnce: false,
-    attemptCount: 0,
-    questions: [],
-  };
   const exercisesResult = {
     exercises: [
       {
         topicLabel: 'Fracciones',
+        difficulty: 'EASY',
         statement: 'x',
         type: 'OPEN',
         options: [],
@@ -64,14 +56,17 @@ describe('StudyPlansService', () => {
     course: { id: 'course-lengua', subject: 'Lengua' },
   };
 
+  // Sirve tanto a getById como a requireOwnedPlan: mismo mock de
+  // studyPlan.findUnique para ambos caminos (union de campos usados por los dos).
   function stubPlanForGetById(over: Record<string, unknown> = {}) {
     prisma.studyPlan.findUnique.mockResolvedValue({
       id: 'plan-1',
       userId: 'user-1',
       courseId: 'course-mates',
-      title: 'Simulacro: Fracciones',
+      title: 'Fracciones',
       summary: 'resumen',
       difficulty: 'MEDIUM',
+      exercisesConfig: null,
       createdAt: new Date(),
       exercises: exercisesResult.exercises,
       course: { id: 'course-mates', title: 'Matemáticas 3º ESO' },
@@ -87,7 +82,7 @@ describe('StudyPlansService', () => {
           theoryModule: { id: 'tm-1' },
         },
       ],
-      examBank: { id: 'bank-1' },
+      examBanks: [],
       ...over,
     });
   }
@@ -127,6 +122,7 @@ describe('StudyPlansService', () => {
         update: jest.fn().mockResolvedValue({}),
         delete: jest.fn().mockResolvedValue({}),
       },
+      examAttempt: { groupBy: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
     };
     theory = {
@@ -135,11 +131,7 @@ describe('StudyPlansService', () => {
       deleteById: jest.fn().mockResolvedValue(undefined),
     };
     exercises = { generateForTopics: jest.fn().mockResolvedValue(exercisesResult) };
-    aiExams = {
-      generateForTopics: jest.fn().mockResolvedValue(examResult),
-      getBank: jest.fn().mockResolvedValue(examResult),
-      deleteBank: jest.fn().mockResolvedValue({ ok: true }),
-    };
+    aiExams = { generateForTopics: jest.fn().mockResolvedValue({ id: 'bank-1' }) };
     service = new StudyPlansService(
       prisma as never,
       theory as never,
@@ -286,30 +278,22 @@ describe('StudyPlansService', () => {
     const dto = {
       courseId: 'course-mates',
       topics: [{ title: 'Fracciones' }],
-      numExercises: 5,
-      difficulty: 'MEDIUM' as const,
-      numQuestions: 5 as const,
+      exercisesPerTopic: { easy: 2, medium: 2, hard: 1 },
     };
 
-    it('rechaza con 422 si numQuestions < número de temas', async () => {
+    it('rechaza con 422 si el reparto de ejercicios por tema no suma entre 1 y 10', async () => {
       await expect(
-        service.create('user-1', {
-          ...dto,
-          numQuestions: 5,
-          topics: [
-            { title: 'tema uno' },
-            { title: 'tema dos' },
-            { title: 'tema tres' },
-            { title: 'tema cuatro' },
-            { title: 'tema cinco' },
-            { title: 'tema seis' },
-          ],
-        }),
+        service.create('user-1', { ...dto, exercisesPerTopic: { easy: 0, medium: 0, hard: 0 } }),
+      ).rejects.toThrow(UnprocessableEntityException);
+      expect(prisma.studyPlan.create).not.toHaveBeenCalled();
+
+      await expect(
+        service.create('user-1', { ...dto, exercisesPerTopic: { easy: 10, medium: 10, hard: 10 } }),
       ).rejects.toThrow(UnprocessableEntityException);
       expect(prisma.studyPlan.create).not.toHaveBeenCalled();
     });
 
-    it('crea el plan, genera teoría con el contexto de cada tema y enlaza las secciones', async () => {
+    it('crea el plan, genera teoría y ejercicios por tema, y enlaza las secciones (sin examen)', async () => {
       stubPlanForGetById();
       const result = await service.create('user-1', dto);
 
@@ -317,7 +301,7 @@ describe('StudyPlansService', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             title: 'Fracciones',
-            difficulty: 'MEDIUM',
+            exercisesConfig: { easy: 2, medium: 2, hard: 1 },
           }),
         }),
       );
@@ -325,23 +309,18 @@ describe('StudyPlansService', () => {
         courseId: 'course-mates',
         topic: 'Fracciones',
       });
-      expect(exercises.generateForTopics).toHaveBeenCalledWith(
-        'user-1',
-        expect.objectContaining({ topics: ['Fracciones'], count: 5, difficulty: 'MEDIUM' }),
-      );
-      expect(aiExams.generateForTopics).toHaveBeenCalledWith(
-        'user-1',
-        expect.objectContaining({ topics: ['Fracciones'], numQuestions: 5 }),
-      );
+      expect(exercises.generateForTopics).toHaveBeenCalledWith('user-1', {
+        courseId: 'course-mates',
+        topics: ['Fracciones'],
+        perTopic: { easy: 2, medium: 2, hard: 1 },
+      });
+      expect(aiExams.generateForTopics).not.toHaveBeenCalled();
       expect(prisma.theoryModule.update).toHaveBeenCalledWith({
         where: { id: 'tm-1' },
         data: { studyPlanTopicId: 'topic-0' },
       });
-      expect(prisma.aiExamBank.update).toHaveBeenCalledWith({
-        where: { id: 'bank-1' },
-        data: { studyPlanId: 'plan-1' },
-      });
-      expect(result.sections).toEqual({ theory: true, exercises: true, exam: true });
+      expect(prisma.aiExamBank.update).not.toHaveBeenCalled();
+      expect(result.sections).toEqual({ theory: true, exercises: true, exam: false });
     });
 
     it('la teoría de cada tema usa su contextCourseId (tema de otra asignatura)', async () => {
@@ -396,7 +375,6 @@ describe('StudyPlansService', () => {
 
       expect(prisma.studyPlan.delete).not.toHaveBeenCalled();
       expect(prisma.theoryModule.update).not.toHaveBeenCalled();
-      expect(prisma.aiExamBank.update).toHaveBeenCalled(); // el examen sí se enlaza
       expect(result.sections.theory).toBe(false);
       expect(result.topics[0].hasTheory).toBe(false);
     });
@@ -404,7 +382,6 @@ describe('StudyPlansService', () => {
     it('fallo total: si TODO falla, borra la cáscara y lanza 500 (sin plan huérfano)', async () => {
       theory.generate.mockRejectedValue(new Error('IA caída'));
       exercises.generateForTopics.mockRejectedValue(new Error('IA caída'));
-      aiExams.generateForTopics.mockRejectedValue(new Error('IA caída'));
 
       await expect(service.create('user-1', dto)).rejects.toThrow(InternalServerErrorException);
       expect(prisma.studyPlan.delete).toHaveBeenCalledWith({ where: { id: 'plan-1' } });
@@ -417,30 +394,10 @@ describe('StudyPlansService', () => {
       expect(prisma.studyPlan.delete).toHaveBeenCalledWith({ where: { id: 'plan-1' } });
       // Los artefactos generados pero sin enlazar tampoco quedan huérfanos
       expect(prisma.theoryModule.delete).toHaveBeenCalledWith({ where: { id: 'tm-1' } });
-      expect(prisma.aiExamBank.delete).toHaveBeenCalledWith({ where: { id: 'bank-1' } });
-    });
-
-    it('rechaza con 422 si numExercises < número de temas', async () => {
-      await expect(
-        service.create('user-1', {
-          ...dto,
-          numQuestions: 10,
-          numExercises: 5,
-          topics: [
-            { title: 'tema uno' },
-            { title: 'tema dos' },
-            { title: 'tema tres' },
-            { title: 'tema cuatro' },
-            { title: 'tema cinco' },
-            { title: 'tema seis' },
-          ],
-        }),
-      ).rejects.toThrow(UnprocessableEntityException);
-      expect(prisma.studyPlan.create).not.toHaveBeenCalled();
     });
   });
 
-  // ─── getById / deleteById: ownership ────────────────────────────────────────
+  // ─── getById / deleteById: ownership y exámenes lazy ────────────────────────
 
   describe('getById', () => {
     it('lanza 404 si el plan no existe', async () => {
@@ -453,13 +410,54 @@ describe('StudyPlansService', () => {
       await expect(service.getById('user-1', 'plan-1')).rejects.toThrow(ForbiddenException);
     });
 
-    it('devuelve el examen vía aiExams.getBank (serialización sin isCorrect)', async () => {
-      stubPlanForGetById();
+    it('no llama a examAttempt.groupBy si el plan no tiene examBanks', async () => {
+      stubPlanForGetById(); // examBanks: []
       const result = await service.getById('user-1', 'plan-1');
-      // getBank es el único camino al examen: su serialización ya oculta isCorrect
-      expect(aiExams.getBank).toHaveBeenCalledWith('user-1', 'bank-1');
-      expect(result.exam).toBe(examResult);
-      expect(JSON.stringify(result.exam)).not.toContain('isCorrect');
+      expect(prisma.examAttempt.groupBy).not.toHaveBeenCalled();
+      expect(result.exams).toEqual([]);
+      expect(result.sections.exam).toBe(false);
+    });
+
+    it('devuelve exams desde examBanks con attemptCount y bestScore vía examAttempt.groupBy', async () => {
+      stubPlanForGetById({
+        examBanks: [
+          {
+            id: 'bank-1',
+            title: 'Básico',
+            level: 'BASIC',
+            studyPlanTopicId: null,
+            numQuestions: 5,
+            timeLimit: null,
+            onlyOnce: false,
+          },
+        ],
+      });
+      prisma.examAttempt.groupBy.mockResolvedValue([
+        { aiExamBankId: 'bank-1', _count: { _all: 3 }, _max: { score: 80 } },
+      ]);
+
+      const result = await service.getById('user-1', 'plan-1');
+
+      expect(prisma.examAttempt.groupBy).toHaveBeenCalledWith({
+        by: ['aiExamBankId'],
+        where: { aiExamBankId: { in: ['bank-1'] }, userId: 'user-1' },
+        _count: { _all: true },
+        _max: { score: true },
+      });
+      expect(result.exams).toEqual([
+        {
+          id: 'bank-1',
+          title: 'Básico',
+          level: 'BASIC',
+          topicId: null,
+          numQuestions: 5,
+          timeLimit: null,
+          onlyOnce: false,
+          attemptCount: 3,
+          bestScore: 80,
+        },
+      ]);
+      expect(result.sections.exam).toBe(true);
     });
   });
 
@@ -498,6 +496,198 @@ describe('StudyPlansService', () => {
       await expect(
         service.regenerateTopicTheory('user-1', 'plan-1', 'topic-ajeno'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('regenerateExercises', () => {
+    it('usa el exercisesConfig guardado como fallback cuando el dto va vacío', async () => {
+      stubPlanForGetById({
+        exercisesConfig: { easy: 3, medium: 1, hard: 0 },
+        topics: [
+          {
+            id: 'topic-0',
+            order: 0,
+            source: 'CUSTOM',
+            moduleId: null,
+            title: 'Fracciones',
+            subject: null,
+            contextCourseId: 'course-mates',
+            theoryModule: { id: 'tm-1' },
+          },
+        ],
+      });
+
+      await service.regenerateExercises('user-1', 'plan-1', {});
+
+      expect(exercises.generateForTopics).toHaveBeenCalledWith('user-1', {
+        courseId: 'course-mates',
+        topics: ['Fracciones'],
+        perTopic: { easy: 3, medium: 1, hard: 0 },
+      });
+      expect(prisma.studyPlan.update).toHaveBeenCalledWith({
+        where: { id: 'plan-1' },
+        data: {
+          exercises: exercisesResult.exercises,
+          exercisesConfig: { easy: 3, medium: 1, hard: 0 },
+        },
+      });
+    });
+
+    it('el dto sobreescribe el reparto guardado campo a campo', async () => {
+      stubPlanForGetById({ exercisesConfig: { easy: 3, medium: 1, hard: 0 } });
+
+      await service.regenerateExercises('user-1', 'plan-1', { hard: 2 });
+
+      expect(exercises.generateForTopics).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ perTopic: { easy: 3, medium: 1, hard: 2 } }),
+      );
+    });
+  });
+
+  describe('generateExam', () => {
+    it('preset BASIC: numQuestions 5, difficulty EASY, enlaza el banco con level BASIC', async () => {
+      stubPlanForGetById();
+      aiExams.generateForTopics.mockResolvedValue({ id: 'bank-1' });
+
+      await service.generateExam('user-1', 'plan-1', { level: 'BASIC' });
+
+      expect(aiExams.generateForTopics).toHaveBeenCalledWith('user-1', {
+        courseId: 'course-mates',
+        topics: ['Fracciones'],
+        numQuestions: 5,
+        difficulty: 'EASY',
+      });
+      expect(prisma.aiExamBank.update).toHaveBeenCalledWith({
+        where: { id: 'bank-1' },
+        data: { studyPlanId: 'plan-1', studyPlanTopicId: null, level: 'BASIC' },
+      });
+    });
+
+    it('con topicId usa el contextCourseId del tema y genera solo su título', async () => {
+      stubPlanForGetById({
+        topics: [
+          {
+            id: 'topic-0',
+            order: 0,
+            source: 'CUSTOM',
+            moduleId: null,
+            title: 'Fracciones',
+            subject: null,
+            contextCourseId: 'course-mates',
+            theoryModule: { id: 'tm-1' },
+          },
+          {
+            id: 'topic-1',
+            order: 1,
+            source: 'CUSTOM',
+            moduleId: null,
+            title: 'análisis morfológico',
+            subject: null,
+            contextCourseId: 'course-lengua',
+            theoryModule: null,
+          },
+        ],
+      });
+      aiExams.generateForTopics.mockResolvedValue({ id: 'bank-2' });
+
+      await service.generateExam('user-1', 'plan-1', { level: 'MEDIUM', topicId: 'topic-1' });
+
+      expect(aiExams.generateForTopics).toHaveBeenCalledWith('user-1', {
+        courseId: 'course-lengua',
+        topics: ['análisis morfológico'],
+        numQuestions: 8,
+        difficulty: 'MEDIUM',
+      });
+      expect(prisma.aiExamBank.update).toHaveBeenCalledWith({
+        where: { id: 'bank-2' },
+        data: { studyPlanId: 'plan-1', studyPlanTopicId: 'topic-1', level: 'MEDIUM' },
+      });
+    });
+
+    it('idempotente: si ya existe un banco con el mismo (level, topicId), no llama a la IA', async () => {
+      stubPlanForGetById({
+        examBanks: [
+          {
+            id: 'bank-1',
+            title: 'Básico',
+            level: 'BASIC',
+            studyPlanTopicId: null,
+            numQuestions: 5,
+            timeLimit: null,
+            onlyOnce: false,
+          },
+        ],
+      });
+
+      await service.generateExam('user-1', 'plan-1', { level: 'BASIC' });
+
+      expect(aiExams.generateForTopics).not.toHaveBeenCalled();
+      expect(prisma.aiExamBank.update).not.toHaveBeenCalled();
+    });
+
+    it('rechaza con 422 si numQuestions es menor que el número de temas', async () => {
+      stubPlanForGetById({
+        topics: [
+          {
+            id: 'topic-0',
+            order: 0,
+            source: 'CUSTOM',
+            moduleId: null,
+            title: 'Tema 1',
+            subject: null,
+            contextCourseId: 'course-mates',
+            theoryModule: null,
+          },
+          {
+            id: 'topic-1',
+            order: 1,
+            source: 'CUSTOM',
+            moduleId: null,
+            title: 'Tema 2',
+            subject: null,
+            contextCourseId: 'course-mates',
+            theoryModule: null,
+          },
+          {
+            id: 'topic-2',
+            order: 2,
+            source: 'CUSTOM',
+            moduleId: null,
+            title: 'Tema 3',
+            subject: null,
+            contextCourseId: 'course-mates',
+            theoryModule: null,
+          },
+        ],
+      });
+
+      await expect(
+        service.generateExam('user-1', 'plan-1', { level: 'BASIC', numQuestions: 2 }),
+      ).rejects.toThrow(UnprocessableEntityException);
+      expect(aiExams.generateForTopics).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('rename', () => {
+    it('actualiza el título recortando espacios', async () => {
+      stubPlanForGetById();
+
+      await service.rename('user-1', 'plan-1', { title: '  Nuevo título  ' });
+
+      expect(prisma.studyPlan.update).toHaveBeenCalledWith({
+        where: { id: 'plan-1' },
+        data: { title: 'Nuevo título' },
+      });
+    });
+
+    it('lanza 403 si el plan pertenece a otro usuario', async () => {
+      stubPlanForGetById({ userId: 'user-2' });
+
+      await expect(service.rename('user-1', 'plan-1', { title: 'Nuevo título' })).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.studyPlan.update).not.toHaveBeenCalled();
     });
   });
 });

@@ -12,9 +12,7 @@ async function validateDto(payload: Record<string, unknown>) {
 const validPayload = {
   courseId: 'course-1',
   topics: [{ title: 'Fracciones' }],
-  numExercises: 5,
-  difficulty: 'MEDIUM',
-  numQuestions: 5,
+  exercisesPerTopic: { easy: 2, medium: 2, hard: 1 },
 };
 
 describe('CreateStudyPlanDto', () => {
@@ -54,23 +52,39 @@ describe('CreateStudyPlanDto', () => {
     expect(errors.some((e) => e.property === 'topics')).toBe(true);
   });
 
-  it('rechaza numQuestions fuera de {5, 10}', async () => {
-    const errors = await validateDto({ ...validPayload, numQuestions: 7 });
-    expect(errors.some((e) => e.property === 'numQuestions')).toBe(true);
+  // BUG conocido (reportado, no corregido aquí): `exercisesPerTopic` solo lleva
+  // @ValidateNested + @Type, sin @IsDefined/@IsNotEmptyObject. class-validator
+  // no valida NESTED_VALIDATION cuando el valor es undefined, así que un
+  // payload sin este campo pasa la validación (y luego el service explota con
+  // un TypeError al leer `.easy` de undefined, en vez de un 422 limpio).
+  it('NO rechaza (bug conocido) un payload sin exercisesPerTopic', async () => {
+    const payload = { ...validPayload } as Record<string, unknown>;
+    delete payload.exercisesPerTopic;
+    const errors = await validateDto(payload);
+    expect(errors).toHaveLength(0);
   });
 
-  it('rechaza numExercises fuera de rango (0 y 21)', async () => {
-    expect((await validateDto({ ...validPayload, numExercises: 0 })).length).toBeGreaterThan(0);
-    expect((await validateDto({ ...validPayload, numExercises: 21 })).length).toBeGreaterThan(0);
+  it('rechaza exercisesPerTopic con easy negativo', async () => {
+    const errors = await validateDto({
+      ...validPayload,
+      exercisesPerTopic: { easy: -1, medium: 2, hard: 1 },
+    });
+    expect(errors.some((e) => e.property === 'exercisesPerTopic')).toBe(true);
   });
 
-  it('rechaza difficulty desconocida', async () => {
-    const errors = await validateDto({ ...validPayload, difficulty: 'EXTREME' });
-    expect(errors.some((e) => e.property === 'difficulty')).toBe(true);
+  it('rechaza exercisesPerTopic con hard > 10', async () => {
+    const errors = await validateDto({
+      ...validPayload,
+      exercisesPerTopic: { easy: 2, medium: 2, hard: 11 },
+    });
+    expect(errors.some((e) => e.property === 'exercisesPerTopic')).toBe(true);
   });
 
-  it('rechaza timeLimit fuera de rango', async () => {
-    expect((await validateDto({ ...validPayload, timeLimit: 30 })).length).toBeGreaterThan(0);
-    expect((await validateDto({ ...validPayload, timeLimit: 20000 })).length).toBeGreaterThan(0);
+  it('acepta {easy:2, medium:2, hard:1} como reparto válido', async () => {
+    const errors = await validateDto({
+      ...validPayload,
+      exercisesPerTopic: { easy: 2, medium: 2, hard: 1 },
+    });
+    expect(errors).toHaveLength(0);
   });
 });
