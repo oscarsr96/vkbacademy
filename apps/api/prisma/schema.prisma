@@ -731,7 +731,7 @@ model StudyPlan {
   id       String @id @default(cuid())
   userId   String
   courseId String // asignatura base (curso matriculado desde el que se crea el plan)
-  title    String // "Simulacro: Fracciones · Ecuaciones · Proporcionalidad" (generado)
+  title    String // "Fracciones · Ecuaciones · Proporcionalidad" (generado; renombrable por el alumno)
   summary  String @db.Text @default("")
   /// Dificultad elegida por el alumno (EASY | MEDIUM | HARD).
   difficulty String @default("MEDIUM")

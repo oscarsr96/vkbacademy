@@ -316,7 +316,7 @@ describe('StudyPlansService', () => {
       expect(prisma.studyPlan.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            title: 'Simulacro: Fracciones',
+            title: 'Fracciones',
             difficulty: 'MEDIUM',
           }),
         }),

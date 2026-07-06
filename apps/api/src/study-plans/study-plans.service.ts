@@ -316,7 +316,8 @@ export class StudyPlansService {
   }
 
   private buildTitle(topics: { title: string }[]): string {
-    return `Simulacro: ${topics.map((t) => t.title).join(' · ')}`.slice(0, 200);
+    // Título por defecto del curso multi-tema; el alumno puede renombrarlo después.
+    return topics.map((t) => t.title).join(' · ').slice(0, 200);
   }
 
   async listMine(userId: string) {

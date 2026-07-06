@@ -76,7 +76,7 @@ export default function StudyPage() {
           <Icon name="shapes" size={26} />
         </span>
         <span style={s.planCtaBody}>
-          <strong style={s.planCtaTitle}>Simulacro multi-tema</strong>
+          <strong style={s.planCtaTitle}>Curso multi-tema</strong>
           <span style={s.planCtaSubtitle}>
             Combina varios temas como en un examen real
           </span>
@@ -287,7 +287,7 @@ export default function StudyPage() {
       </section>
 
       <section style={s.results}>
-        <h2 className="section-label">Mis simulacros multi-tema</h2>
+        <h2 className="section-label">Mis cursos multi-tema</h2>
         {removePlan.isError && (
           <div className="alert alert-error" style={{ marginTop: 14 }}>
             {getApiErrorMessage(removePlan.error, 'No se pudo borrar el plan. Inténtalo de nuevo.')}
@@ -297,8 +297,8 @@ export default function StudyPage() {
         {!plansLoading && (plans?.length ?? 0) === 0 && (
           <EmptyState
             icon="shapes"
-            title="Aún no has creado ningún simulacro multi-tema"
-            message="Pulsa arriba en «Simulacro multi-tema» para combinar varios temas."
+            title="Aún no has creado ningún curso multi-tema"
+            message="Pulsa arriba en «Curso multi-tema» para combinar varios temas."
           />
         )}
         {!plansLoading && (plans?.length ?? 0) > 0 && (

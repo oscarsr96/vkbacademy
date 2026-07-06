@@ -228,13 +228,13 @@ Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, si
     { "kind": "CONTENT", "heading": "título de la sección de desarrollo", "body": "desarrollo (ver ESTRUCTURA)" },
     { "kind": "EXAMPLE", "heading": "Ejemplos paso a paso", "body": "mínimo 3 ejemplos resueltos (ver ESTRUCTURA)" },
     { "kind": "VIDEO", "heading": "Vídeo recomendado", "ytQuery": "consulta optimizada para buscar el mejor vídeo en YouTube sobre este tema" },
-    { "kind": "CONTENT", "heading": "Chuleta de repaso", "body": "resumen compacto de fórmulas y reglas clave (ver ESTRUCTURA)" },
+    { "kind": "CONTENT", "heading": "Reglas de oro", "body": "resumen compacto de fórmulas y reglas clave (ver ESTRUCTURA)" },
     { "kind": "CONTENT", "heading": "Lo que te llevas", "body": "cierre espejo de la promesa (ver ESTRUCTURA)" }
   ]
 }
 
 ESTRUCTURA — metodología Winston de enseñanza, OBLIGATORIA:
-- Entre 6 y 9 lecciones, en este orden: 1 INTRO "Qué vas a conseguir" (SIEMPRE la primera) + 1-3 CONTENT de desarrollo + 1 EXAMPLE + 1 VIDEO + 1 CONTENT "Chuleta de repaso" + 1 CONTENT "Lo que te llevas" (SIEMPRE la última).
+- Entre 6 y 9 lecciones, en este orden: 1 INTRO "Qué vas a conseguir" (SIEMPRE la primera) + 1-3 CONTENT de desarrollo + 1 EXAMPLE + 1 VIDEO + 1 CONTENT "Reglas de oro" + 1 CONTENT "Lo que te llevas" (SIEMPRE la última).
 
 - INTRO "Qué vas a conseguir" — promesa de empoderamiento: qué sabrá HACER el alumno al final que no sabe ahora, y para qué le sirve. Formato: 1 frase corta que enganche + lista de 3-4 items con el formato exacto "- **Sabrás** [habilidad concreta]: te servirá para [uso real: el examen, el deporte o la vida diaria]". Sin definiciones todavía, sin índice.
 
@@ -255,7 +255,7 @@ ESTRUCTURA — metodología Winston de enseñanza, OBLIGATORIA:
 **Resultado:** [solución final]
 **Por qué funciona:** [1-2 frases conectando el procedimiento con la teoría]
 
-- CONTENT "Chuleta de repaso" — resumen de estudio antes del cierre: TODAS las fórmulas, reglas y definiciones clave del tema en formato compacto, pensado para releerse 5 minutos antes del examen. Lista de items cortos "- **[nombre]**: [fórmula o regla en 1 línea]" (con LaTeX si aplica) + exactamente 1 callout 🧠 con lo más importante de todo el tema. Sin párrafos largos ni contenido nuevo: solo condensa lo ya explicado.
+- CONTENT "Reglas de oro" — resumen de estudio antes del cierre: TODAS las fórmulas, reglas y definiciones clave del tema en formato compacto, pensado para releerse 5 minutos antes del examen. Se renderiza como tarjetas (flashcards): CADA item DEBE seguir el formato exacto "- **[nombre corto]**: [fórmula o regla en 1 línea]" (con LaTeX si aplica), entre 4 y 8 items + exactamente 1 callout 🧠 con lo más importante de todo el tema. Sin párrafos largos ni contenido nuevo: solo condensa lo ya explicado.
 
 - CONTENT "Lo que te llevas" — cierre de contribuciones, espejo de la promesa inicial: lista de 3-4 items "- **Ya sabes** [la misma habilidad prometida al inicio]" + 1 frase final que empuje al siguiente paso (practicar con ejercicios o hacer el test). PROHIBIDO cerrar con "gracias", "espero que" o despedidas.
 

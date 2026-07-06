@@ -158,8 +158,8 @@ export default function StudyPlanCreatePage() {
     <div style={s.page}>
       <PageHeader
         variant="light"
-        title="Simulacro multi-tema"
-        subtitle="Combina varios temas de tu temario (o temas propios) en un único examen, como en un examen real."
+        title="Curso multi-tema"
+        subtitle="Combina varios temas de tu temario (o temas propios) en un curso con teoría, ejercicios y examen."
       />
 
       <form onSubmit={handleSubmit} className="dash-grid">
@@ -240,7 +240,6 @@ export default function StudyPlanCreatePage() {
                     setCustomTitle(e.target.value);
                     setCustomError('');
                   }}
-                  placeholder="Ej: verbos irregulares, la célula, ecuaciones de segundo grado..."
                   disabled={atMax}
                 />
               </div>

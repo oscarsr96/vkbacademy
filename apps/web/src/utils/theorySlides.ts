@@ -23,8 +23,14 @@ import type {
 
 export type SlideKind = 'cover' | 'content' | 'video' | 'closing' | 'example';
 
-/** Variante visual de una slide de contenido (checklist Winston). */
-export type ContentVariant = 'objectives' | 'takeaways';
+/** Variante visual de una slide de contenido (checklist Winston / flashcards). */
+export type ContentVariant = 'objectives' | 'takeaways' | 'summary';
+
+/** Tarjeta de la variante summary: término + regla/fórmula ("- **término**: regla"). */
+export interface SummaryCard {
+  term: string;
+  body: string;
+}
 
 export interface Slide {
   id: string;
@@ -41,10 +47,10 @@ export interface Slide {
   heading?: string;
   /** Bloques de markdown; cada uno se revela como un fragmento. */
   blocks?: string[];
-  /** true si es continuación de una lección dividida en varias slides. */
-  continued?: boolean;
-  /** Promesa inicial u "objetivos" / cierre "lo que te llevas". */
+  /** Promesa inicial u "objetivos" / cierre "lo que te llevas" / chuleta "reglas de oro". */
   variant?: ContentVariant;
+  /** Flashcards de la variante summary (se revelan antes que los blocks). */
+  cards?: SummaryCard[];
   // example (ejercicio resuelto paso a paso)
   statement?: string;
   steps?: string[];
@@ -105,16 +111,44 @@ export function paginateBlocks(blocks: string[], budget = MAX_SLIDE_CHARS): stri
 
 const OBJECTIVES_RE = /qu[eé] vas a conseguir/i;
 const TAKEAWAYS_RE = /lo que te llevas/i;
+const SUMMARY_RE = /chuleta de repaso|reglas de oro|resumen/i;
 
 /**
- * Detecta si una lección es la promesa inicial o el cierre Winston por su
- * heading. Los temarios antiguos ("Introducción", …) no matchean y se
- * renderizan como contenido normal.
+ * Detecta si una lección es la promesa inicial, el cierre Winston o la chuleta
+ * de reglas clave por su heading. Los temarios antiguos ("Introducción", …) no
+ * matchean y se renderizan como contenido normal.
  */
 export function contentVariant(lesson: TheoryLesson): ContentVariant | undefined {
   if (lesson.kind === 'INTRO' && OBJECTIVES_RE.test(lesson.heading)) return 'objectives';
   if (TAKEAWAYS_RE.test(lesson.heading)) return 'takeaways';
+  if (lesson.kind !== 'INTRO' && SUMMARY_RE.test(lesson.heading)) return 'summary';
   return undefined;
+}
+
+const SUMMARY_CARD_RE = /^[-*]\s+\*\*(.+?)\*\*[:.]?\s*(.*)$/;
+
+/**
+ * Extrae las flashcards de una slide summary: cada línea "- **término**: regla"
+ * se convierte en tarjeta; el resto de líneas/bloques (callouts, párrafos) se
+ * conserva como bloques normales. Si nada parsea, degrada a contenido normal.
+ */
+export function parseSummaryCards(blocks: string[]): { cards: SummaryCard[]; rest: string[] } {
+  const cards: SummaryCard[] = [];
+  const rest: string[] = [];
+
+  for (const block of blocks) {
+    const leftover: string[] = [];
+    for (const line of block.split('\n')) {
+      const match = line.trim().match(SUMMARY_CARD_RE);
+      // El separador a veces queda dentro de la negrita ("- **Regla.** texto").
+      if (match) cards.push({ term: match[1].trim().replace(/[:.]+$/, ''), body: match[2].trim() });
+      else leftover.push(line);
+    }
+    const restBlock = leftover.join('\n').trim();
+    if (restBlock) rest.push(restBlock);
+  }
+
+  return { cards, rest };
 }
 
 export interface ParsedExample {
@@ -259,7 +293,6 @@ export function buildSlides(module: TheoryModuleWithLessons): Slide[] {
             kind: 'content',
             heading: stripLeadingEmoji(lesson.heading),
             blocks: pageBlocks,
-            continued: emitted > 0 || j > 0,
           });
           emitted++;
         });
@@ -277,17 +310,28 @@ export function buildSlides(module: TheoryModuleWithLessons): Slide[] {
 
     const variant = contentVariant(lesson);
     const blocks = splitMarkdownBlocks(lesson.body ?? '');
-    // La promesa y el cierre son checklists cortas y autocontenidas: siempre en
-    // una sola slide (paginarlas deja el callout huérfano en una slide "cont.").
+    // Las variantes (promesa, cierre, chuleta) son autocontenidas: siempre en
+    // una sola slide (paginarlas dejaría huérfanos el callout o las tarjetas).
     const pages =
       blocks.length === 0 ? [['']] : variant ? [blocks] : paginateBlocks(blocks);
     pages.forEach((pageBlocks, i) => {
+      if (variant === 'summary') {
+        const { cards, rest } = parseSummaryCards(pageBlocks);
+        slides.push({
+          id: `${lesson.id}-${i}`,
+          kind: 'content',
+          heading: stripLeadingEmoji(lesson.heading),
+          blocks: rest,
+          variant,
+          cards,
+        });
+        return;
+      }
       slides.push({
         id: `${lesson.id}-${i}`,
         kind: 'content',
         heading: stripLeadingEmoji(lesson.heading),
         blocks: pageBlocks,
-        continued: i > 0,
         variant,
       });
     });
@@ -306,15 +350,15 @@ function slideLabel(slide: Omit<Slide, 'index' | 'label'>, i: number): string {
   if (slide.kind === 'cover') return 'Portada';
   if (slide.kind === 'closing') return 'Fin';
   if (slide.kind === 'video') return slide.heading ?? 'Vídeo';
-  const base = slide.heading ?? `Slide ${i + 1}`;
-  return slide.continued ? `${base} (cont.)` : base;
+  return slide.heading ?? `Slide ${i + 1}`;
 }
 
-/** Nº de fragmentos revelables de una slide (bloques o piezas del ejemplo). */
+/** Nº de fragmentos revelables de una slide (bloques, tarjetas o piezas del ejemplo). */
 export function fragmentCount(slide: Slide): number {
   if (slide.kind === 'example') {
     // enunciado + pasos + resultado + porqué (si existe)
     return 1 + (slide.steps?.length ?? 0) + 1 + (slide.why ? 1 : 0);
   }
-  return slide.kind === 'content' ? (slide.blocks?.length ?? 0) : 0;
+  if (slide.kind !== 'content') return 0;
+  return (slide.cards?.length ?? 0) + (slide.blocks?.length ?? 0);
 }

@@ -18,8 +18,8 @@ import EmptyState from '../components/ui/EmptyState';
 type Tab = 'theory' | 'exercises' | 'exam';
 
 const STEPS: { key: Tab; label: string; icon: string; desc: string }[] = [
-  { key: 'theory', label: 'Apuntes', icon: 'book', desc: 'Estudia cada tema del simulacro' },
-  { key: 'exercises', label: 'Ejercicios', icon: 'target', desc: 'Practica todos los temas combinados' },
+  { key: 'theory', label: 'Apuntes', icon: 'book', desc: 'Estudia cada tema del curso' },
+  { key: 'exercises', label: 'Ejercicios', icon: 'target', desc: 'Practica tema a tema lo aprendido' },
   { key: 'exam', label: 'Examen', icon: 'graduation', desc: 'Un examen con preguntas de cada tema' },
 ];
 
@@ -347,6 +347,11 @@ function groupExercisesByTopic(
 
 function ExercisesTab({ plan }: { plan: StudyPlanDetail }) {
   const regen = useRegeneratePlanExercises(plan.id);
+  const groups = groupExercisesByTopic(plan.exercises ?? []);
+  // Mismo patrón de bloques colapsables por tema que el tab de Apuntes.
+  const [expandedLabel, setExpandedLabel] = useState<string | null>(
+    groups[0]?.topicLabel ?? null,
+  );
   if (!plan.exercises || plan.exercises.length === 0) {
     return (
       <MissingSection
@@ -359,15 +364,41 @@ function ExercisesTab({ plan }: { plan: StudyPlanDetail }) {
       />
     );
   }
-  const groups = groupExercisesByTopic(plan.exercises);
   return (
-    <div style={s.exerciseGroups}>
-      {groups.map((g) => (
-        <div key={g.topicLabel} style={s.exerciseGroup}>
-          <h3 style={s.exerciseGroupTitle}>{g.topicLabel}</h3>
-          <ExercisePractice exercises={g.items} />
-        </div>
-      ))}
+    <div style={s.deckList}>
+      {groups.map((g, i) => {
+        const isOpen = expandedLabel === g.topicLabel;
+        return (
+          <div key={g.topicLabel} className="vkb-card" style={s.deckCard}>
+            <button
+              type="button"
+              className="topic-deck-toggle"
+              onClick={() =>
+                setExpandedLabel((cur) => (cur === g.topicLabel ? null : g.topicLabel))
+              }
+              aria-expanded={isOpen}
+            >
+              <span style={s.deckNum}>{i + 1}</span>
+              <span style={s.deckBody}>
+                <span style={s.deckTitle}>{g.topicLabel}</span>
+                <span style={s.deckTag}>
+                  {g.items.length} {g.items.length === 1 ? 'ejercicio' : 'ejercicios'}
+                </span>
+              </span>
+              <Icon
+                name="chevron-right"
+                size={18}
+                style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}
+              />
+            </button>
+            {isOpen && (
+              <div style={s.deckContent}>
+                <ExercisePractice exercises={g.items} />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -485,17 +516,6 @@ const s: Record<string, React.CSSProperties> = {
     letterSpacing: '0.04em',
   },
   deckContent: { marginTop: 16 },
-
-  exerciseGroups: { display: 'flex', flexDirection: 'column', gap: 28 },
-  exerciseGroup: { display: 'flex', flexDirection: 'column', gap: 12 },
-  exerciseGroupTitle: {
-    margin: 0,
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    color: 'var(--brand-deep)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
 
   examCard: {
     display: 'flex',
