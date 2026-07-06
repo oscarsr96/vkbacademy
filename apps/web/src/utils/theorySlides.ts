@@ -17,7 +17,6 @@
 
 import type {
   TheoryLesson,
-  TheoryLessonKind,
   TheoryModuleWithLessons,
   TheoryVideoCandidate,
 } from '@vkbacademy/shared';
@@ -39,7 +38,6 @@ export interface Slide {
   coverSubtitle?: string;
   topic?: string;
   // content
-  icon?: string;
   heading?: string;
   /** Bloques de markdown; cada uno se revela como un fragmento. */
   blocks?: string[];
@@ -56,15 +54,16 @@ export interface Slide {
   candidates?: TheoryVideoCandidate[];
 }
 
-export const KIND_ICON: Record<TheoryLessonKind, string> = {
-  INTRO: '🧭',
-  CONTENT: '📚',
-  EXAMPLE: '💡',
-  VIDEO: '▶️',
-};
-
 /** Presupuesto de caracteres por slide antes de empezar una nueva. */
 const MAX_SLIDE_CHARS = 480;
+
+/**
+ * Elimina emojis iniciales de un heading (la IA marca los ejemplos con 💪 y
+ * los temarios antiguos traen iconos): las slides van sin emoticonos.
+ */
+export function stripLeadingEmoji(text: string): string {
+  return text.replace(/^[\p{Extended_Pictographic}\u{FE0F}\u{200D}\s]+/u, '').trim() || text;
+}
 
 /** Separa un markdown en bloques de nivel superior (párrafos, listas, callouts…). */
 export function splitMarkdownBlocks(md: string): string[] {
@@ -146,7 +145,7 @@ export function parseExample(chunk: string): ParsedExample | null {
   const headingMatch = lines[0]?.match(/^###\s+(.+)$/);
   if (!headingMatch) return null;
 
-  const title = headingMatch[1].trim();
+  const title = stripLeadingEmoji(headingMatch[1].trim());
   let statement = '';
   const steps: string[] = [];
   let result = '';
@@ -229,8 +228,7 @@ export function buildSlides(module: TheoryModuleWithLessons): Slide[] {
       slides.push({
         id: lesson.id,
         kind: 'video',
-        icon: KIND_ICON.VIDEO,
-        heading: lesson.heading,
+        heading: stripLeadingEmoji(lesson.heading),
         candidates: resolveVideoCandidates(lesson),
       });
       continue;
@@ -259,8 +257,7 @@ export function buildSlides(module: TheoryModuleWithLessons): Slide[] {
           slides.push({
             id: `${lesson.id}-${i}-${j}`,
             kind: 'content',
-            icon: KIND_ICON.EXAMPLE,
-            heading: lesson.heading,
+            heading: stripLeadingEmoji(lesson.heading),
             blocks: pageBlocks,
             continued: emitted > 0 || j > 0,
           });
@@ -271,8 +268,7 @@ export function buildSlides(module: TheoryModuleWithLessons): Slide[] {
         slides.push({
           id: `${lesson.id}-0`,
           kind: 'content',
-          icon: KIND_ICON.EXAMPLE,
-          heading: lesson.heading,
+          heading: stripLeadingEmoji(lesson.heading),
           blocks: [''],
         });
       }
@@ -289,8 +285,7 @@ export function buildSlides(module: TheoryModuleWithLessons): Slide[] {
       slides.push({
         id: `${lesson.id}-${i}`,
         kind: 'content',
-        icon: variant === 'objectives' ? '🎯' : variant === 'takeaways' ? '🏆' : KIND_ICON[lesson.kind],
-        heading: lesson.heading,
+        heading: stripLeadingEmoji(lesson.heading),
         blocks: pageBlocks,
         continued: i > 0,
         variant,

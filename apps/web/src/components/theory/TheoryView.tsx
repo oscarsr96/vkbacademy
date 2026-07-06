@@ -1,30 +1,32 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type {
   TheoryLesson,
-  TheoryLessonKind,
   TheoryModuleWithLessons,
   TheoryVideoCandidate,
 } from '@vkbacademy/shared';
 import { TheoryMarkdown, THEORY_CALLOUT_CSS } from './theoryMarkdown';
 import TheorySlides from './TheorySlides';
+import { buildSlides, stripLeadingEmoji } from '../../utils/theorySlides';
 import { downloadTheoryPdf, shareTheoryPdf } from '../../utils/theoryPdf';
 
-const KIND_ICON: Record<TheoryLessonKind, string> = {
-  INTRO: '🧭',
-  CONTENT: '📚',
-  EXAMPLE: '💡',
-  VIDEO: '▶️',
-};
+interface TheoryViewProps {
+  module: TheoryModuleWithLessons;
+  /** Título del curso: cabecera y nombre de fichero del PDF. */
+  courseTitle: string;
+}
 
-export default function TheoryView({ module }: { module: TheoryModuleWithLessons }) {
+export default function TheoryView({ module, courseTitle }: TheoryViewProps) {
   const [showSlides, setShowSlides] = useState(false);
+  // La presentación es la fuente; los apuntes en texto quedan colapsados por defecto.
+  const [showArticle, setShowArticle] = useState(false);
   const [pdfBusy, setPdfBusy] = useState<'download' | 'share' | null>(null);
+  const slideCount = useMemo(() => buildSlides(module).length, [module]);
 
   async function handleDownload() {
     if (pdfBusy) return;
     setPdfBusy('download');
     try {
-      await downloadTheoryPdf(module);
+      await downloadTheoryPdf(module, courseTitle);
     } catch {
       window.alert('No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
@@ -36,7 +38,7 @@ export default function TheoryView({ module }: { module: TheoryModuleWithLessons
     if (pdfBusy) return;
     setPdfBusy('share');
     try {
-      await shareTheoryPdf(module);
+      await shareTheoryPdf(module, courseTitle);
     } catch {
       window.alert('No se pudo compartir el PDF. Inténtalo de nuevo.');
     } finally {
@@ -49,17 +51,31 @@ export default function TheoryView({ module }: { module: TheoryModuleWithLessons
       <style>
         {ANIMATIONS}
         {THEORY_CALLOUT_CSS}
+        {HERO_CSS}
       </style>
 
-      <div style={s.actions}>
+      <section className="theory-hero">
+        <span className="theory-hero-play" aria-hidden>
+          ▶
+        </span>
+        <div className="theory-hero-copy">
+          <h2 className="theory-hero-title">Presentación del temario</h2>
+          <p className="theory-hero-sub">
+            Empieza aquí: recorre los apuntes diapositiva a diapositiva, con ejemplos resueltos
+            paso a paso.
+          </p>
+          <span className="theory-hero-meta">{slideCount} diapositivas</span>
+        </div>
         <button
           type="button"
-          className="btn btn-primary"
+          className="btn btn-primary theory-hero-cta"
           onClick={() => setShowSlides(true)}
-          style={s.presentBtn}
         >
-          ▶ Presentación
+          ▶ Empezar
         </button>
+      </section>
+
+      <div style={s.actions}>
         <button
           type="button"
           onClick={handleDownload}
@@ -76,15 +92,25 @@ export default function TheoryView({ module }: { module: TheoryModuleWithLessons
         >
           {pdfBusy === 'share' ? '⏳ Generando…' : '📲 Enviar por WhatsApp'}
         </button>
+        <button
+          type="button"
+          onClick={() => setShowArticle((v) => !v)}
+          style={s.secondaryBtn}
+          aria-expanded={showArticle}
+        >
+          {showArticle ? '▴ Ocultar apuntes en texto' : '▾ Ver apuntes en texto'}
+        </button>
       </div>
 
       {showSlides && <TheorySlides module={module} onClose={() => setShowSlides(false)} />}
 
-      <article style={s.article}>
-        {module.lessons.map((lesson, idx) => (
-          <LessonSection key={lesson.id} lesson={lesson} index={idx} />
-        ))}
-      </article>
+      {showArticle && (
+        <article style={s.article}>
+          {module.lessons.map((lesson, idx) => (
+            <LessonSection key={lesson.id} lesson={lesson} index={idx} />
+          ))}
+        </article>
+      )}
     </div>
   );
 }
@@ -92,9 +118,7 @@ export default function TheoryView({ module }: { module: TheoryModuleWithLessons
 function LessonSection({ lesson, index }: { lesson: TheoryLesson; index: number }) {
   return (
     <section className="theory-section" style={{ ...s.section, animationDelay: `${index * 90}ms` }}>
-      <h2 style={s.sectionTitle}>
-        <span aria-hidden>{KIND_ICON[lesson.kind]}</span> {lesson.heading}
-      </h2>
+      <h2 style={s.sectionTitle}>{stripLeadingEmoji(lesson.heading)}</h2>
       {lesson.kind === 'VIDEO' ? (
         <VideoLesson lesson={lesson} />
       ) : (
@@ -117,6 +141,46 @@ const ANIMATIONS = `
   @media (prefers-reduced-motion: reduce) {
     .theory-section { animation: none; }
   }
+`;
+
+// CTA protagonista de la presentación (zona dark del design system estadio).
+const HERO_CSS = `
+  .theory-hero {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 24px 26px;
+    border-radius: 16px;
+    color: #fff;
+    background:
+      radial-gradient(120% 90% at 50% -20%, var(--brand-soft), transparent 60%),
+      radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1.4px) 0 0 / 14px 14px,
+      linear-gradient(180deg, var(--navy-950, #080e1a) 0%, var(--navy-800, #0d1b2a) 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .theory-hero-play {
+    flex: none;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 1.6rem;
+    color: #fff;
+    background: var(--gradient-signature, var(--brand));
+    box-shadow: 0 0 24px var(--brand-glow);
+  }
+  .theory-hero-copy { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 6px; }
+  .theory-hero-title { margin: 0; font-size: 1.15rem; font-weight: 800; }
+  .theory-hero-sub { margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.75); line-height: 1.5; }
+  .theory-hero-meta {
+    font-family: var(--font-display, inherit);
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    color: var(--amber-led, #ffd24d);
+  }
+  .theory-hero-cta { padding: 14px 28px; font-size: 1rem; font-weight: 800; flex: none; }
 `;
 
 function VideoLesson({ lesson }: { lesson: TheoryLesson }) {
@@ -195,9 +259,8 @@ function formatDuration(seconds: number): string {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  wrap: { display: 'flex', flexDirection: 'column', gap: 24 },
+  wrap: { display: 'flex', flexDirection: 'column', gap: 20 },
   actions: { display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
-  presentBtn: { padding: '10px 18px', fontSize: '0.9rem', fontWeight: 700 },
   secondaryBtn: {
     background: 'var(--color-surface)',
     border: '1px solid var(--color-border)',

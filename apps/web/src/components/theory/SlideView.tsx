@@ -56,10 +56,8 @@ function Frag({
 function CoverSlide({ slide }: { slide: Slide }) {
   return (
     <div className="tsl-cover">
-      <span className="tsl-ball" aria-hidden>
-        🏀
-      </span>
-      <span className="tsl-cover-eyebrow">{slide.topic}</span>
+      <img className="tsl-logo" src="/brand/vkb-logo.png" alt="Vallekas Basket" />
+      <span className="tsl-cover-eyebrow">VKB Academy · {slide.topic}</span>
       <h1 className="tsl-cover-title">{slide.coverTitle}</h1>
       {slide.coverSubtitle && <p className="tsl-cover-sub">{slide.coverSubtitle}</p>}
     </div>
@@ -79,9 +77,6 @@ function ContentSlide({
   return (
     <div className={`tsl-content${slide.variant ? ` tsl-content--${slide.variant}` : ''}`}>
       <h2 className="tsl-heading">
-        <span className="tsl-icon" aria-hidden>
-          {slide.icon}
-        </span>
         {slide.heading}
         {slide.continued && <span className="tsl-cont">cont.</span>}
       </h2>
@@ -167,12 +162,7 @@ function VideoSlide({ slide, forPdf }: { slide: Slide; forPdf: boolean }) {
   if (candidates.length === 0) {
     return (
       <div className="tsl-content">
-        <h2 className="tsl-heading">
-          <span className="tsl-icon" aria-hidden>
-            ▶️
-          </span>
-          {slide.heading}
-        </h2>
+        <h2 className="tsl-heading">{slide.heading}</h2>
         <p className="tsl-muted">No se encontró un vídeo adecuado para este tema.</p>
       </div>
     );
@@ -182,12 +172,7 @@ function VideoSlide({ slide, forPdf }: { slide: Slide; forPdf: boolean }) {
 
   return (
     <div className="tsl-video">
-      <h2 className="tsl-heading">
-        <span className="tsl-icon" aria-hidden>
-          ▶️
-        </span>
-        {slide.heading}
-      </h2>
+      <h2 className="tsl-heading">{slide.heading}</h2>
 
       {forPdf ? (
         <div className="tsl-video-card">
@@ -236,13 +221,11 @@ function VideoSlide({ slide, forPdf }: { slide: Slide; forPdf: boolean }) {
 function ClosingSlide() {
   return (
     <div className="tsl-closing">
-      <span className="tsl-ball" aria-hidden>
-        🏀
-      </span>
+      <img className="tsl-logo" src="/brand/vkb-logo.png" alt="Vallekas Basket" />
       <h2 className="tsl-closing-title">¡Bien jugado!</h2>
       <p className="tsl-closing-sub">
-        Has terminado el temario. Descárgalo en PDF o envíatelo a WhatsApp para repasarlo cuando
-        quieras.
+        Apuntes completados. Ahora te toca: practica con los ejercicios y remata con el examen.
+        Descarga el PDF si quieres repasar sobre papel.
       </p>
     </div>
   );

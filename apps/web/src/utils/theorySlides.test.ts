@@ -151,7 +151,7 @@ describe('parseExample', () => {
   it('parsea título, enunciado, pasos, resultado y porqué', () => {
     const parsed = parseExample(EXAMPLE_MD)!;
     expect(parsed).not.toBeNull();
-    expect(parsed.title).toBe('💪 Ejemplo 1: descuento de rebajas');
+    expect(parsed.title).toBe('Ejemplo 1: descuento de rebajas');
     expect(parsed.statement).toContain('zapatillas');
     expect(parsed.steps).toHaveLength(3);
     expect(parsed.steps[1]).toContain('Resta el descuento');
@@ -177,13 +177,12 @@ describe('parseExample', () => {
 });
 
 describe('buildSlides — estructura Winston', () => {
-  it('marca la INTRO "Qué vas a conseguir" como variante objectives con icono 🎯', () => {
+  it('marca la INTRO "Qué vas a conseguir" como variante objectives', () => {
     const slides = buildSlides(
       moduleWith([lesson({ kind: 'INTRO', heading: 'Qué vas a conseguir', body: '- **Sabrás** x' })]),
     );
     const intro = slides.find((s) => s.kind === 'content')!;
     expect(intro.variant).toBe('objectives');
-    expect(intro.icon).toBe('🎯');
   });
 
   it('marca "Lo que te llevas" como variante takeaways', () => {
