@@ -3,8 +3,9 @@ import type {
   StudyPlanSummary,
   StudyPlanDetail,
   CreateStudyPlanRequest,
-  RegenerateExercisesRequest,
-  RegenerateExamRequest,
+  GenerateStudyPlanExamRequest,
+  RenameStudyPlanRequest,
+  RegenerateStudyPlanExercisesRequest,
 } from '@vkbacademy/shared';
 
 export const studyPlansApi = {
@@ -15,14 +16,18 @@ export const studyPlansApi = {
 
   getById: (id: string) => api.get<StudyPlanDetail>(`/study-plans/${id}`).then((r) => r.data),
 
+  rename: (id: string, payload: RenameStudyPlanRequest) =>
+    api.patch<StudyPlanDetail>(`/study-plans/${id}`, payload).then((r) => r.data),
+
   delete: (id: string) => api.delete<void>(`/study-plans/${id}`).then((r) => r.data),
 
   regenerateTopicTheory: (id: string, topicId: string) =>
     api.post<StudyPlanDetail>(`/study-plans/${id}/topics/${topicId}/theory`).then((r) => r.data),
 
-  regenerateExercises: (id: string, payload: RegenerateExercisesRequest) =>
+  regenerateExercises: (id: string, payload: RegenerateStudyPlanExercisesRequest) =>
     api.post<StudyPlanDetail>(`/study-plans/${id}/exercises`, payload).then((r) => r.data),
 
-  regenerateExam: (id: string, payload: RegenerateExamRequest) =>
-    api.post<StudyPlanDetail>(`/study-plans/${id}/exam`, payload).then((r) => r.data),
+  // Genera (lazy) el examen de un nivel: combinado o de un tema concreto.
+  generateExam: (id: string, payload: GenerateStudyPlanExamRequest) =>
+    api.post<StudyPlanDetail>(`/study-plans/${id}/exams`, payload).then((r) => r.data),
 };
