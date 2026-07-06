@@ -19,8 +19,8 @@ describe('StudyPlansService', () => {
       findUnique: jest.Mock;
       findMany: jest.Mock;
     };
-    theoryModule: { update: jest.Mock };
-    aiExamBank: { update: jest.Mock };
+    theoryModule: { update: jest.Mock; delete: jest.Mock };
+    aiExamBank: { update: jest.Mock; delete: jest.Mock };
     $transaction: jest.Mock;
   };
   let theory: { generate: jest.Mock; getById: jest.Mock; deleteById: jest.Mock };
@@ -119,8 +119,14 @@ describe('StudyPlansService', () => {
         findUnique: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
       },
-      theoryModule: { update: jest.fn().mockResolvedValue({}) },
-      aiExamBank: { update: jest.fn().mockResolvedValue({}) },
+      theoryModule: {
+        update: jest.fn().mockResolvedValue({}),
+        delete: jest.fn().mockResolvedValue({}),
+      },
+      aiExamBank: {
+        update: jest.fn().mockResolvedValue({}),
+        delete: jest.fn().mockResolvedValue({}),
+      },
       $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
     };
     theory = {
@@ -409,6 +415,28 @@ describe('StudyPlansService', () => {
 
       await expect(service.create('user-1', dto)).rejects.toThrow('conexión perdida');
       expect(prisma.studyPlan.delete).toHaveBeenCalledWith({ where: { id: 'plan-1' } });
+      // Los artefactos generados pero sin enlazar tampoco quedan huérfanos
+      expect(prisma.theoryModule.delete).toHaveBeenCalledWith({ where: { id: 'tm-1' } });
+      expect(prisma.aiExamBank.delete).toHaveBeenCalledWith({ where: { id: 'bank-1' } });
+    });
+
+    it('rechaza con 422 si numExercises < número de temas', async () => {
+      await expect(
+        service.create('user-1', {
+          ...dto,
+          numQuestions: 10,
+          numExercises: 5,
+          topics: [
+            { title: 'tema uno' },
+            { title: 'tema dos' },
+            { title: 'tema tres' },
+            { title: 'tema cuatro' },
+            { title: 'tema cinco' },
+            { title: 'tema seis' },
+          ],
+        }),
+      ).rejects.toThrow(UnprocessableEntityException);
+      expect(prisma.studyPlan.create).not.toHaveBeenCalled();
     });
   });
 

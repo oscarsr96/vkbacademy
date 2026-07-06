@@ -161,16 +161,31 @@ export class ExercisesService {
 
     const maxTokens = Math.min(8000, 200 + params.count * 250);
 
-    let parsed: unknown;
-    try {
-      parsed = await generateAiJson(this.ai, prompt, maxTokens, { attempts: 2, logger: this.logger });
-    } catch (err) {
-      this.logger.error('Error al parsear JSON de IA (ejercicios multi-tema) tras reintentos:', err);
+    // Como en el examen multi-tema: el reparto por tema es frágil, así que la
+    // validación semántica (etiquetas + cobertura) también reintenta, no solo el parseo.
+    let result: GenerateTopicExercisesResult | null = null;
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= 2 && !result; attempt++) {
+      try {
+        const parsed = await generateAiJson(this.ai, prompt, maxTokens, {
+          attempts: 1,
+          logger: this.logger,
+        });
+        result = this.validateTopicExercisesResult(parsed, params.topics, params.count);
+      } catch (err) {
+        lastErr = err;
+        this.logger.warn(
+          `Ejercicios multi-tema inválidos (generación ${attempt}/2): ${err instanceof Error ? err.message : 'desconocido'}`,
+        );
+      }
+    }
+    if (!result) {
+      this.logger.error('Error al generar ejercicios multi-tema tras reintentos:', lastErr);
       throw new InternalServerErrorException(
-        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
+        `El agente IA devolvió un formato inválido: ${lastErr instanceof Error ? lastErr.message : 'desconocido'}`,
       );
     }
-    return this.validateTopicExercisesResult(parsed, params.topics);
+    return result;
   }
 
   async evaluate(dto: EvaluateExerciseDto): Promise<EvaluationResult> {
@@ -201,17 +216,32 @@ export class ExercisesService {
   private validateTopicExercisesResult(
     parsed: unknown,
     topics: string[],
+    count: number,
   ): GenerateTopicExercisesResult {
     const result = this.validateExercisesResult(parsed);
-    const validLabels = new Set(topics.map((t) => t.trim()));
+    const perTopicCount = new Map<string, number>(topics.map((t) => [t.trim(), 0]));
     for (const [idx, ex] of (result.exercises as GeneratedTopicExercise[]).entries()) {
       const label = typeof ex.topicLabel === 'string' ? ex.topicLabel.trim() : '';
-      if (!validLabels.has(label)) {
+      if (!perTopicCount.has(label)) {
         throw new InternalServerErrorException(
           `Ejercicio ${idx + 1}: topicLabel inválido "${ex.topicLabel ?? ''}" (debe ser uno de los temas pedidos)`,
         );
       }
       ex.topicLabel = label;
+      perTopicCount.set(label, perTopicCount.get(label)! + 1);
+    }
+
+    // Cobertura: si hay ejercicios suficientes, ningún tema puede quedarse a cero
+    // (misma regla que el examen multi-tema).
+    if (count >= topics.length) {
+      const uncovered = [...perTopicCount.entries()]
+        .filter(([, n]) => n === 0)
+        .map(([topic]) => topic);
+      if (uncovered.length > 0) {
+        throw new InternalServerErrorException(
+          `Los ejercicios no cubren todos los temas: faltan ejercicios de ${uncovered.join(', ')}`,
+        );
+      }
     }
     return result as GenerateTopicExercisesResult;
   }

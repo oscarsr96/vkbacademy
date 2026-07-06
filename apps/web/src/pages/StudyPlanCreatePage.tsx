@@ -39,6 +39,7 @@ export default function StudyPlanCreatePage() {
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
   const [customTitle, setCustomTitle] = useState('');
   const [customSubject, setCustomSubject] = useState(''); // '' = asignatura base
+  const [customError, setCustomError] = useState('');
 
   const [numExercises, setNumExercises] = useState(5);
   const [difficulty, setDifficulty] = useState<StudyDifficulty>('MEDIUM');
@@ -92,6 +93,12 @@ export default function StudyPlanCreatePage() {
   function addCustomTopic() {
     const title = customTitle.trim();
     if (title.length < 3 || atMax) return;
+    // Guardia de duplicados en cliente (el 422 del backend queda como red de seguridad)
+    const normalized = title.toLowerCase();
+    if (selectedTopics.some((t) => t.title.trim().toLowerCase() === normalized)) {
+      setCustomError('Ese tema ya está en el plan.');
+      return;
+    }
     const subject = customSubject || undefined;
     setSelectedTopics((prev) => [
       ...prev,
@@ -105,6 +112,7 @@ export default function StudyPlanCreatePage() {
     ]);
     setCustomTitle('');
     setCustomSubject('');
+    setCustomError('');
   }
 
   function removeTopic(key: string) {
@@ -112,8 +120,13 @@ export default function StudyPlanCreatePage() {
   }
 
   const needsMoreQuestions = numQuestions < selectedTopics.length;
+  const needsMoreExercises = numExercises < selectedTopics.length;
   const canSubmit =
-    !!courseId && selectedTopics.length > 0 && !needsMoreQuestions && !create.isPending;
+    !!courseId &&
+    selectedTopics.length > 0 &&
+    !needsMoreQuestions &&
+    !needsMoreExercises &&
+    !create.isPending;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -223,7 +236,10 @@ export default function StudyPlanCreatePage() {
                   id="customTitle"
                   type="text"
                   value={customTitle}
-                  onChange={(e) => setCustomTitle(e.target.value)}
+                  onChange={(e) => {
+                    setCustomTitle(e.target.value);
+                    setCustomError('');
+                  }}
                   placeholder="Ej: verbos irregulares, la célula, ecuaciones de segundo grado..."
                   disabled={atMax}
                 />
@@ -256,6 +272,7 @@ export default function StudyPlanCreatePage() {
                 <Icon name="zap" size={14} />
                 Añadir
               </button>
+              {customError && <p style={s.warn}>{customError}</p>}
               {atMax && <p style={s.warn}>Máximo {MAX_TOPICS} temas por plan.</p>}
             </div>
           )}
@@ -389,6 +406,12 @@ export default function StudyPlanCreatePage() {
               <p style={s.warn}>
                 Con {selectedTopics.length} temas necesitas al menos {selectedTopics.length}{' '}
                 preguntas (1 por tema): elige 10 preguntas o quita algún tema.
+              </p>
+            )}
+            {needsMoreExercises && (
+              <p style={s.warn}>
+                Con {selectedTopics.length} temas necesitas al menos {selectedTopics.length}{' '}
+                ejercicios (1 por tema): sube el número de ejercicios o quita algún tema.
               </p>
             )}
             {selectedTopics.length === 0 && (

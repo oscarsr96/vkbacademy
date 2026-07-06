@@ -186,6 +186,12 @@ export class StudyPlansService {
           `necesitas numQuestions ≥ ${dto.topics.length}`,
       );
     }
+    if (dto.numExercises < dto.topics.length) {
+      throw new UnprocessableEntityException(
+        `Debe haber al menos 1 ejercicio por tema: con ${dto.topics.length} temas ` +
+          `necesitas numExercises ≥ ${dto.topics.length}`,
+      );
+    }
 
     const resolvedTopics = await this.resolveAndAssertTopics(userId, dto.courseId, dto.topics);
 
@@ -288,8 +294,21 @@ export class StudyPlansService {
     try {
       await this.prisma.$transaction(ops);
     } catch (err) {
-      // Si el enlace transaccional falla, no dejar un plan cáscara huérfano.
-      await this.prisma.studyPlan.delete({ where: { id: plan.id } });
+      // Si el enlace transaccional falla, no dejar huérfanos: ni el plan cáscara
+      // ni los decks/banco ya generados pero sin enlazar (quedarían sueltos en la
+      // biblioteca del alumno, indistinguibles de los creados a mano).
+      const generatedTheoryIds = theoryResults.flatMap((r) =>
+        r.status === 'fulfilled' ? [r.value.id] : [],
+      );
+      await Promise.allSettled([
+        ...generatedTheoryIds.map((theoryId) =>
+          this.prisma.theoryModule.delete({ where: { id: theoryId } }),
+        ),
+        ...(examRes.status === 'fulfilled'
+          ? [this.prisma.aiExamBank.delete({ where: { id: examRes.value.id } })]
+          : []),
+        this.prisma.studyPlan.delete({ where: { id: plan.id } }),
+      ]);
       throw err;
     }
 
@@ -393,11 +412,12 @@ export class StudyPlansService {
     const topic = plan.topics.find((t) => t.id === topicId);
     if (!topic) throw new NotFoundException('Tema no encontrado en este plan');
 
-    if (topic.theoryModule) await this.theory.deleteById(userId, topic.theoryModule.id);
+    // Generar primero: si la IA falla, el deck anterior (si existía) queda intacto.
     const theory = await this.theory.generate(userId, {
       courseId: topic.contextCourseId,
       topic: topic.title,
     });
+    if (topic.theoryModule) await this.theory.deleteById(userId, topic.theoryModule.id);
     await this.prisma.theoryModule.update({
       where: { id: theory.id },
       data: { studyPlanTopicId: topic.id },
@@ -409,7 +429,13 @@ export class StudyPlansService {
   async regenerateExercises(userId: string, planId: string, dto: RegenerateExercisesDto) {
     const plan = await this.requireOwnedPlan(userId, planId);
     const prevCount = Array.isArray(plan.exercises) ? (plan.exercises as unknown[]).length : 0;
-    const count = dto.count ?? (prevCount > 0 ? prevCount : 5);
+    const count = dto.count ?? (prevCount > 0 ? prevCount : Math.max(5, plan.topics.length));
+    if (count < plan.topics.length) {
+      throw new UnprocessableEntityException(
+        `Debe haber al menos 1 ejercicio por tema: con ${plan.topics.length} temas ` +
+          `necesitas count ≥ ${plan.topics.length}`,
+      );
+    }
     const res = await this.exercises.generateForTopics(userId, {
       courseId: plan.courseId,
       topics: plan.topics.map((t) => t.title),
@@ -433,7 +459,7 @@ export class StudyPlansService {
           `necesitas numQuestions ≥ ${plan.topics.length}`,
       );
     }
-    if (plan.examBank) await this.aiExams.deleteBank(userId, plan.examBank.id);
+    // Generar primero: si la IA falla, el banco anterior (si existía) queda intacto.
     const bank = await this.aiExams.generateForTopics(userId, {
       courseId: plan.courseId,
       topics: plan.topics.map((t) => t.title),
@@ -442,6 +468,7 @@ export class StudyPlansService {
       onlyOnce: dto.onlyOnce ?? plan.examBank?.onlyOnce,
       difficulty: plan.difficulty as 'EASY' | 'MEDIUM' | 'HARD',
     });
+    if (plan.examBank) await this.aiExams.deleteBank(userId, plan.examBank.id);
     await this.prisma.aiExamBank.update({
       where: { id: bank.id },
       data: { studyPlanId: plan.id },
