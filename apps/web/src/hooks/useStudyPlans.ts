@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { studyPlansApi } from '../api/study-plans.api';
-import type { CreateStudyPlanRequest } from '@vkbacademy/shared';
+import type {
+  CreateStudyPlanRequest,
+  GenerateStudyPlanExamRequest,
+  RegenerateStudyPlanExercisesRequest,
+} from '@vkbacademy/shared';
 
 export function useMyStudyPlans() {
   return useQuery({ queryKey: ['study-plans', 'mine'], queryFn: () => studyPlansApi.listMine() });
@@ -41,15 +45,32 @@ export function useRegenerateTopicTheory(id: string) {
 export function useRegeneratePlanExercises(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (count?: number) => studyPlansApi.regenerateExercises(id, { count }),
+    mutationFn: (payload?: RegenerateStudyPlanExercisesRequest) =>
+      studyPlansApi.regenerateExercises(id, payload ?? {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['study-plans', id] }),
   });
 }
 
-export function useRegeneratePlanExam(id: string) {
+/** Genera (lazy) el examen de un nivel del plan; el detalle se refresca al terminar. */
+export function useGeneratePlanExam(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => studyPlansApi.regenerateExam(id, {}),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['study-plans', id] }),
+    mutationFn: (payload: GenerateStudyPlanExamRequest) =>
+      studyPlansApi.generateExam(id, payload),
+    onSuccess: (detail) => {
+      qc.setQueryData(['study-plans', id], detail);
+      void qc.invalidateQueries({ queryKey: ['study-plans', 'mine'] });
+    },
+  });
+}
+
+export function useRenameStudyPlan(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (title: string) => studyPlansApi.rename(id, { title }),
+    onSuccess: (detail) => {
+      qc.setQueryData(['study-plans', id], detail);
+      void qc.invalidateQueries({ queryKey: ['study-plans', 'mine'] });
+    },
   });
 }

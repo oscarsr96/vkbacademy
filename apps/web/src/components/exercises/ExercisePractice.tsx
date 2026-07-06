@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import type { StudyExercise } from '@vkbacademy/shared';
+import type { StudyDifficulty, StudyExercise } from '@vkbacademy/shared';
 import api from '../../lib/axios';
+
+// Los ejercicios del curso multi-tema llegan con dificultad; los del flujo un-tema, sin ella.
+type PracticeExercise = StudyExercise & { difficulty?: StudyDifficulty };
+
+const DIFFICULTY_LABEL: Record<StudyDifficulty, string> = {
+  EASY: 'Fácil',
+  MEDIUM: 'Medio',
+  HARD: 'Difícil',
+};
 
 type Verdict = 'correct' | 'partial' | 'incorrect';
 
@@ -16,7 +25,7 @@ interface EvaluatePayload {
   solution: string;
 }
 
-export default function ExercisePractice({ exercises }: { exercises: StudyExercise[] }) {
+export default function ExercisePractice({ exercises }: { exercises: PracticeExercise[] }) {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [selected, setSelected] = useState<Record<number, number | null>>({});
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -113,7 +122,7 @@ function ExerciseCard({
   onEvaluate,
   onToggle,
 }: {
-  exercise: StudyExercise;
+  exercise: PracticeExercise;
   index: number;
   revealed: boolean;
   selected: number | null;
@@ -162,6 +171,11 @@ function ExerciseCard({
       <header style={s.cardHeader}>
         <span style={s.cardNumber}>#{index + 1}</span>
         <span style={s.cardType}>{labelForType(exercise.type)}</span>
+        {exercise.difficulty && (
+          <span style={{ ...s.cardDifficulty, ...difficultyStyle(exercise.difficulty) }}>
+            {DIFFICULTY_LABEL[exercise.difficulty]}
+          </span>
+        )}
       </header>
 
       <p style={s.statement}>{exercise.statement}</p>
@@ -240,6 +254,18 @@ function verdictLabel(verdict: Verdict): string {
   }
 }
 
+// Color del chip de dificultad (verde / ámbar / rojo suaves).
+function difficultyStyle(difficulty: StudyDifficulty): React.CSSProperties {
+  switch (difficulty) {
+    case 'EASY':
+      return { color: 'var(--color-success, #16a34a)', background: 'rgba(22,163,74,0.1)' };
+    case 'MEDIUM':
+      return { color: '#b45309', background: 'rgba(180,83,9,0.1)' };
+    case 'HARD':
+      return { color: 'var(--color-error)', background: 'rgba(220,38,38,0.08)' };
+  }
+}
+
 function labelForType(type: StudyExercise['type']): string {
   switch (type) {
     case 'SINGLE':
@@ -275,6 +301,14 @@ const s: Record<string, React.CSSProperties> = {
   },
   cardHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   cardNumber: { fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-deep)' },
+  cardDifficulty: {
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    padding: '2px 8px',
+    borderRadius: 999,
+  },
   cardType: {
     fontSize: '0.75rem',
     fontWeight: 600,
