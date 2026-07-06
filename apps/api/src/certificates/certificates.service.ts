@@ -140,10 +140,14 @@ export class CertificatesService {
 
     const attempt = await this.prisma.examAttempt.findUnique({
       where: { id: attemptId },
-      select: { courseId: true, moduleId: true },
+      select: { courseId: true, moduleId: true, aiExamBankId: true },
     });
 
     if (!attempt) return;
+
+    // Los bancos generados por IA (flujo de estudio del alumno) no emiten
+    // certificados oficiales: solo los exámenes curados por admin.
+    if (attempt.aiExamBankId) return;
 
     if (attempt.courseId) {
       await this.issueCertificate(
