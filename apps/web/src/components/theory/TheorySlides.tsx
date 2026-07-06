@@ -11,6 +11,7 @@ import {
   useState,
   type TouchEvent as ReactTouchEvent,
 } from 'react';
+import { createPortal } from 'react-dom';
 import type { TheoryModuleWithLessons } from '@vkbacademy/shared';
 import { buildSlides, fragmentCount } from '../../utils/theorySlides';
 import { SlideView } from './SlideView';
@@ -32,8 +33,34 @@ export default function TheorySlides({ module, onClose }: Props) {
   const slide = slides[current];
   const frags = fragmentCount(slide);
 
+  const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
+
+  // Pantalla completa real (Fullscreen API). Si el navegador no la soporta
+  // (iOS Safari), el botón no se muestra.
+  const fullscreenSupported =
+    typeof document !== 'undefined' &&
+    typeof document.documentElement.requestFullscreen === 'function';
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    } else if (rootRef.current) {
+      void rootRef.current.requestFullscreen().catch(() => undefined);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      // Al cerrar el deck estando en pantalla completa, salir de ella.
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    };
+  }, []);
 
   const goTo = useCallback(
     (idx: number, reveal: 'all' | 'none') => {
@@ -95,7 +122,15 @@ export default function TheorySlides({ module, onClose }: Props) {
           e.preventDefault();
           setGridOpen(true);
           break;
+        case 'f':
+        case 'F':
+          e.preventDefault();
+          toggleFullscreen();
+          break;
         case 'Escape':
+          // En pantalla completa, Esc la abandona (lo gestiona el navegador);
+          // no cerramos además el deck.
+          if (document.fullscreenElement) break;
           e.preventDefault();
           onClose();
           break;
@@ -103,7 +138,7 @@ export default function TheorySlides({ module, onClose }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [next, prev, goTo, total, onClose, gridOpen]);
+  }, [next, prev, goTo, total, onClose, gridOpen, toggleFullscreen]);
 
   // Bloquear scroll del body mientras el deck está abierto.
   useEffect(() => {
@@ -115,7 +150,17 @@ export default function TheorySlides({ module, onClose }: Props) {
   }, []);
 
   // Auto-fit: escala la slide para que no desborde verticalmente en desktop.
-  // En móvil no se escala (se hace scroll vertical).
+  // En móvil no se escala (se hace scroll vertical). Se recalcula también al
+  // cambiar el tamaño del escenario (entrar/salir de pantalla completa, resize).
+  const [fitTick, setFitTick] = useState(0);
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => setFitTick((t) => t + 1));
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+
   useLayoutEffect(() => {
     const inner = innerRef.current;
     const stage = stageRef.current;
@@ -127,7 +172,7 @@ export default function TheorySlides({ module, onClose }: Props) {
     if (need > avail) {
       inner.style.transform = `scale(${Math.max(0.55, avail / need)})`;
     }
-  }, [current, revealed, slide]);
+  }, [current, revealed, slide, fitTick]);
 
   // Swipe en móvil.
   const touch = useRef<{ x: number; y: number } | null>(null);
@@ -151,8 +196,11 @@ export default function TheorySlides({ module, onClose }: Props) {
   const atStart = current === 0 && revealed === 0;
   const atEnd = current === total - 1 && revealed >= frags;
 
-  return (
+  return createPortal(
+    // Portal a <body>: un ancestro con transform (p.ej. .vkb-card:hover) se
+    // convertiría en containing block del position:fixed y encogería el deck.
     <div
+      ref={rootRef}
       className="tslides"
       role="dialog"
       aria-modal="true"
@@ -170,6 +218,16 @@ export default function TheorySlides({ module, onClose }: Props) {
       <header className="tslides-topbar">
         <div className="tslides-title">{module.title}</div>
         <div className="tslides-actions">
+          {fullscreenSupported && (
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+              title={isFullscreen ? 'Salir de pantalla completa (F)' : 'Pantalla completa (F)'}
+            >
+              ⛶
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setGridOpen(true)}
@@ -253,7 +311,7 @@ export default function TheorySlides({ module, onClose }: Props) {
         </button>
       </nav>
 
-      <p className="tslides-hint">← → o toca para avanzar · G índice · Esc para salir</p>
+      <p className="tslides-hint">← → o toca para avanzar · F pantalla completa · G índice · Esc para salir</p>
 
       {gridOpen && (
         <div className="tslides-grid" onClick={() => setGridOpen(false)}>
@@ -279,7 +337,8 @@ export default function TheorySlides({ module, onClose }: Props) {
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -489,17 +548,6 @@ export const TSLIDES_CSS = `
     gap: 12px;
     flex-wrap: wrap;
   }
-  .tsl-cont {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.6em;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(255,255,255,0.5);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 999px;
-    padding: 2px 10px;
-  }
   .tsl-body {
     font-size: clamp(1.05rem, 2.1vw, 1.4rem);
     line-height: 1.65;
@@ -538,38 +586,87 @@ export const TSLIDES_CSS = `
     margin: 0 0 0.8em;
     padding: 0;
     display: grid;
-    gap: 12px;
+    gap: 14px;
   }
   .tsl-content--objectives .tsl-body li,
   .tsl-content--takeaways .tsl-body li {
     position: relative;
     margin: 0;
-    padding: 14px 18px 14px 58px;
+    padding: 18px 20px 18px 64px;
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.14);
-    border-radius: 14px;
+    border-radius: 16px;
     line-height: 1.5;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.25);
   }
   .tsl-content--objectives .tsl-body li::before,
   .tsl-content--takeaways .tsl-body li::before {
     content: '✓';
     position: absolute;
-    left: 15px;
+    left: 16px;
     top: 50%;
     transform: translateY(-50%);
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: var(--brand-glow);
-    color: var(--brand-light);
+    background: var(--gradient-signature, var(--brand));
+    color: #fff;
     font-weight: 800;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     display: grid;
     place-items: center;
+    box-shadow: 0 0 18px var(--brand-glow);
   }
   .tsl-content--takeaways .tsl-body li {
     background: var(--brand-soft);
     border-color: var(--brand);
+  }
+
+  /* ── Variante summary: flashcards de reglas de oro / chuleta de repaso ── */
+  .tsl-content--summary .tsl-body { font-size: clamp(0.9rem, 1.8vw, 1.15rem); }
+  .tsl-flashcards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+    margin: 0 0 14px;
+  }
+  .tsl-flashcards .tslides-frag { display: flex; }
+  .tsl-flashcard {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 18px 18px 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.25);
+  }
+  .tsl-flashcard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-signature, linear-gradient(90deg, var(--brand), var(--brand-light)));
+  }
+  .tsl-flashcard-term {
+    font-family: 'Unbounded', 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.3;
+    color: var(--brand-light);
+  }
+  .tsl-flashcard-body { line-height: 1.5; color: rgba(255,255,255,0.92); }
+  .tsl-flashcard-body p { margin: 0; }
+  .tsl-flashcard-body .katex { font-size: 1.12em; }
+  /* El callout 🧠 de la chuleta destaca a ancho completo bajo las tarjetas */
+  .tsl-content--summary .theory-callout {
+    background: var(--brand-soft);
+    border-left-color: var(--brand);
   }
 
   /* ── Slide de ejemplo paso a paso ── */

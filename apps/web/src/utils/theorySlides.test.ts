@@ -5,6 +5,7 @@ import {
   fragmentCount,
   paginateBlocks,
   parseExample,
+  parseSummaryCards,
   resolveVideoCandidates,
   splitExampleChunks,
   splitMarkdownBlocks,
@@ -121,7 +122,8 @@ describe('buildSlides', () => {
     const slides = buildSlides(moduleWith([lesson({ kind: 'CONTENT', body })]));
     const content = slides.filter((s) => s.kind === 'content');
     expect(content.length).toBe(2);
-    expect(content[1].continued).toBe(true);
+    // Las dos slides comparten heading, sin marcador "cont." (fuera de la UI).
+    expect(content[0].heading).toBe(content[1].heading);
   });
 
   it('numera las slides de forma correlativa', () => {
@@ -209,6 +211,39 @@ describe('buildSlides — estructura Winston', () => {
     expect(slides.find((s) => s.kind === 'content')!.variant).toBeUndefined();
   });
 
+  it('marca "Reglas de oro" y "Chuleta de repaso" como variante summary con flashcards', () => {
+    const body = `- **Fracción generatriz**: $x = a/b$\n- **Redondeo**: mira la cifra siguiente\n\n> 🧠 **Recuerda:** lo más importante.`;
+    for (const heading of ['Reglas de oro', 'Chuleta de repaso']) {
+      const slides = buildSlides(moduleWith([lesson({ kind: 'CONTENT', heading, body })]));
+      const slide = slides.find((s) => s.kind === 'content')!;
+      expect(slide.variant).toBe('summary');
+      expect(slide.cards).toEqual([
+        { term: 'Fracción generatriz', body: '$x = a/b$' },
+        { term: 'Redondeo', body: 'mira la cifra siguiente' },
+      ]);
+      expect(slide.blocks).toEqual(['> 🧠 **Recuerda:** lo más importante.']);
+    }
+  });
+
+  it('una summary sin items de lista degrada a contenido normal (sin tarjetas)', () => {
+    const slides = buildSlides(
+      moduleWith([lesson({ kind: 'CONTENT', heading: 'Reglas de oro', body: 'párrafo suelto' })]),
+    );
+    const slide = slides.find((s) => s.kind === 'content')!;
+    expect(slide.cards).toEqual([]);
+    expect(slide.blocks).toEqual(['párrafo suelto']);
+  });
+
+  it('la summary no se pagina aunque supere el presupuesto de caracteres', () => {
+    const items = Array.from({ length: 8 }, (_, i) => `- **Regla ${i}**: ${'x'.repeat(90)}`);
+    const slides = buildSlides(
+      moduleWith([lesson({ kind: 'CONTENT', heading: 'Reglas de oro', body: items.join('\n') })]),
+    );
+    const content = slides.filter((s) => s.kind === 'content');
+    expect(content).toHaveLength(1);
+    expect(content[0].cards).toHaveLength(8);
+  });
+
   it('convierte una lección EXAMPLE estructurada en slides example con pasos', () => {
     const body = `${EXAMPLE_MD}\n${EXAMPLE_MD.replace('Ejemplo 1', 'Ejemplo 2')}`;
     const slides = buildSlides(moduleWith([lesson({ kind: 'EXAMPLE', heading: 'Ejemplos', body })]));
@@ -230,7 +265,32 @@ describe('buildSlides — estructura Winston', () => {
   });
 });
 
+describe('parseSummaryCards', () => {
+  it('separa tarjetas y resto dentro del mismo bloque', () => {
+    const { cards, rest } = parseSummaryCards(['- **A**: uno\nlínea suelta\n- **B.** dos']);
+    expect(cards).toEqual([
+      { term: 'A', body: 'uno' },
+      { term: 'B', body: 'dos' },
+    ]);
+    expect(rest).toEqual(['línea suelta']);
+  });
+
+  it('devuelve todo como resto si nada parsea', () => {
+    const { cards, rest } = parseSummaryCards(['párrafo', '- item sin negrita']);
+    expect(cards).toEqual([]);
+    expect(rest).toEqual(['párrafo', '- item sin negrita']);
+  });
+});
+
 describe('fragmentCount', () => {
+  it('en slides summary cuenta tarjetas + bloques restantes', () => {
+    const body = `- **A**: uno\n- **B**: dos\n\n> 🧠 **Recuerda:** clave.`;
+    const slides = buildSlides(
+      moduleWith([lesson({ kind: 'CONTENT', heading: 'Reglas de oro', body })]),
+    );
+    expect(fragmentCount(slides.find((s) => s.kind === 'content')!)).toBe(3);
+  });
+
   it('en slides example cuenta enunciado + pasos + resultado + porqué', () => {
     const slides = buildSlides(
       moduleWith([lesson({ kind: 'EXAMPLE', heading: 'Ejemplos', body: EXAMPLE_MD })]),

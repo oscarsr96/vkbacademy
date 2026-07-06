@@ -73,16 +73,35 @@ function ContentSlide({
   revealed: number;
   forPdf: boolean;
 }) {
+  const cards = slide.cards ?? [];
   const blocks = slide.blocks ?? [];
   return (
     <div className={`tsl-content${slide.variant ? ` tsl-content--${slide.variant}` : ''}`}>
-      <h2 className="tsl-heading">
-        {slide.heading}
-        {slide.continued && <span className="tsl-cont">cont.</span>}
-      </h2>
+      <h2 className="tsl-heading">{slide.heading}</h2>
       <div className="tsl-body">
+        {cards.length > 0 && (
+          <div className="tsl-flashcards">
+            {cards.map((card, i) => (
+              <Frag key={`card-${i}`} shown={forPdf || i < revealed} delayIndex={i} forPdf={forPdf}>
+                <div className="tsl-flashcard">
+                  <span className="tsl-flashcard-term">{card.term}</span>
+                  {card.body && (
+                    <div className="tsl-flashcard-body">
+                      <TheoryMarkdown>{card.body}</TheoryMarkdown>
+                    </div>
+                  )}
+                </div>
+              </Frag>
+            ))}
+          </div>
+        )}
         {blocks.map((block, i) => (
-          <Frag key={i} shown={forPdf || i < revealed} delayIndex={i} forPdf={forPdf}>
+          <Frag
+            key={i}
+            shown={forPdf || cards.length + i < revealed}
+            delayIndex={cards.length + i}
+            forPdf={forPdf}
+          >
             <TheoryMarkdown>{block}</TheoryMarkdown>
           </Frag>
         ))}
