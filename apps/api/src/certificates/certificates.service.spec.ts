@@ -319,6 +319,39 @@ describe('CertificatesService', () => {
       expect(mockPrisma.certificate.create).not.toHaveBeenCalled();
     });
 
+    it('NO emite certificado si el intento procede de un banco IA — aunque el score sea ≥ 50', async () => {
+      mockPrisma.examAttempt.findUnique.mockResolvedValue({
+        courseId: 'course1',
+        moduleId: null,
+        aiExamBankId: 'bank1',
+      });
+
+      await service.issueExamCertificate('user1', 'attempt1', 100);
+
+      expect(mockPrisma.certificate.findFirst).not.toHaveBeenCalled();
+      expect(mockPrisma.certificate.create).not.toHaveBeenCalled();
+    });
+
+    it('sigue emitiendo certificado para intentos oficiales con aiExamBankId null — no regresión', async () => {
+      mockPrisma.examAttempt.findUnique.mockResolvedValue({
+        courseId: 'course1',
+        moduleId: null,
+        aiExamBankId: null,
+      });
+      mockPrisma.certificate.findFirst.mockResolvedValue(null);
+      mockPrisma.certificate.create.mockResolvedValue({});
+
+      await service.issueExamCertificate('user1', 'attempt1', 80);
+
+      expect(mockPrisma.certificate.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            type: CertificateType.COURSE_EXAM,
+          }),
+        }),
+      );
+    });
+
     it('guarda el examScore en el certificado', async () => {
       mockPrisma.examAttempt.findUnique.mockResolvedValue({
         courseId: null,

@@ -23,6 +23,8 @@ export interface ExamAttemptStarted {
 export interface ExamCorrection {
   questionId: string;
   questionText: string;
+  // Tema del plan multi-tema al que pertenece la pregunta. Null/ausente en exámenes un-tema.
+  topicLabel?: string | null;
   // Compatibilidad: primera respuesta seleccionada/correcta.
   selectedAnswerId: string | null;
   selectedAnswerText: string | null;

@@ -190,6 +190,24 @@ export function ResultsStep({
                 </span>
               </div>
 
+              {c.topicLabel && (
+                <span
+                  style={{
+                    display: 'inline-block',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    color: 'var(--color-text-muted)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: 999,
+                    padding: '2px 10px',
+                    marginBottom: 6,
+                  }}
+                >
+                  Tema: {c.topicLabel}
+                </span>
+              )}
+
               {(() => {
                 // Para MULTIPLE muestra todas las seleccionadas/correctas; para
                 // SINGLE/TRUE_FALSE cae en los campos legacy con un único valor.

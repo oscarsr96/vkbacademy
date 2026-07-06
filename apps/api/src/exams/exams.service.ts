@@ -16,6 +16,8 @@ interface QuestionSnapshot {
   id: string;
   text: string;
   type: string;
+  // Tema de la pregunta en exámenes IA multi-tema; ausente en el resto.
+  topicLabel?: string | null;
   answers: { id: string; text: string; isCorrect: boolean }[];
 }
 
@@ -258,6 +260,8 @@ export class ExamsService {
       return {
         questionId: q.id,
         questionText: q.text,
+        // Tema de la pregunta (exámenes multi-tema); null en el resto.
+        topicLabel: q.topicLabel ?? null,
         // Compatibilidad: primer seleccionado/correcto en los campos antiguos.
         selectedAnswerId: selectedIds[0] ?? null,
         selectedAnswerText: selectedAnswers[0]?.text ?? null,

@@ -32,6 +32,8 @@ const TeacherPortalPage = lazy(() => import('./pages/TeacherPortalPage'));
 const ExamPage = lazy(() => import('./pages/ExamPage'));
 const StudyPage = lazy(() => import('./pages/StudyPage'));
 const StudyUnitPage = lazy(() => import('./pages/StudyUnitPage'));
+const StudyPlanCreatePage = lazy(() => import('./pages/StudyPlanCreatePage'));
+const StudyPlanPage = lazy(() => import('./pages/StudyPlanPage'));
 const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminCoursesPage = lazy(() => import('./pages/admin/AdminCoursesPage'));
@@ -161,6 +163,8 @@ export default function App() {
 
         {/* Estudiar — curso generado por IA (teoría + ejercicios + examen) */}
         <Route path="study" element={<StudyPage />} />
+        <Route path="study/plan/new" element={<StudyPlanCreatePage />} />
+        <Route path="study/plan/:id" element={<StudyPlanPage />} />
         <Route path="study/:id" element={<StudyUnitPage />} />
 
         {/* Fase 9 — Certificados */}
