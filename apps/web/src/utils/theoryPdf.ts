@@ -80,12 +80,9 @@ function drawFooter(doc: JsPdf, pageNum: number, totalPages: number): void {
   doc.setTextColor(ORANGE.r, ORANGE.g, ORANGE.b);
   doc.text('VKB ACADEMY', FOOTER_MARGIN, FOOTER_BASELINE);
 
-  const brandW = doc.getTextWidth('VKB ACADEMY');
+  // Numeración de página (derecha)
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(FOOTER_MUTED.r, FOOTER_MUTED.g, FOOTER_MUTED.b);
-  doc.text('· Temario', FOOTER_MARGIN + brandW + 10, FOOTER_BASELINE);
-
-  // Numeración de página (derecha)
   doc.text(`${pageNum} / ${totalPages}`, PAGE_W - FOOTER_MARGIN, FOOTER_BASELINE, {
     align: 'right',
   });
@@ -138,7 +135,6 @@ const PDF_OVERRIDE_CSS = `
   .tslides-pdf-page .tsl-closing-title { color: #111827; }
   .tslides-pdf-page .tsl-logo { filter: none; }
   .tslides-pdf-page .tsl-heading { color: #111827; }
-  .tslides-pdf-page .tsl-cont { color: #475569; border-color: #cbd5e1; }
   .tslides-pdf-page .tsl-body { color: #111827; }
   .tslides-pdf-page .tsl-body strong { color: #000; }
   .tslides-pdf-page .tsl-body code { background: #f1f5f9; color: #111827; }
@@ -152,11 +148,25 @@ const PDF_OVERRIDE_CSS = `
   .tslides-pdf-page .tsl-content--takeaways .tsl-body li {
     background: #f8fafc;
     border-color: #cbd5e1;
+    box-shadow: none;
   }
   .tslides-pdf-page .tsl-content--objectives .tsl-body li::before,
   .tslides-pdf-page .tsl-content--takeaways .tsl-body li::before {
     background: #e2e8f0;
     color: #111827;
+    box-shadow: none;
+  }
+  .tslides-pdf-page .tsl-flashcard {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    box-shadow: none;
+  }
+  .tslides-pdf-page .tsl-flashcard::before { background: #94a3b8; }
+  .tslides-pdf-page .tsl-flashcard-term { color: #111827; }
+  .tslides-pdf-page .tsl-flashcard-body { color: #111827; }
+  .tslides-pdf-page .tsl-content--summary .theory-callout {
+    background: #f1f5f9 !important;
+    border-left-color: #64748b !important;
   }
   .tslides-pdf-page .tsl-ex-label { color: #334155; }
   .tslides-pdf-page .tsl-ex-statement { background: #f8fafc; border-color: #cbd5e1; }
@@ -169,26 +179,43 @@ const PDF_OVERRIDE_CSS = `
   .tslides-pdf-page .tsl-video-card-play { background: #e2e8f0; color: #111827; box-shadow: none; }
 `;
 
-function PdfPages({ slides }: { slides: Slide[] }) {
+// Una sola página montada a la vez: html2canvas clona el documento entero en
+// cada captura, así que montar TODAS las slides a la vez encarece cada captura
+// con el DOM de las demás (los temarios con mucho KaTeX tardaban minutos).
+function PdfPage({ slide }: { slide: Slide }) {
   return createElement(
     'div',
     null,
     createElement('style', null, TSLIDES_CSS + THEORY_CALLOUT_CSS + PDF_OVERRIDE_CSS),
-    ...slides.map((slide) =>
+    createElement(
+      'div',
+      {
+        key: slide.id,
+        className: 'tslides-pdf-page',
+        style: slide.kind === 'cover' ? COVER_PAGE_STYLE : PAGE_STYLE,
+      },
       createElement(
         'div',
-        {
-          key: slide.id,
-          className: 'tslides-pdf-page',
-          style: slide.kind === 'cover' ? COVER_PAGE_STYLE : PAGE_STYLE,
-        },
-        createElement(
-          'div',
-          { className: 'tslides-inner', style: { width: '100%', maxWidth: 1080 } },
-          createElement(SlideView, { slide, revealed: Number.MAX_SAFE_INTEGER, forPdf: true }),
-        ),
+        { className: 'tslides-inner', style: { width: '100%', maxWidth: 1080 } },
+        createElement(SlideView, { slide, revealed: Number.MAX_SAFE_INTEGER, forPdf: true }),
       ),
     ),
+  );
+}
+
+/** Avance de la generación, para pintar "Generando… página i de N" en la UI. */
+export type PdfProgress = (page: number, total: number) => void;
+
+/** Espera a que React pinte, carguen fuentes (KaTeX) e imágenes de la página montada. */
+async function waitForPageReady(host: HTMLElement): Promise<void> {
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  try {
+    await document.fonts.ready;
+  } catch {
+    /* fonts.ready no soportado: continuar */
+  }
+  await Promise.all(
+    Array.from(host.querySelectorAll('img')).map((img) => img.decode().catch(() => undefined)),
   );
 }
 
@@ -199,10 +226,11 @@ function buildDocTitle(module: TheoryModuleWithLessons, courseTitle: string): st
   return `${courseTitle} - ${capitalized}`;
 }
 
-/** Renderiza las slides fuera de pantalla y genera el documento PDF. */
+/** Renderiza las slides fuera de pantalla (una a una) y genera el documento PDF. */
 async function generateTheoryPdf(
   module: TheoryModuleWithLessons,
   courseTitle: string,
+  onProgress?: PdfProgress,
 ): Promise<JsPdf> {
   // Carga diferida: html2canvas/jsPDF solo se descargan al exportar (no en el bundle inicial).
   const [{ default: JsPDFCtor }, { default: html2canvas }, logo] = await Promise.all([
@@ -228,28 +256,21 @@ async function generateTheoryPdf(
   document.body.appendChild(host);
 
   const root = createRoot(host);
-  root.render(createElement(PdfPages, { slides }));
-
-  // Esperar a que carguen fuentes (incl. KaTeX), imágenes (logo) y a que React
-  // pinte el markdown.
-  try {
-    await document.fonts.ready;
-  } catch {
-    /* fonts.ready no soportado: continuar */
-  }
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  await Promise.all(
-    Array.from(host.querySelectorAll('img')).map((img) => img.decode().catch(() => undefined)),
-  );
-
-  const pages = Array.from(host.querySelectorAll<HTMLElement>('.tslides-pdf-page'));
   const doc = new JsPDFCtor({ orientation: 'landscape', unit: 'px', format: [PAGE_W, PAGE_H] });
 
   try {
-    for (let i = 0; i < pages.length; i++) {
-      const isCover = slides[i]?.kind === 'cover';
+    for (let i = 0; i < slides.length; i++) {
+      onProgress?.(i + 1, slides.length);
+      const isCover = slides[i].kind === 'cover';
+
+      root.render(createElement(PdfPage, { slide: slides[i] }));
+      await waitForPageReady(host);
+
+      const page = host.querySelector<HTMLElement>('.tslides-pdf-page');
+      if (!page) continue;
+
       // Escalar el contenido para que no se recorte en la página (no hay scroll en PDF).
-      const inner = pages[i].querySelector<HTMLElement>('.tslides-inner');
+      const inner = page.querySelector<HTMLElement>('.tslides-inner');
       if (inner) {
         const availH = isCover ? PAGE_H - 112 : PAGE_H - HEADER_H - 80; // padding vertical
         const availW = PAGE_W - 160; // padding horizontal (80 × 2)
@@ -259,7 +280,7 @@ async function generateTheoryPdf(
       // scale 3 para texto nítido al imprimir (a scale 2 salía borroso). JPEG en
       // calidad alta: jsPDF incrusta los PNG como píxeles sin comprimir (~24 MB
       // por página); a 3x los artefactos JPEG son invisibles.
-      const canvas = await html2canvas(pages[i], {
+      const canvas = await html2canvas(page, {
         scale: 3,
         backgroundColor: '#ffffff',
         useCORS: true,
@@ -271,7 +292,7 @@ async function generateTheoryPdf(
       if (i > 0) doc.addPage([PAGE_W, PAGE_H], 'landscape');
       doc.addImage(img, 'JPEG', 0, 0, PAGE_W, PAGE_H);
       if (!isCover) drawHeader(doc, logo, docTitle);
-      drawFooter(doc, i + 1, pages.length);
+      drawFooter(doc, i + 1, slides.length);
     }
   } finally {
     root.unmount();
@@ -294,8 +315,9 @@ export function theoryPdfFilename(module: TheoryModuleWithLessons, courseTitle: 
 export async function downloadTheoryPdf(
   module: TheoryModuleWithLessons,
   courseTitle: string,
+  onProgress?: PdfProgress,
 ): Promise<void> {
-  const doc = await generateTheoryPdf(module, courseTitle);
+  const doc = await generateTheoryPdf(module, courseTitle, onProgress);
   doc.save(theoryPdfFilename(module, courseTitle));
 }
 
@@ -309,8 +331,9 @@ type ShareResult = 'shared' | 'downloaded';
 export async function shareTheoryPdf(
   module: TheoryModuleWithLessons,
   courseTitle: string,
+  onProgress?: PdfProgress,
 ): Promise<ShareResult> {
-  const doc = await generateTheoryPdf(module, courseTitle);
+  const doc = await generateTheoryPdf(module, courseTitle, onProgress);
   const filename = theoryPdfFilename(module, courseTitle);
   const blob = doc.output('blob');
   const file = new File([blob], filename, { type: 'application/pdf' });

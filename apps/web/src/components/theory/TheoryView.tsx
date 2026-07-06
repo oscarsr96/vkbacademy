@@ -20,17 +20,25 @@ export default function TheoryView({ module, courseTitle }: TheoryViewProps) {
   // La presentación es la fuente; los apuntes en texto quedan colapsados por defecto.
   const [showArticle, setShowArticle] = useState(false);
   const [pdfBusy, setPdfBusy] = useState<'download' | 'share' | null>(null);
+  const [pdfProgress, setPdfProgress] = useState<{ page: number; total: number } | null>(null);
   const slideCount = useMemo(() => buildSlides(module).length, [module]);
+
+  const pdfBusyLabel = pdfProgress
+    ? `⏳ Generando… ${pdfProgress.page}/${pdfProgress.total}`
+    : '⏳ Generando…';
 
   async function handleDownload() {
     if (pdfBusy) return;
     setPdfBusy('download');
     try {
-      await downloadTheoryPdf(module, courseTitle);
+      await downloadTheoryPdf(module, courseTitle, (page, total) =>
+        setPdfProgress({ page, total }),
+      );
     } catch {
       window.alert('No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
       setPdfBusy(null);
+      setPdfProgress(null);
     }
   }
 
@@ -38,11 +46,12 @@ export default function TheoryView({ module, courseTitle }: TheoryViewProps) {
     if (pdfBusy) return;
     setPdfBusy('share');
     try {
-      await shareTheoryPdf(module, courseTitle);
+      await shareTheoryPdf(module, courseTitle, (page, total) => setPdfProgress({ page, total }));
     } catch {
       window.alert('No se pudo compartir el PDF. Inténtalo de nuevo.');
     } finally {
       setPdfBusy(null);
+      setPdfProgress(null);
     }
   }
 
@@ -82,7 +91,7 @@ export default function TheoryView({ module, courseTitle }: TheoryViewProps) {
           disabled={pdfBusy !== null}
           style={s.secondaryBtn}
         >
-          {pdfBusy === 'download' ? '⏳ Generando…' : '⬇️ Descargar PDF'}
+          {pdfBusy === 'download' ? pdfBusyLabel : '⬇️ Descargar PDF'}
         </button>
         <button
           type="button"
@@ -90,7 +99,7 @@ export default function TheoryView({ module, courseTitle }: TheoryViewProps) {
           disabled={pdfBusy !== null}
           style={s.secondaryBtn}
         >
-          {pdfBusy === 'share' ? '⏳ Generando…' : '📲 Enviar por WhatsApp'}
+          {pdfBusy === 'share' ? pdfBusyLabel : '📲 Enviar por WhatsApp'}
         </button>
         <button
           type="button"
