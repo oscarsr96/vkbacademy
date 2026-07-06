@@ -1,25 +1,42 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { User } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { StudyPlansService } from './study-plans.service';
 import { CreateStudyPlanDto } from './dto/create-study-plan.dto';
-import { RegenerateExercisesDto } from '../study/dto/regenerate-exercises.dto';
-import { RegenerateExamDto } from '../study/dto/regenerate-exam.dto';
+import { GeneratePlanExamDto } from './dto/generate-plan-exam.dto';
+import { RenameStudyPlanDto } from './dto/rename-study-plan.dto';
+import { RegeneratePlanExercisesDto } from './dto/regenerate-plan-exercises.dto';
 
 @Controller('study-plans')
 @UseGuards(JwtAuthGuard)
 export class StudyPlansController {
   constructor(private readonly studyPlans: StudyPlansService) {}
 
-  // Creación completa = N teorías + ejercicios + examen (hasta 8 llamadas IA),
+  // Creación completa = N teorías + N lotes de ejercicios (hasta 12 llamadas IA),
   // lo más caro de toda la app: límite estricto de 5/hora por usuario.
-  /** Crea un plan multi-tema generando teoría por tema + ejercicios y examen combinados. */
+  /** Crea un curso multi-tema generando teoría y ejercicios por tema (examen: lazy). */
   @Post()
   @Throttle({ default: { ttl: 3600000, limit: 5 } })
   create(@CurrentUser() user: User, @Body() dto: CreateStudyPlanDto) {
     return this.studyPlans.create(user.id, dto);
+  }
+
+  /** Renombra el curso multi-tema (solo el dueño). */
+  @Patch(':id')
+  rename(@CurrentUser() user: User, @Param('id') id: string, @Body() dto: RenameStudyPlanDto) {
+    return this.studyPlans.rename(user.id, id, dto);
   }
 
   /** Lista los planes multi-tema del alumno. */
@@ -53,21 +70,25 @@ export class StudyPlansController {
     return this.studyPlans.regenerateTopicTheory(user.id, id, topicId);
   }
 
-  /** Regenera los ejercicios combinados (acepta count opcional). */
+  /** Regenera los ejercicios por tema (acepta reparto easy/medium/hard opcional). */
   @Post(':id/exercises')
   @Throttle({ default: { ttl: 3600000, limit: 30 } })
   regenExercises(
     @CurrentUser() user: User,
     @Param('id') id: string,
-    @Body() dto: RegenerateExercisesDto,
+    @Body() dto: RegeneratePlanExercisesDto,
   ) {
     return this.studyPlans.regenerateExercises(user.id, id, dto);
   }
 
-  /** Regenera el examen combinado (acepta numQuestions/timeLimit/onlyOnce opcionales). */
-  @Post(':id/exam')
+  /** Genera (lazy) el examen de un nivel: combinado o de un tema concreto. */
+  @Post(':id/exams')
   @Throttle({ default: { ttl: 3600000, limit: 30 } })
-  regenExam(@CurrentUser() user: User, @Param('id') id: string, @Body() dto: RegenerateExamDto) {
-    return this.studyPlans.regenerateExam(user.id, id, dto);
+  generateExam(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() dto: GeneratePlanExamDto,
+  ) {
+    return this.studyPlans.generateExam(user.id, id, dto);
   }
 }

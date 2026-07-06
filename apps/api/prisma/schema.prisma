@@ -647,12 +647,21 @@ model AiExamBank {
   studyUnitId String?    @unique
   studyUnit   StudyUnit? @relation(fields: [studyUnitId], references: [id], onDelete: Cascade)
 
-  // Examen combinado de un plan de estudio multi-tema (1:1 con el plan)
-  studyPlanId String?    @unique
+  // Exámenes de un plan multi-tema: uno por nivel (BASIC/MEDIUM/HARD), combinado
+  // (studyPlanTopicId null) o por tema. Generación lazy desde la pestaña Examen.
+  studyPlanId String?
   studyPlan   StudyPlan? @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+
+  /// Tema del plan cuando el examen es por tema (modo PER_TOPIC).
+  studyPlanTopicId String?
+  studyPlanTopic   StudyPlanTopic? @relation(fields: [studyPlanTopicId], references: [id], onDelete: Cascade)
+
+  /// Nivel del examen del plan (BASIC | MEDIUM | HARD); null en bancos un-tema y legacy.
+  level String?
 
   @@index([userId, createdAt])
   @@index([userId, courseId])
+  @@index([studyPlanId])
 }
 
 model AiExamQuestion {
@@ -735,14 +744,16 @@ model StudyPlan {
   summary  String @db.Text @default("")
   /// Dificultad elegida por el alumno (EASY | MEDIUM | HARD).
   difficulty String @default("MEDIUM")
-  /// Ejercicios combinados generados por IA; cada item lleva topicLabel para agrupar en UI.
+  /// Ejercicios por tema generados por IA; cada item lleva topicLabel y difficulty.
   exercises Json?
+  /// Reparto de ejercicios por tema elegido al crear: { easy, medium, hard }.
+  exercisesConfig Json?
   createdAt DateTime @default(now())
 
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course   Course           @relation("CourseStudyPlans", fields: [courseId], references: [id], onDelete: Cascade)
-  topics   StudyPlanTopic[]
-  examBank AiExamBank? // vía AiExamBank.studyPlanId
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course           @relation("CourseStudyPlans", fields: [courseId], references: [id], onDelete: Cascade)
+  topics    StudyPlanTopic[]
+  examBanks AiExamBank[] // vía AiExamBank.studyPlanId (uno por nivel/tema, lazy)
 
   @@index([userId, createdAt])
   @@index([userId, courseId])
@@ -762,6 +773,7 @@ model StudyPlanTopic {
   plan         StudyPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   module       Module?       @relation("ModuleStudyPlanTopics", fields: [moduleId], references: [id], onDelete: SetNull)
   theoryModule TheoryModule? // vía TheoryModule.studyPlanTopicId
+  examBanks    AiExamBank[] // exámenes por tema (modo PER_TOPIC), vía AiExamBank.studyPlanTopicId
 
   @@index([planId, order])
 }

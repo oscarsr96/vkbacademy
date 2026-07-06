@@ -127,6 +127,130 @@ describe('ExercisesService', () => {
     });
   });
 
+  describe('generateForTopics', () => {
+    function easyExerciseJson(): string {
+      return JSON.stringify({
+        exercises: [
+          {
+            difficulty: 'EASY',
+            statement: 'x',
+            type: 'SINGLE',
+            options: ['a', 'b'],
+            solution: 'a',
+            explanation: 'porque sí',
+          },
+        ],
+      });
+    }
+
+    it('hace una llamada IA por tema (no una combinada)', async () => {
+      prisma.course.findUnique.mockResolvedValue(baseCourse);
+      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
+      ai.generate.mockResolvedValue(easyExerciseJson());
+
+      const result = await service.generateForTopics('user-1', {
+        courseId: 'course-1',
+        topics: ['Tema A', 'Tema B'],
+        perTopic: { easy: 1, medium: 0, hard: 0 },
+      });
+
+      expect(ai.generate).toHaveBeenCalledTimes(2);
+      expect(result.exercises).toHaveLength(2);
+      // El topicLabel lo asigna el servicio localmente, no la IA
+      expect(result.exercises.map((e) => e.topicLabel)).toEqual(['Tema A', 'Tema B']);
+      expect(result.exercises.every((e) => e.difficulty === 'EASY')).toBe(true);
+    });
+
+    it('lanza ForbiddenException si el alumno no está matriculado', async () => {
+      prisma.course.findUnique.mockResolvedValue(baseCourse);
+      prisma.enrollment.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.generateForTopics('user-1', {
+          courseId: 'course-1',
+          topics: ['Tema A'],
+          perTopic: { easy: 1, medium: 0, hard: 0 },
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(ai.generate).not.toHaveBeenCalled();
+    });
+
+    it('lanza NotFoundException si el curso no existe', async () => {
+      prisma.course.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.generateForTopics('user-1', {
+          courseId: 'missing',
+          topics: ['Tema A'],
+          perTopic: { easy: 1, medium: 0, hard: 0 },
+        }),
+      ).rejects.toThrow(NotFoundException);
+      expect(ai.generate).not.toHaveBeenCalled();
+    });
+
+    it('reintenta (2x) un tema cuyo conteo por dificultad no cuadra, y acepta si el 2º intento es correcto', async () => {
+      prisma.course.findUnique.mockResolvedValue(baseCourse);
+      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
+      // 1er intento: la IA devuelve MEDIUM cuando se pidió EASY (conteo incumplido)
+      ai.generate
+        .mockResolvedValueOnce(
+          JSON.stringify({
+            exercises: [
+              {
+                difficulty: 'MEDIUM',
+                statement: 'x',
+                type: 'SINGLE',
+                options: ['a', 'b'],
+                solution: 'a',
+                explanation: 'z',
+              },
+            ],
+          }),
+        )
+        .mockResolvedValueOnce(easyExerciseJson());
+
+      const result = await service.generateForTopics('user-1', {
+        courseId: 'course-1',
+        topics: ['Fracciones'],
+        perTopic: { easy: 1, medium: 0, hard: 0 },
+      });
+
+      expect(ai.generate).toHaveBeenCalledTimes(2);
+      expect(result.exercises).toHaveLength(1);
+      expect(result.exercises[0].difficulty).toBe('EASY');
+      expect(result.exercises[0].topicLabel).toBe('Fracciones');
+    });
+
+    it('lanza error tras agotar los 2 intentos si el conteo por dificultad sigue sin cuadrar', async () => {
+      prisma.course.findUnique.mockResolvedValue(baseCourse);
+      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
+      // Ambos intentos devuelven MEDIUM cuando se pidió EASY
+      ai.generate.mockResolvedValue(
+        JSON.stringify({
+          exercises: [
+            {
+              difficulty: 'MEDIUM',
+              statement: 'x',
+              type: 'SINGLE',
+              options: ['a', 'b'],
+              solution: 'a',
+              explanation: 'z',
+            },
+          ],
+        }),
+      );
+
+      await expect(
+        service.generateForTopics('user-1', {
+          courseId: 'course-1',
+          topics: ['Fracciones'],
+          perTopic: { easy: 1, medium: 0, hard: 0 },
+        }),
+      ).rejects.toThrow();
+      expect(ai.generate).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('evaluate', () => {
     const dto = {
       statement: '¿Cuánto vale 2+2?',

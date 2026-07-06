@@ -332,7 +332,8 @@ export default function StudyPage() {
                     <span style={p.sections.exercises ? s.sectionOk : s.sectionMissing}>
                       Ejercicios
                     </span>
-                    <span style={p.sections.exam ? s.sectionOk : s.sectionMissing}>Examen</span>
+                    {/* El examen se genera lazy por niveles: sin generar no es un fallo */}
+                    <span style={p.sections.exam ? s.sectionOk : s.sectionPending}>Examen</span>
                   </span>
                   <span style={s.itemDate}>
                     {new Date(p.createdAt).toLocaleDateString('es-ES', {
@@ -467,6 +468,15 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     color: 'var(--color-error)',
     background: 'rgba(220,38,38,0.08)',
+    padding: '2px 8px',
+    borderRadius: 999,
+  },
+  // Examen aún sin generar (es lazy por niveles): pendiente, no fallo.
+  sectionPending: {
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    color: 'var(--color-text-muted)',
+    background: 'rgba(0,0,0,0.05)',
     padding: '2px 8px',
     borderRadius: 999,
   },

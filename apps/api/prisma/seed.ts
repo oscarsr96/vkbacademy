@@ -1,5 +1,6 @@
 import { PrismaClient, Role, ChallengeType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { MATES_3ESO_MODULES } from './data/mates-3eso-modules';
 
 const prisma = new PrismaClient();
 
@@ -227,12 +228,19 @@ async function main() {
   });
 
   // Curso: Matemáticas de 3º ESO — visible para el student de ejemplo
+  // Temario oficial: las 14 unidades de MATES_3ESO_MODULES, en orden
   const courseMath = await prisma.course.create({
     data: {
       title: 'Matemáticas 3º ESO',
       description: 'Repaso de álgebra, geometría y estadística para 3º de ESO.',
       published: true,
       schoolYearId: sy3eso.id,
+      modules: {
+        create: MATES_3ESO_MODULES.map((title, index) => ({
+          title,
+          order: index + 1,
+        })),
+      },
     },
   });
 

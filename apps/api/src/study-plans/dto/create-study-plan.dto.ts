@@ -3,8 +3,6 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
-  IsBoolean,
-  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -39,6 +37,27 @@ export class StudyPlanTopicInputDto {
   subject?: string;
 }
 
+/**
+ * Reparto de ejercicios POR TEMA: cada tema del plan recibe easy+medium+hard
+ * ejercicios. La suma (1..10) se valida en el service.
+ */
+export class ExercisesPerTopicDto {
+  @IsInt()
+  @Min(0)
+  @Max(10, { message: 'Máximo 10 ejercicios fáciles por tema' })
+  easy: number;
+
+  @IsInt()
+  @Min(0)
+  @Max(10, { message: 'Máximo 10 ejercicios medios por tema' })
+  medium: number;
+
+  @IsInt()
+  @Min(0)
+  @Max(10, { message: 'Máximo 10 ejercicios difíciles por tema' })
+  hard: number;
+}
+
 export class CreateStudyPlanDto {
   @IsString()
   courseId: string;
@@ -50,25 +69,9 @@ export class CreateStudyPlanDto {
   @Type(() => StudyPlanTopicInputDto)
   topics: StudyPlanTopicInputDto[];
 
-  @IsInt()
-  @Min(1, { message: 'Mínimo 1 ejercicio' })
-  @Max(20, { message: 'Máximo 20 ejercicios' })
-  numExercises: number;
-
-  @IsIn(['EASY', 'MEDIUM', 'HARD'], { message: 'difficulty debe ser EASY, MEDIUM o HARD' })
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-
-  @IsInt()
-  @IsIn([5, 10], { message: 'numQuestions debe ser 5 o 10' })
-  numQuestions: 5 | 10;
-
-  @IsInt()
-  @Min(60, { message: 'El tiempo mínimo es 60 segundos' })
-  @Max(10800, { message: 'El tiempo máximo es 10800 segundos (3 h)' })
-  @IsOptional()
-  timeLimit?: number;
-
-  @IsBoolean()
-  @IsOptional()
-  onlyOnce?: boolean;
+  // Los exámenes ya no se generan al crear: se generan por nivel (lazy) desde
+  // la pestaña Examen (POST /study-plans/:id/exams).
+  @ValidateNested()
+  @Type(() => ExercisesPerTopicDto)
+  exercisesPerTopic: ExercisesPerTopicDto;
 }

@@ -1,19 +1,22 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { StudyDifficulty, StudyPlanTopicInput } from '@vkbacademy/shared';
+import type { StudyExercisesPerTopic, StudyPlanTopicInput } from '@vkbacademy/shared';
 import { useCourses, useCourse, useSubjects } from '../hooks/useCourses';
 import { useCreateStudyPlan } from '../hooks/useStudyPlans';
 import { getApiErrorMessage } from '../utils/errorMessage';
 import PageHeader from '../components/ui/PageHeader';
 import Icon from '../components/ui/Icon';
 
-const DIFFICULTIES: { value: StudyDifficulty; label: string }[] = [
-  { value: 'EASY', label: 'Fácil' },
-  { value: 'MEDIUM', label: 'Media' },
-  { value: 'HARD', label: 'Difícil' },
-];
-
 const MAX_TOPICS = 6;
+
+// Reparto de ejercicios por tema (pedido del producto: 2 fáciles, 2 medios, 1 difícil).
+const DEFAULT_PER_TOPIC: StudyExercisesPerTopic = { easy: 2, medium: 2, hard: 1 };
+
+const SPLIT_FIELDS: { key: keyof StudyExercisesPerTopic; label: string }[] = [
+  { key: 'easy', label: 'Fáciles' },
+  { key: 'medium', label: 'Medios' },
+  { key: 'hard', label: 'Difíciles' },
+];
 
 // Tema ya elegido para el plan (oficial u propio), con etiqueta lista para mostrar en el chip.
 interface SelectedTopic {
@@ -41,14 +44,14 @@ export default function StudyPlanCreatePage() {
   const [customSubject, setCustomSubject] = useState(''); // '' = asignatura base
   const [customError, setCustomError] = useState('');
 
-  const [numExercises, setNumExercises] = useState(5);
-  const [difficulty, setDifficulty] = useState<StudyDifficulty>('MEDIUM');
-  const [numQuestions, setNumQuestions] = useState<5 | 10>(5);
-  const [useTimer, setUseTimer] = useState(false);
-  const [timerMins, setTimerMins] = useState(15);
-  const [onlyOnce, setOnlyOnce] = useState(false);
+  const [perTopic, setPerTopic] = useState<StudyExercisesPerTopic>(DEFAULT_PER_TOPIC);
+  const perTopicTotal = perTopic.easy + perTopic.medium + perTopic.hard;
 
   const create = useCreateStudyPlan();
+
+  function setSplit(key: keyof StudyExercisesPerTopic, value: number) {
+    setPerTopic((prev) => ({ ...prev, [key]: Math.max(0, Math.min(10, value)) }));
+  }
 
   function handleCourseChange(id: string) {
     setCourseId(id);
@@ -72,7 +75,9 @@ export default function StudyPlanCreatePage() {
 
   const atMax = selectedTopics.length >= MAX_TOPICS;
 
-  function toggleModule(module: { id: string; title: string; order: number }) {
+  // displayNum = posición en el temario ordenado (el campo `order` de BD no es
+  // fiable como numeral: hay cursos 0-based y 1-based).
+  function toggleModule(module: { id: string; title: string }, displayNum: number) {
     setSelectedTopics((prev) => {
       const exists = prev.some((t) => t.kind === 'OFFICIAL' && t.moduleId === module.id);
       if (exists) return prev.filter((t) => !(t.kind === 'OFFICIAL' && t.moduleId === module.id));
@@ -84,7 +89,7 @@ export default function StudyPlanCreatePage() {
           kind: 'OFFICIAL',
           moduleId: module.id,
           title: module.title,
-          label: `Tema ${module.order + 1} — ${module.title}`,
+          label: `Tema ${displayNum} — ${module.title}`,
         },
       ];
     });
@@ -119,14 +124,8 @@ export default function StudyPlanCreatePage() {
     setSelectedTopics((prev) => prev.filter((t) => t.key !== key));
   }
 
-  const needsMoreQuestions = numQuestions < selectedTopics.length;
-  const needsMoreExercises = numExercises < selectedTopics.length;
-  const canSubmit =
-    !!courseId &&
-    selectedTopics.length > 0 &&
-    !needsMoreQuestions &&
-    !needsMoreExercises &&
-    !create.isPending;
+  const splitInvalid = perTopicTotal < 1 || perTopicTotal > 10;
+  const canSubmit = !!courseId && selectedTopics.length > 0 && !splitInvalid && !create.isPending;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -139,15 +138,7 @@ export default function StudyPlanCreatePage() {
           : { title: t.title },
     );
     create.mutate(
-      {
-        courseId,
-        topics,
-        numExercises,
-        difficulty,
-        numQuestions,
-        timeLimit: useTimer ? Math.round(timerMins * 60) : undefined,
-        onlyOnce,
-      },
+      { courseId, topics, exercisesPerTopic: perTopic },
       { onSuccess: (plan) => navigate(`/study/plan/${plan.id}`) },
     );
   }
@@ -200,7 +191,7 @@ export default function StudyPlanCreatePage() {
               )}
               {modules.length > 0 && (
                 <ul style={s.checklist}>
-                  {modules.map((m) => {
+                  {modules.map((m, i) => {
                     const isSelected = selectedTopics.some(
                       (t) => t.kind === 'OFFICIAL' && t.moduleId === m.id,
                     );
@@ -212,9 +203,9 @@ export default function StudyPlanCreatePage() {
                             type="checkbox"
                             checked={isSelected}
                             disabled={disabled}
-                            onChange={() => toggleModule(m)}
+                            onChange={() => toggleModule(m, i + 1)}
                           />
-                          Tema {m.order + 1} — {m.title}
+                          Tema {i + 1} — {m.title}
                         </label>
                       </li>
                     );
@@ -303,118 +294,58 @@ export default function StudyPlanCreatePage() {
                   </li>
                 ))}
               </ul>
-              <p style={s.muted}>El examen tendrá al menos 1 pregunta de cada uno.</p>
+              <p style={s.muted}>Cada tema tendrá su propio bloque de teoría y de ejercicios.</p>
             </div>
           )}
         </div>
 
-        {/* Rail lateral: configuración de ejercicios/examen + envío */}
+        {/* Rail lateral: configuración de ejercicios + envío */}
         <div style={s.col}>
           <div className="vkb-card" style={s.section}>
             <h3 style={s.sectionTitle}>
               <Icon name="target" size={16} color="var(--brand-deep)" />
-              Ejercicios
+              Ejercicios por tema
             </h3>
-            <div className="field">
-              <label htmlFor="numExercises">Nº de ejercicios</label>
-              <input
-                id="numExercises"
-                type="number"
-                min={1}
-                max={20}
-                value={numExercises}
-                onChange={(e) =>
-                  setNumExercises(Math.max(1, Math.min(20, Number(e.target.value) || 1)))
-                }
-              />
-            </div>
-            <div className="field">
-              <label>Dificultad</label>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {DIFFICULTIES.map((d) => (
-                  <button
-                    key={d.value}
-                    type="button"
-                    onClick={() => setDifficulty(d.value)}
-                    className={`chip${difficulty === d.value ? ' active' : ''}`}
-                    style={s.chipFlex}
-                  >
-                    {d.label}
-                  </button>
-                ))}
+            {SPLIT_FIELDS.map((f) => (
+              <div className="field" key={f.key} style={s.splitRow}>
+                <label htmlFor={`split-${f.key}`} style={s.splitLabel}>
+                  {f.label}
+                </label>
+                <input
+                  id={`split-${f.key}`}
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={perTopic[f.key]}
+                  onChange={(e) => setSplit(f.key, Number(e.target.value) || 0)}
+                  style={s.splitInput}
+                />
               </div>
-            </div>
+            ))}
+            <p style={s.muted}>
+              {perTopicTotal} por tema
+              {selectedTopics.length > 1 &&
+                ` · ${selectedTopics.length} temas × ${perTopicTotal} = ${
+                  selectedTopics.length * perTopicTotal
+                } ejercicios`}
+            </p>
+            {splitInvalid && (
+              <p style={s.warn}>El reparto debe sumar entre 1 y 10 ejercicios por tema.</p>
+            )}
           </div>
 
           <div className="vkb-card" style={s.section}>
             <h3 style={s.sectionTitle}>
               <Icon name="graduation" size={16} color="var(--brand-deep)" />
-              Examen
+              Exámenes
             </h3>
-            <div className="field">
-              <label>Preguntas del examen</label>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {([5, 10] as const).map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setNumQuestions(n)}
-                    className={`chip${numQuestions === n ? ' active' : ''}`}
-                    style={s.chipFlex}
-                  >
-                    {n} preguntas
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <label style={s.toggle}>
-              <input
-                type="checkbox"
-                checked={useTimer}
-                onChange={(e) => setUseTimer(e.target.checked)}
-              />
-              <Icon name="clock" size={15} color="var(--color-text-muted)" />
-              <span>Límite de tiempo</span>
-              {useTimer && (
-                <input
-                  type="number"
-                  min={1}
-                  max={180}
-                  value={timerMins}
-                  onChange={(e) =>
-                    setTimerMins(Math.min(180, Math.max(1, Number(e.target.value) || 1)))
-                  }
-                  style={s.timerInput}
-                />
-              )}
-              {useTimer && <span style={s.muted}>minutos</span>}
-            </label>
-
-            <label style={s.toggle}>
-              <input
-                type="checkbox"
-                checked={onlyOnce}
-                onChange={(e) => setOnlyOnce(e.target.checked)}
-              />
-              <Icon name="lock" size={15} color="var(--color-text-muted)" />
-              <span>Examen de un solo intento</span>
-            </label>
-
-            {needsMoreQuestions && (
-              <p style={s.warn}>
-                Con {selectedTopics.length} temas necesitas al menos {selectedTopics.length}{' '}
-                preguntas (1 por tema): elige 10 preguntas o quita algún tema.
-              </p>
-            )}
-            {needsMoreExercises && (
-              <p style={s.warn}>
-                Con {selectedTopics.length} temas necesitas al menos {selectedTopics.length}{' '}
-                ejercicios (1 por tema): sube el número de ejercicios o quita algún tema.
-              </p>
-            )}
+            <p style={s.muted}>
+              Los exámenes se generan después, en la pestaña Examen del curso: niveles básico,
+              medio y difícil, de todos los temas juntos o de cada tema por separado. El reto es
+              aprobar los 3 niveles.
+            </p>
             {selectedTopics.length === 0 && (
-              <p style={s.warn}>Añade al menos 1 tema para poder crear el plan.</p>
+              <p style={s.warn}>Añade al menos 1 tema para poder crear el curso.</p>
             )}
           </div>
 
@@ -430,7 +361,7 @@ export default function StudyPlanCreatePage() {
             ) : (
               <>
                 <Icon name="zap" size={16} />
-                Crear plan de estudio
+                Crear curso
               </>
             )}
           </button>
@@ -488,22 +419,9 @@ const s: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     padding: '4px 0',
   },
-  chipFlex: { flex: 1 },
-  toggle: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    fontSize: '0.9rem',
-    color: 'var(--color-text)',
-  },
-  timerInput: {
-    width: 80,
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 8,
-    color: 'var(--color-text)',
-    padding: '6px 10px',
-  },
+  splitRow: { display: 'flex', alignItems: 'center', gap: 12, flexDirection: 'row' },
+  splitLabel: { flex: 1, margin: 0 },
+  splitInput: { width: 90 },
   chipList: {
     listStyle: 'none',
     margin: 0,
