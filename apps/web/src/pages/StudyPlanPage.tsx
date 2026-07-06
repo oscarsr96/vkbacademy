@@ -314,7 +314,7 @@ function TopicTheoryDeck({
             <TheoryView module={topic.theory} courseTitle={courseTitle} />
           ) : (
             <MissingSection
-              label={`los apuntes de "${topic.title}"`}
+              label={`la teoría de "${topic.title}"`}
               icon="book"
               onRetry={() => regen.mutate(topic.id)}
               retrying={regen.isPending}
