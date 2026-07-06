@@ -100,19 +100,56 @@ export interface StudyPlanTopicInput {
   subject?: string;
 }
 
+// Reparto de ejercicios POR TEMA: cada tema del plan recibe easy+medium+hard.
+export interface StudyExercisesPerTopic {
+  easy: number;
+  medium: number;
+  hard: number;
+}
+
 export interface CreateStudyPlanRequest {
   courseId: string; // asignatura base
   topics: StudyPlanTopicInput[]; // 1..6
-  numExercises: number; // 1..20
-  difficulty: StudyDifficulty; // aplica a ejercicios y examen
-  numQuestions: 5 | 10; // debe ser >= topics.length (≥1 pregunta por tema)
-  timeLimit?: number; // segundos
-  onlyOnce?: boolean;
+  exercisesPerTopic: StudyExercisesPerTopic; // suma 1..10 (por tema)
 }
 
-// Ejercicio combinado: igual que StudyExercise pero etiquetado con su tema.
+// Ejercicio del plan: etiquetado con su tema y su dificultad.
 export interface StudyPlanExercise extends StudyExercise {
   topicLabel: string;
+  difficulty?: StudyDifficulty; // ausente en ejercicios generados antes del reparto
+}
+
+// ── Exámenes por nivel del plan (generación lazy desde la pestaña Examen) ──
+
+export type StudyPlanExamLevel = 'BASIC' | 'MEDIUM' | 'HARD';
+
+export interface StudyPlanExamInfo {
+  id: string;
+  title: string;
+  level: StudyPlanExamLevel | null; // null = banco anterior a los niveles
+  topicId: string | null; // null = examen combinado de todos los temas
+  numQuestions: number;
+  timeLimit: number | null;
+  onlyOnce: boolean;
+  attemptCount: number;
+  bestScore: number | null; // mejor nota del alumno (0-100); aprobado = ≥50
+}
+
+export interface GenerateStudyPlanExamRequest {
+  level: StudyPlanExamLevel;
+  topicId?: string; // presente = examen de ese tema; ausente = combinado
+  numQuestions?: number; // override del preset del nivel (3..20)
+  difficulty?: StudyDifficulty; // override del preset del nivel
+}
+
+export interface RenameStudyPlanRequest {
+  title: string; // 3..200
+}
+
+export interface RegenerateStudyPlanExercisesRequest {
+  easy?: number;
+  medium?: number;
+  hard?: number;
 }
 
 export interface StudyPlanTopicSummary {
@@ -144,5 +181,8 @@ export interface StudyPlanTopicDetail extends StudyPlanTopicSummary {
 export interface StudyPlanDetail extends Omit<StudyPlanSummary, 'topics'> {
   topics: StudyPlanTopicDetail[];
   exercises: StudyPlanExercise[] | null;
-  exam: StudyExam | null;
+  /// Reparto por tema con el que se generaron los ejercicios (null en planes antiguos).
+  exercisesConfig: StudyExercisesPerTopic | null;
+  /// Exámenes generados (por nivel, combinados o por tema). Vacío hasta que el alumno genere el primero.
+  exams: StudyPlanExamInfo[];
 }
