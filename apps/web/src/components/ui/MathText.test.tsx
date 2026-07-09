@@ -44,6 +44,17 @@ describe('MathText', () => {
     expect(container.querySelector('.katex')).toBeNull();
   });
 
+  it('precios "$N" no se confunden con fórmulas (falso positivo)', () => {
+    const { container } = render(<MathText>cuesta $5 y $10</MathText>);
+    expect(container.textContent).toBe('cuesta $5 y $10');
+    expect(container.querySelector('.katex')).toBeNull();
+  });
+
+  it('$2x$ sí renderiza como fórmula (empezar por dígito es válido)', () => {
+    const { container } = render(<MathText>{'Si $2x$ es par...'}</MathText>);
+    expect(container.querySelector('.katex')).not.toBeNull();
+  });
+
   it('LaTeX inválido no lanza (throwOnError: false)', () => {
     expect(() => render(<MathText>{'Mal formado: $\\frac{$'}</MathText>)).not.toThrow();
   });

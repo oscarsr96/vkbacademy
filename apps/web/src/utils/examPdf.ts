@@ -20,6 +20,37 @@ function setColor(
   else doc.setFillColor(color.r, color.g, color.b);
 }
 
+// jsPDF no renderiza KaTeX: los enunciados/respuestas generados por la IA
+// llegan con notación LaTeX ($...$ / $$...$$) que hay que aplanar a texto
+// legible antes de imprimirla con doc.text/splitTextToSize. No busca
+// perfección tipográfica, solo que se entienda en el PDF.
+function latexToPlainText(s: string): string {
+  return s.replace(/\$\$([^$]+)\$\$|\$([^$\n]+)\$/g, (_match, block, inline) =>
+    simplifyTex(block ?? inline),
+  );
+}
+
+function simplifyTex(tex: string): string {
+  return tex
+    .replace(/\\d?frac\{([^{}]*)\}\{([^{}]*)\}/g, '$1/$2')
+    .replace(/\\sqrt\{([^{}]*)\}/g, '√($1)')
+    .replace(/\\cdot(?![a-zA-Z])/g, '·')
+    .replace(/\\times(?![a-zA-Z])/g, '×')
+    .replace(/\\div(?![a-zA-Z])/g, '÷')
+    .replace(/\\pm(?![a-zA-Z])/g, '±')
+    .replace(/\\le(q)?(?![a-zA-Z])/g, '≤')
+    .replace(/\\ge(q)?(?![a-zA-Z])/g, '≥')
+    .replace(/\\ne(q)?(?![a-zA-Z])/g, '≠')
+    .replace(/\\pi(?![a-zA-Z])/g, 'π')
+    .replace(/\\infty(?![a-zA-Z])/g, '∞')
+    .replace(/\^\{([^{}]*)\}/g, '^($1)')
+    .replace(/_\{([^{}]*)\}/g, '_($1)')
+    .replace(/\\left|\\right/g, '')
+    .replace(/[{}]/g, '')
+    .replace(/\\([a-zA-Z]+)/g, '$1')
+    .trim();
+}
+
 export function downloadExamPdf(result: ExamAttemptResult, scopeTitle: string) {
   const doc = new jsPDF();
   const margin = 20;
@@ -123,7 +154,10 @@ export function downloadExamPdf(result: ExamAttemptResult, scopeTitle: string) {
 
   // ── Correcciones ───────────────────────────────────────────────────────────
   result.corrections.forEach((c, i) => {
-    const questionLines = doc.splitTextToSize(`${i + 1}. ${c.questionText}`, contentW - 14);
+    const questionLines = doc.splitTextToSize(
+      `${i + 1}. ${latexToPlainText(c.questionText)}`,
+      contentW - 14,
+    );
     const blockH = questionLines.length * 6 + (c.isCorrect ? 14 : 20);
 
     if (y + blockH > PAGE_H - 16) {
@@ -154,18 +188,21 @@ export function downloadExamPdf(result: ExamAttemptResult, scopeTitle: string) {
     y += questionLines.length * 6 + 3;
 
     // Helpers: para MULTIPLE muestra todas; para SINGLE/TRUE_FALSE el campo legacy.
-    const selectedTexts =
+    // latexToPlainText() aplana el LaTeX de cada texto antes de imprimirlo (jsPDF no renderiza KaTeX).
+    const selectedTexts = (
       c.selectedAnswerTexts && c.selectedAnswerTexts.length > 0
         ? c.selectedAnswerTexts
         : c.selectedAnswerText
           ? [c.selectedAnswerText]
-          : [];
-    const correctTexts =
+          : []
+    ).map(latexToPlainText);
+    const correctTexts = (
       c.correctAnswerTexts && c.correctAnswerTexts.length > 0
         ? c.correctAnswerTexts
         : c.correctAnswerText
           ? [c.correctAnswerText]
-          : [];
+          : []
+    ).map(latexToPlainText);
 
     // Tu respuesta / tus respuestas
     doc.setFontSize(9);

@@ -53,4 +53,5 @@ jobs:
         working-directory: apps/api
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx ts-node prisma/seed-modules-mates-3eso.ts ${{ inputs.courseId }}
+          COURSE_ID: ${{ inputs.courseId }}
+        run: npx ts-node prisma/seed-modules-mates-3eso.ts "$COURSE_ID"

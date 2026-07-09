@@ -138,7 +138,9 @@ function ExerciseCard({
 }) {
   const hasOptions = exercise.options.length > 0;
   const correctIndex = hasOptions
-    ? exercise.options.findIndex((o) => o.trim() === exercise.solution.trim())
+    ? exercise.options.findIndex(
+        (o) => normalizeForMatch(o) === normalizeForMatch(exercise.solution),
+      )
     : -1;
   const canCheck = hasOptions ? selected !== null : answer.trim().length > 0;
 
@@ -271,6 +273,13 @@ function difficultyStyle(difficulty: StudyDifficulty): React.CSSProperties {
     case 'HARD':
       return { color: 'var(--color-error)', background: 'rgba(220,38,38,0.08)' };
   }
+}
+
+// Normaliza para comparar opción vs solución más allá de diferencias triviales
+// de espaciado o notación LaTeX (p. ej. "$x = 2$" vs "$x=2$" deben marcar como
+// la misma opción al revelar). Solo afecta a esta comparación, no al texto mostrado.
+function normalizeForMatch(s: string): string {
+  return s.replace(/\s+/g, '').replace(/\$/g, '').replace(/\\dfrac/g, '\\frac');
 }
 
 function labelForType(type: StudyExercise['type']): string {

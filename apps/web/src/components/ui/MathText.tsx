@@ -2,7 +2,10 @@
 // $...$ (inline) y $$...$$ (bloque). Los enunciados, opciones y explicaciones
 // generados por la IA llegan como strings planos con esa notación.
 // Un "$" sin pareja NO es matemática: se muestra literal. No se soporta el
-// escape "\$" (los generadores no lo emiten).
+// escape "\$" (los generadores no lo emiten). El inline usa la convención
+// estándar de LaTeX (p. ej. Markdown/MathJax): el contenido no puede empezar
+// ni terminar en espacio y el "$" de cierre no puede ir seguido de un dígito,
+// para no confundir precios como "cuesta $5 y $10" con una fórmula.
 
 import { Fragment } from 'react';
 import katex from 'katex';
@@ -15,7 +18,7 @@ type Segment =
 // Primero se extraen los bloques $$...$$; después, los $...$ inline dentro de
 // los tramos de texto restantes (sin cruzar saltos de línea).
 const BLOCK_RE = /\$\$([^$]+)\$\$/;
-const INLINE_RE = /\$([^$\n]+)\$/;
+const INLINE_RE = /\$([^\s$\n](?:[^$\n]*[^\s$\n])?)\$(?!\d)/;
 
 function splitBy(input: string, pattern: RegExp, display: boolean): Segment[] {
   const re = new RegExp(pattern.source, 'g');
