@@ -336,9 +336,9 @@ export default function CoursePage() {
           </div>
         )}
 
-        {/* CTA: generar plan de estudio multi-tema a partir de este temario */}
+        {/* CTA: generar un curso de estudio a partir de este temario */}
         <div style={S.examCourseBtn}>
-          <Link to={`/study/plan/new?courseId=${courseId}`} className="btn btn-ghost">
+          <Link to={`/study?courseId=${courseId}`} className="btn btn-ghost">
             <Icon name="shapes" size={16} />
             Generar curso de estudio de este temario
           </Link>

@@ -24,109 +24,6 @@ describe('ExercisesService', () => {
     service = new ExercisesService(prisma as never, ai as never);
   });
 
-  describe('generate', () => {
-    it('devuelve los ejercicios generados por la IA cuando el alumno está matriculado', async () => {
-      prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
-      ai.generate.mockResolvedValue(
-        JSON.stringify({
-          exercises: [
-            {
-              statement: '¿Cuánto vale log(100)?',
-              type: 'SINGLE',
-              options: ['1', '2', '10'],
-              solution: '2',
-              explanation: 'log base 10 de 100 es 2',
-            },
-            {
-              statement: '¿log(a) + log(b) = log(a + b)?',
-              type: 'TRUE_FALSE',
-              options: ['Verdadero', 'Falso'],
-              solution: 'Falso',
-              explanation: 'Es log(a*b)',
-            },
-          ],
-        }),
-      );
-
-      const result = await service.generate('user-1', {
-        courseId: 'course-1',
-        topic: 'propiedades de logaritmos',
-        count: 2,
-      });
-
-      expect(result.exercises).toHaveLength(2);
-      expect(result.exercises[0].statement).toContain('log(100)');
-      expect(result.exercises[1].type).toBe('TRUE_FALSE');
-      expect(prisma.enrollment.findFirst).toHaveBeenCalledWith({
-        where: { userId: 'user-1', courseId: 'course-1' },
-      });
-    });
-
-    it('lanza NotFoundException si el curso no existe', async () => {
-      prisma.course.findUnique.mockResolvedValue(null);
-      await expect(
-        service.generate('user-1', { courseId: 'missing', topic: 't', count: 5 }),
-      ).rejects.toThrow(NotFoundException);
-      expect(ai.generate).not.toHaveBeenCalled();
-    });
-
-    it('lanza ForbiddenException si el alumno no está matriculado en el curso', async () => {
-      prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue(null);
-
-      await expect(
-        service.generate('user-1', { courseId: 'course-1', topic: 't', count: 5 }),
-      ).rejects.toThrow(ForbiddenException);
-      expect(ai.generate).not.toHaveBeenCalled();
-    });
-
-    it('parsea respuesta de IA con markdown ```json``` rodeando el contenido', async () => {
-      prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
-      ai.generate.mockResolvedValue(
-        '```json\n{"exercises":[{"statement":"x","type":"OPEN","options":[],"solution":"y","explanation":"z"}]}\n```',
-      );
-
-      const result = await service.generate('user-1', {
-        courseId: 'course-1',
-        topic: 't',
-        count: 1,
-      });
-
-      expect(result.exercises).toHaveLength(1);
-      expect(result.exercises[0].type).toBe('OPEN');
-    });
-
-    it('lanza error si la IA devuelve JSON inválido', async () => {
-      prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
-      ai.generate.mockResolvedValue('esto no es JSON {malformado');
-
-      await expect(
-        service.generate('user-1', { courseId: 'course-1', topic: 't', count: 1 }),
-      ).rejects.toThrow();
-    });
-
-    it('incluye en el prompt el título del curso, nivel educativo, tema y número', async () => {
-      prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
-      ai.generate.mockResolvedValue('{"exercises":[]}');
-
-      await service.generate('user-1', {
-        courseId: 'course-1',
-        topic: 'propiedades de logaritmos',
-        count: 5,
-      });
-
-      const prompt = ai.generate.mock.calls[0][0] as string;
-      expect(prompt).toContain('Matemáticas 3º ESO');
-      expect(prompt).toContain('3º ESO');
-      expect(prompt).toContain('propiedades de logaritmos');
-      expect(prompt).toContain('5');
-    });
-  });
-
   describe('generateForTopics', () => {
     function easyExerciseJson(): string {
       return JSON.stringify({
@@ -159,6 +56,23 @@ describe('ExercisesService', () => {
       // El topicLabel lo asigna el servicio localmente, no la IA
       expect(result.exercises.map((e) => e.topicLabel)).toEqual(['Tema A', 'Tema B']);
       expect(result.exercises.every((e) => e.difficulty === 'EASY')).toBe(true);
+    });
+
+    it('incluye la instrucción de LaTeX (con escape JSON) en el prompt de generación', async () => {
+      prisma.course.findUnique.mockResolvedValue(baseCourse);
+      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
+      ai.generate.mockResolvedValue(easyExerciseJson());
+
+      await service.generateForTopics('user-1', {
+        courseId: 'course-1',
+        topics: ['Fracciones'],
+        perTopic: { easy: 1, medium: 0, hard: 0 },
+      });
+
+      const prompt = ai.generate.mock.calls[0][0] as string;
+      expect(prompt).toContain('LaTeX');
+      // El ejemplo del prompt debe enseñar la doble barra del escape JSON
+      expect(prompt).toContain('$\\\\frac{1}{2}$');
     });
 
     it('lanza ForbiddenException si el alumno no está matriculado', async () => {
@@ -289,6 +203,15 @@ describe('ExercisesService', () => {
       expect(prompt).toContain('Capital de Francia');
       expect(prompt).toContain('Paris');
       expect(prompt).toContain('París');
+    });
+
+    it('incluye la instrucción de LaTeX para el feedback en el prompt de evaluación', async () => {
+      ai.generate.mockResolvedValue('{"verdict":"correct","feedback":"OK"}');
+      await service.evaluate(dto);
+
+      const prompt = ai.generate.mock.calls[0][0] as string;
+      expect(prompt).toContain('LaTeX');
+      expect(prompt).toContain('$\\\\frac{1}{2}$');
     });
 
     it('rechaza veredictos fuera del enum esperado', async () => {

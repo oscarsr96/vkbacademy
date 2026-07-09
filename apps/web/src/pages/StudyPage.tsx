@@ -1,304 +1,395 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import type { StudyDifficulty } from '@vkbacademy/shared';
-import { useCourses } from '../hooks/useCourses';
-import { useMyStudyUnits, useCreateStudyUnit, useDeleteStudyUnit } from '../hooks/useStudy';
-import { useMyStudyPlans, useDeleteStudyPlan } from '../hooks/useStudyPlans';
+import { useMemo, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import type { StudyExercisesPerTopic, StudyPlanTopicInput } from '@vkbacademy/shared';
+import { useCourses, useCourse, useSubjects } from '../hooks/useCourses';
+import { useMyStudyPlans, useCreateStudyPlan, useDeleteStudyPlan } from '../hooks/useStudyPlans';
 import { getApiErrorMessage } from '../utils/errorMessage';
 import PageHeader from '../components/ui/PageHeader';
 import Icon from '../components/ui/Icon';
 import EmptyState from '../components/ui/EmptyState';
 
-const DIFFICULTIES: { value: StudyDifficulty; label: string }[] = [
-  { value: 'EASY', label: 'Fácil' },
-  { value: 'MEDIUM', label: 'Media' },
-  { value: 'HARD', label: 'Difícil' },
+const MAX_TOPICS = 6;
+
+// Reparto de ejercicios por tema (pedido del producto: 2 fáciles, 2 medios, 1 difícil).
+const DEFAULT_PER_TOPIC: StudyExercisesPerTopic = { easy: 2, medium: 2, hard: 1 };
+
+const SPLIT_FIELDS: { key: keyof StudyExercisesPerTopic; label: string }[] = [
+  { key: 'easy', label: 'Fáciles' },
+  { key: 'medium', label: 'Medios' },
+  { key: 'hard', label: 'Difíciles' },
 ];
 
+// Tema ya elegido para el curso (oficial u propio), con etiqueta lista para mostrar en el chip.
+interface SelectedTopic {
+  key: string;
+  kind: 'OFFICIAL' | 'CUSTOM';
+  moduleId?: string;
+  title: string;
+  subject?: string;
+  label: string;
+}
+
 export default function StudyPage() {
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
   const { data: coursesData } = useCourses(1);
   const courses = coursesData?.data ?? [];
 
-  const { data: units, isLoading: unitsLoading } = useMyStudyUnits();
-  const create = useCreateStudyUnit();
-  const remove = useDeleteStudyUnit();
+  const [courseId, setCourseId] = useState(searchParams.get('courseId') ?? '');
+  const { data: courseDetail } = useCourse(courseId);
+  const { data: subjects } = useSubjects();
+
+  const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
+  const [customTitle, setCustomTitle] = useState('');
+  const [customSubject, setCustomSubject] = useState(''); // '' = asignatura base
+  const [customError, setCustomError] = useState('');
+
+  const [perTopic, setPerTopic] = useState<StudyExercisesPerTopic>(DEFAULT_PER_TOPIC);
+  const perTopicTotal = perTopic.easy + perTopic.medium + perTopic.hard;
+
+  const create = useCreateStudyPlan();
 
   const { data: plans, isLoading: plansLoading } = useMyStudyPlans();
   const removePlan = useDeleteStudyPlan();
 
-  const [courseId, setCourseId] = useState('');
-  const [topic, setTopic] = useState('');
-  const [numExercises, setNumExercises] = useState(5);
-  const [difficulty, setDifficulty] = useState<StudyDifficulty>('MEDIUM');
-  const [numQuestions, setNumQuestions] = useState<5 | 10>(5);
-  const [useTimer, setUseTimer] = useState(false);
-  const [timerMins, setTimerMins] = useState(15);
-  const [onlyOnce, setOnlyOnce] = useState(false);
+  function setSplit(key: keyof StudyExercisesPerTopic, value: number) {
+    setPerTopic((prev) => ({ ...prev, [key]: Math.max(0, Math.min(10, value)) }));
+  }
+
+  function handleCourseChange(id: string) {
+    setCourseId(id);
+    // El temario y los temas propios "de otra asignatura" dependen de la base: se limpian al cambiarla.
+    setSelectedTopics([]);
+    setCustomSubject('');
+  }
+
+  // Materias de otras asignaturas matriculadas (con subject propio, distintas de la base),
+  // deduplicadas por nombre de materia normalizado.
+  const otherSubjectOptions = useMemo(() => {
+    if (!subjects) return [];
+    const seen = new Map<string, string>();
+    for (const c of subjects) {
+      if (!c.isEnrolled || !c.subject || c.id === courseId) continue;
+      const key = c.subject.trim().toLowerCase();
+      if (!seen.has(key)) seen.set(key, c.subject.trim());
+    }
+    return [...seen.values()];
+  }, [subjects, courseId]);
+
+  const atMax = selectedTopics.length >= MAX_TOPICS;
+
+  // displayNum = posición en el temario ordenado (el campo `order` de BD no es
+  // fiable como numeral: hay cursos 0-based y 1-based).
+  function toggleModule(module: { id: string; title: string }, displayNum: number) {
+    setSelectedTopics((prev) => {
+      const exists = prev.some((t) => t.kind === 'OFFICIAL' && t.moduleId === module.id);
+      if (exists) return prev.filter((t) => !(t.kind === 'OFFICIAL' && t.moduleId === module.id));
+      if (prev.length >= MAX_TOPICS) return prev;
+      return [
+        ...prev,
+        {
+          key: `official-${module.id}`,
+          kind: 'OFFICIAL',
+          moduleId: module.id,
+          title: module.title,
+          label: `Tema ${displayNum} — ${module.title}`,
+        },
+      ];
+    });
+  }
+
+  function addCustomTopic() {
+    const title = customTitle.trim();
+    if (title.length < 3 || atMax) return;
+    // Guardia de duplicados en cliente (el 422 del backend queda como red de seguridad)
+    const normalized = title.toLowerCase();
+    if (selectedTopics.some((t) => t.title.trim().toLowerCase() === normalized)) {
+      setCustomError('Ese tema ya está en el curso.');
+      return;
+    }
+    const subject = customSubject || undefined;
+    setSelectedTopics((prev) => [
+      ...prev,
+      {
+        key: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        kind: 'CUSTOM',
+        title,
+        subject,
+        label: subject ? `${title} (${subject})` : title,
+      },
+    ]);
+    setCustomTitle('');
+    setCustomSubject('');
+    setCustomError('');
+  }
+
+  function removeTopic(key: string) {
+    setSelectedTopics((prev) => prev.filter((t) => t.key !== key));
+  }
+
+  const splitInvalid = perTopicTotal < 1 || perTopicTotal > 10;
+  const canSubmit = !!courseId && selectedTopics.length > 0 && !splitInvalid && !create.isPending;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!courseId || topic.trim().length < 3) return;
+    if (!canSubmit) return;
+    const topics: StudyPlanTopicInput[] = selectedTopics.map((t) =>
+      t.kind === 'OFFICIAL'
+        ? { moduleId: t.moduleId! }
+        : t.subject
+          ? { title: t.title, subject: t.subject }
+          : { title: t.title },
+    );
     create.mutate(
-      {
-        courseId,
-        topic: topic.trim(),
-        numExercises,
-        difficulty,
-        numQuestions,
-        timeLimit: useTimer ? Math.round(timerMins * 60) : undefined,
-        onlyOnce,
-      },
-      { onSuccess: (unit) => navigate(`/study/${unit.id}`) },
+      { courseId, topics, exercisesPerTopic: perTopic },
+      { onSuccess: (plan) => navigate(`/study/plan/${plan.id}`) },
     );
   }
 
-  const apiError = (
-    create.error as { response?: { data?: { message?: string | string[] } } } | null
-  )?.response?.data?.message;
-  const apiErrorText = Array.isArray(apiError) ? apiError.join(' · ') : apiError;
-
-  const removeError = (
-    remove.error as { response?: { data?: { message?: string | string[] } } } | null
-  )?.response?.data?.message;
-  const removeErrorText = Array.isArray(removeError) ? removeError.join(' · ') : removeError;
+  const modules = courseDetail?.modules ?? [];
 
   return (
     <div style={s.page}>
       <PageHeader
         variant="light"
         title="Estudiar"
-        subtitle="Escribe un tema de una de tus asignaturas y se creará un curso con teoría, ejercicios y un examen, todo generado para ti."
+        subtitle="Elige uno o varios temas de tus asignaturas y se creará un curso con teoría, ejercicios y examen, todo generado para ti."
       />
 
-      <Link to="/study/plan/new" className="vkb-card" style={s.planCta}>
-        <span style={s.planCtaIcon}>
-          <Icon name="shapes" size={26} />
-        </span>
-        <span style={s.planCtaBody}>
-          <strong style={s.planCtaTitle}>Curso multi-tema</strong>
-          <span style={s.planCtaSubtitle}>
-            Combina varios temas como en un examen real
-          </span>
-        </span>
-        <Icon name="chevron-right" size={18} color="var(--brand-deep)" />
-      </Link>
-
-      <form onSubmit={handleSubmit} className="vkb-card" style={s.form}>
-        {/* Asignatura + tema */}
-        <div className="field">
-          <label htmlFor="courseId">Asignatura</label>
-          <select
-            id="courseId"
-            value={courseId}
-            onChange={(e) => setCourseId(e.target.value)}
-            required
-          >
-            <option value="">Selecciona una asignatura</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label htmlFor="topic">¿Sobre qué tema quieres estudiar?</label>
-          <textarea
-            id="topic"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder="Ej: propiedades de logaritmos, el Renacimiento, análisis sintáctico..."
-            rows={3}
-            style={s.textarea}
-            required
-          />
-        </div>
-
-        {/* Ejercicios */}
-        <div style={s.section}>
-          <h3 style={s.sectionTitle}>
-            <Icon name="target" size={16} color="var(--brand-deep)" />
-            Ejercicios
-          </h3>
-          <div style={s.row}>
-            <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="numExercises">Nº de ejercicios</label>
-              <input
-                id="numExercises"
-                type="number"
-                min={1}
-                max={20}
-                value={numExercises}
-                onChange={(e) =>
-                  setNumExercises(Math.max(1, Math.min(20, Number(e.target.value) || 1)))
-                }
-              />
-            </div>
-            <div className="field" style={{ flex: 2 }}>
-              <label>Dificultad</label>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {DIFFICULTIES.map((d) => (
-                  <button
-                    key={d.value}
-                    type="button"
-                    onClick={() => setDifficulty(d.value)}
-                    className={`chip${difficulty === d.value ? ' active' : ''}`}
-                    style={s.chipFlex}
-                  >
-                    {d.label}
-                  </button>
+      <form onSubmit={handleSubmit} className="dash-grid">
+        {/* Columna principal: elección de temas */}
+        <div style={s.col}>
+          <div className="vkb-card" style={s.section}>
+            <h3 style={s.sectionTitle}>
+              <Icon name="shapes" size={16} color="var(--brand-deep)" />
+              Asignatura base
+            </h3>
+            <div className="field">
+              <label htmlFor="courseId">Asignatura</label>
+              <select
+                id="courseId"
+                value={courseId}
+                onChange={(e) => handleCourseChange(e.target.value)}
+                required
+              >
+                <option value="">Selecciona una asignatura</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
-          </div>
-        </div>
-
-        {/* Examen */}
-        <div style={s.section}>
-          <h3 style={s.sectionTitle}>
-            <Icon name="graduation" size={16} color="var(--brand-deep)" />
-            Examen
-          </h3>
-          <div className="field">
-            <label>Preguntas del examen</label>
-            <div style={{ display: 'flex', gap: 10 }}>
-              {([5, 10] as const).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setNumQuestions(n)}
-                  className={`chip${numQuestions === n ? ' active' : ''}`}
-                  style={s.chipFlex}
-                >
-                  {n} preguntas
-                </button>
-              ))}
-            </div>
+            <p style={s.muted}>
+              Con un solo tema ya puedes crear tu curso; combina varios si quieres prepararte un
+              examen más completo.
+            </p>
           </div>
 
-          <label style={s.toggle}>
-            <input
-              type="checkbox"
-              checked={useTimer}
-              onChange={(e) => setUseTimer(e.target.checked)}
-            />
-            <Icon name="clock" size={15} color="var(--color-text-muted)" />
-            <span>Límite de tiempo</span>
-            {useTimer && (
-              <input
-                type="number"
-                min={1}
-                max={180}
-                value={timerMins}
-                onChange={(e) =>
-                  setTimerMins(Math.min(180, Math.max(1, Number(e.target.value) || 1)))
-                }
-                style={s.timerInput}
-              />
-            )}
-            {useTimer && <span style={s.muted}>minutos</span>}
-          </label>
-
-          <label style={s.toggle}>
-            <input
-              type="checkbox"
-              checked={onlyOnce}
-              onChange={(e) => setOnlyOnce(e.target.checked)}
-            />
-            <Icon name="lock" size={15} color="var(--color-text-muted)" />
-            <span>Examen de un solo intento</span>
-          </label>
-        </div>
-
-        {apiErrorText && <div className="alert alert-error">{apiErrorText}</div>}
-
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={create.isPending || !courseId || topic.trim().length < 3}
-          style={{ alignSelf: 'flex-start', padding: '12px 24px' }}
-        >
-          {create.isPending ? (
-            <span className="spinner" />
-          ) : (
-            <>
-              <Icon name="zap" size={16} />
-              Crear curso de estudio
-            </>
+          {courseId && (
+            <div className="vkb-card" style={s.section}>
+              <h3 style={s.sectionTitle}>
+                <Icon name="book" size={16} color="var(--brand-deep)" />
+                Temario oficial
+              </h3>
+              {!courseDetail && <p style={s.muted}>Cargando temario…</p>}
+              {courseDetail && modules.length === 0 && (
+                <p style={s.muted}>Esta asignatura aún no tiene módulos publicados.</p>
+              )}
+              {modules.length > 0 && (
+                <ul style={s.checklist}>
+                  {modules.map((m, i) => {
+                    const isSelected = selectedTopics.some(
+                      (t) => t.kind === 'OFFICIAL' && t.moduleId === m.id,
+                    );
+                    const disabled = !isSelected && atMax;
+                    return (
+                      <li key={m.id}>
+                        <label style={{ ...s.checkboxRow, opacity: disabled ? 0.5 : 1 }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            disabled={disabled}
+                            onChange={() => toggleModule(m, i + 1)}
+                          />
+                          Tema {i + 1} — {m.title}
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           )}
-        </button>
+
+          {courseId && (
+            <div className="vkb-card" style={s.section}>
+              <h3 style={s.sectionTitle}>
+                <Icon name="zap" size={16} color="var(--brand-deep)" />
+                Añadir tema propio
+              </h3>
+              <div className="field">
+                <label htmlFor="customTitle">Tema</label>
+                <input
+                  id="customTitle"
+                  type="text"
+                  value={customTitle}
+                  onChange={(e) => {
+                    setCustomTitle(e.target.value);
+                    setCustomError('');
+                  }}
+                  disabled={atMax}
+                />
+              </div>
+              {otherSubjectOptions.length > 0 && (
+                <div className="field">
+                  <label htmlFor="customSubject">¿De qué asignatura es?</label>
+                  <select
+                    id="customSubject"
+                    value={customSubject}
+                    onChange={(e) => setCustomSubject(e.target.value)}
+                    disabled={atMax}
+                  >
+                    <option value="">Esta asignatura (base)</option>
+                    {otherSubjectOptions.map((subj) => (
+                      <option key={subj} value={subj}>
+                        {subj}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={addCustomTopic}
+                disabled={atMax || customTitle.trim().length < 3}
+                style={{ alignSelf: 'flex-start' }}
+              >
+                <Icon name="zap" size={14} />
+                Añadir
+              </button>
+              {customError && <p style={s.warn}>{customError}</p>}
+              {atMax && <p style={s.warn}>Máximo {MAX_TOPICS} temas por curso.</p>}
+            </div>
+          )}
+
+          {selectedTopics.length > 0 && (
+            <div className="vkb-card" style={s.section}>
+              <h3 style={s.sectionTitle}>
+                Temas del curso
+                <span style={s.counter}>
+                  {selectedTopics.length} / {MAX_TOPICS}
+                </span>
+              </h3>
+              <ul style={s.chipList}>
+                {selectedTopics.map((t, i) => (
+                  <li key={t.key} className="chip" style={s.topicChip}>
+                    <span style={s.topicChipNum}>{i + 1}</span>
+                    <span style={s.topicChipLabel}>{t.label}</span>
+                    <span style={s.topicChipTag}>
+                      {t.kind === 'OFFICIAL' ? 'Oficial' : 'Propio'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeTopic(t.key)}
+                      style={s.chipRemove}
+                      aria-label={`Quitar ${t.label}`}
+                    >
+                      <Icon name="close" size={13} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p style={s.muted}>Cada tema tendrá su propio bloque de teoría y de ejercicios.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Rail lateral: configuración de ejercicios + envío */}
+        <div style={s.col}>
+          <div className="vkb-card" style={s.section}>
+            <h3 style={s.sectionTitle}>
+              <Icon name="target" size={16} color="var(--brand-deep)" />
+              Ejercicios por tema
+            </h3>
+            {SPLIT_FIELDS.map((f) => (
+              <div className="field" key={f.key} style={s.splitRow}>
+                <label htmlFor={`split-${f.key}`} style={s.splitLabel}>
+                  {f.label}
+                </label>
+                <input
+                  id={`split-${f.key}`}
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={perTopic[f.key]}
+                  onChange={(e) => setSplit(f.key, Number(e.target.value) || 0)}
+                  style={s.splitInput}
+                />
+              </div>
+            ))}
+            <p style={s.muted}>
+              {perTopicTotal} por tema
+              {selectedTopics.length > 1 &&
+                ` · ${selectedTopics.length} temas × ${perTopicTotal} = ${
+                  selectedTopics.length * perTopicTotal
+                } ejercicios`}
+            </p>
+            {splitInvalid && (
+              <p style={s.warn}>El reparto debe sumar entre 1 y 10 ejercicios por tema.</p>
+            )}
+          </div>
+
+          <div className="vkb-card" style={s.section}>
+            <h3 style={s.sectionTitle}>
+              <Icon name="graduation" size={16} color="var(--brand-deep)" />
+              Exámenes
+            </h3>
+            <p style={s.muted}>
+              Los exámenes se generan después, en la pestaña Examen del curso: niveles básico,
+              medio y difícil, de todos los temas juntos o de cada tema por separado. El reto es
+              aprobar los 3 niveles.
+            </p>
+            {selectedTopics.length === 0 && (
+              <p style={s.warn}>Añade al menos 1 tema para poder crear el curso.</p>
+            )}
+          </div>
+
+          {create.isError && (
+            <div className="alert alert-error">
+              {getApiErrorMessage(create.error, 'No se pudo crear el curso. Inténtalo de nuevo.')}
+            </div>
+          )}
+
+          <button type="submit" className="btn btn-primary" disabled={!canSubmit} style={s.submitBtn}>
+            {create.isPending ? (
+              <span className="spinner" />
+            ) : (
+              <>
+                <Icon name="zap" size={16} />
+                Crear curso de estudio
+              </>
+            )}
+          </button>
+        </div>
       </form>
 
+      {/* Lista única de cursos de estudio (a ancho completo, bajo el formulario) */}
       <section style={s.results}>
         <h2 className="section-label">Mis cursos de estudio</h2>
-        {removeErrorText && (
-          <div className="alert alert-error" style={{ marginTop: 14 }}>
-            {removeErrorText}
-          </div>
-        )}
-        {unitsLoading && <p style={s.muted}>Cargando…</p>}
-        {!unitsLoading && (units?.length ?? 0) === 0 && (
-          <EmptyState
-            icon="brain"
-            title="Aún no has creado ningún curso"
-            message="Escribe un tema arriba para empezar."
-          />
-        )}
-        {!unitsLoading && (units?.length ?? 0) > 0 && (
-          <div className="numbered-grid" style={s.list}>
-            {(units ?? []).map((u, i) => (
-              <article
-                key={u.id}
-                className="vkb-card numbered-card"
-                style={{
-                  ...s.item,
-                  animation: `riseIn 0.5s cubic-bezier(0.18, 0.72, 0.24, 1.12) ${i * 60}ms both`,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm(`¿Borrar "${u.title}"?`)) remove.mutate(u.id);
-                  }}
-                  style={s.deleteBtn}
-                  aria-label="Borrar unidad"
-                >
-                  <Icon name="close" size={16} />
-                </button>
-                <Link to={`/study/${u.id}`} style={s.itemLink}>
-                  <strong style={s.itemTitle}>{u.title}</strong>
-                  <span style={s.itemMeta}>
-                    {u.course.title} · Tema: {u.topic}
-                  </span>
-                  <span style={s.itemDate}>
-                    {new Date(u.createdAt).toLocaleDateString('es-ES', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </span>
-                </Link>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section style={s.results}>
-        <h2 className="section-label">Mis cursos multi-tema</h2>
         {removePlan.isError && (
           <div className="alert alert-error" style={{ marginTop: 14 }}>
-            {getApiErrorMessage(removePlan.error, 'No se pudo borrar el plan. Inténtalo de nuevo.')}
+            {getApiErrorMessage(removePlan.error, 'No se pudo borrar el curso. Inténtalo de nuevo.')}
           </div>
         )}
         {plansLoading && <p style={s.muted}>Cargando…</p>}
         {!plansLoading && (plans?.length ?? 0) === 0 && (
           <EmptyState
-            icon="shapes"
-            title="Aún no has creado ningún curso multi-tema"
-            message="Pulsa arriba en «Curso multi-tema» para combinar varios temas."
+            icon="brain"
+            title="Aún no has creado ningún curso"
+            message="Elige arriba uno o varios temas para empezar."
           />
         )}
         {!plansLoading && (plans?.length ?? 0) > 0 && (
@@ -318,14 +409,14 @@ export default function StudyPage() {
                     if (window.confirm(`¿Borrar "${p.title}"?`)) removePlan.mutate(p.id);
                   }}
                   style={s.deleteBtn}
-                  aria-label="Borrar plan"
+                  aria-label="Borrar curso"
                 >
                   <Icon name="close" size={16} />
                 </button>
                 <Link to={`/study/plan/${p.id}`} style={s.itemLink}>
                   <strong style={s.itemTitle}>{p.title}</strong>
                   <span style={s.itemMeta}>
-                    {p.course.title} · {p.topics.length} temas
+                    {p.course.title} · {p.topics.length} {p.topics.length === 1 ? 'tema' : 'temas'}
                   </span>
                   <span style={s.planSections}>
                     <span style={p.sections.theory ? s.sectionOk : s.sectionMissing}>Apuntes</span>
@@ -354,49 +445,15 @@ export default function StudyPage() {
 
 const s: Record<string, React.CSSProperties> = {
   page: {
-    maxWidth: 900,
+    maxWidth: 1200,
     margin: '0 auto',
     padding: '32px 16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: 32,
+    gap: 24,
   },
-  planCta: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 16,
-    padding: '18px 22px',
-    textDecoration: 'none',
-    cursor: 'pointer',
-  },
-  planCtaIcon: {
-    flex: 'none',
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    display: 'grid',
-    placeItems: 'center',
-    color: 'var(--brand-deep)',
-    background: 'var(--brand-soft)',
-  },
-  planCtaBody: { flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 },
-  planCtaTitle: { fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-text)' },
-  planCtaSubtitle: { fontSize: '0.875rem', color: 'var(--color-text-muted)' },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 16,
-  },
-  row: { display: 'flex', gap: 16, flexWrap: 'wrap' },
-  section: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-    padding: 16,
-    border: '1px solid var(--color-border)',
-    borderRadius: 10,
-    background: 'var(--color-bg)',
-  },
+  col: { display: 'flex', flexDirection: 'column', gap: 20 },
+  section: { display: 'flex', flexDirection: 'column', gap: 12 },
   sectionTitle: {
     display: 'flex',
     alignItems: 'center',
@@ -406,34 +463,70 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     color: 'var(--color-text)',
   },
-  textarea: {
-    width: '100%',
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 8,
-    color: 'var(--color-text)',
-    padding: '10px 12px',
-    fontSize: '0.95rem',
-    fontFamily: 'inherit',
-    resize: 'vertical',
+  counter: {
+    marginLeft: 'auto',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: 'var(--brand-deep)',
+    background: 'var(--brand-soft)',
+    padding: '2px 10px',
+    borderRadius: 999,
   },
-  chipFlex: { flex: 1 },
-  toggle: {
+  muted: { color: 'var(--color-text-muted)', fontSize: '0.875rem', margin: 0 },
+  warn: { color: 'var(--color-error)', fontSize: '0.8125rem', margin: 0, lineHeight: 1.4 },
+  checklist: {
+    listStyle: 'none',
+    margin: 0,
+    padding: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  checkboxRow: {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
     fontSize: '0.9rem',
     color: 'var(--color-text)',
+    cursor: 'pointer',
+    padding: '4px 0',
   },
-  timerInput: {
-    width: 80,
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 8,
-    color: 'var(--color-text)',
-    padding: '6px 10px',
+  splitRow: { display: 'flex', alignItems: 'center', gap: 12, flexDirection: 'row' },
+  splitLabel: { flex: 1, margin: 0 },
+  splitInput: { width: 90 },
+  chipList: {
+    listStyle: 'none',
+    margin: 0,
+    padding: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
   },
-  muted: { color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: 0 },
+  topicChip: { width: '100%', justifyContent: 'flex-start', cursor: 'default', padding: '8px 14px' },
+  topicChipNum: {
+    fontFamily: 'var(--font-display)',
+    color: 'var(--brand-deep)',
+    fontWeight: 700,
+    flexShrink: 0,
+  },
+  topicChipLabel: { flex: 1, color: 'var(--color-text)', fontWeight: 600, textAlign: 'left' },
+  topicChipTag: {
+    fontSize: '0.7rem',
+    fontWeight: 700,
+    color: 'var(--color-text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  },
+  chipRemove: {
+    display: 'inline-flex',
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--color-text-muted)',
+    cursor: 'pointer',
+    padding: 2,
+    flexShrink: 0,
+  },
+  submitBtn: { padding: '12px 24px', justifyContent: 'center' },
   results: { display: 'flex', flexDirection: 'column', gap: 16 },
   list: {
     display: 'grid',

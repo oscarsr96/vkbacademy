@@ -42,11 +42,11 @@ export interface ResolvedTopic {
 }
 
 /**
- * Curso multi-tema (StudyPlan): combina N temas (oficiales del temario o
+ * Curso de estudio (StudyPlan): combina 1..N temas (oficiales del temario o
  * libres) en teoría POR TEMA (N decks) + ejercicios POR TEMA con reparto de
  * dificultad. Los exámenes se generan LAZY por nivel (básico/medio/difícil),
- * combinados o por tema, desde la pestaña Examen. Flujo adicional al un-tema
- * (StudyService/StudyUnit), que no se toca. Personal (scoped por userId).
+ * combinados o por tema, desde la pestaña Examen. Es el flujo único de
+ * estudio. Personal (scoped por userId).
  */
 @Injectable()
 export class StudyPlansService {

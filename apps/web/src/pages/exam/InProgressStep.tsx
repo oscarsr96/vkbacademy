@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ExamAttemptStarted, ExamQuestionPublic } from '@vkbacademy/shared';
 import Icon from '../../components/ui/Icon';
+import MathText from '../../components/ui/MathText';
 import ProgressBar from '../../components/ui/ProgressBar';
 
 // ─── Componente: Examen en progreso ───────────────────────────────────────────
@@ -145,7 +146,7 @@ export function InProgressStep({
               }}
             >
               <span style={{ color: 'var(--brand)', marginRight: 8, fontWeight: 900 }}>{idx + 1}.</span>
-              {q.text}
+              <MathText>{q.text}</MathText>
             </div>
 
             {/* Hint para MULTIPLE */}
@@ -239,7 +240,9 @@ export function InProgressStep({
                           />
                         ))}
                     </span>
-                    <span>{a.text}</span>
+                    <span>
+                      <MathText>{a.text}</MathText>
+                    </span>
                   </button>
                 );
               })}

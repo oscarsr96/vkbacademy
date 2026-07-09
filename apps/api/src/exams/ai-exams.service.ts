@@ -10,7 +10,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { generateAiJson } from '../ai/ai-json';
 import { splitAcrossTopics } from '../ai/topic-distribution';
-import { GenerateAiExamDto } from './dto/generate-ai-exam.dto';
 
 // ─── Tipos del payload IA ────────────────────────────────────────────────────
 
@@ -73,13 +72,12 @@ const DIFFICULTY_GUIDANCE: Record<'EASY' | 'MEDIUM' | 'HARD', string> = {
 };
 
 /**
- * Servicio de exámenes generados por IA por el propio alumno.
+ * Servicio de exámenes generados por IA por el propio alumno (flujo StudyPlan).
  *
- * El alumno elige curso, módulo (opcional), tema libre y nº de preguntas (5 o
- * 10). La IA produce un banco con preguntas tipo SINGLE/MULTIPLE/TRUE_FALSE
- * que se persiste scoped a `userId` (similar a TheoryModule). El alumno
- * puede repetir el banco las veces que quiera; cada toma crea un
- * `ExamAttempt` enlazado al banco vía `aiExamBankId`.
+ * La IA produce un banco con preguntas tipo SINGLE/MULTIPLE/TRUE_FALSE que se
+ * persiste scoped a `userId` (similar a TheoryModule). El alumno puede repetir
+ * el banco las veces que quiera; cada toma crea un `ExamAttempt` enlazado al
+ * banco vía `aiExamBankId`.
  */
 @Injectable()
 export class AiExamsService {
@@ -92,92 +90,8 @@ export class AiExamsService {
 
   // ─── Generar y persistir un nuevo banco ─────────────────────────────────
 
-  async generate(userId: string, dto: GenerateAiExamDto) {
-    const course = await this.prisma.course.findUnique({
-      where: { id: dto.courseId },
-      include: { schoolYear: true },
-    });
-    if (!course) throw new NotFoundException(`Curso "${dto.courseId}" no encontrado`);
-
-    const enrollment = await this.prisma.enrollment.findFirst({
-      where: { userId, courseId: dto.courseId },
-    });
-    if (!enrollment) throw new ForbiddenException('No estás matriculado en este curso');
-
-    let moduleTitle: string | undefined;
-    if (dto.moduleId) {
-      const module = await this.prisma.module.findFirst({
-        where: { id: dto.moduleId, courseId: dto.courseId },
-        select: { id: true, title: true },
-      });
-      if (!module) {
-        throw new NotFoundException(`Módulo "${dto.moduleId}" no encontrado en este curso`);
-      }
-      moduleTitle = module.title;
-    }
-
-    const prompt = this.buildPrompt(
-      course.title,
-      course.schoolYear?.label ?? '',
-      moduleTitle,
-      dto.topic,
-      dto.numQuestions,
-      dto.difficulty ?? 'MEDIUM',
-    );
-
-    this.logger.log(
-      `Generando examen IA: ${dto.numQuestions} preguntas sobre "${dto.topic}" (curso "${course.title}"${moduleTitle ? `, módulo "${moduleTitle}"` : ''})`,
-    );
-
-    const maxTokens = Math.min(8000, 600 + dto.numQuestions * 350);
-
-    // Reintento automático ante JSON inválido: ver `ai-json.ts`.
-    let parsed: unknown;
-    try {
-      parsed = await generateAiJson(this.ai, prompt, maxTokens, { attempts: 2, logger: this.logger });
-    } catch (err) {
-      this.logger.error('Error al parsear JSON de IA (examen) tras reintentos:', err);
-      throw new InternalServerErrorException(
-        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
-      );
-    }
-    const payload = this.validatePayload(parsed, dto.numQuestions);
-
-    // Persistir banco + preguntas + respuestas en una transacción
-    const bank = await this.prisma.aiExamBank.create({
-      data: {
-        userId,
-        courseId: dto.courseId,
-        moduleId: dto.moduleId ?? null,
-        topic: dto.topic,
-        title: payload.title.trim().slice(0, 200) || dto.topic,
-        numQuestions: dto.numQuestions,
-        timeLimit: dto.timeLimit ?? null,
-        onlyOnce: dto.onlyOnce ?? false,
-        questions: {
-          create: payload.questions.map((q, qIdx) => ({
-            text: q.text,
-            type: q.type as QuestionType,
-            order: qIdx,
-            explanation: q.explanation ?? null,
-            answers: {
-              create: q.answers.map((a, aIdx) => ({
-                text: a.text,
-                isCorrect: a.isCorrect,
-                order: aIdx,
-              })),
-            },
-          })),
-        },
-      },
-      include: this.bankInclude(),
-    });
-
-    return this.serializeBank(bank, { includeIsCorrect: false, attemptCount: 0 });
-  }
-
   /**
-   * Variante multi-tema (flujo StudyPlan): una sola llamada IA que reparte las
+   * Una sola llamada IA que reparte las
    * preguntas entre los temas (base floor(N/T), resto a los primeros)
    * manteniendo la distribución global de tipos, y etiqueta cada pregunta con
    * su `topicLabel`. La validación exige cobertura ≥1 pregunta por tema; si la
@@ -583,82 +497,6 @@ export class AiExamsService {
     return { single, multiple, trueFalse };
   }
 
-  private buildPrompt(
-    courseTitle: string,
-    schoolYearLabel: string,
-    moduleTitle: string | undefined,
-    topic: string,
-    count: number,
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD',
-  ): string {
-    const dist = this.getTypeDistribution(count);
-    return `Genera un examen en español sobre el tema "${topic}".
-
-Curso: "${courseTitle}"
-${schoolYearLabel ? `Nivel educativo: "${schoolYearLabel}" (sistema educativo español)` : ''}
-${moduleTitle ? `Módulo: "${moduleTitle}"` : ''}
-Dificultad: ${DIFFICULTY_GUIDANCE[difficulty]}
-Número total de preguntas: ${count}
-
-⚠️ DISTRIBUCIÓN POR TIPO — OBLIGATORIA, NO NEGOCIABLE:
-- ${dist.single} preguntas de tipo "SINGLE" (una sola respuesta correcta entre 3-4 opciones)
-- ${dist.multiple} preguntas de tipo "MULTIPLE" (varias respuestas correctas, entre 4 opciones)
-- ${dist.trueFalse} preguntas de tipo "TRUE_FALSE" (verdadero/falso)
-
-Si devuelves todas las preguntas del mismo tipo, la respuesta será RECHAZADA.
-Si no respetas el reparto exacto, la respuesta será RECHAZADA.
-
-Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, sin explicaciones adicionales fuera del JSON):
-{
-  "title": "Título breve del examen (máx. 80 caracteres)",
-  "questions": [
-    {
-      "text": "Enunciado claro de la pregunta",
-      "type": "SINGLE",
-      "answers": [
-        { "text": "opción A", "isCorrect": true },
-        { "text": "opción B", "isCorrect": false },
-        { "text": "opción C", "isCorrect": false },
-        { "text": "opción D", "isCorrect": false }
-      ],
-      "explanation": "Por qué la opción correcta es la correcta (1-2 frases pedagógicas)"
-    },
-    {
-      "text": "Enunciado de pregunta de respuesta múltiple — usa fórmulas como 'selecciona TODAS las que apliquen' o '¿cuáles de las siguientes...?'",
-      "type": "MULTIPLE",
-      "answers": [
-        { "text": "opción A", "isCorrect": true },
-        { "text": "opción B", "isCorrect": true },
-        { "text": "opción C", "isCorrect": false },
-        { "text": "opción D", "isCorrect": false }
-      ],
-      "explanation": "Justificación pedagógica"
-    },
-    {
-      "text": "Afirmación a juzgar como verdadera o falsa",
-      "type": "TRUE_FALSE",
-      "answers": [
-        { "text": "Verdadero", "isCorrect": true },
-        { "text": "Falso", "isCorrect": false }
-      ],
-      "explanation": "Por qué es verdadera (o falsa)"
-    }
-  ]
-}
-
-Reglas estrictas:
-- Devuelve EXACTAMENTE ${count} preguntas — ni una más, ni una menos.
-- Respeta exactamente el reparto: ${dist.single} SINGLE + ${dist.multiple} MULTIPLE + ${dist.trueFalse} TRUE_FALSE.
-- Mezcla los tipos en orden variado (no agrupar todas las SINGLE juntas).
-- SINGLE: 3 o 4 opciones, exactamente 1 con isCorrect=true.
-- MULTIPLE: 4 opciones, 2 o 3 con isCorrect=true. El enunciado debe dejar claro que hay varias correctas.
-- TRUE_FALSE: exactamente 2 opciones ["Verdadero", "Falso"], solo una con isCorrect=true.
-- Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}.
-- Contenido curricular real relacionado con "${topic}".
-- "explanation" pedagógica y breve (1-2 frases) — el alumno la verá tras corregir.
-- Solo devuelve JSON puro, sin markdown ni texto adicional.`;
-  }
-
   private buildMultiTopicPrompt(
     courseTitle: string,
     schoolYearLabel: string,
@@ -744,6 +582,7 @@ Reglas estrictas:
 - Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}.
 - Contenido curricular real relacionado con cada tema.
 - "explanation" pedagógica y breve (1-2 frases) — el alumno la verá tras corregir.
+- Para expresiones matemáticas usa SIEMPRE LaTeX en el "text" de las preguntas, el "text" de las respuestas y en "explanation": inline con $...$ (ej. "$x^2 - 5x + 6 = 0$") y bloques con $$...$$ solo si hace falta una ecuación destacada. NUNCA escribas fórmulas en texto plano. Como respondes JSON, cada barra invertida de LaTeX va escapada con doble barra: escribe "$\\\\frac{1}{2}$", nunca "$\\frac{1}{2}$".
 - Solo devuelve JSON puro, sin markdown ni texto adicional.`;
   }
 }

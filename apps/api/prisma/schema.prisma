@@ -111,7 +111,6 @@ model User {
   academyMembers    AcademyMember[]
   theoryModules     TheoryModule[]
   aiExamBanks       AiExamBank[]
-  studyUnits        StudyUnit[]
   studyPlans        StudyPlan[]
 
   @@index([schoolYearId])
@@ -157,7 +156,6 @@ model Course {
   tutorMessages TutorMessage[] @relation("TutorMessageCourse")
   theoryModules TheoryModule[] @relation("CourseTheoryModules")
   aiExamBanks   AiExamBank[]   @relation("CourseAiExamBanks")
-  studyUnits    StudyUnit[]    @relation("CourseStudyUnits")
   studyPlans    StudyPlan[]    @relation("CourseStudyPlans")
 
   @@index([schoolYearId])
@@ -591,9 +589,6 @@ model TheoryModule {
   course  Course         @relation("CourseTheoryModules", fields: [courseId], references: [id], onDelete: Cascade)
   lessons TheoryLesson[]
 
-  studyUnitId String?    @unique
-  studyUnit   StudyUnit? @relation(fields: [studyUnitId], references: [id], onDelete: Cascade)
-
   // Tema de un plan de estudio multi-tema: cada tema tiene su propio deck 1:1
   studyPlanTopicId String?         @unique
   studyPlanTopic   StudyPlanTopic? @relation(fields: [studyPlanTopicId], references: [id], onDelete: Cascade)
@@ -644,9 +639,6 @@ model AiExamBank {
   questions AiExamQuestion[]
   attempts  ExamAttempt[]
 
-  studyUnitId String?    @unique
-  studyUnit   StudyUnit? @relation(fields: [studyUnitId], references: [id], onDelete: Cascade)
-
   // Exámenes de un plan multi-tema: uno por nivel (BASIC/MEDIUM/HARD), combinado
   // (studyPlanTopicId null) o por tema. Generación lazy desde la pestaña Examen.
   studyPlanId String?
@@ -696,39 +688,10 @@ model AiExamAnswer {
 }
 
 // ─────────────────────────────────────────────────────────
-// UNIDAD DE ESTUDIO (alumno) — agrupa Teoría + Ejercicios + Examen
-// generados por IA a partir de un tema. Personal (scoped por userId).
-// ─────────────────────────────────────────────────────────
-model StudyUnit {
-  id        String   @id @default(cuid())
-  userId    String
-  courseId  String
-  topic     String // input crudo del alumno
-  title     String // título limpio (se toma de la teoría generada)
-  summary   String   @db.Text
-  /// Dificultad elegida por el alumno (EASY | MEDIUM | HARD). Gobierna la
-  /// generación de ejercicios y examen; se reutiliza al regenerar cada sección.
-  difficulty String  @default("MEDIUM")
-  /// Ejercicios generados por IA, persistidos como JSON. Estructura:
-  /// [{ statement, type: 'SINGLE'|'TRUE_FALSE'|'OPEN', options: string[], solution, explanation }]
-  exercises Json?
-  createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation("CourseStudyUnits", fields: [courseId], references: [id], onDelete: Cascade)
-
-  theoryModule TheoryModule?
-  examBank     AiExamBank?
-
-  @@index([userId, createdAt])
-  @@index([userId, courseId])
-}
-
-// ─────────────────────────────────────────────────────────
-// PLAN DE ESTUDIO MULTI-TEMA (alumno) — combina N temas
+// PLAN DE ESTUDIO (alumno) — combina 1..N temas
 // (oficiales del temario o libres) en teoría por tema +
 // ejercicios y examen combinados. Personal (scoped por userId).
-// Flujo adicional: no sustituye a StudyUnit (un-tema).
+// Es el flujo único de estudio generado por IA.
 // ─────────────────────────────────────────────────────────
 
 enum StudyTopicSource {
