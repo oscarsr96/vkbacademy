@@ -5,6 +5,7 @@ import { downloadCertificatePdf } from '../../utils/certificatePdf';
 import { downloadExamPdf } from '../../utils/examPdf';
 import { launchConfetti } from '../../utils/confetti';
 import Icon from '../../components/ui/Icon';
+import MathText from '../../components/ui/MathText';
 import type { ExamAttemptResult } from '@vkbacademy/shared';
 import { scoreColor } from './examShared';
 
@@ -186,7 +187,7 @@ export function ResultsStep({
                   <Icon name={c.isCorrect ? 'check' : 'close'} size={14} />
                 </span>
                 <span>
-                  {i + 1}. {c.questionText}
+                  {i + 1}. <MathText>{c.questionText}</MathText>
                 </span>
               </div>
 
@@ -234,7 +235,7 @@ export function ResultsStep({
                         }}
                       >
                         {selectedTexts.length === 1 ? 'Tu respuesta' : 'Tus respuestas'}:{' '}
-                        {selectedTexts.join(' · ')}
+                        <MathText>{selectedTexts.join(' · ')}</MathText>
                       </div>
                     ) : (
                       <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
@@ -252,7 +253,7 @@ export function ResultsStep({
                         }}
                       >
                         {correctTexts.length === 1 ? 'Respuesta correcta' : 'Respuestas correctas'}:{' '}
-                        {correctTexts.join(' · ')}
+                        <MathText>{correctTexts.join(' · ')}</MathText>
                       </div>
                     )}
                   </>

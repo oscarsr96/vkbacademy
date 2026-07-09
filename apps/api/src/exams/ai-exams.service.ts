@@ -582,6 +582,7 @@ Reglas estrictas:
 - Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}.
 - Contenido curricular real relacionado con cada tema.
 - "explanation" pedagógica y breve (1-2 frases) — el alumno la verá tras corregir.
+- Para expresiones matemáticas usa SIEMPRE LaTeX en el "text" de las preguntas, el "text" de las respuestas y en "explanation": inline con $...$ (ej. "$x^2 - 5x + 6 = 0$") y bloques con $$...$$ solo si hace falta una ecuación destacada. NUNCA escribas fórmulas en texto plano. Como respondes JSON, cada barra invertida de LaTeX va escapada con doble barra: escribe "$\\\\frac{1}{2}$", nunca "$\\frac{1}{2}$".
 - Solo devuelve JSON puro, sin markdown ni texto adicional.`;
   }
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { StudyDifficulty, StudyExercise } from '@vkbacademy/shared';
 import api from '../../lib/axios';
+import MathText from '../ui/MathText';
 
 // Los ejercicios del curso multi-tema llegan con dificultad; los del flujo un-tema, sin ella.
 type PracticeExercise = StudyExercise & { difficulty?: StudyDifficulty };
@@ -178,7 +179,9 @@ function ExerciseCard({
         )}
       </header>
 
-      <p style={s.statement}>{exercise.statement}</p>
+      <p style={s.statement}>
+        <MathText>{exercise.statement}</MathText>
+      </p>
 
       {hasOptions && (
         <ul style={s.options}>
@@ -189,7 +192,7 @@ function ExerciseCard({
               onClick={revealed ? undefined : () => onChoose(j)}
             >
               <span style={s.optionLetter}>{String.fromCharCode(65 + j)}.</span>
-              {opt}
+              <MathText>{opt}</MathText>
             </li>
           ))}
         </ul>
@@ -223,18 +226,22 @@ function ExerciseCard({
       {revealed && evaluation && (
         <div style={{ ...s.verdictBox, ...VERDICT_STYLES[evaluation.verdict] }}>
           <div style={s.verdictHeader}>{verdictLabel(evaluation.verdict)}</div>
-          <div style={s.verdictFeedback}>{evaluation.feedback}</div>
+          <div style={s.verdictFeedback}>
+            <MathText>{evaluation.feedback}</MathText>
+          </div>
         </div>
       )}
 
       {revealed && (
         <div style={s.solution}>
           <div style={s.solutionLine}>
-            <strong style={s.solutionLabel}>Solución:</strong> {exercise.solution}
+            <strong style={s.solutionLabel}>Solución:</strong>{' '}
+            <MathText>{exercise.solution}</MathText>
           </div>
           {exercise.explanation && (
             <div style={s.solutionLine}>
-              <strong style={s.solutionLabel}>Explicación:</strong> {exercise.explanation}
+              <strong style={s.solutionLabel}>Explicación:</strong>{' '}
+              <MathText>{exercise.explanation}</MathText>
             </div>
           )}
         </div>

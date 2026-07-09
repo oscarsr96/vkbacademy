@@ -246,7 +246,9 @@ Criterios:
 - "partial": la respuesta contiene la idea clave pero le falta rigor, parte del desarrollo, o comete errores menores que no invalidan el núcleo.
 - "incorrect": la respuesta es claramente errónea, vacía o no responde al enunciado.
 
-El feedback debe ser pedagógico, directo y en segunda persona ("Has olvidado simplificar...", "Correcto: has aplicado bien..."). No reveles la solución completa.`;
+El feedback debe ser pedagógico, directo y en segunda persona ("Has olvidado simplificar...", "Correcto: has aplicado bien..."). No reveles la solución completa.
+
+Notación matemática: el enunciado y la solución pueden contener LaTeX delimitado por $...$ (ej. "$\\frac{1}{2}$"); interprétalo como fórmulas, no como texto literal. En el "feedback", escribe las expresiones matemáticas SIEMPRE en LaTeX inline $...$; como respondes JSON, escapa las barras invertidas con doble barra ("$\\\\frac{1}{2}$", nunca "$\\frac{1}{2}$").`;
   }
 
   private buildSplitPrompt(
@@ -319,6 +321,7 @@ Reglas:
 - Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}
 - Contenido curricular real relacionado con "${topic}"
 - "explanation" debe ayudar al alumno a entender por qué la respuesta es correcta
+- Para expresiones matemáticas usa SIEMPRE LaTeX en "statement", "options", "solution" y "explanation": inline con $...$ (ej. "$x^2 - 5x + 6 = 0$") y bloques con $$...$$ solo si hace falta una ecuación destacada. NUNCA escribas fórmulas en texto plano. Como respondes JSON, cada barra invertida de LaTeX va escapada con doble barra: escribe "$\\\\frac{1}{2}$", nunca "$\\frac{1}{2}$"
 - Solo devuelve JSON puro, sin markdown ni texto adicional`;
   }
 }

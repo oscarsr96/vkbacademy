@@ -39,6 +39,78 @@ describe('AiExamsService', () => {
     jest.clearAllMocks();
   });
 
+  // ─── generateForTopics ───────────────────────────────────────────────────
+
+  describe('generateForTopics', () => {
+    it('incluye la instrucción de LaTeX (con escape JSON) en el prompt de generación', async () => {
+      mockPrisma.course.findUnique.mockResolvedValue({
+        id: 'c1',
+        title: 'Mate',
+        schoolYear: { label: '3º ESO' },
+      });
+      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'enr1' });
+      mockAi.generate.mockResolvedValue(
+        JSON.stringify({
+          title: 'Examen',
+          questions: [
+            {
+              topicLabel: 'Fracciones',
+              text: 'p1',
+              type: 'SINGLE',
+              answers: [
+                { text: 'a', isCorrect: true },
+                { text: 'b', isCorrect: false },
+              ],
+            },
+            {
+              topicLabel: 'Fracciones',
+              text: 'p2',
+              type: 'MULTIPLE',
+              answers: [
+                { text: 'a', isCorrect: true },
+                { text: 'b', isCorrect: true },
+                { text: 'c', isCorrect: false },
+                { text: 'd', isCorrect: false },
+              ],
+            },
+            {
+              topicLabel: 'Fracciones',
+              text: 'p3',
+              type: 'TRUE_FALSE',
+              answers: [
+                { text: 'Verdadero', isCorrect: true },
+                { text: 'Falso', isCorrect: false },
+              ],
+            },
+          ],
+        }),
+      );
+      mockPrisma.aiExamBank.create.mockResolvedValue({
+        id: 'bank1',
+        title: 'Examen',
+        topic: 'Fracciones',
+        numQuestions: 3,
+        timeLimit: null,
+        onlyOnce: false,
+        createdAt: new Date(),
+        course: { id: 'c1', title: 'Mate' },
+        module: null,
+        questions: [],
+      });
+
+      await service.generateForTopics('user1', {
+        courseId: 'c1',
+        topics: ['Fracciones'],
+        numQuestions: 3,
+      });
+
+      const prompt = mockAi.generate.mock.calls[0][0];
+      expect(prompt).toContain('LaTeX');
+      // El ejemplo del prompt debe enseñar la doble barra del escape JSON
+      expect(prompt).toContain('$\\\\frac{1}{2}$');
+    });
+  });
+
   // ─── listMyBanks ─────────────────────────────────────────────────────────
 
   describe('listMyBanks', () => {

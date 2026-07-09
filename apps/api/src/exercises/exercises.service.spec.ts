@@ -58,6 +58,23 @@ describe('ExercisesService', () => {
       expect(result.exercises.every((e) => e.difficulty === 'EASY')).toBe(true);
     });
 
+    it('incluye la instrucción de LaTeX (con escape JSON) en el prompt de generación', async () => {
+      prisma.course.findUnique.mockResolvedValue(baseCourse);
+      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
+      ai.generate.mockResolvedValue(easyExerciseJson());
+
+      await service.generateForTopics('user-1', {
+        courseId: 'course-1',
+        topics: ['Fracciones'],
+        perTopic: { easy: 1, medium: 0, hard: 0 },
+      });
+
+      const prompt = ai.generate.mock.calls[0][0] as string;
+      expect(prompt).toContain('LaTeX');
+      // El ejemplo del prompt debe enseñar la doble barra del escape JSON
+      expect(prompt).toContain('$\\\\frac{1}{2}$');
+    });
+
     it('lanza ForbiddenException si el alumno no está matriculado', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
       prisma.enrollment.findFirst.mockResolvedValue(null);
@@ -186,6 +203,15 @@ describe('ExercisesService', () => {
       expect(prompt).toContain('Capital de Francia');
       expect(prompt).toContain('Paris');
       expect(prompt).toContain('París');
+    });
+
+    it('incluye la instrucción de LaTeX para el feedback en el prompt de evaluación', async () => {
+      ai.generate.mockResolvedValue('{"verdict":"correct","feedback":"OK"}');
+      await service.evaluate(dto);
+
+      const prompt = ai.generate.mock.calls[0][0] as string;
+      expect(prompt).toContain('LaTeX');
+      expect(prompt).toContain('$\\\\frac{1}{2}$');
     });
 
     it('rechaza veredictos fuera del enum esperado', async () => {
