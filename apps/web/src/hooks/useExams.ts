@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { examsApi } from '../api/exams.api';
-import type { StartExamPayload, SubmitExamPayload, GenerateAiExamPayload } from '../api/exams.api';
+import type { StartExamPayload, SubmitExamPayload } from '../api/exams.api';
 
 // ─── Hooks alumno ─────────────────────────────────────────────────────────────
 
@@ -66,16 +66,6 @@ export function useMyAiExamBanks() {
   return useQuery({
     queryKey: ['ai-exam-banks'],
     queryFn: () => examsApi.listMyAiBanks(),
-  });
-}
-
-export function useGenerateAiExam() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: GenerateAiExamPayload) => examsApi.generateAiExam(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ai-exam-banks'] });
-    },
   });
 }
 

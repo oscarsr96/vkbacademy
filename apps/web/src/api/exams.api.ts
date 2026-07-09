@@ -108,15 +108,6 @@ export interface AiExamBankDetail {
   }[];
 }
 
-export interface GenerateAiExamPayload {
-  courseId: string;
-  moduleId?: string;
-  topic: string;
-  numQuestions: 5 | 10;
-  timeLimit?: number; // segundos
-  onlyOnce?: boolean;
-}
-
 export const examsApi = {
   getAvailable: () => api.get<AvailableExams>('/exams/available').then((r) => r.data),
 
@@ -133,9 +124,6 @@ export const examsApi = {
     api.get<ExamAttemptHistoryItem[]>('/exams/history', { params }).then((r) => r.data),
 
   // ── IA ──
-  generateAiExam: (payload: GenerateAiExamPayload) =>
-    api.post<AiExamBankDetail>('/exams/ai/generate', payload).then((r) => r.data),
-
   listMyAiBanks: () => api.get<AiExamBankSummary[]>('/exams/ai/my-banks').then((r) => r.data),
 
   getAiBank: (bankId: string) =>

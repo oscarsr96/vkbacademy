@@ -8,7 +8,6 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { generateAiJson } from '../ai/ai-json';
-import { GenerateExercisesDto } from './dto/generate-exercises.dto';
 import { EvaluateExerciseDto } from './dto/evaluate-exercise.dto';
 
 export type ExerciseType = 'SINGLE' | 'TRUE_FALSE' | 'OPEN';
@@ -68,13 +67,9 @@ const DIFFICULTY_GUIDANCE: Record<'EASY' | 'MEDIUM' | 'HARD', string> = {
 
 /**
  * Genera ejercicios de práctica bajo demanda para un alumno matriculado
- * en un curso. Los ejercicios NO se persisten en BD — son efímeros, solo
- * para que el alumno practique en el momento.
- *
- * El alumno introduce un tema (ej: "propiedades de logaritmos") y un
- * número (1-20) y la IA devuelve esa cantidad de ejercicios mezclando
- * tipos: SINGLE choice, TRUE_FALSE y OPEN (respuesta abierta con
- * explicación de la solución).
+ * en un curso (flujo StudyPlan): una llamada IA por tema con reparto de
+ * dificultad. Los ejercicios los persiste el plan, no este servicio.
+ * También evalúa las respuestas abiertas del alumno con la IA.
  */
 @Injectable()
 export class ExercisesService {
@@ -85,57 +80,11 @@ export class ExercisesService {
     private readonly ai: AiProviderService,
   ) {}
 
-  async generate(userId: string, dto: GenerateExercisesDto): Promise<GenerateExercisesResult> {
-    const course = await this.prisma.course.findUnique({
-      where: { id: dto.courseId },
-      include: { schoolYear: true },
-    });
-
-    if (!course) {
-      throw new NotFoundException(`Curso "${dto.courseId}" no encontrado`);
-    }
-
-    const enrollment = await this.prisma.enrollment.findFirst({
-      where: { userId, courseId: dto.courseId },
-    });
-
-    if (!enrollment) {
-      throw new ForbiddenException('No estás matriculado en este curso');
-    }
-
-    const prompt = this.buildPrompt(
-      course.title,
-      course.schoolYear?.label ?? '',
-      dto.topic,
-      dto.count,
-      dto.difficulty ?? 'MEDIUM',
-    );
-
-    this.logger.log(
-      `Generando ${dto.count} ejercicios sobre "${dto.topic}" para curso "${course.title}"`,
-    );
-
-    // ~150 tokens por ejercicio + overhead
-    const maxTokens = Math.min(8000, 200 + dto.count * 250);
-
-    // Reintento automático ante JSON inválido: ver `ai-json.ts`.
-    let parsed: unknown;
-    try {
-      parsed = await generateAiJson(this.ai, prompt, maxTokens, { attempts: 2, logger: this.logger });
-    } catch (err) {
-      this.logger.error('Error al parsear JSON de IA (ejercicios) tras reintentos:', err);
-      throw new InternalServerErrorException(
-        `El agente IA devolvió un formato inválido: ${err instanceof Error ? err.message : 'desconocido'}`,
-      );
-    }
-    return this.validateExercisesResult(parsed);
-  }
-
   /**
-   * Variante multi-tema (flujo StudyPlan): una llamada IA POR TEMA, cada una
-   * con el reparto de dificultad pedido (easy/medium/hard). El `topicLabel` se
-   * asigna localmente (no se confía a la IA) y la validación exige el conteo
-   * exacto por dificultad; ante fallo semántico se regenera ese tema (2x).
+   * Una llamada IA POR TEMA, cada una con el reparto de dificultad pedido
+   * (easy/medium/hard). El `topicLabel` se asigna localmente (no se confía a
+   * la IA) y la validación exige el conteo exacto por dificultad; ante fallo
+   * semántico se regenera ese tema (2x).
    */
   async generateForTopics(
     userId: string,
@@ -298,57 +247,6 @@ Criterios:
 - "incorrect": la respuesta es claramente errónea, vacía o no responde al enunciado.
 
 El feedback debe ser pedagógico, directo y en segunda persona ("Has olvidado simplificar...", "Correcto: has aplicado bien..."). No reveles la solución completa.`;
-  }
-
-  private buildPrompt(
-    courseTitle: string,
-    schoolYearLabel: string,
-    topic: string,
-    count: number,
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD',
-  ): string {
-    return `Genera ${count} ejercicios de práctica en español sobre el tema "${topic}".
-
-Curso: "${courseTitle}"
-${schoolYearLabel ? `Nivel educativo: "${schoolYearLabel}" (sistema educativo español)` : ''}
-Dificultad: ${DIFFICULTY_GUIDANCE[difficulty]}
-
-Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin markdown, sin explicaciones adicionales fuera del JSON):
-{
-  "exercises": [
-    {
-      "statement": "enunciado del ejercicio",
-      "type": "SINGLE",
-      "options": ["opción A", "opción B", "opción C"],
-      "solution": "opción A",
-      "explanation": "por qué la opción A es correcta"
-    },
-    {
-      "statement": "enunciado",
-      "type": "TRUE_FALSE",
-      "options": ["Verdadero", "Falso"],
-      "solution": "Verdadero",
-      "explanation": "explicación de por qué es verdadero"
-    },
-    {
-      "statement": "enunciado de un ejercicio abierto",
-      "type": "OPEN",
-      "options": [],
-      "solution": "respuesta correcta o pasos resueltos",
-      "explanation": "explicación detallada del razonamiento"
-    }
-  ]
-}
-
-Reglas:
-- Mezcla los 3 tipos (SINGLE, TRUE_FALSE, OPEN) cuando sea apropiado para el tema
-- SINGLE: 3-4 opciones, exactamente 1 correcta (la propiedad "solution" debe coincidir con una de las opciones)
-- TRUE_FALSE: opciones siempre ["Verdadero", "Falso"], solución coincide
-- OPEN: campo "options" vacío []; "solution" contiene la respuesta o pasos resueltos
-- Los enunciados deben ser claros, precisos y adecuados al nivel ${schoolYearLabel || 'del curso'}
-- Contenido curricular real relacionado con "${topic}"
-- "explanation" debe ayudar al alumno a entender por qué la respuesta es correcta
-- Solo devuelve JSON puro, sin markdown ni texto adicional`;
   }
 
   private buildSplitPrompt(

@@ -39,7 +39,7 @@ const EXAM_LEVELS: { key: StudyPlanExamLevel; label: string; preset: string }[] 
 
 const PASS_SCORE = 50;
 
-// Mismo look&feel de itinerario que StudyUnitPage (no se toca ese fichero: copia local).
+// Itinerario secuencial del curso: primero apuntes, luego práctica, luego examen.
 const STEPPER_CSS = `
   .unit-steps { display: flex; align-items: stretch; gap: 6px; margin-top: 10px; }
   .unit-step {
@@ -270,7 +270,7 @@ export default function StudyPlanPage() {
   );
 }
 
-// Estado vacío + reintento de una sección, idéntico al de StudyUnitPage (no exportado desde allí: copia local).
+// Estado vacío + botón de reintento de una sección que falló al generarse.
 function MissingSection({
   label,
   icon,
@@ -392,7 +392,7 @@ function TopicTheoryDeck({
   );
 }
 
-// ─── Ejercicios: agrupados por tema, misma UX de resolución que StudyUnitPage ──
+// ─── Ejercicios: agrupados por tema, resueltos con ExercisePractice ──
 
 function groupExercisesByTopic(
   exercises: StudyPlanExercise[],

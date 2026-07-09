@@ -1,7 +1,7 @@
 // Render de markdown didáctico del temario: GFM + matemáticas (KaTeX) + callouts
 // pedagógicos (tip / recuerda / cuidado / pregunta) detectados a partir de
 // blockquotes con emoji al inicio. Compartido por la vista artículo
-// (StudyUnitPage) y el modo presentación (TheorySlides).
+// (TheoryView) y el modo presentación (TheorySlides).
 
 import type { ReactNode } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';

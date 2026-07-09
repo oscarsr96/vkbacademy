@@ -1,59 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  ForbiddenException,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AiExamsService } from './ai-exams.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
-
-// Payload válido devuelto por la IA: 5 preguntas mezclando tipos.
-function validPayload(count: number) {
-  const base = [
-    {
-      text: '¿Cuál es la capital de España?',
-      type: 'SINGLE',
-      answers: [
-        { text: 'Madrid', isCorrect: true },
-        { text: 'Barcelona', isCorrect: false },
-        { text: 'Sevilla', isCorrect: false },
-      ],
-      explanation: 'Madrid es la capital política de España.',
-    },
-    {
-      text: 'Selecciona los planetas rocosos.',
-      type: 'MULTIPLE',
-      answers: [
-        { text: 'Mercurio', isCorrect: true },
-        { text: 'Venus', isCorrect: true },
-        { text: 'Júpiter', isCorrect: false },
-        { text: 'Saturno', isCorrect: false },
-      ],
-      explanation: 'Mercurio y Venus son rocosos; Júpiter y Saturno son gaseosos.',
-    },
-    {
-      text: 'El agua hierve a 100°C a nivel del mar.',
-      type: 'TRUE_FALSE',
-      answers: [
-        { text: 'Verdadero', isCorrect: true },
-        { text: 'Falso', isCorrect: false },
-      ],
-      explanation: 'A 1 atm el punto de ebullición del agua es 100°C.',
-    },
-  ];
-  // Repetimos para llegar a `count`
-  const questions = [];
-  for (let i = 0; i < count; i++) questions.push(base[i % base.length]);
-  return { title: 'Examen de prueba', questions };
-}
 
 describe('AiExamsService', () => {
   let service: AiExamsService;
 
   const mockPrisma = {
     course: { findUnique: jest.fn() },
-    module: { findFirst: jest.fn() },
     enrollment: { findFirst: jest.fn() },
     aiExamBank: {
       create: jest.fn(),
@@ -82,142 +37,6 @@ describe('AiExamsService', () => {
 
     service = module.get<AiExamsService>(AiExamsService);
     jest.clearAllMocks();
-  });
-
-  // ─── generate ────────────────────────────────────────────────────────────
-
-  describe('generate', () => {
-    const dto = { courseId: 'c1', topic: 'Logaritmos', numQuestions: 5 as const };
-
-    it('lanza NotFoundException si el curso no existe', async () => {
-      mockPrisma.course.findUnique.mockResolvedValue(null);
-      await expect(service.generate('user1', dto)).rejects.toThrow(NotFoundException);
-    });
-
-    it('lanza ForbiddenException si el alumno no está matriculado', async () => {
-      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Mate', schoolYear: null });
-      mockPrisma.enrollment.findFirst.mockResolvedValue(null);
-      await expect(service.generate('user1', dto)).rejects.toThrow(ForbiddenException);
-    });
-
-    it('lanza NotFoundException si el módulo no pertenece al curso', async () => {
-      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Mate', schoolYear: null });
-      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
-      mockPrisma.module.findFirst.mockResolvedValue(null);
-      await expect(service.generate('user1', { ...dto, moduleId: 'm1' })).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('lanza error si la IA devuelve número incorrecto de preguntas', async () => {
-      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Mate', schoolYear: null });
-      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
-      mockAi.generate.mockResolvedValue(JSON.stringify(validPayload(3))); // pidió 5
-
-      await expect(service.generate('user1', dto)).rejects.toThrow(InternalServerErrorException);
-    });
-
-    it('lanza error si SINGLE no tiene exactamente 1 respuesta correcta', async () => {
-      const bad = validPayload(5);
-      bad.questions[0] = {
-        ...bad.questions[0],
-        answers: bad.questions[0].answers.map((a) => ({ ...a, isCorrect: true })),
-      };
-      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Mate', schoolYear: null });
-      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
-      mockAi.generate.mockResolvedValue(JSON.stringify(bad));
-
-      await expect(service.generate('user1', dto)).rejects.toThrow(InternalServerErrorException);
-    });
-
-    it('persiste el banco y NO devuelve isCorrect en la respuesta', async () => {
-      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Mate', schoolYear: null });
-      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
-      mockAi.generate.mockResolvedValue(JSON.stringify(validPayload(5)));
-
-      const created = {
-        id: 'bank1',
-        title: 'Examen de prueba',
-        topic: 'Logaritmos',
-        numQuestions: 5,
-        timeLimit: null,
-        onlyOnce: false,
-        createdAt: new Date('2026-05-05T12:00:00Z'),
-        course: { id: 'c1', title: 'Mate' },
-        module: null,
-        questions: [
-          {
-            id: 'q1',
-            text: 'pregunta',
-            type: 'SINGLE',
-            order: 0,
-            explanation: 'expl',
-            answers: [
-              { id: 'a1', text: 'A', isCorrect: true, order: 0 },
-              { id: 'a2', text: 'B', isCorrect: false, order: 1 },
-            ],
-          },
-        ],
-      };
-      mockPrisma.aiExamBank.create.mockResolvedValue(created);
-
-      const result = await service.generate('user1', dto);
-
-      expect(mockPrisma.aiExamBank.create).toHaveBeenCalledTimes(1);
-      const callArgs = mockPrisma.aiExamBank.create.mock.calls[0][0];
-      expect(callArgs.data.userId).toBe('user1');
-      expect(callArgs.data.numQuestions).toBe(5);
-      expect(result.id).toBe('bank1');
-      // Crítico: no exponer isCorrect en la respuesta
-      const resultStr = JSON.stringify(result);
-      expect(resultStr).not.toContain('isCorrect');
-    });
-
-    it('persiste timeLimit y onlyOnce cuando vienen en el DTO', async () => {
-      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Mate', schoolYear: null });
-      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
-      mockAi.generate.mockResolvedValue(JSON.stringify(validPayload(5)));
-      mockPrisma.aiExamBank.create.mockResolvedValue({
-        id: 'bank1',
-        title: 't',
-        topic: 't',
-        numQuestions: 5,
-        timeLimit: 600,
-        onlyOnce: true,
-        createdAt: new Date(),
-        course: { id: 'c1', title: 'Mate' },
-        module: null,
-        questions: [],
-      });
-
-      await service.generate('user1', { ...dto, timeLimit: 600, onlyOnce: true });
-
-      const callArgs = mockPrisma.aiExamBank.create.mock.calls[0][0];
-      expect(callArgs.data.timeLimit).toBe(600);
-      expect(callArgs.data.onlyOnce).toBe(true);
-    });
-
-    it('rechaza si la IA devuelve todas las preguntas del mismo tipo (N>=3)', async () => {
-      mockPrisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'Mate', schoolYear: null });
-      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
-      // Payload con 5 preguntas, todas SINGLE
-      const allSingle = {
-        title: 'Examen mono-tipo',
-        questions: Array.from({ length: 5 }, () => ({
-          text: '¿Cuál es la capital de España?',
-          type: 'SINGLE',
-          answers: [
-            { text: 'Madrid', isCorrect: true },
-            { text: 'Barcelona', isCorrect: false },
-          ],
-          explanation: 'expl',
-        })),
-      };
-      mockAi.generate.mockResolvedValue(JSON.stringify(allSingle));
-
-      await expect(service.generate('user1', dto)).rejects.toThrow(InternalServerErrorException);
-      await expect(service.generate('user1', dto)).rejects.toThrow(/variedad de tipos/i);
-    });
   });
 
   // ─── listMyBanks ─────────────────────────────────────────────────────────
