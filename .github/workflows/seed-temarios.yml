@@ -1,0 +1,56 @@
+# Siembra de temarios oficiales contra la BD de un entorno (PRE o PROD).
+#
+# Ejecuta el script idempotente de Matemáticas 3º ESO (14 unidades) usando el
+# secret DATABASE_URL del environment elegido, igual que los jobs de migración
+# del pipeline. No borra ni modifica módulos existentes (upsert por título).
+#
+# Uso: Actions → "Seed temarios" → Run workflow → elegir entorno.
+# El entorno "prod" usa el environment `prod-canary`, protegido por el mismo
+# gate de aprobación que las migraciones de PROD.
+
+name: Seed temarios
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Entorno cuya BD se siembra'
+        required: true
+        type: choice
+        options:
+          - pre
+          - prod
+      courseId:
+        description: 'courseId opcional (solo si el título del curso no es "Matemáticas 3º ESO")'
+        required: false
+        type: string
+
+jobs:
+  seed:
+    name: Seed temario Mates 3º ESO (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment == 'prod' && 'prod-canary' || 'pre' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter @vkbacademy/api exec prisma generate
+
+      - name: Ejecutar seed de temarios
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx ts-node prisma/seed-modules-mates-3eso.ts ${{ inputs.courseId }}
