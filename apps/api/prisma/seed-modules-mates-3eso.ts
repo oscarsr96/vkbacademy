@@ -7,18 +7,9 @@
 // Si se pasa courseId como argumento, tiene prioridad sobre la búsqueda por título.
 import { PrismaClient } from '@prisma/client';
 import { MATES_3ESO_MODULES } from './data/mates-3eso-modules';
+import { normalizeTitle } from './data/normalize-title';
 
 const prisma = new PrismaClient();
-
-// Normaliza un título para comparación: trim + minúsculas + sin acentos.
-function normalizeTitle(title: string): string {
-  return title
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    // Marca de diacríticos: U+0300 a U+036F (tildes, virgulillas, etc.)
-    .replace(/[̀-ͯ]/g, '');
-}
 
 async function main() {
   const courseIdArg = process.argv[2];
