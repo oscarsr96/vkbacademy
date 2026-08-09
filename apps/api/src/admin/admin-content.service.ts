@@ -352,6 +352,10 @@ export class AdminContentService {
         data: {
           title: dto.name,
           schoolYearId: schoolYear.id,
+          description: dto.description ?? null,
+          coverUrl: dto.coverUrl ?? null,
+          subject: dto.subject ?? null,
+          published: dto.published ?? false,
         },
       });
 
@@ -361,7 +365,7 @@ export class AdminContentService {
           data: dto.examQuestions.map((q, i) => ({
             courseId: newCourse.id,
             text: q.text,
-            type: QuestionType.SINGLE,
+            type: q.type ?? QuestionType.SINGLE,
             order: i + 1,
           })),
         });
@@ -401,7 +405,7 @@ export class AdminContentService {
             data: modDto.examQuestions.map((q, i) => ({
               moduleId: newModule.id,
               text: q.text,
-              type: QuestionType.SINGLE,
+              type: q.type ?? QuestionType.SINGLE,
               order: i + 1,
             })),
           });
@@ -447,7 +451,7 @@ export class AdminContentService {
             await tx.question.createMany({
               data: lesDto.quiz.questions.map((qDto, qi) => ({
                 text: qDto.text,
-                type: QuestionType.SINGLE,
+                type: qDto.type ?? QuestionType.SINGLE,
                 order: qi + 1,
                 quizId: newQuiz.id,
               })),

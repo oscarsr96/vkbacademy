@@ -11,12 +11,13 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { LessonType } from '@prisma/client';
+import { LessonType, QuestionType } from '@prisma/client';
 
 // ── Respuestas de quiz / examen ──────────────────────────────────────────────
 
 export class ImportAnswerDto {
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   text: string;
 
   @IsBoolean()
@@ -26,8 +27,14 @@ export class ImportAnswerDto {
 // ── Preguntas de quiz (dentro de una lección QUIZ) ───────────────────────────
 
 export class ImportQuizQuestionDto {
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   text: string;
+
+  // Si no viene, se asume SINGLE (comportamiento histórico del import)
+  @IsOptional()
+  @IsEnum(QuestionType)
+  type?: QuestionType;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -45,8 +52,14 @@ export class ImportQuizDto {
 // ── Preguntas del banco de examen (por módulo) ───────────────────────────────
 
 export class ImportExamQuestionDto {
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   text: string;
+
+  // Si no viene, se asume SINGLE (comportamiento histórico del import)
+  @IsOptional()
+  @IsEnum(QuestionType)
+  type?: QuestionType;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -57,20 +70,24 @@ export class ImportExamQuestionDto {
 // ── Lección ──────────────────────────────────────────────────────────────────
 
 export class ImportLessonDto {
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   title: string;
 
   @IsEnum(LessonType)
   type: LessonType;
 
-  @IsInt() @Min(1)
+  @IsInt()
+  @Min(1)
   order: number;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   youtubeId?: string;
 
   // Contenido para MATCH, SORT, FILL_BLANK (objeto libre)
-  @IsOptional() @IsObject()
+  @IsOptional()
+  @IsObject()
   content?: Record<string, unknown>;
 
   // Solo si type === QUIZ
@@ -83,10 +100,12 @@ export class ImportLessonDto {
 // ── Módulo ───────────────────────────────────────────────────────────────────
 
 export class ImportModuleDto {
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   title: string;
 
-  @IsInt() @Min(1)
+  @IsInt()
+  @Min(1)
   order: number;
 
   @IsArray()
@@ -105,12 +124,32 @@ export class ImportModuleDto {
 // ── Curso raíz ───────────────────────────────────────────────────────────────
 
 export class ImportCourseDto {
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   name: string;
 
   // Nombre del nivel: "1eso", "2eso", etc.
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   schoolYear: string;
+
+  // Metadatos del curso. Opcionales: un JSON antiguo sin ellos se importa igual que antes.
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  coverUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  // Si no viene, el curso se crea despublicado
+  @IsOptional()
+  @IsBoolean()
+  published?: boolean;
 
   @IsArray()
   @ValidateNested({ each: true })
