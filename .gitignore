@@ -55,3 +55,6 @@ web-build/
 
 # Git worktrees locales (skill superpowers:using-git-worktrees)
 .worktrees/
+
+# Exports de contenido generados por scripts/vkb-export.mjs (snapshot de un entorno)
+data/exports/
