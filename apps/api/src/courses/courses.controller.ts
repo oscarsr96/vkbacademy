@@ -77,7 +77,7 @@ export class CoursesController {
 
   @Get(':id/student-progress/:studentId')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.TEACHER, Role.ADMIN)
+  @Roles(Role.TUTOR, Role.ADMIN)
   getStudentCourseProgress(
     @Param('id') id: string,
     @Param('studentId') studentId: string,
@@ -88,14 +88,14 @@ export class CoursesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(Role.TEACHER, Role.ADMIN)
+  @Roles(Role.ADMIN)
   create(@Body() dto: CreateCourseDto) {
     return this.coursesService.create(dto);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles(Role.TEACHER, Role.ADMIN)
+  @Roles(Role.ADMIN)
   update(@Param('id') id: string, @Body() dto: UpdateCourseDto) {
     return this.coursesService.update(id, dto);
   }

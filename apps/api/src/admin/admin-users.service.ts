@@ -103,7 +103,6 @@ export class AdminUsersService {
         schoolYearId: dto.schoolYearId ?? null,
         tutorId: dto.tutorId ?? null,
         ...(academyId ? { academyMembers: { create: { academyId } } } : {}),
-        ...(dto.role === 'TEACHER' ? { teacherProfile: { create: {} } } : {}),
       },
       select: {
         id: true,

@@ -1,37 +1,26 @@
-import {
-  createApp,
-  closeApp,
-  login,
-  authGet,
-  authPost,
-  publicGet,
-  getPrisma,
-} from './setup';
+import { createApp, closeApp, login, authGet, authPost, publicGet, getPrisma } from './setup';
 
 describe('Courses — /courses', () => {
   let studentToken: string;
-  let teacherToken: string;
   let adminToken: string;
   let tutorToken: string;
 
   // IDs de cursos resueltos desde la BD
-  let course3esoId: string;       // Fundamentos del Baloncesto (3ºESO)
-  let courseMathId: string;       // Matemáticas 3ºESO (student matriculado)
-  let course1esoId: string;       // Técnicas de Pase (1ºESO — NO visible para student)
-  let course4esoId: string;       // Defensa Avanzada (4ºESO — NO visible para student)
+  let course3esoId: string; // Fundamentos del Baloncesto (3ºESO)
+  let courseMathId: string; // Matemáticas 3ºESO (student matriculado)
+  let course1esoId: string; // Técnicas de Pase (1ºESO — NO visible para student)
+  let course4esoId: string; // Defensa Avanzada (4ºESO — NO visible para student)
 
   beforeAll(async () => {
     await createApp();
 
-    const [s, t, a, tu] = await Promise.all([
+    const [s, a, tu] = await Promise.all([
       login('student@vkbacademy.com'),
-      login('teacher@vkbacademy.com'),
       login('admin@vkbacademy.com'),
       login('oscar.sanchez@egocogito.com'),
     ]);
 
     studentToken = s.accessToken;
-    teacherToken = t.accessToken;
     adminToken = a.accessToken;
     tutorToken = tu.accessToken;
 
@@ -72,17 +61,6 @@ describe('Courses — /courses', () => {
       // NO debe ver cursos de otros niveles
       expect(titles).not.toContain('Técnicas de Pase');
       expect(titles).not.toContain('Defensa Avanzada');
-    });
-
-    it('TEACHER ve todos los cursos', async () => {
-      const res = await authGet('/courses', teacherToken);
-
-      expect(res.status).toBe(200);
-      const titles: string[] = res.body.data.map((c: any) => c.title);
-
-      expect(titles).toContain('Fundamentos del Baloncesto');
-      expect(titles).toContain('Técnicas de Pase');
-      expect(titles).toContain('Defensa Avanzada');
     });
 
     it('ADMIN ve todos los cursos', async () => {
@@ -146,13 +124,6 @@ describe('Courses — /courses', () => {
       expect(res.status).toBe(403);
     });
 
-    it('TEACHER puede acceder a cualquier curso', async () => {
-      const res = await authGet(`/courses/${course1esoId}`, teacherToken);
-
-      expect(res.status).toBe(200);
-      expect(res.body.title).toBe('Técnicas de Pase');
-    });
-
     it('ADMIN puede acceder a cualquier curso', async () => {
       const res = await authGet(`/courses/${course4esoId}`, adminToken);
 
@@ -195,17 +166,6 @@ describe('Courses — /courses', () => {
   // ─── POST /courses — creación ──────────────────────────────────────────────
 
   describe('POST /courses', () => {
-    it('TEACHER puede crear un curso', async () => {
-      const res = await authPost('/courses', teacherToken, {
-        title: 'Nuevo Curso de Tiro',
-        description: 'Técnicas avanzadas de tiro',
-        published: false,
-      });
-
-      expect(res.status).toBe(201);
-      expect(res.body.title).toBe('Nuevo Curso de Tiro');
-    });
-
     it('ADMIN puede crear un curso', async () => {
       const res = await authPost('/courses', adminToken, {
         title: 'Curso Creado por Admin',
@@ -239,7 +199,7 @@ describe('Courses — /courses', () => {
     });
 
     it('devuelve 400 si el título es demasiado corto', async () => {
-      const res = await authPost('/courses', teacherToken, {
+      const res = await authPost('/courses', adminToken, {
         title: 'AB',
       });
 

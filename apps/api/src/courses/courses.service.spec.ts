@@ -286,11 +286,11 @@ describe('CoursesService', () => {
       mockPrisma.userProgress.findMany.mockResolvedValue([]);
     });
 
-    it('TEACHER: accede sin comprobar ownership (ve resultados de todos)', async () => {
+    it('SUPER_ADMIN: accede sin comprobar ownership (ve resultados de todos)', async () => {
       const result = await service.getStudentCourseProgress(
         'course1',
         'student1',
-        requester(Role.TEACHER, { id: 'teacher1' }),
+        requester(Role.SUPER_ADMIN, { id: 'super1' }),
       );
 
       expect(result.courseId).toBe('course1');

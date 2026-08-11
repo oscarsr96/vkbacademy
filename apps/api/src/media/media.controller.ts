@@ -11,10 +11,10 @@ import { GetUploadUrlDto } from './dto/get-upload-url.dto';
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
-  /** Genera una presigned URL para subir un vídeo a S3 [TEACHER, ADMIN] */
+  /** Genera una presigned URL para subir un vídeo a S3 [ADMIN] */
   @Post('upload-url')
   @UseGuards(RolesGuard)
-  @Roles(Role.TEACHER, Role.ADMIN)
+  @Roles(Role.ADMIN)
   getUploadUrl(@Body() dto: GetUploadUrlDto) {
     return this.mediaService.getUploadUrl(dto.fileName, dto.contentType);
   }
@@ -27,11 +27,11 @@ export class MediaController {
    * ya no guardan la key S3 (los vídeos son de YouTube vía `youtubeId`), por lo
    * que no existe mapeo key→recurso en BD para validar el acceso de un alumno a
    * una key concreta; el control más estricto disponible es limitar la firma a
-   * quienes suben contenido (TEACHER/ADMIN; SUPER_ADMIN pasa por el chequeo ADMIN).
+   * quienes suben contenido (ADMIN; SUPER_ADMIN pasa por el chequeo ADMIN).
    */
   @Get('view-url/:key(*)')
   @UseGuards(RolesGuard)
-  @Roles(Role.TEACHER, Role.ADMIN)
+  @Roles(Role.ADMIN)
   getViewUrl(@Param('key') key: string) {
     return this.mediaService.getViewUrl(key);
   }

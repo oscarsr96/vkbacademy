@@ -1,27 +1,19 @@
-import {
-  createApp,
-  closeApp,
-  login,
-  authGet,
-  authPost,
-  publicPost,
-  publicGet,
-} from './setup';
+import { createApp, closeApp, login, authGet, authPost, publicPost, publicGet } from './setup';
 
 describe('Media — /media', () => {
   let studentToken: string;
-  let teacherToken: string;
+  let adminToken: string;
 
   beforeAll(async () => {
     await createApp();
 
-    const [s, t] = await Promise.all([
+    const [s, a] = await Promise.all([
       login('student@vkbacademy.com'),
-      login('teacher@vkbacademy.com'),
+      login('admin@vkbacademy.com'),
     ]);
 
     studentToken = s.accessToken;
-    teacherToken = t.accessToken;
+    adminToken = a.accessToken;
   });
 
   afterAll(async () => {
@@ -50,13 +42,13 @@ describe('Media — /media', () => {
     });
 
     it('devuelve 400 si el body está vacío', async () => {
-      const res = await authPost('/media/upload-url', teacherToken, {});
+      const res = await authPost('/media/upload-url', adminToken, {});
 
       expect(res.status).toBe(400);
     });
 
     it('devuelve 400 si fileName no tiene extensión de vídeo válida', async () => {
-      const res = await authPost('/media/upload-url', teacherToken, {
+      const res = await authPost('/media/upload-url', adminToken, {
         fileName: 'documento.pdf',
         contentType: 'video/mp4',
       });
@@ -65,7 +57,7 @@ describe('Media — /media', () => {
     });
 
     it('devuelve 400 si contentType no es de tipo video', async () => {
-      const res = await authPost('/media/upload-url', teacherToken, {
+      const res = await authPost('/media/upload-url', adminToken, {
         fileName: 'video.mp4',
         contentType: 'image/jpeg',
       });
@@ -73,11 +65,11 @@ describe('Media — /media', () => {
       expect(res.status).toBe(400);
     });
 
-    it('un TEACHER con credenciales válidas no recibe 401 ni 403 (auth y roles pasan)', async () => {
+    it('un ADMIN con credenciales válidas no recibe 401 ni 403 (auth y roles pasan)', async () => {
       // En entorno de test sin credenciales AWS reales, el SDK puede lanzar un
       // error 500. Lo que verificamos es que la capa de autenticación y roles
       // funciona correctamente; un 500 de S3 es un resultado aceptable.
-      const res = await authPost('/media/upload-url', teacherToken, {
+      const res = await authPost('/media/upload-url', adminToken, {
         fileName: 'leccion.mp4',
         contentType: 'video/mp4',
       });
@@ -99,21 +91,15 @@ describe('Media — /media', () => {
     it('devuelve 403 cuando un STUDENT intenta firmar una key arbitraria', async () => {
       // Sin mapeo key→recurso en BD (los vídeos son de YouTube), la firma se
       // restringe a roles de gestión de contenido; un alumno recibe 403.
-      const res = await authGet(
-        '/media/view-url/cursos/leccion-01.mp4',
-        studentToken,
-      );
+      const res = await authGet('/media/view-url/cursos/leccion-01.mp4', studentToken);
 
       expect(res.status).toBe(403);
     });
 
-    it('un TEACHER autenticado no recibe 401 ni 403 (rol de gestión de contenido)', async () => {
+    it('un ADMIN autenticado no recibe 401 ni 403 (rol de gestión de contenido)', async () => {
       // Sin AWS real el SDK puede devolver 500, pero lo relevante es que auth y
-      // roles pasan para un TEACHER.
-      const res = await authGet(
-        '/media/view-url/cursos/leccion-01.mp4',
-        teacherToken,
-      );
+      // roles pasan para un ADMIN.
+      const res = await authGet('/media/view-url/cursos/leccion-01.mp4', adminToken);
 
       expect(res.status).not.toBe(401);
       expect(res.status).not.toBe(403);

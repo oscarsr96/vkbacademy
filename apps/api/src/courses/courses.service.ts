@@ -46,7 +46,7 @@ export class CoursesService {
         where.id = { in: [] };
       }
     } else {
-      // TUTOR/TEACHER/ADMIN ven todos los cursos (publicados o no)
+      // TUTOR/ADMIN ven todos los cursos (publicados o no)
       if (schoolYearIdFilter) {
         where.schoolYearId = schoolYearIdFilter;
       }
@@ -140,7 +140,7 @@ export class CoursesService {
 
   /**
    * Verifica que el solicitante puede ver el progreso de un alumno concreto.
-   * - TEACHER / SUPER_ADMIN: ven resultados de todos (matriz de permisos).
+   * - SUPER_ADMIN: ve resultados de todos (matriz de permisos).
    * - TUTOR: solo sus alumnos asignados (`tutorId`).
    * - ADMIN: solo alumnos de su propia academia (membresía compartida).
    */
@@ -148,7 +148,7 @@ export class CoursesService {
     requester: AuthenticatedUser,
     studentId: string,
   ): Promise<void> {
-    if (requester.role === Role.TEACHER || requester.role === Role.SUPER_ADMIN) {
+    if (requester.role === Role.SUPER_ADMIN) {
       return;
     }
 
