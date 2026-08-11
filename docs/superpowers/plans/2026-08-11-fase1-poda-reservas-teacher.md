@@ -1315,9 +1315,14 @@ enum ChallengeType {
 
 Quitar `BookingStatus` y `BookingMode` del bloque de enums, y `Booking` de la lista de entidades principales. En la sección de multi-tenancy (§14), quitar `Booking` de la lista de modelos scoped por `academyId`.
 
-- [ ] **Step 6: Actualizar las variables de entorno (§9)**
+- [ ] **Step 6: Actualizar las variables de entorno (§9) y el README**
 
-Quitar las claves de Daily.co si aparecen en el bloque de ejemplo.
+Quitar las claves de Daily.co si aparecen en el bloque de ejemplo de `CLAUDE.md`.
+
+`README.md:81` también documenta `DAILY_API_KEY`. Quitarla de ahí, junto con cualquier mención a videollamadas o clases particulares que quede en el README. Verificar después:
+
+Run: `grep -rni "daily\|reserva\|videollamada" README.md CLAUDE.md`
+Expected: sin salida, salvo menciones que no tengan nada que ver con reservas de clases.
 
 - [ ] **Step 7: Añadir la fase al roadmap (§12)**
 
