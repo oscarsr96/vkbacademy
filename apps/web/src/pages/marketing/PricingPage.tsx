@@ -28,7 +28,6 @@ const STUDENT_FEATURES = [
 // Lo que obtiene el tutor/padre
 const TUTOR_FEATURES = [
   { icon: '📊', text: 'Seguimiento en tiempo real del progreso de tu hijo/a' },
-  { icon: '💬', text: 'Tutor de IA disponible a cualquier hora' },
   { icon: '📋', text: 'Historial completo de intentos, exámenes y certificados' },
   { icon: '🔔', text: 'Notificaciones de avance de tu hijo/a' },
 ];
@@ -185,7 +184,6 @@ export default function PricingPage() {
                 'Lecciones interactivas y tests',
                 'Exámenes y certificados PDF',
                 'Sistema de retos y puntos',
-                'Tutor de IA a cualquier hora',
               ].map((item) => (
                 <li key={item} style={S.planCheck}>
                   <span style={S.planCheckmark}>✓</span>
