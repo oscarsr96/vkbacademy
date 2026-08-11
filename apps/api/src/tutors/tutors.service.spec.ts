@@ -61,9 +61,6 @@ const mockPrisma = {
   certificate: {
     findMany: jest.fn(),
   },
-  booking: {
-    findMany: jest.fn(),
-  },
 };
 
 // ---------------------------------------------------------------------------
@@ -75,7 +72,6 @@ function setupEmptyParallelQueries() {
   mockPrisma.quizAttempt.findMany.mockResolvedValue([]);
   mockPrisma.examAttempt.findMany.mockResolvedValue([]);
   mockPrisma.certificate.findMany.mockResolvedValue([]);
-  mockPrisma.booking.findMany.mockResolvedValue([]);
   mockPrisma.enrollment.findMany.mockResolvedValue([]);
   mockPrisma.userProgress.count.mockResolvedValue(0);
 }
@@ -220,7 +216,6 @@ describe('TutorsService', () => {
         quizzes: expect.objectContaining({ attempts: 0, avgScore: null, bestScore: null }),
         exams: expect.objectContaining({ attempts: 0, avgScore: null, bestScore: null, passed: 0 }),
         certificates: { total: 0, byType: {} },
-        sessions: { confirmed: 0, totalHours: 0 },
         courses: [],
         activity: [],
       });
@@ -302,24 +297,6 @@ describe('TutorsService', () => {
       expect(result.quizzes.avgScore).toBe(70);
       expect(result.quizzes.bestScore).toBe(80);
       expect(result.quizzes.attempts).toBe(3);
-    });
-
-    it('totalHours calcula correctamente desde startAt/endAt de reservas', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockStudent);
-      setupEmptyParallelQueries();
-
-      // 2 reservas de 1 hora cada una = 2 horas
-      const startAt = new Date('2026-01-10T10:00:00Z');
-      const endAt = new Date('2026-01-10T11:00:00Z');
-      mockPrisma.booking.findMany.mockResolvedValue([
-        { startAt, endAt },
-        { startAt, endAt },
-      ]);
-
-      const result = await service.getStudentStats(TUTOR_ID, STUDENT_ID);
-
-      expect(result.sessions.confirmed).toBe(2);
-      expect(result.sessions.totalHours).toBe(2);
     });
 
     it('activeDays cuenta los días únicos con lecciones completadas', async () => {
