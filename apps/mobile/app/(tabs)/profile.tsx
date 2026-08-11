@@ -1,25 +1,16 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '../../src/store/auth.store';
 import { authApi } from '../../src/api/auth.api';
 
 const ROLE_LABELS: Record<string, string> = {
   STUDENT: 'Estudiante',
-  TEACHER: 'Profesor',
   ADMIN: 'Administrador',
 };
 
 const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
   STUDENT: { bg: '#dcfce7', text: '#166534' },
-  TEACHER: { bg: '#dbeafe', text: '#1e40af' },
-  ADMIN:   { bg: '#fef3c7', text: '#92400e' },
+  ADMIN: { bg: '#fef3c7', text: '#92400e' },
 };
 
 export default function ProfileScreen() {
