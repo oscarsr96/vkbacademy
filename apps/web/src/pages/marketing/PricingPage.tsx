@@ -30,7 +30,7 @@ const TUTOR_FEATURES = [
   { icon: '📊', text: 'Seguimiento en tiempo real del progreso de tu hijo/a' },
   { icon: '💬', text: 'Tutor de IA disponible a cualquier hora' },
   { icon: '📋', text: 'Historial completo de intentos, exámenes y certificados' },
-  { icon: '🔔', text: 'Notificaciones de avance y recordatorios de clases' },
+  { icon: '🔔', text: 'Notificaciones de avance de tu hijo/a' },
 ];
 
 const FAQS = [
