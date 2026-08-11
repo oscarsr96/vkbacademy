@@ -1355,6 +1355,226 @@ git commit -m "docs: actualiza CLAUDE.md tras la poda de reservas y rol TEACHER"
 
 ---
 
+## Task 12b: Marketing — dejar de vender un producto que ya no existe
+
+> Añadida tras la revisión de las Tasks 7-9. Ni el spec ni el plan original cubrían `PublicLayout`, y el sitio público sigue anunciando reserva de clases particulares en tres páginas. **Debe resolverse antes de la Task 13**, o PROD anuncia una función inexistente.
+>
+> **El copy de sustitución que hay aquí es un borrador.** Está escrito para ser fiel a lo que la app hace de verdad, pero es texto comercial del negocio del propietario y debería revisarlo.
+
+Esta es la única tarea del plan que toca `PublicLayout`. La regla dura del proyecto prohíbe hacerlo *desde tareas del app autenticado*; esta lo es de marketing, y es su cometido entero.
+
+**Decisión de contenido:** el pilar de "Reserva clases particulares" se **sustituye**, no se borra, por el **tutor IA** (`apps/api/src/tutor/`, `TutorWidget.tsx`): existe, está en producción y hoy no se anuncia en ninguna parte. Así el número de pilares no cambia y la retícula de las páginas no se descuadra.
+
+**Files:**
+- Modify: `apps/web/src/pages/marketing/LandingPage.tsx:74-79,168,312,370,442`
+- Modify: `apps/web/src/pages/marketing/AcademyLandingPage.tsx:83-87,305`
+- Modify: `apps/web/src/pages/marketing/PricingPage.tsx:31,39,50-51,192,231-232`
+
+**Interfaces:**
+- Consumes: nada.
+- Produces: ninguna mención a reserva de clases en `apps/web/src/pages/marketing/`.
+
+- [ ] **Step 1: Añadir el icono de chat a los dos registros de iconos**
+
+`LandingPage.tsx` tiene su registro de SVG en línea (`target`, `video`, `check`, `graduation`, `calendar`, `chart`, `trophy`). Ninguno sirve para el tutor IA. Añadir a ese registro, respetando el estilo de línea 24×24 del resto:
+
+```ts
+  chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+```
+
+Hacer lo mismo en el registro equivalente de `AcademyLandingPage.tsx`.
+
+Después de sustituir los pilares (Steps 2 y 3), comprobar si `calendar` queda sin uso en cada página; si es así, borrar su entrada del registro.
+
+- [ ] **Step 2: Sustituir el pilar en `LandingPage.tsx`**
+
+Sustituir el objeto de las líneas 74-79:
+
+```ts
+  {
+    icon: 'calendar',
+    title: 'Reserva clases con sus profes',
+    description:
+      'Tú gestionas las clases particulares directamente desde la plataforma, tanto presenciales como online.',
+  },
+```
+
+por:
+
+```ts
+  {
+    icon: 'chat',
+    title: 'Un tutor que no se cansa',
+    description:
+      'Cuando se atasca a las once de la noche, pregunta y recibe una explicación al momento. Sin esperar a la próxima clase.',
+  },
+```
+
+- [ ] **Step 3: Sustituir el pilar en `AcademyLandingPage.tsx`**
+
+Sustituir el objeto de las líneas 83-87:
+
+```ts
+  {
+    icon: 'calendar',
+    title: 'Reserva clases particulares',
+    desc: 'Gestiona clases particulares directamente desde la plataforma, presenciales u online.',
+  },
+```
+
+por:
+
+```ts
+  {
+    icon: 'chat',
+    title: 'Un tutor que no se cansa',
+    desc: 'Pregunta cualquier duda y recibe una explicación al momento, a cualquier hora.',
+  },
+```
+
+- [ ] **Step 4: Corregir las enumeraciones de producto**
+
+`LandingPage.tsx:312` — sustituir `clases particulares` por `un tutor de IA` en la enumeración, dejando el resto de la frase igual:
+
+```
+cualquier tema, exámenes con certificado y un tutor de IA — todo en un solo lugar,
+```
+
+`AcademyLandingPage.tsx:305` — mismo cambio:
+
+```
+interactivas, exámenes con certificado y un tutor de IA — todo en un solo lugar,
+```
+
+`LandingPage.tsx:168` — sustituir la frase entera:
+
+```ts
+      'Consulta su progreso, sus certificados y su actividad reciente desde tu propio panel.',
+```
+
+- [ ] **Step 5: Corregir las comparaciones de precio**
+
+Las dos comparaciones con el precio de una clase particular **se conservan**: siguen siendo ciertas y son argumento de venta legítimo. Vallekas no vende clases en la app, pero una clase particular sigue costando lo que cuesta en el mercado.
+
+`LandingPage.tsx:370` y `:442` se dejan **tal cual**. Verificar solo que no prometen que la plataforma las ofrezca; si al releerlas dan a entender que se pueden reservar ahí, ajustar la redacción mínimamente para que sea una comparación externa.
+
+- [ ] **Step 6: Limpiar `PricingPage.tsx`**
+
+Línea 31 — sustituir el bullet de características:
+
+```ts
+  { icon: '💬', text: 'Tutor de IA disponible a cualquier hora' },
+```
+
+Línea 39 — la respuesta de la FAQ menciona gestionar reservas. Sustituir el final:
+
+```ts
+    a: 'Contacta con la administración del club. Ellos crearán la cuenta de tu hijo/a y te asignarán como tutor. A partir de ahí, sigues su progreso desde tu propio panel.',
+```
+
+Líneas 50-51 — la pregunta entera es sobre clases particulares. **Borrar el objeto completo de esa FAQ**, pregunta y respuesta.
+
+Línea 192 — sustituir la fila de la tabla comparativa:
+
+```ts
+                'Tutor de IA a cualquier hora',
+```
+
+Líneas 231-232 — sustituir el texto de la sección del tutor:
+
+```
+                  Tienes tu propio acceso para ver el progreso de tu hijo/a, sus certificados
+                  y recibir notificaciones de avance.
+```
+
+Línea 242 se **conserva**: los profesores del club siguen creando el contenido, aunque no den clases por la plataforma.
+
+- [ ] **Step 7: Verificar**
+
+Run: `grep -rniE "reserva|clase particular|clases particulares" apps/web/src/pages/marketing/`
+Expected: solo las dos comparaciones de precio del Step 5. Ninguna que prometa reservar.
+
+Run: `pnpm --filter @vkbacademy/web exec tsc --noEmit`
+Expected: sin errores.
+
+Revisar visualmente que las retículas de pilares siguen teniendo el mismo número de elementos y que la FAQ borrada no deja un hueco raro.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add apps/web/src/pages/marketing
+git commit -m "refactor(web): el sitio publico deja de anunciar clases particulares"
+```
+
+---
+
+## Task 12c: Mobile — podar el esqueleto de reservas
+
+> Añadida tras la revisión de las Tasks 7-9. `apps/mobile` (711 LOC, roadmap fase 11, sin desplegar) conserva una pantalla de reservas y el rol `TEACHER`. No rompe nada —usa `Record<string, …>`, no el enum de `shared`, y el CI no la typechequea— pero es resto de la misma poda.
+
+**Files:**
+- Delete: `apps/mobile/app/(tabs)/bookings.tsx`
+- Modify: `apps/mobile/app/(tabs)/_layout.tsx`
+- Modify: `apps/mobile/app/(tabs)/profile.tsx:15,21`
+
+**Interfaces:**
+- Consumes: nada.
+- Produces: `apps/mobile` sin referencias a reservas ni a `TEACHER`.
+
+- [ ] **Step 1: Borrar la pantalla**
+
+```bash
+git rm "apps/mobile/app/(tabs)/bookings.tsx"
+```
+
+Son 14 líneas: un stub con el texto "Reservas — Fase 4".
+
+- [ ] **Step 2: Quitar la pestaña**
+
+En `apps/mobile/app/(tabs)/_layout.tsx`, borrar el `<Tabs.Screen>` completo de `bookings`:
+
+```tsx
+      <Tabs.Screen
+        name="bookings"
+        options={{
+          title: 'Reservas',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar-outline" size={size} color={color} />
+          ),
+        }}
+      />
+```
+
+Quedan dos pestañas: `index` (Cursos) y `profile` (Perfil).
+
+- [ ] **Step 3: Quitar el rol TEACHER**
+
+En `apps/mobile/app/(tabs)/profile.tsx`, borrar la línea 15 del mapa de etiquetas y la línea 21 del mapa de colores:
+
+```ts
+  TEACHER: 'Profesor',
+  TEACHER: { bg: '#dbeafe', text: '#1e40af' },
+```
+
+- [ ] **Step 4: Verificar**
+
+Run: `grep -rniE "booking|reserva|TEACHER" apps/mobile/app apps/mobile/src`
+Expected: sin salida.
+
+Run: `ls "apps/mobile/app/(tabs)"`
+Expected: `_layout.tsx`, `index.tsx`, `profile.tsx`.
+
+No ejecutar el build de mobile: requiere `eas`, que no está instalado en el entorno, y el CI no lo compila.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add -A apps/mobile
+git commit -m "refactor(mobile): elimina el esqueleto de reservas y el rol TEACHER"
+```
+
+---
+
 ## Task 13: Despliegue
 
 **Files:** ninguno. Es operación.
