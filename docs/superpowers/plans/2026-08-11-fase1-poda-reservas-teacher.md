@@ -697,6 +697,86 @@ git commit -m "refactor(api): retira el rol TEACHER de guards, DTOs y servicios"
 
 ---
 
+## Task 6b: Backend — cortar el consumo de reservas en `tutors` y en la config
+
+> Añadida tras la revisión de la Task 2. El módulo `tutors/` pertenece a la Fase 2 y **no se elimina aquí**, pero consulta la tabla `Booking`, que sí desaparece en la Task 10. Sin este corte, el `prisma generate` de la Task 10 deja la API sin compilar.
+
+**Files:**
+- Modify: `apps/api/src/tutors/tutors.service.ts:163,203-211,306,371-374`
+- Modify: `apps/api/src/tutors/tutors.service.spec.ts:64,78,314`
+- Modify: `apps/api/src/config/env.schema.ts:66-67`
+
+**Interfaces:**
+- Consumes: nada.
+- Produces: `getStudentSummary` deja de devolver la clave `sessions`. El resto de la respuesta (`exams`, `certificates`, `courses`, `activity`) no cambia. Las Tasks 7-9 alinean el frontend con esta forma.
+
+- [ ] **Step 1: Quitar la consulta de reservas del `Promise.all`**
+
+En `apps/api/src/tutors/tutors.service.ts`, la desestructuración de la línea 163 es **posicional**. Quitar `bookings` de la lista de nombres:
+
+```ts
+    const [completedInPeriod, quizAttempts, examAttempts, certificates, enrollments] =
+```
+
+y borrar del array la consulta correspondiente, con su comentario, manteniendo el orden relativo del resto:
+
+```ts
+        // Reservas confirmadas en el período
+        this.prisma.booking.findMany({
+          where: {
+            studentId,
+            status: 'CONFIRMED',
+            ...(dateRange ? { startAt: dateRange } : {}),
+          },
+          select: { startAt: true, endAt: true },
+        }),
+```
+
+Un desajuste aquí asigna `enrollments` al nombre `bookings` sin error de compilación: verificar que los cinco nombres restantes siguen alineados con las cinco consultas restantes, en el mismo orden.
+
+- [ ] **Step 2: Quitar el cálculo y la clave de respuesta**
+
+Borrar `const totalBookingMinutes = bookings.reduce(...)` (línea 306) con su comentario.
+
+En el objeto de retorno, borrar el bloque completo:
+
+```ts
+      sessions: {
+        confirmed: bookings.length,
+        totalHours: Math.round(totalBookingMinutes / 6) / 10,
+      },
+```
+
+- [ ] **Step 3: Limpiar el spec**
+
+En `apps/api/src/tutors/tutors.service.spec.ts`, borrar la clave `booking` del objeto `mockPrisma` (línea 64), la línea `mockPrisma.booking.findMany.mockResolvedValue([]);` del `beforeEach` (línea 78) y el bloque de la línea 314 que carga reservas de prueba. Si algún test asertaba sobre `sessions`, borrar esas aserciones; si el test entero solo existía para comprobar `sessions`, borrarlo.
+
+- [ ] **Step 4: Quitar `DAILY_API_KEY` de la validación de entorno**
+
+En `apps/api/src/config/env.schema.ts`, borrar las líneas 66-67 y la línea en blanco sobrante:
+
+```ts
+  // ── Videollamadas (Daily.co) ───────────────────────────────────────────────
+  DAILY_API_KEY: Joi.string().allow('').optional(),
+```
+
+- [ ] **Step 5: Verificar**
+
+Run: `grep -rniE "booking|daily" apps/api/src/tutors apps/api/src/config`
+Expected: sin salida.
+
+Run: `pnpm --filter @vkbacademy/api exec tsc --noEmit -p tsconfig.json && pnpm --filter @vkbacademy/api test`
+Expected: compila y la suite en verde.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add -A apps/api/src/tutors apps/api/src/config
+git commit -m "refactor(api): tutors y config dejan de depender de reservas"
+```
+
+---
+
 ## Task 7: Frontend — borrar las páginas y clientes de reservas y facturación
 
 **Files:**
@@ -916,6 +996,21 @@ En `apps/web/src/utils/errorMessage.ts:3`, el comentario cita un fichero que ya 
 ```ts
 // en StudyPage.tsx, para no dejar mutaciones con fallo silencioso.
 ```
+
+- [ ] **Step 5b: Quitar la tarjeta de sesiones del seguimiento del tutor**
+
+La Task 6b eliminó la clave `sessions` de la respuesta de `GET /tutors/my-students/:id`. Hay que alinear el frontend, que por lo demás **se mantiene**: `TutorStudentsPage` es de la Fase 2.
+
+En `apps/web/src/api/tutors.api.ts`, borrar del tipo de la respuesta el bloque `sessions` con sus dos campos (líneas ~75-78):
+
+```ts
+  sessions: {
+    confirmed: number;
+    totalHours: number;
+  };
+```
+
+En `apps/web/src/pages/TutorStudentsPage.tsx`, borrar la tarjeta de estadística que consume `sessions` (líneas ~485-491): el componente completo con `value={sessions.confirmed}` y `sub={`${sessions.totalHours}h en total`}`. Si `sessions` se desestructuraba de la respuesta más arriba en el componente, quitarlo también de ahí.
 
 - [ ] **Step 6: Verificar**
 
