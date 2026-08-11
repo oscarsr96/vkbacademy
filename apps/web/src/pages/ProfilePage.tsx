@@ -10,7 +10,6 @@ import Icon from '../components/ui/Icon';
 const ROLE_LABELS: Record<string, string> = {
   STUDENT: 'Alumno',
   TUTOR: 'Tutor',
-  TEACHER: 'Profesor',
   ADMIN: 'Administrador',
 };
 

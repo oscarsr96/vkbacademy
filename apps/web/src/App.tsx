@@ -14,7 +14,6 @@ import CoursesPage from './pages/CoursesPage';
 import CoursePage from './pages/CoursePage';
 import LessonPage from './pages/LessonPage';
 import ChallengesPage from './pages/ChallengesPage';
-import BookingsPage from './pages/BookingsPage';
 import TutorStudentsPage from './pages/TutorStudentsPage';
 import CertificatesPage from './pages/CertificatesPage';
 import SubjectsPage from './pages/SubjectsPage';
@@ -26,9 +25,8 @@ import PricingPage from './pages/marketing/PricingPage';
 import RootIndex from './components/RootIndex';
 import BrandSync from './components/BrandSync';
 
-// Rutas pesadas o de uso poco frecuente (panel admin, portal docente, estudio con IA) —
+// Rutas pesadas o de uso poco frecuente (panel admin, examenes, estudio con IA) —
 // carga diferida para reducir el bundle inicial que descarga un alumno normal.
-const TeacherPortalPage = lazy(() => import('./pages/TeacherPortalPage'));
 const ExamPage = lazy(() => import('./pages/ExamPage'));
 const StudyPage = lazy(() => import('./pages/StudyPage'));
 const StudyPlanPage = lazy(() => import('./pages/StudyPlanPage'));
@@ -36,7 +34,6 @@ const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage')
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminCoursesPage = lazy(() => import('./pages/admin/AdminCoursesPage'));
 const AdminCourseDetailPage = lazy(() => import('./pages/admin/AdminCourseDetailPage'));
-const AdminBillingPage = lazy(() => import('./pages/admin/AdminBillingPage'));
 const AdminChallengesPage = lazy(() => import('./pages/admin/AdminChallengesPage'));
 const AdminRedemptionsPage = lazy(() => import('./pages/admin/AdminRedemptionsPage'));
 const AdminExamBankPage = lazy(() => import('./pages/admin/AdminExamBankPage'));
@@ -147,9 +144,6 @@ export default function App() {
         <Route path="courses/:courseId" element={<CoursePage />} />
         <Route path="courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
 
-        {/* Fase 4 — Reservas */}
-        <Route path="bookings" element={<BookingsPage />} />
-
         {/* Tutor */}
         <Route path="tutor/students" element={<TutorStudentsPage />} />
 
@@ -168,9 +162,6 @@ export default function App() {
 
         {/* Perfil de usuario */}
         <Route path="profile" element={<ProfilePage />} />
-
-        {/* Portal docente */}
-        <Route path="teacher" element={<TeacherPortalPage />} />
 
         {/* Fase 6 — Panel de administración */}
         <Route
@@ -202,14 +193,6 @@ export default function App() {
           element={
             <AdminRoute>
               <AdminCourseDetailPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="admin/billing"
-          element={
-            <AdminRoute>
-              <AdminBillingPage />
             </AdminRoute>
           }
         />

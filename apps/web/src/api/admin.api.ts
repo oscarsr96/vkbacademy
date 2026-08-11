@@ -42,9 +42,8 @@ export interface CertificateStats {
 }
 
 export interface AdminMetrics {
-  users: { total: number; students: number; tutors: number; teachers: number };
+  users: { total: number; students: number; tutors: number };
   courses: { total: number; published: number };
-  bookings: { total: number; confirmed: number; pending: number };
   enrollments: number;
   quizAttempts: number;
 }
@@ -146,16 +145,12 @@ export interface AnalyticsKPIs {
   completedLessons: number;
   quizAttempts: number;
   avgQuizScore: number;
-  newBookings: number;
-  confirmedBookings: number;
-  cancelledBookings: number;
 }
 
 export interface TimeSeriesPoint {
   date: string;
   completedLessons: number;
   quizAttempts: number;
-  newBookings: number;
   newUsers: number;
 }
 
@@ -173,18 +168,6 @@ export interface StudentActivity {
   completedLessons: number;
   quizAttempts: number;
   avgScore: number;
-}
-
-export interface TeacherActivity {
-  teacherId: string;
-  name: string;
-  email: string;
-  confirmed: number;
-  pending: number;
-  cancelled: number;
-  hoursTaught: number;
-  online: number;
-  inPerson: number;
 }
 
 export interface AtRiskStudent {
@@ -207,92 +190,16 @@ export interface LowCompletionLesson {
   completedCount: number;
 }
 
-export interface BookingHeatmapCell {
-  day: number;
-  hour: number;
-  count: number;
-}
-
 export interface AdminAnalytics {
   kpis: AnalyticsKPIs;
   timeSeries: TimeSeriesPoint[];
   topCourses: CourseActivity[];
   topStudents: StudentActivity[];
-  bookings: {
-    byStatus: { status: string; count: number }[];
-    byMode: { mode: string; count: number }[];
-  };
-  teachers: {
-    summary: {
-      activeTeachers: number;
-      totalHoursTaught: number;
-      totalConfirmedSessions: number;
-    };
-    top: TeacherActivity[];
-  };
   insights: {
     atRiskStudents: AtRiskStudent[];
     scoreDistribution: ScoreBucket[];
     lowCompletionLessons: LowCompletionLesson[];
-    bookingHeatmap: BookingHeatmapCell[];
-    avgBookingLeadDays: number;
   };
-}
-
-// ─── Billing ──────────────────────────────────────────────────────────────────
-
-export interface BillingConfig {
-  id: string;
-  studentMonthlyPrice: number;
-  classOnlineRatePerHour: number;
-  classInPersonRatePerHour: number;
-  clubCommissionRate: number;
-  infrastructureMonthlyCost: number;
-  s3MonthlyCost: number;
-  anthropicMonthlyCost: number;
-  updatedAt: string;
-}
-
-export interface BillingReport {
-  period: { from: string; to: string; months: number };
-  config: BillingConfig;
-  revenue: {
-    subscriptions: {
-      activeStudents: number;
-      monthlyPrice: number;
-      months: number;
-      total: number;
-    };
-    classes: {
-      confirmedCount: number;
-      onlineHours: number;
-      inPersonHours: number;
-      grossRevenue: number;
-      commissionRate: number;
-      commission: number;
-    };
-    total: number;
-  };
-  costs: {
-    resend: { estimatedEmails: number; estimated: number; tier: 'free' | 'paid' };
-    dailyCo: { participantMinutes: number; estimated: number; tier: 'free' | 'paid' };
-    s3: { estimated: number };
-    anthropic: { estimated: number };
-    infrastructure: { estimated: number };
-    total: number;
-  };
-  net: number;
-  margin: number;
-}
-
-export interface BillingConfigPayload {
-  studentMonthlyPrice?: number;
-  classOnlineRatePerHour?: number;
-  classInPersonRatePerHour?: number;
-  clubCommissionRate?: number;
-  infrastructureMonthlyCost?: number;
-  s3MonthlyCost?: number;
-  anthropicMonthlyCost?: number;
 }
 
 // ─── Certificados (Admin) ─────────────────────────────────────────────────────
@@ -536,14 +443,6 @@ export const adminApi = {
   getAnalytics: (params?: AnalyticsQueryParams) =>
     api.get<AdminAnalytics>('/admin/analytics', { params }).then((r) => r.data),
 
-  // ─── Facturación ───────────────────────────────────────────────────────────
-
-  getBilling: (params?: { from?: string; to?: string }) =>
-    api.get<BillingReport>('/admin/billing', { params }).then((r) => r.data),
-
-  updateBillingConfig: (payload: BillingConfigPayload) =>
-    api.patch<BillingConfig>('/admin/billing/config', payload).then((r) => r.data),
-
   // ─── Canjes ────────────────────────────────────────────────────────────────
 
   listRedemptions: (params?: { page?: number; limit?: number }) =>
@@ -645,10 +544,9 @@ export const adminApi = {
 
   listCertificates: (params?: { page?: number; limit?: number }) =>
     api
-      .get<PaginatedResponse<AdminCertificate> & { stats: CertificateStats }>(
-        '/admin/certificates',
-        { params },
-      )
+      .get<
+        PaginatedResponse<AdminCertificate> & { stats: CertificateStats }
+      >('/admin/certificates', { params })
       .then((r) => r.data),
 
   issueCertificate: (payload: {

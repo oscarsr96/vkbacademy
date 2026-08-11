@@ -704,10 +704,6 @@ body {
   color: var(--brand-deep);
   border: 1px solid var(--brand-glow);
 }
-.role-badge.TEACHER {
-  background: #dbeafe;
-  color: #1e40af;
-}
 .role-badge.STUDENT {
   background: #dcfce7;
   color: #166534;

@@ -72,10 +72,6 @@ export interface StudentStats {
     total: number;
     byType: Record<string, number>;
   };
-  sessions: {
-    confirmed: number;
-    totalHours: number;
-  };
   courses: CourseProgress[];
   activity: ActivityDay[];
 }

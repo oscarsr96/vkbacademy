@@ -14,7 +14,6 @@ import { useAcademyFilterStore } from '../../store/academy-filter.store';
 const ROLE_LABELS: Record<Role, string> = {
   [Role.STUDENT]: 'Alumno',
   [Role.TUTOR]: 'Tutor',
-  [Role.TEACHER]: 'Profesor',
   [Role.ADMIN]: 'Admin',
   [Role.SUPER_ADMIN]: 'Super Admin',
 };
@@ -22,7 +21,6 @@ const ROLE_LABELS: Record<Role, string> = {
 const ROLE_COLORS: Record<Role, string> = {
   [Role.STUDENT]: '#6366f1',
   [Role.TUTOR]: '#f59e0b',
-  [Role.TEACHER]: '#10b981',
   [Role.ADMIN]: '#ef4444',
   [Role.SUPER_ADMIN]: '#dc2626',
 };
