@@ -29,6 +29,8 @@ Usuarios: alumnos, tutores (padres), profesores, admins, super_admin.
 
 ## 3. Stack
 
+> **Aviso (rama `refactor/fase1-poda-reservas`):** Daily.co ya no se usa — se eliminaron las clases particulares. La fila queda abajo como referencia histórica hasta que se actualice esta tabla.
+
 | Capa                 | Tecnología                                   |
 | -------------------- | -------------------------------------------- |
 | Web frontend         | React 18 + Vite + TypeScript                 |
@@ -74,6 +76,8 @@ Usuarios: alumnos, tutores (padres), profesores, admins, super_admin.
 
 ## 5. Roles y permisos
 
+> **Aviso (rama `refactor/fase1-poda-reservas`):** el rol `TEACHER` ya no existe en el código (guards, DTOs, frontend), aunque siga en el enum `Role` de Prisma hasta que se aplique la migración destructiva. La matriz de abajo todavía no está actualizada y sigue mostrando la columna `teacher`.
+
 | Acción                       | student | tutor | teacher | admin | super_admin |
 | ---------------------------- | :-----: | :---: | :-----: | :---: | :---------: |
 | Ver cursos asignados         |   ✅    |  ✅   |   ✅    |  ✅   |     ✅      |
@@ -98,6 +102,8 @@ Usuarios: alumnos, tutores (padres), profesores, admins, super_admin.
 
 ## 6. Modelo de datos — enums y relaciones clave
 
+> **Aviso (rama `refactor/fase1-poda-reservas`):** `TEACHER` se eliminó del código de la app pero sigue en el enum `Role` de abajo hasta que se aplique la migración destructiva; lo mismo ocurre con `Booking`, `BookingStatus`, `BookingMode` y las tablas `AvailabilitySlot`/`TeacherProfile`, ya sin uso en la app.
+
 ```prisma
 enum Role          { STUDENT TUTOR TEACHER ADMIN SUPER_ADMIN }
 enum LessonType    { VIDEO QUIZ EXERCISE MATCH SORT FILL_BLANK }
@@ -121,6 +127,8 @@ Para schema completo: `apps/api/prisma/schema.prisma`.
 ---
 
 ## 7. API REST — endpoints principales
+
+> **Aviso (rama `refactor/fase1-poda-reservas`):** el bloque «Reservas y disponibilidad» y el namespace `billing` de más abajo describen endpoints **eliminados** de la API — llamarlos devuelve 404.
 
 ### Auth
 
@@ -260,6 +268,8 @@ pnpm build
 ---
 
 ## 11. Decisiones de arquitectura (resumen)
+
+> **Aviso (rama `refactor/fase1-poda-reservas`):** Daily.co ya no se usa; la decisión nº 5 queda abajo como referencia histórica.
 
 1. **Monorepo Turborepo** → compartir tipos web/mobile/api.
 2. **JWT + refresh propio** → sin dependencia de Auth0.
