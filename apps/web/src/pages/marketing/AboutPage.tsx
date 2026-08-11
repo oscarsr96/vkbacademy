@@ -51,7 +51,7 @@ const VALUES = [
 const WHY_POINTS = [
   'Para que tu hijo/a no pierda ritmo entre entrenamientos',
   'Para que puedas ver su progreso en tiempo real, sin esperar al profe',
-  'Para que tú gestiones sus clases particulares cuando mejor te venga',
+  'Para que tenga un tutor de IA disponible siempre que se atasque',
 ];
 
 // Merchandising del club
