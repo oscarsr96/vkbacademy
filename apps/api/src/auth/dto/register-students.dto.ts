@@ -47,7 +47,7 @@ export class RegisterStudentsDto {
   @IsArray()
   @ArrayMinSize(1, { message: 'Debes registrar al menos un alumno' })
   @ArrayMaxSize(MAX_STUDENTS_PER_REQUEST, {
-    message: 'Puedes registrar como máximo 10 alumnos por solicitud',
+    message: `Puedes registrar como máximo ${MAX_STUDENTS_PER_REQUEST} alumnos por solicitud`,
   })
   @ValidateNested({ each: true })
   @Type(() => NewStudentDto)

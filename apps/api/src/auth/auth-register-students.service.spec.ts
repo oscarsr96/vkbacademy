@@ -279,6 +279,10 @@ describe('AuthService.registerStudents', () => {
     ).rejects.toThrow(BadRequestException);
 
     expect(mockTx.user.create).not.toHaveBeenCalled();
+    // Fija el ORDEN: validar cursos antes de hashear. Con ids inválidos el atacante
+    // paga un findMany indexado y cero bcrypt, que es lo que impide que el abuso
+    // del array vuelva por otra puerta.
+    expect(mockedBcrypt.hash).not.toHaveBeenCalled();
   });
 
   it('traduce el P2002 de username a ConflictException, no a un 500 opaco', async () => {
