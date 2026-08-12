@@ -304,6 +304,67 @@ git commit -m "feat(admin): restablecer contrasena de alumno y ver su username"
 
 ---
 
+## Task 2b: Schema — migración aditiva de `guardianEmail`
+
+> Añadida en el escaneo previo a la ejecución. La Task 3 escribe `guardianEmail` en el `data` de un `tx.user.create()`, y el cliente de Prisma no conoce ese campo hasta que existe en el schema: sin esto, la Task 3 no compila. Los tests con mocks sí pasarían, porque no tocan Prisma real, y por eso el fallo se colaría hasta el `tsc`.
+
+**Es una migración puramente aditiva.** Añade una columna nullable y no toca ni un dato. Es desplegable por sí sola y no tiene punto de no retorno. **Toda la parte destructiva sigue en la Task 8.**
+
+**Files:**
+- Modify: `apps/api/prisma/schema.prisma`
+- Create: `apps/api/prisma/migrations/<timestamp>_add_guardian_email/migration.sql`
+
+**Interfaces:**
+- Consumes: nada.
+- Produces: `User.guardianEmail: string | null` disponible en el cliente de Prisma. La Task 3 depende de ello.
+
+- [ ] **Step 1: Añadir el campo al schema**
+
+En `apps/api/prisma/schema.prisma`, modelo `User`, añadir junto a los demás campos escalares:
+
+```prisma
+  /// Email de contacto del padre o la madre. No crea cuenta (fase 2).
+  guardianEmail String?
+```
+
+**No tocar nada más**: ni `tutorId`, ni `mustChangePassword`, ni el enum `Role`. Todo eso es de la Task 8.
+
+- [ ] **Step 2: Generar y revisar la migración**
+
+Run:
+```bash
+pnpm --filter @vkbacademy/api exec prisma migrate dev --name add_guardian_email --create-only
+```
+
+Abrir el `migration.sql` generado y comprobar que contiene **exactamente** una sentencia:
+
+```sql
+ALTER TABLE "User" ADD COLUMN "guardianEmail" TEXT;
+```
+
+Si Prisma ha generado algo más, es que el schema tenía cambios sin migrar de antes: parar y avisar en el informe en vez de aplicarlo.
+
+- [ ] **Step 3: Aplicar y regenerar el cliente**
+
+```bash
+pnpm --filter @vkbacademy/api exec prisma migrate dev
+pnpm --filter @vkbacademy/api exec prisma generate
+```
+
+- [ ] **Step 4: Verificar**
+
+Run: `pnpm --filter @vkbacademy/api exec tsc --noEmit -p tsconfig.json && pnpm --filter @vkbacademy/api test`
+Expected: compila y la suite en verde. El campo aún no lo usa nadie.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/api/prisma/schema.prisma apps/api/prisma/migrations
+git commit -m "feat(db): anade guardianEmail al modelo User"
+```
+
+---
+
 ## Task 3: Backend — registro por familia
 
 **Files:**
@@ -426,7 +487,7 @@ Crear `apps/api/src/auth/auth-register-students.service.spec.ts`. Copiar la estr
   });
 ```
 
-**Nota importante:** `guardianEmail` todavía no existe en el schema de Prisma (se añade en la Task 8). El cuarto test comprueba el argumento pasado a un `create` mockeado, así que **pasa igualmente**: no toca la base de datos real. El campo se escribirá en el `data` del `create` y Prisma lo aceptará en cuanto exista la columna.
+**Nota:** `guardianEmail` ya existe en el schema desde la Task 2b, así que el `create` compila y el cuarto test comprueba el argumento sobre un `create` mockeado.
 
 - [ ] **Step 3: Ejecutar los tests para verlos fallar**
 
@@ -929,12 +990,7 @@ Expected: un fichero por entorno. **Si falta alguno, volver a la Task 1.**
 
 - [ ] **Step 2: Editar el schema**
 
-En `apps/api/prisma/schema.prisma`, modelo `User`: borrar las tres líneas de la self-relation y la de `mustChangePassword`, y añadir el campo nuevo:
-
-```prisma
-  /// Email de contacto del padre o la madre. No crea cuenta (fase 2).
-  guardianEmail String?
-```
+En `apps/api/prisma/schema.prisma`, modelo `User`: borrar las tres líneas de la self-relation y la de `mustChangePassword`. **`guardianEmail` ya está desde la Task 2b: no volver a añadirlo.**
 
 Borrar también `@@index([tutorId])`. Reducir el enum:
 
@@ -959,26 +1015,25 @@ Si el comando aborta por falta de TTY (pide confirmar la pérdida de datos), eje
 
 Abrir el `migration.sql` generado y reordenarlo. El orden correcto es:
 
-```sql
--- 1. Añadir la columna nueva ANTES de nada, para poder rellenarla
-ALTER TABLE "User" ADD COLUMN "guardianEmail" TEXT;
+La columna `guardianEmail` ya existe (Task 2b), así que esta migración solo rescata y destruye.
 
--- 2. Rescatar el email del padre en cada hijo. IMPRESCINDIBLE antes del DELETE:
+```sql
+-- 1. Rescatar el email del padre en cada hijo. IMPRESCINDIBLE antes del DELETE:
 --    si se invierte el orden, el contacto de cada familia se pierde para siempre.
 UPDATE "User" s SET "guardianEmail" = t.email
   FROM "User" t
   WHERE s."tutorId" = t.id AND t.role = 'TUTOR';
 
--- 3. Ahora sí, borrar los tutores. Sus relaciones son onDelete: Cascade.
+-- 2. Ahora sí, borrar los tutores. Sus relaciones son onDelete: Cascade.
 DELETE FROM "User" WHERE role = 'TUTOR';
 
--- 4. Columnas e índice
+-- 3. Columnas e índice
 DROP INDEX IF EXISTS "User_tutorId_idx";
 ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "User_tutorId_fkey";
 ALTER TABLE "User" DROP COLUMN "tutorId";
 ALTER TABLE "User" DROP COLUMN "mustChangePassword";
 
--- 5. Enum, SIEMPRE al final (su COMMIT cierra la transacción envolvente de Prisma)
+-- 4. Enum, SIEMPRE al final (su COMMIT cierra la transacción envolvente de Prisma)
 CREATE TYPE "Role_new" AS ENUM ('STUDENT', 'ADMIN', 'SUPER_ADMIN');
 ALTER TABLE "User" ALTER COLUMN "role" DROP DEFAULT;
 ALTER TABLE "User" ALTER COLUMN "role" TYPE "Role_new" USING ("role"::text::"Role_new");
