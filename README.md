@@ -1,6 +1,6 @@
 # VKBacademy
 
-Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**. Los jugadores acceden a cursos con vídeos, ejercicios interactivos (emparejar, ordenar, rellenar huecos) y tests; los tutores (padres/responsables) gestionan las reservas de clases particulares con los profesores; los administradores disponen de un panel completo con analytics en tiempo real.
+Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**. Los jugadores acceden a cursos con vídeos, ejercicios interactivos (emparejar, ordenar, rellenar huecos) y tests; los tutores (padres/responsables) siguen el progreso de sus alumnos asignados; los administradores disponen de un panel completo con analytics en tiempo real.
 
 ---
 
@@ -17,7 +17,6 @@ Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**
 | Auth | JWT + Refresh tokens (implementación propia) |
 | Almacenamiento vídeo | AWS S3 + URLs firmadas (1 h) |
 | Email transaccional | Resend |
-| Videollamadas | Daily.co |
 | Estado global (web) | Zustand 5 |
 | Data fetching | TanStack Query v5 |
 | Monorepo | Turborepo + pnpm workspaces |
@@ -28,9 +27,8 @@ Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**
 
 | Rol | Descripción |
 |-----|-------------|
-| `STUDENT` | Accede a cursos de su nivel, realiza tests, ve sus reservas (solo lectura) |
-| `TUTOR` | Gestiona reservas en nombre de sus alumnos asignados |
-| `TEACHER` | Gestiona cursos donde es autor, fija su disponibilidad, confirma/cancela reservas |
+| `STUDENT` | Accede a cursos de su nivel, realiza tests |
+| `TUTOR` | Ve el progreso y resultados de sus alumnos asignados |
 | `ADMIN` | Acceso completo: CRUD usuarios, cursos, contenido con IA y analytics avanzado |
 
 ---
@@ -76,9 +74,6 @@ AWS_SIGNED_URL_EXPIRES=3600
 # Email (Resend)
 RESEND_API_KEY=""
 EMAIL_FROM="noreply@tuclub.com"
-
-# Videollamadas (Daily.co)
-DAILY_API_KEY=""
 
 # App
 PORT=3001
@@ -135,8 +130,6 @@ pnpm dev
 │   │       ├── courses/       # Cursos, módulos, lecciones, progreso
 │   │       ├── quizzes/       # Tests, corrección en servidor
 │   │       ├── progress/      # Progreso por lección
-│   │       ├── bookings/      # Reservas + Daily.co
-│   │       ├── availability/  # Slots de disponibilidad del profesor
 │   │       ├── tutors/        # Alumnos asignados a un tutor
 │   │       ├── media/         # S3 upload + URLs firmadas
 │   │       ├── notifications/ # Emails transaccionales (Resend)
@@ -201,19 +194,6 @@ GET  /media/view-url/:key       → URL firmada para reproducir vídeo
 GET  /quizzes/:id               → preguntas SIN isCorrect
 POST /quizzes/:id/submit        → respuestas → { score, correcciones }
 GET  /quizzes/:id/attempts      → historial de intentos
-```
-
-### Reservas
-```
-GET  /teachers                            → lista de profesores con disponibilidad
-GET  /teachers/:id/slots?from=&to=        → slots libres en rango
-POST /bookings                            → crear reserva [TUTOR, ADMIN]
-PATCH /bookings/:id/confirm               → confirmar [TEACHER, ADMIN]
-PATCH /bookings/:id/cancel                → cancelar [TUTOR, TEACHER, ADMIN]
-GET  /bookings/mine                       → mis reservas (filtrado por rol)
-GET  /availability/mine                   → mis slots [TEACHER]
-POST /availability                        → añadir slot [TEACHER, ADMIN]
-DELETE /availability/:id                  → eliminar slot [TEACHER, ADMIN]
 ```
 
 ### Tutores
@@ -299,11 +279,10 @@ GET  /certificates/verify/:code  → verificación pública (sin JWT)
 
 Filtros: período (presets 7d/30d/3m/6m/1a o rango personalizado), agrupación día/semana/mes, nivel educativo y curso.
 
-- **8 KPIs**: nuevos alumnos, matrículas, lecciones completadas, intentos de quiz, score medio, reservas creadas, confirmadas, canceladas
+- **KPIs**: nuevos alumnos, matrículas, lecciones completadas, intentos de quiz, score medio
 - **Gráfico de líneas SVG** con 4 series temporales (sin librerías externas)
 - **Top 5 cursos** por matrículas con barras de progreso
 - **Top 5 alumnos** por actividad con score medio
-- **Desglose de reservas** por estado (CONFIRMED/PENDING/CANCELLED) y modalidad (IN_PERSON/ONLINE)
 
 ### Gestión de usuarios (`/admin/users`)
 
@@ -321,13 +300,6 @@ Filtros: período (presets 7d/30d/3m/6m/1a o rango personalizado), agrupación d
 - Generación con IA (Claude Sonnet) para cursos, módulos, lecciones (incluidos tipos MATCH/SORT/FILL_BLANK) y preguntas individuales
 - Los cambios en el admin invalidan automáticamente la caché del alumno (sin necesidad de recargar la página)
 
-### Facturación (`/admin/billing`)
-
-- Ingresos estimados: suscripciones de alumnos + comisión sobre clases
-- Costes estimados: Resend, Daily.co, S3, Anthropic, infraestructura
-- Margen neto con filtro de período personalizable
-- Configuración de tarifas y costes editable por el admin
-
 ### Retos (`/admin/challenges`)
 
 - Tabla de retos con tipo, objetivo, puntos, completados y estado activo/inactivo
@@ -339,27 +311,6 @@ Filtros: período (presets 7d/30d/3m/6m/1a o rango personalizado), agrupación d
 - Historial completo de todos los canjes de puntos de los alumnos
 - KPIs: total canjes, pendientes de entrega (resaltados en amarillo), puntos gastados, alumnos distintos
 - Botón "Marcar entregado" por cada canje pendiente con registro de fecha de entrega
-
----
-
-## Flujo de reservas
-
-```
-Tutor
-  → selecciona alumno
-  → elige profesor (slots en tiempo real)
-  → elige fecha/hora
-  → indica curso, modalidad (presencial / online) y notas
-  → crea reserva  ───────────────────→  email al profesor
-
-Profesor confirma
-  → si ONLINE: sala Daily.co creada automáticamente
-  → email a tutor + alumno con enlace de videollamada
-
-Cancelación (tutor, profesor o admin)
-  → sala Daily.co eliminada si era ONLINE
-  → email a las demás partes
-```
 
 ---
 
