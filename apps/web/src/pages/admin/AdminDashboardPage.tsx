@@ -6,10 +6,8 @@ import {
   type TimeSeriesPoint,
   type CourseActivity,
   type StudentActivity,
-  type TeacherActivity,
   type AtRiskStudent,
   type LowCompletionLesson,
-  type BookingHeatmapCell,
   type AdminCertificate,
   type AdminCertificateType,
 } from '../../api/admin.api';
@@ -116,9 +114,6 @@ export default function AdminDashboardPage() {
   ];
 
   const kpis = data?.kpis;
-  const pendingBookings =
-    data?.bookings.byStatus.find((b) => b.status === 'PENDING')?.count ?? 0;
-
   // Conteo de certificados por tipo (ya agregado por el backend, no por la página cargada)
   const certByType = (type: AdminCertificateType) => certsPage?.stats.byType[type] ?? 0;
   const recentCerts = certsPage?.data ?? [];
@@ -248,9 +243,6 @@ export default function AdminDashboardPage() {
             <KpiCard label="Lecciones completadas" value={kpis.completedLessons} color="#10b981" icon="✅" />
             <KpiCard label="Intentos de quiz" value={kpis.quizAttempts} color="#8b5cf6" icon="🧠" />
             <KpiCard label="Score medio" value={`${kpis.avgQuizScore}%`} color="#f97316" icon="⭐" />
-            <KpiCard label="Reservas creadas" value={kpis.newBookings} color="var(--color-primary)" icon="📅" />
-            <KpiCard label="Confirmadas" value={kpis.confirmedBookings} color="#10b981" icon="✔️" />
-            <KpiCard label="Canceladas" value={kpis.cancelledBookings} color="#ef4444" icon="❌" />
             <KpiCard label="Certificados emitidos" value={certsTotal} color="#7c3aed" icon="📜" subtitle="Total histórico" />
             <KpiCard label="Cursos completados" value={certByType('COURSE_COMPLETION')} color="#0891b2" icon="🏆" subtitle="Certificados" />
           </div>
@@ -265,7 +257,6 @@ export default function AdminDashboardPage() {
                 series={[
                   { key: 'completedLessons', label: 'Lecciones completadas', color: '#10b981' },
                   { key: 'quizAttempts', label: 'Intentos de quiz', color: '#8b5cf6' },
-                  { key: 'newBookings', label: 'Reservas', color: '#f59e0b' },
                   { key: 'newUsers', label: 'Nuevos alumnos', color: '#6366f1' },
                 ]}
               />
@@ -300,96 +291,6 @@ export default function AdminDashboardPage() {
               </div>
             </section>
           </div>
-
-          {/* ── Desglose de reservas ── */}
-          <section style={s.section}>
-            <h2 style={s.sectionTitle}>Desglose de reservas</h2>
-            <div style={s.twoCol}>
-              <div className="vkb-card" style={{ padding: '20px 24px' }}>
-                <p style={s.cardSubtitle}>Por estado</p>
-                {data.bookings.byStatus.length === 0
-                  ? <p style={s.empty}>Sin reservas</p>
-                  : data.bookings.byStatus.map((b) => {
-                    const labels: Record<string, string> = { CONFIRMED: 'Confirmadas', PENDING: 'Pendientes', CANCELLED: 'Canceladas' };
-                    const colors: Record<string, string> = { CONFIRMED: '#10b981', PENDING: '#f59e0b', CANCELLED: '#ef4444' };
-                    const max = Math.max(...data.bookings.byStatus.map((x) => x.count), 1);
-                    return (
-                      <HorizBar
-                        key={b.status}
-                        label={labels[b.status] ?? b.status}
-                        value={b.count}
-                        max={max}
-                        unit="reservas"
-                        color={colors[b.status] ?? '#6366f1'}
-                      />
-                    );
-                  })
-                }
-                {data.bookings.byStatus.length > 0 && (
-                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.75rem' }}>
-                    {pendingBookings > 0 && `⚠️ ${pendingBookings} pendiente${pendingBookings !== 1 ? 's' : ''} sin confirmar`}
-                  </p>
-                )}
-              </div>
-              <div className="vkb-card" style={{ padding: '20px 24px' }}>
-                <p style={s.cardSubtitle}>Por modalidad</p>
-                {data.bookings.byMode.length === 0
-                  ? <p style={s.empty}>Sin reservas</p>
-                  : data.bookings.byMode.map((b) => {
-                    const labels: Record<string, string> = { IN_PERSON: 'Presencial', ONLINE: 'Online' };
-                    const colors: Record<string, string> = { IN_PERSON: '#6366f1', ONLINE: '#f97316' };
-                    const max = Math.max(...data.bookings.byMode.map((x) => x.count), 1);
-                    return (
-                      <HorizBar
-                        key={b.mode}
-                        label={labels[b.mode] ?? b.mode}
-                        value={b.count}
-                        max={max}
-                        unit="reservas"
-                        color={colors[b.mode] ?? '#6366f1'}
-                      />
-                    );
-                  })
-                }
-              </div>
-            </div>
-          </section>
-
-          {/* ── Profesores ── */}
-          <section style={s.section}>
-            <h2 style={s.sectionTitle}>Actividad de profesores</h2>
-
-            {/* Resumen en 3 mini-KPIs */}
-            <div style={s.teacherSummary}>
-              <div style={s.teacherKpi}>
-                <span style={s.teacherKpiValue}>{data.teachers.summary.activeTeachers}</span>
-                <span style={s.teacherKpiLabel}>Profesores activos</span>
-              </div>
-              <div style={s.teacherKpiDivider} />
-              <div style={s.teacherKpi}>
-                <span style={s.teacherKpiValue}>{data.teachers.summary.totalConfirmedSessions}</span>
-                <span style={s.teacherKpiLabel}>Sesiones confirmadas</span>
-              </div>
-              <div style={s.teacherKpiDivider} />
-              <div style={s.teacherKpi}>
-                <span style={s.teacherKpiValue}>{data.teachers.summary.totalHoursTaught}h</span>
-                <span style={s.teacherKpiLabel}>Horas impartidas</span>
-              </div>
-            </div>
-
-            {/* Lista de profesores */}
-            {data.teachers.top.length === 0 ? (
-              <div className="vkb-card" style={{ padding: '20px 24px' }}>
-                <p style={s.empty}>Sin actividad de profesores en el período</p>
-              </div>
-            ) : (
-              <div style={s.teacherList}>
-                {data.teachers.top.map((t, i) => (
-                  <TeacherRow key={t.teacherId} rank={i + 1} teacher={t} />
-                ))}
-              </div>
-            )}
-          </section>
 
           {/* ── Distribución de scores + Lecciones menos completadas ── */}
           <div style={s.twoCol}>
@@ -436,25 +337,6 @@ export default function AdminDashboardPage() {
               </div>
             </section>
           </div>
-
-          {/* ── Heatmap de reservas ── */}
-          <section style={s.section}>
-            <h2 style={s.sectionTitle}>
-              Heatmap de reservas por hora
-              {data.insights.avgBookingLeadDays > 0 && (
-                <span style={s.leadTimeBadge}>
-                  Antelación media: {data.insights.avgBookingLeadDays} días
-                </span>
-              )}
-            </h2>
-            <div className="vkb-card" style={{ padding: '20px 24px' }}>
-              {data.insights.bookingHeatmap.length === 0 ? (
-                <p style={s.empty}>Sin reservas en el período</p>
-              ) : (
-                <BookingHeatmap data={data.insights.bookingHeatmap} />
-              )}
-            </div>
-          </section>
 
           {/* ── Alumnos en riesgo ── */}
           {data.insights.atRiskStudents.length > 0 && (
@@ -659,69 +541,6 @@ function LowCompletionRow({ lesson }: { lesson: LowCompletionLesson }) {
   );
 }
 
-// ─── Booking Heatmap ──────────────────────────────────────────────────────────
-
-function BookingHeatmap({ data }: { data: BookingHeatmapCell[] }) {
-  // Horas visibles: 7–22 (horario habitual)
-  const hours = Array.from({ length: 16 }, (_, i) => i + 7);
-  // Días: 0=Dom en JS → reordenamos Lun(1)…Dom(0)
-  const dayOrder = [1, 2, 3, 4, 5, 6, 0];
-  const dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-
-  const heatmapMap = new Map(data.map((c) => [`${c.day}-${c.hour}`, c.count]));
-  const maxCount = Math.max(...data.map((c) => c.count), 1);
-
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <div style={{ display: 'inline-grid', gridTemplateColumns: `44px repeat(${hours.length}, 30px)`, gap: 3, minWidth: 0 }}>
-        {/* Cabecera horas */}
-        <div />
-        {hours.map((h) => (
-          <div key={h} style={{ textAlign: 'center' as const, fontSize: '0.6rem', color: 'var(--color-text-muted)', paddingBottom: 3 }}>
-            {h}h
-          </div>
-        ))}
-        {/* Filas por día */}
-        {dayOrder.map((jsDay, i) => (
-          <React.Fragment key={jsDay}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', paddingRight: 4 }}>
-              {dayLabels[i]}
-            </div>
-            {hours.map((h) => {
-              const count = heatmapMap.get(`${jsDay}-${h}`) ?? 0;
-              const intensity = count / maxCount;
-              return (
-                <div
-                  key={h}
-                  title={`${dayLabels[i]} ${h}:00 — ${count} reserva${count !== 1 ? 's' : ''}`}
-                  style={{
-                    height: 22,
-                    borderRadius: 3,
-                    background:
-                      count === 0
-                        ? 'var(--color-border)'
-                        : `rgba(249, 115, 22, ${0.12 + intensity * 0.88})`,
-                    transition: 'background 0.3s',
-                    cursor: count > 0 ? 'default' : undefined,
-                  }}
-                />
-              );
-            })}
-          </React.Fragment>
-        ))}
-      </div>
-      {/* Leyenda */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.75rem', fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>
-        <span>Menos</span>
-        {[0.1, 0.3, 0.55, 0.75, 1].map((op) => (
-          <div key={op} style={{ width: 14, height: 14, borderRadius: 2, background: `rgba(249, 115, 22, ${op})` }} />
-        ))}
-        <span>Más</span>
-      </div>
-    </div>
-  );
-}
-
 // ─── At-risk Student Row ──────────────────────────────────────────────────────
 
 function AtRiskRow({ student }: { student: AtRiskStudent }) {
@@ -746,65 +565,6 @@ function AtRiskRow({ student }: { student: AtRiskStudent }) {
       <span style={{ fontSize: '0.75rem', fontWeight: 700, color, background: `${color}1a`, padding: '2px 8px', borderRadius: 10, flexShrink: 0 }}>
         {label}
       </span>
-    </div>
-  );
-}
-
-// ─── Teacher Row ──────────────────────────────────────────────────────────────
-
-function TeacherRow({ rank, teacher }: { rank: number; teacher: TeacherActivity }) {
-  const initials = teacher.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-  const total = teacher.confirmed + teacher.pending + teacher.cancelled;
-  const confirmedPct = total > 0 ? (teacher.confirmed / total) * 100 : 0;
-  const pendingPct = total > 0 ? (teacher.pending / total) * 100 : 0;
-  const cancelledPct = total > 0 ? (teacher.cancelled / total) * 100 : 0;
-
-  return (
-    <div className="vkb-card" style={{ padding: '14px 18px', marginBottom: 10 }}>
-      {/* Cabecera: avatar + nombre + métricas rápidas */}
-      <div style={s.teacherRowHeader}>
-        <span style={s.rank}>{rank}</span>
-        <div style={{ ...s.miniAvatar, background: '#f97316' }}>{initials}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {teacher.name}
-          </span>
-          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-            {teacher.email}
-          </span>
-        </div>
-        {/* Horas */}
-        <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
-          <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f97316', lineHeight: 1 }}>
-            {teacher.hoursTaught}h
-          </div>
-          <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>impartidas</div>
-        </div>
-      </div>
-
-      {/* Barra de sesiones por estado */}
-      <div>
-        <div style={{ marginBottom: '0.6rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', gap: '0.5rem', flexWrap: 'wrap' as const }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-              <strong style={{ color: '#10b981' }}>{teacher.confirmed}</strong> confirmadas ·{' '}
-              <strong style={{ color: '#f59e0b' }}>{teacher.pending}</strong> pendientes ·{' '}
-              <strong style={{ color: '#ef4444' }}>{teacher.cancelled}</strong> canceladas
-            </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-              {teacher.online > 0 && `${teacher.online} online`}
-              {teacher.online > 0 && teacher.inPerson > 0 && ' · '}
-              {teacher.inPerson > 0 && `${teacher.inPerson} presencial`}
-            </span>
-          </div>
-          {/* Barra compuesta */}
-          <div style={{ height: 8, background: 'var(--color-border)', borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${confirmedPct}%`, background: '#10b981', transition: 'width 0.4s ease' }} />
-            <div style={{ width: `${pendingPct}%`, background: '#f59e0b', transition: 'width 0.4s ease' }} />
-            <div style={{ width: `${cancelledPct}%`, background: '#ef4444', transition: 'width 0.4s ease' }} />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -1027,7 +787,6 @@ const s: Record<string, React.CSSProperties> = {
   // ── Sections
   section: { marginBottom: '1.5rem' },
   sectionTitle: { fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: '0.6rem' },
-  cardSubtitle: { fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '0.875rem', marginTop: 0 },
   twoCol: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' },
 
   // ── Misc
@@ -1041,13 +800,4 @@ const s: Record<string, React.CSSProperties> = {
 
   // ── Certificates section
   certTypeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '0.875rem' },
-
-  // ── Teacher section
-  teacherSummary: { display: 'flex', alignItems: 'center', background: 'var(--color-surface)', border: '1.5px solid rgba(234,88,12,0.15)', borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 24px rgba(234,88,12,0.08)', padding: '1rem 1.5rem', marginBottom: '0.875rem', gap: 0 },
-  teacherKpi: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', flex: 1, gap: '0.2rem' },
-  teacherKpiValue: { fontSize: '1.75rem', fontWeight: 800, color: '#f97316', lineHeight: 1 },
-  teacherKpiLabel: { fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', fontWeight: 600 },
-  teacherKpiDivider: { width: 1, height: 40, background: 'var(--color-border)', flexShrink: 0, margin: '0 1rem' },
-  teacherList: { display: 'flex', flexDirection: 'column' as const, gap: '0' },
-  teacherRowHeader: { display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' },
 };

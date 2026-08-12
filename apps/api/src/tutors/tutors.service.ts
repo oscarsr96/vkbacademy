@@ -160,7 +160,7 @@ export class TutorsService {
       : null;
 
     // 3. Todas las queries en paralelo
-    const [completedInPeriod, quizAttempts, examAttempts, certificates, bookings, enrollments] =
+    const [completedInPeriod, quizAttempts, examAttempts, certificates, enrollments] =
       await Promise.all([
         // Lecciones completadas en el período
         this.prisma.userProgress.findMany({
@@ -197,16 +197,6 @@ export class TutorsService {
             ...(dateRange ? { issuedAt: dateRange } : {}),
           },
           select: { type: true, issuedAt: true },
-        }),
-
-        // Reservas confirmadas en el período
-        this.prisma.booking.findMany({
-          where: {
-            studentId,
-            status: 'CONFIRMED',
-            ...(dateRange ? { startAt: dateRange } : {}),
-          },
-          select: { startAt: true, endAt: true },
         }),
 
         // Matrículas + árbol de módulos/lecciones para calcular % de avance all-time
@@ -302,12 +292,7 @@ export class TutorsService {
       certByType[cert.type] = (certByType[cert.type] ?? 0) + 1;
     }
 
-    // 9. Horas de clase (reservas confirmadas)
-    const totalBookingMinutes = bookings.reduce((acc, b) => {
-      return acc + (new Date(b.endAt).getTime() - new Date(b.startAt).getTime()) / 60000;
-    }, 0);
-
-    // 10. Actividad diaria — lecciones completadas y quizzes agrupados por día
+    // 9. Actividad diaria — lecciones completadas y quizzes agrupados por día
     const activityMap = new Map<string, { lessons: number; quizzes: number }>();
 
     for (const p of completedInPeriod) {
@@ -367,10 +352,6 @@ export class TutorsService {
       certificates: {
         total: certificates.length,
         byType: certByType,
-      },
-      sessions: {
-        confirmed: bookings.length,
-        totalHours: Math.round(totalBookingMinutes / 6) / 10,
       },
       courses,
       activity,

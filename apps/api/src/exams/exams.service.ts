@@ -45,7 +45,7 @@ export class ExamsService {
    * Un STUDENT solo puede consultar/iniciar exámenes de cursos en los que está
    * matriculado (igual que `getAvailable`). Para un banco de módulo se exige
    * matrícula en el curso al que pertenece el módulo. Los roles no-alumno
-   * (profesores/admin) mantienen su acceso actual.
+   * (tutores/admin) mantienen su acceso actual.
    */
   private async assertBankAccess(
     userId: string,
@@ -77,11 +77,7 @@ export class ExamsService {
 
   // ─── Info del banco de preguntas ──────────────────────────────────────────
 
-  async getBankInfo(
-    params: { courseId?: string; moduleId?: string },
-    userId: string,
-    role: Role,
-  ) {
+  async getBankInfo(params: { courseId?: string; moduleId?: string }, userId: string, role: Role) {
     const { courseId, moduleId } = params;
     if (!courseId && !moduleId) {
       throw new BadRequestException('Debes especificar courseId o moduleId');

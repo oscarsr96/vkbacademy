@@ -1,6 +1,6 @@
 # VKBacademy
 
-Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**. Los jugadores acceden a cursos con vídeos, ejercicios interactivos (emparejar, ordenar, rellenar huecos) y tests; los tutores (padres/responsables) gestionan las reservas de clases particulares con los profesores; los administradores disponen de un panel completo con analytics en tiempo real.
+Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**. Los jugadores acceden a cursos con vídeos, ejercicios interactivos (emparejar, ordenar, rellenar huecos) y tests; los tutores (padres/responsables) siguen el progreso de sus alumnos asignados; los administradores disponen de un panel completo con analytics en tiempo real.
 
 ---
 
@@ -17,7 +17,6 @@ Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**
 | Auth | JWT + Refresh tokens (implementación propia) |
 | Almacenamiento vídeo | AWS S3 + URLs firmadas (1 h) |
 | Email transaccional | Resend |
-| Videollamadas | Daily.co |
 | Estado global (web) | Zustand 5 |
 | Data fetching | TanStack Query v5 |
 | Monorepo | Turborepo + pnpm workspaces |
@@ -28,9 +27,8 @@ Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**
 
 | Rol | Descripción |
 |-----|-------------|
-| `STUDENT` | Accede a cursos de su nivel, realiza tests, ve sus reservas (solo lectura) |
-| `TUTOR` | Gestiona reservas en nombre de sus alumnos asignados |
-| `TEACHER` | Gestiona cursos donde es autor, fija su disponibilidad, confirma/cancela reservas |
+| `STUDENT` | Accede a cursos de su nivel, realiza tests |
+| `TUTOR` | Ve el progreso y resultados de sus alumnos asignados |
 | `ADMIN` | Acceso completo: CRUD usuarios, cursos, contenido con IA y analytics avanzado |
 
 ---
@@ -77,9 +75,6 @@ AWS_SIGNED_URL_EXPIRES=3600
 RESEND_API_KEY=""
 EMAIL_FROM="noreply@tuclub.com"
 
-# Videollamadas (Daily.co)
-DAILY_API_KEY=""
-
 # App
 PORT=3001
 FRONTEND_URL="http://localhost:5173"
@@ -103,9 +98,10 @@ Usuarios creados por el seed:
 
 | Email | Contraseña | Rol |
 |-------|-----------|-----|
-| `admin@vkbacademy.com` | `password123` | ADMIN |
-| `teacher@vkbacademy.com` | `password123` | TEACHER |
-| `oscar.sanchez@egocogito.com` | `password123` | TUTOR |
+| `superadmin@vkbacademy.com` | `password123` | SUPER_ADMIN |
+| `admin@vkbacademy.com` | `password123` | ADMIN (Vallekas Basket) |
+| `admin@cboscar.com` | `password123` | ADMIN (CB Oscar) |
+| `tutor@vkbacademy.com` | `password123` | TUTOR |
 | `student@vkbacademy.com` | `password123` | STUDENT (3º ESO) |
 
 ### 5. Arrancar en desarrollo
@@ -135,8 +131,6 @@ pnpm dev
 │   │       ├── courses/       # Cursos, módulos, lecciones, progreso
 │   │       ├── quizzes/       # Tests, corrección en servidor
 │   │       ├── progress/      # Progreso por lección
-│   │       ├── bookings/      # Reservas + Daily.co
-│   │       ├── availability/  # Slots de disponibilidad del profesor
 │   │       ├── tutors/        # Alumnos asignados a un tutor
 │   │       ├── media/         # S3 upload + URLs firmadas
 │   │       ├── notifications/ # Emails transaccionales (Resend)
@@ -152,15 +146,15 @@ pnpm dev
 │   │       ├── layouts/      # AppLayout (sidebar por rol) + PublicLayout (marketing)
 │   │       ├── pages/
 │   │       │   ├── admin/    # AdminDashboardPage, AdminUsersPage, AdminCoursesPage,
-│   │       │   │             # AdminChallengesPage, AdminRedemptionsPage, AdminBillingPage,
-│   │       │   │             # AdminExamBankPage
-│   │       │   ├── marketing/           # LandingPage, AboutPage, PricingPage (públicas)
+│   │       │   │             # AdminChallengesPage, AdminRedemptionsPage, AdminAcademiesPage,
+│   │       │   │             # AdminExamBankPage, AdminCourseDetailPage
+│   │       │   ├── marketing/           # LandingPage, AboutPage, PricingPage, AcademyLandingPage (públicas)
+│   │       │   ├── exam/                # ConfigStep, InProgressStep, ResultsStep
 │   │       │   ├── CertificatesPage.tsx # Mis certificados + descarga PDF
-│   │       │   ├── ExamsListPage.tsx    # Lista de bancos disponibles para el alumno
 │   │       │   ├── ExamPage.tsx         # Flujo completo: config → examen → resultados + PDF
 │   │       │   ├── ChallengesPage.tsx   # Retos + tienda de merchandising
-│   │       │   ├── BookingsPage.tsx
 │   │       │   ├── CoursesPage.tsx
+│   │       │   ├── TutorStudentsPage.tsx
 │   │       │   └── …
 │   │       └── utils/
 │   │           ├── certificatePdf.ts    # PDF de certificados con jsPDF
@@ -192,7 +186,7 @@ GET  /courses/:id/progress      → progreso del usuario autenticado
 GET  /lessons/:id               → detalle de lección
                                   (incluye campo `content` para lecciones interactivas)
 POST /lessons/:id/complete      → marcar lección como completada
-POST /media/upload-url          → presigned URL para subir vídeo a S3 [TEACHER, ADMIN]
+POST /media/upload-url          → presigned URL para subir vídeo a S3 [ADMIN]
 GET  /media/view-url/:key       → URL firmada para reproducir vídeo
 ```
 
@@ -201,19 +195,6 @@ GET  /media/view-url/:key       → URL firmada para reproducir vídeo
 GET  /quizzes/:id               → preguntas SIN isCorrect
 POST /quizzes/:id/submit        → respuestas → { score, correcciones }
 GET  /quizzes/:id/attempts      → historial de intentos
-```
-
-### Reservas
-```
-GET  /teachers                            → lista de profesores con disponibilidad
-GET  /teachers/:id/slots?from=&to=        → slots libres en rango
-POST /bookings                            → crear reserva [TUTOR, ADMIN]
-PATCH /bookings/:id/confirm               → confirmar [TEACHER, ADMIN]
-PATCH /bookings/:id/cancel                → cancelar [TUTOR, TEACHER, ADMIN]
-GET  /bookings/mine                       → mis reservas (filtrado por rol)
-GET  /availability/mine                   → mis slots [TEACHER]
-POST /availability                        → añadir slot [TEACHER, ADMIN]
-DELETE /availability/:id                  → eliminar slot [TEACHER, ADMIN]
 ```
 
 ### Tutores
@@ -258,8 +239,6 @@ POST   /admin/courses/generate              → generación con IA
 DELETE /admin/courses/:id
 GET    /admin/analytics?from=&to=&granularity=day|week|month&courseId=&schoolYearId=
 GET    /admin/metrics
-GET    /admin/billing?from=&to=
-PATCH  /admin/billing/config
 GET    /admin/challenges
 POST   /admin/challenges
 PATCH  /admin/challenges/:id
@@ -299,11 +278,10 @@ GET  /certificates/verify/:code  → verificación pública (sin JWT)
 
 Filtros: período (presets 7d/30d/3m/6m/1a o rango personalizado), agrupación día/semana/mes, nivel educativo y curso.
 
-- **8 KPIs**: nuevos alumnos, matrículas, lecciones completadas, intentos de quiz, score medio, reservas creadas, confirmadas, canceladas
+- **KPIs**: nuevos alumnos, matrículas, lecciones completadas, intentos de quiz, score medio
 - **Gráfico de líneas SVG** con 4 series temporales (sin librerías externas)
 - **Top 5 cursos** por matrículas con barras de progreso
 - **Top 5 alumnos** por actividad con score medio
-- **Desglose de reservas** por estado (CONFIRMED/PENDING/CANCELLED) y modalidad (IN_PERSON/ONLINE)
 
 ### Gestión de usuarios (`/admin/users`)
 
@@ -321,13 +299,6 @@ Filtros: período (presets 7d/30d/3m/6m/1a o rango personalizado), agrupación d
 - Generación con IA (Claude Sonnet) para cursos, módulos, lecciones (incluidos tipos MATCH/SORT/FILL_BLANK) y preguntas individuales
 - Los cambios en el admin invalidan automáticamente la caché del alumno (sin necesidad de recargar la página)
 
-### Facturación (`/admin/billing`)
-
-- Ingresos estimados: suscripciones de alumnos + comisión sobre clases
-- Costes estimados: Resend, Daily.co, S3, Anthropic, infraestructura
-- Margen neto con filtro de período personalizable
-- Configuración de tarifas y costes editable por el admin
-
 ### Retos (`/admin/challenges`)
 
 - Tabla de retos con tipo, objetivo, puntos, completados y estado activo/inactivo
@@ -339,27 +310,6 @@ Filtros: período (presets 7d/30d/3m/6m/1a o rango personalizado), agrupación d
 - Historial completo de todos los canjes de puntos de los alumnos
 - KPIs: total canjes, pendientes de entrega (resaltados en amarillo), puntos gastados, alumnos distintos
 - Botón "Marcar entregado" por cada canje pendiente con registro de fecha de entrega
-
----
-
-## Flujo de reservas
-
-```
-Tutor
-  → selecciona alumno
-  → elige profesor (slots en tiempo real)
-  → elige fecha/hora
-  → indica curso, modalidad (presencial / online) y notas
-  → crea reserva  ───────────────────→  email al profesor
-
-Profesor confirma
-  → si ONLINE: sala Daily.co creada automáticamente
-  → email a tutor + alumno con enlace de videollamada
-
-Cancelación (tutor, profesor o admin)
-  → sala Daily.co eliminada si era ONLINE
-  → email a las demás partes
-```
 
 ---
 
@@ -396,17 +346,19 @@ El sistema de retos fideliza a los alumnos mediante puntos e insignias obtenidos
 
 | Tipo | Descripción |
 |------|-------------|
-| `LESSON_COMPLETED` | Completa N lecciones en total |
-| `MODULE_COMPLETED` | Completa N módulos enteros |
-| `COURSE_COMPLETED` | Completa N cursos completos |
-| `QUIZ_SCORE` | Consigue ≥ N% en cualquier quiz |
-| `BOOKING_ATTENDED` | Asiste a N clases confirmadas |
+| `EXERCISE_COMPLETED` | Completa N ejercicios (lecciones EXERCISE/MATCH/SORT/FILL_BLANK/QUIZ) |
+| `EXERCISE_SCORE` | Consigue ≥ N% en cualquier ejercicio |
+| `THEORY_COMPLETED` | Genera/lee N módulos de teoría |
+| `EXAM_COMPLETED` | Entrega N exámenes |
+| `EXAM_SCORE` | Consigue ≥ N% en cualquier examen |
 | `STREAK_WEEKLY` | Mantén una racha activa de N semanas consecutivas |
-| `TOTAL_HOURS` | Acumula N horas de estudio |
+| `TOTAL_HOURS_EXERCISE` | Acumula N horas haciendo ejercicios |
+| `TOTAL_HOURS_THEORY` | Acumula N horas estudiando teoría |
+| `TOTAL_HOURS_EXAM` | Acumula N horas resolviendo exámenes |
 
 ### Racha semanal
 
-La racha (`currentStreak`) se calcula por semana ISO. Cada vez que el alumno completa una lección, quiz o clase en una semana distinta a la anterior, la racha aumenta. Si hay un salto de más de una semana, la racha se reinicia a 1.
+La racha (`currentStreak`) se calcula por semana ISO. Cada vez que el alumno completa una lección, un ejercicio, un examen o un módulo de teoría en una semana distinta a la anterior, la racha aumenta. Si hay un salto de más de una semana, la racha se reinicia a 1.
 
 ### Tienda de merchandising (`/challenges`)
 
@@ -414,13 +366,13 @@ Los alumnos pueden canjear sus puntos acumulados por artículos del club. Cada c
 
 ### Visibilidad por rol
 
-| Ruta | STUDENT | TUTOR | TEACHER | ADMIN |
-|------|---------|-------|---------|-------|
-| `/challenges` | ✅ | ✅ | ❌ | ❌ |
-| `/my-exams` | ✅ | ❌ | ❌ | ❌ |
-| `/admin/challenges` | ❌ | ❌ | ❌ | ✅ |
-| `/admin/redemptions` | ❌ | ❌ | ❌ | ✅ |
-| `/admin/exam-banks` | ❌ | ❌ | ❌ | ✅ |
+| Ruta | STUDENT | TUTOR | ADMIN |
+|------|---------|-------|-------|
+| `/challenges` | ✅ | ✅ | ❌ |
+| `/exam` | ✅ | ❌ | ❌ |
+| `/admin/challenges` | ❌ | ❌ | ✅ |
+| `/admin/redemptions` | ❌ | ❌ | ✅ |
+| `/admin/exam-banks` | ❌ | ❌ | ✅ |
 
 ---
 
@@ -430,7 +382,7 @@ Cada curso y módulo puede tener un banco de preguntas independiente de los quiz
 
 ### Flujo del alumno
 
-1. **`/my-exams`** — lista todos los bancos disponibles con el último score
+1. **Enlace desde el curso/módulo** (`/exam?courseId=&moduleId=`) — arranca la configuración del banco elegido
 2. **Configuración** — nº preguntas (1-50), timer opcional, respuesta única opcional
 3. **Examen** — preguntas seleccionadas aleatoriamente (Fisher-Yates), barra de progreso, cuenta atrás con auto-submit
 4. **Resultados** — score, correcciones con texto real de respuestas, historial de intentos
@@ -454,20 +406,25 @@ Cada curso y módulo puede tener un banco de preguntas independiente de los quiz
 | Fase | Descripción | Estado |
 |------|-------------|--------|
 | 0 | Setup monorepo, Docker, Prisma | ✅ |
-| 1 | Autenticación y roles (STUDENT, TUTOR, TEACHER, ADMIN) | ✅ |
+| 1 | Autenticación y roles | ✅ |
 | 2 | Cursos, módulos, vídeos, niveles educativos | ✅ |
 | 3 | Tests, corrección en servidor, progreso | ✅ |
-| 4 | Sistema de reservas + rol TUTOR + Daily.co | ✅ |
+| 4 | Reservas + rol TUTOR | ✅ |
 | 5 | Notificaciones por email (Resend) | ✅ |
-| 6 | Panel de administración completo (analytics, usuarios, cursos, facturación) | ✅ |
+| 6 | Panel de administración completo (analytics, usuarios, cursos) | ✅ |
 | 7 | Gamificación (retos, insignias, racha, tienda de merchandising) | ✅ |
 | 7.5 | Lecciones interactivas (MATCH emparejar, SORT ordenar, FILL_BLANK rellenar huecos) | ✅ |
 | 8 | Sistema de exámenes por curso y módulo (con PDF descargable) | ✅ |
 | 8.5 | Certificados digitales descargables (completar módulo/curso, aprobar examen) | ✅ |
 | 8.6 | Páginas de marketing públicas (Landing, Sobre nosotros, Precios) | ✅ |
-| 9 | App móvil (Expo) | ⬜ Pendiente |
-| 10 | Testing (unit + e2e) | ⬜ Pendiente |
-| 11 | Deployment | ⬜ Pendiente |
+| 9 | Deployment parcial (Vercel + Render + Neon) | ✅ |
+| 10 | Multi-tenancy | ✅ |
+| 10.5 | Entorno PRE + pipeline progresivo | ✅ |
+| 10.6 | Auto-asignación de vídeos YouTube | ✅ |
+| 10.7 | Poda de reservas y rol TEACHER | ✅ |
+| 11 | App móvil (Expo) | ⬜ Pendiente |
+| 12 | Testing completo | ⬜ Pendiente |
+| 13 | Deployment completo | ⬜ Pendiente |
 
 ---
 
@@ -500,4 +457,4 @@ Si el usuario ya está autenticado y visita `/`, se redirige automáticamente a 
 
 ---
 
-*Última actualización: Febrero 2026 — Fases 8.5 (Certificados) y 8.6 (Marketing) completadas*
+*Última actualización: Agosto 2026 — Fase 10.7 (Poda de reservas y rol TEACHER) completada*

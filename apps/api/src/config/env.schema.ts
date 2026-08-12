@@ -63,9 +63,6 @@ export const envValidationSchema = Joi.object({
     .pattern(/^(?:[^<>]+\s*<[^@<>\s]+@[^@<>\s]+>|[^@<>\s]+@[^@<>\s]+)$/)
     .default('VKB Academy <info@vallekasbasket.com>'),
 
-  // ── Videollamadas (Daily.co) ───────────────────────────────────────────────
-  DAILY_API_KEY: Joi.string().allow('').optional(),
-
   // ── IA (generación de cursos) ───────────────────────────────────────────────
   // Gemini 2.0 Flash (primary, gratis) + Claude Haiku (fallback, pago)
   GEMINI_API_KEY: Joi.string().allow('').optional(),

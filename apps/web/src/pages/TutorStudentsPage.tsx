@@ -403,7 +403,7 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
 
   if (!stats) return null;
 
-  const { lessons, quizzes, exams, certificates, sessions } = stats;
+  const { lessons, quizzes, exams, certificates } = stats;
   const memberSince = new Date(stats.student.createdAt).toLocaleDateString('es-ES', {
     day: 'numeric',
     month: 'long',
@@ -482,12 +482,6 @@ function StudentDetail({ student, periodDays }: { student: StudentSummary; perio
           value={stats.student.totalPoints}
           label="Puntos totales"
           sub={`Racha más larga: ${stats.student.longestStreak} sem.`}
-        />
-        <KpiCard
-          emoji="📅"
-          value={sessions.confirmed}
-          label="Clases confirmadas"
-          sub={`${sessions.totalHours}h en total`}
         />
         <KpiCard
           emoji="🔥"

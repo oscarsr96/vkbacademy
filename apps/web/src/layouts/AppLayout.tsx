@@ -16,7 +16,6 @@ function buildNavLinks(role: Role | undefined): NavItem[] {
     return [
       ...base,
       { to: '/tutor/students', label: 'Mis alumnos', icon: 'users' },
-      { to: '/bookings', label: 'Reservas', icon: 'calendar' },
       { to: '/profile', label: 'Mi perfil', icon: 'user' },
     ];
   }
@@ -28,7 +27,6 @@ function buildNavLinks(role: Role | undefined): NavItem[] {
       { to: '/admin/academies', label: 'Academias', icon: 'school' },
       { to: '/admin/users', label: 'Usuarios', icon: 'users' },
       { to: '/admin/courses', label: 'Cursos', icon: 'book' },
-      { to: '/admin/billing', label: 'Facturación', icon: 'credit-card' },
       { to: '/admin/challenges', label: 'Retos', icon: 'target' },
       { to: '/admin/redemptions', label: 'Canjes', icon: 'gift' },
       { to: '/profile', label: 'Mi perfil', icon: 'user', divider: true },
@@ -41,19 +39,9 @@ function buildNavLinks(role: Role | undefined): NavItem[] {
       { to: '/admin', label: 'Dashboard', icon: 'settings', end: true, divider: true },
       { to: '/admin/users', label: 'Usuarios', icon: 'users' },
       { to: '/admin/courses', label: 'Cursos', icon: 'book' },
-      { to: '/admin/billing', label: 'Facturación', icon: 'credit-card' },
       { to: '/admin/challenges', label: 'Retos', icon: 'target' },
       { to: '/admin/redemptions', label: 'Canjes', icon: 'gift' },
       { to: '/profile', label: 'Mi perfil', icon: 'user', divider: true },
-    ];
-  }
-
-  if (role === Role.TEACHER) {
-    return [
-      ...base,
-      { to: '/teacher', label: 'Portal Docente', icon: 'school' },
-      { to: '/courses', label: 'Cursos', icon: 'book' },
-      { to: '/profile', label: 'Mi perfil', icon: 'user' },
     ];
   }
 

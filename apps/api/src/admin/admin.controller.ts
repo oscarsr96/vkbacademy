@@ -33,9 +33,6 @@ import { AssignTutorDto } from './dto/assign-tutor.dto';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 import { UpdateAdminUserDto } from './dto/update-admin-user.dto';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
-import { BillingQueryDto } from './dto/billing-query.dto';
-import { UpdateBillingConfigDto } from './dto/update-billing-config.dto';
-import { BillingService } from './billing.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { CreateExamQuestionDto, UpdateExamQuestionDto } from './dto/create-exam-question.dto';
@@ -59,7 +56,6 @@ export class AdminController {
     private readonly adminGamificationService: AdminGamificationService,
     private readonly adminExamsService: AdminExamsService,
     private readonly courseGeneratorService: CourseGeneratorService,
-    private readonly billingService: BillingService,
     private readonly certificatesService: CertificatesService,
   ) {}
 
@@ -124,21 +120,6 @@ export class AdminController {
   @Get('metrics')
   getMetrics() {
     return this.adminAnalyticsService.getMetrics();
-  }
-
-  // ─── Facturación ──────────────────────────────────────────────────────────
-
-  @Get('billing')
-  getBilling(@Query() query: BillingQueryDto, @CurrentAcademy() academyId: string | null) {
-    return this.billingService.getReport(query.from, query.to, academyId);
-  }
-
-  @Patch('billing/config')
-  updateBillingConfig(
-    @Body() dto: UpdateBillingConfigDto,
-    @CurrentAcademy() academyId: string | null,
-  ) {
-    return this.billingService.updateConfig(dto, academyId);
   }
 
   @Get('analytics')

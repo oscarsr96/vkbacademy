@@ -14,7 +14,6 @@ describe('Admin — /admin', () => {
   let adminToken: string;
   let superAdminToken: string;
   let studentToken: string;
-  let teacherToken: string;
 
   let createdUserId: string;
   let studentId: string;
@@ -23,18 +22,16 @@ describe('Admin — /admin', () => {
   beforeAll(async () => {
     await createApp();
 
-    const [a, sa, s, t] = await Promise.all([
+    const [a, sa, s] = await Promise.all([
       login('admin@vkbacademy.com'),
       login('superadmin@vkbacademy.com'),
       login('student@vkbacademy.com'),
-      login('teacher@vkbacademy.com'),
     ]);
 
     adminToken = a.accessToken;
     superAdminToken = sa.accessToken;
     studentToken = s.accessToken;
     studentId = s.user.id;
-    teacherToken = t.accessToken;
 
     // Resolver un curso para usar en los tests de matrículas
     const prisma = getPrisma();
@@ -68,11 +65,6 @@ describe('Admin — /admin', () => {
 
     it('STUDENT no puede acceder a los usuarios (403)', async () => {
       const res = await authGet('/admin/users', studentToken);
-      expect(res.status).toBe(403);
-    });
-
-    it('TEACHER no puede acceder a los usuarios (403)', async () => {
-      const res = await authGet('/admin/users', teacherToken);
       expect(res.status).toBe(403);
     });
 
@@ -151,11 +143,11 @@ describe('Admin — /admin', () => {
       if (!createdUserId) return;
 
       const res = await authPatch(`/admin/users/${createdUserId}/role`, adminToken, {
-        role: 'TEACHER',
+        role: 'TUTOR',
       });
 
       expect(res.status).toBe(200);
-      expect(res.body.role).toBe('TEACHER');
+      expect(res.body.role).toBe('TUTOR');
     });
 
     it('devuelve 400 si el rol es inválido', async () => {

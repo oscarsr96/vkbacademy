@@ -7,9 +7,6 @@ export * from './types/course.types';
 // Tipos de tests/quizzes
 export * from './types/quiz.types';
 
-// Tipos de reservas
-export * from './types/booking.types';
-
 // Tipos de exámenes
 export * from './types/exam.types';
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus, Role } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 
@@ -87,11 +87,6 @@ export class AdminAnalyticsService {
       ...(schoolYearId && !courseId ? { course: { schoolYearId } } : {}),
     };
 
-    const bookingWhere = {
-      createdAt: { gte: dateFrom, lte: dateTo },
-      ...(courseId ? { courseId } : {}),
-    };
-
     const userWhere = {
       createdAt: { gte: dateFrom, lte: dateTo },
       role: Role.STUDENT,
@@ -99,30 +94,17 @@ export class AdminAnalyticsService {
     };
 
     // ── Consultas principales ──────────────────────────────────────────────
-    const [
-      newUsers,
-      newEnrollments,
-      progressRecords,
-      quizRecords,
-      newBookings,
-      confirmedBookings,
-      cancelledBookings,
-      usersTimeSeries,
-      bookingsTimeSeries,
-    ] = await Promise.all([
-      this.prisma.user.count({ where: userWhere }),
-      this.prisma.enrollment.count({ where: enrollmentWhere }),
-      this.prisma.userProgress.findMany({ where: progressWhere, select: { completedAt: true } }),
-      this.prisma.quizAttempt.findMany({
-        where: quizWhere,
-        select: { completedAt: true, score: true },
-      }),
-      this.prisma.booking.count({ where: bookingWhere }),
-      this.prisma.booking.count({ where: { ...bookingWhere, status: BookingStatus.CONFIRMED } }),
-      this.prisma.booking.count({ where: { ...bookingWhere, status: BookingStatus.CANCELLED } }),
-      this.prisma.user.findMany({ where: userWhere, select: { createdAt: true } }),
-      this.prisma.booking.findMany({ where: bookingWhere, select: { createdAt: true } }),
-    ]);
+    const [newUsers, newEnrollments, progressRecords, quizRecords, usersTimeSeries] =
+      await Promise.all([
+        this.prisma.user.count({ where: userWhere }),
+        this.prisma.enrollment.count({ where: enrollmentWhere }),
+        this.prisma.userProgress.findMany({ where: progressWhere, select: { completedAt: true } }),
+        this.prisma.quizAttempt.findMany({
+          where: quizWhere,
+          select: { completedAt: true, score: true },
+        }),
+        this.prisma.user.findMany({ where: userWhere, select: { createdAt: true } }),
+      ]);
 
     const completedLessons = progressRecords.length;
     const avgQuizScore =
@@ -145,14 +127,12 @@ export class AdminAnalyticsService {
       progressRecords.filter((r) => r.completedAt).map((r) => ({ date: r.completedAt! })),
     );
     const quizByDate = buildMap(quizRecords.map((r) => ({ date: r.completedAt })));
-    const bookingsByDate = buildMap(bookingsTimeSeries.map((r) => ({ date: r.createdAt })));
     const newUsersByDate = buildMap(usersTimeSeries.map((r) => ({ date: r.createdAt })));
 
     const timeSeries = generateRange().map((date) => ({
       date,
       completedLessons: progressByDate.get(date) ?? 0,
       quizAttempts: quizByDate.get(date) ?? 0,
-      newBookings: bookingsByDate.get(date) ?? 0,
       newUsers: newUsersByDate.get(date) ?? 0,
     }));
 
@@ -219,106 +199,6 @@ export class AdminAnalyticsService {
       quizAttempts: scoreMap.get(r.userId)?.count ?? 0,
       avgScore: scoreMap.get(r.userId)?.avg ?? 0,
     }));
-
-    // ── Desglose reservas ──────────────────────────────────────────────────
-    const [bookingsByStatus, bookingsByMode] = await Promise.all([
-      this.prisma.booking.groupBy({
-        by: ['status'],
-        where: bookingWhere,
-        _count: { status: true },
-      }),
-      this.prisma.booking.groupBy({
-        by: ['mode'],
-        where: bookingWhere,
-        _count: { mode: true },
-      }),
-    ]);
-
-    // ── Estadísticas de profesores ─────────────────────────────────────────
-    const teacherBookings = await this.prisma.booking.findMany({
-      where: { createdAt: { gte: dateFrom, lte: dateTo } },
-      select: {
-        teacherId: true,
-        status: true,
-        mode: true,
-        startAt: true,
-        endAt: true,
-      },
-    });
-
-    const uniqueTeacherIds = [...new Set(teacherBookings.map((b) => b.teacherId))];
-    const teacherProfiles =
-      uniqueTeacherIds.length > 0
-        ? await this.prisma.teacherProfile.findMany({
-            where: { id: { in: uniqueTeacherIds } },
-            select: { id: true, user: { select: { name: true, email: true } } },
-          })
-        : [];
-
-    const teacherProfileMap = new Map(teacherProfiles.map((tp) => [tp.id, tp]));
-
-    const teacherStatsMap = new Map<
-      string,
-      {
-        confirmed: number;
-        pending: number;
-        cancelled: number;
-        minutesTaught: number;
-        online: number;
-        inPerson: number;
-      }
-    >();
-
-    for (const booking of teacherBookings) {
-      const existing = teacherStatsMap.get(booking.teacherId) ?? {
-        confirmed: 0,
-        pending: 0,
-        cancelled: 0,
-        minutesTaught: 0,
-        online: 0,
-        inPerson: 0,
-      };
-      if (booking.status === BookingStatus.CONFIRMED) {
-        existing.confirmed++;
-        existing.minutesTaught += Math.round(
-          (booking.endAt.getTime() - booking.startAt.getTime()) / 60_000,
-        );
-      } else if (booking.status === BookingStatus.PENDING) {
-        existing.pending++;
-      } else {
-        existing.cancelled++;
-      }
-      if ((booking.mode as string) === 'ONLINE') existing.online++;
-      else existing.inPerson++;
-      teacherStatsMap.set(booking.teacherId, existing);
-    }
-
-    const topTeachers = [...teacherStatsMap.entries()]
-      .sort(([, a], [, b]) => b.confirmed - a.confirmed)
-      .slice(0, 10)
-      .map(([teacherId, t]) => {
-        const profile = teacherProfileMap.get(teacherId);
-        return {
-          teacherId,
-          name: profile?.user.name ?? 'Desconocido',
-          email: profile?.user.email ?? '',
-          confirmed: t.confirmed,
-          pending: t.pending,
-          cancelled: t.cancelled,
-          hoursTaught: Math.round((t.minutesTaught / 60) * 10) / 10,
-          online: t.online,
-          inPerson: t.inPerson,
-        };
-      });
-
-    const totalConfirmedSessions = [...teacherStatsMap.values()].reduce(
-      (acc, t) => acc + t.confirmed,
-      0,
-    );
-    const totalMinutesTaught = [...teacherStatsMap.values()].reduce(
-      (acc, t) => acc + t.minutesTaught,
-      0,
-    );
 
     // ── Alumnos en riesgo (sin actividad en 14 días, independiente del rango) ──
     const riskCutoff = new Date(now);
@@ -424,34 +304,6 @@ export class AdminAnalyticsService {
       };
     });
 
-    // ── Heatmap de reservas + lead time ────────────────────────────────────────
-    const bookingsForHeatmap = await this.prisma.booking.findMany({
-      where: { createdAt: { gte: dateFrom, lte: dateTo } },
-      select: { startAt: true, createdAt: true },
-    });
-
-    const heatmapCounts = new Map<string, number>();
-    for (const b of bookingsForHeatmap) {
-      const key = `${b.startAt.getDay()}-${b.startAt.getHours()}`;
-      heatmapCounts.set(key, (heatmapCounts.get(key) ?? 0) + 1);
-    }
-    const bookingHeatmap = [...heatmapCounts.entries()].map(([key, count]) => {
-      const [day, hour] = key.split('-').map(Number);
-      return { day, hour, count };
-    });
-
-    const avgBookingLeadDays =
-      bookingsForHeatmap.length > 0
-        ? Math.round(
-            (bookingsForHeatmap.reduce(
-              (acc, b) => acc + (b.startAt.getTime() - b.createdAt.getTime()) / 86_400_000,
-              0,
-            ) /
-              bookingsForHeatmap.length) *
-              10,
-          ) / 10
-        : 0;
-
     return {
       kpis: {
         newUsers,
@@ -459,34 +311,14 @@ export class AdminAnalyticsService {
         completedLessons,
         quizAttempts: quizRecords.length,
         avgQuizScore,
-        newBookings,
-        confirmedBookings,
-        cancelledBookings,
       },
       timeSeries,
       topCourses,
       topStudents,
-      bookings: {
-        byStatus: bookingsByStatus.map((b) => ({
-          status: b.status as string,
-          count: b._count.status,
-        })),
-        byMode: bookingsByMode.map((b) => ({ mode: b.mode as string, count: b._count.mode })),
-      },
-      teachers: {
-        summary: {
-          activeTeachers: uniqueTeacherIds.length,
-          totalHoursTaught: Math.round((totalMinutesTaught / 60) * 10) / 10,
-          totalConfirmedSessions,
-        },
-        top: topTeachers,
-      },
       insights: {
         atRiskStudents,
         scoreDistribution,
         lowCompletionLessons,
-        bookingHeatmap,
-        avgBookingLeadDays,
       },
     };
   }
@@ -498,24 +330,16 @@ export class AdminAnalyticsService {
       totalUsers,
       totalStudents,
       totalTutors,
-      totalTeachers,
       totalCourses,
       publishedCourses,
-      totalBookings,
-      confirmedBookings,
-      pendingBookings,
       totalEnrollments,
       totalQuizAttempts,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.user.count({ where: { role: Role.STUDENT } }),
       this.prisma.user.count({ where: { role: Role.TUTOR } }),
-      this.prisma.user.count({ where: { role: Role.TEACHER } }),
       this.prisma.course.count(),
       this.prisma.course.count({ where: { published: true } }),
-      this.prisma.booking.count(),
-      this.prisma.booking.count({ where: { status: 'CONFIRMED' } }),
-      this.prisma.booking.count({ where: { status: 'PENDING' } }),
       this.prisma.enrollment.count(),
       this.prisma.quizAttempt.count(),
     ]);
@@ -525,10 +349,8 @@ export class AdminAnalyticsService {
         total: totalUsers,
         students: totalStudents,
         tutors: totalTutors,
-        teachers: totalTeachers,
       },
       courses: { total: totalCourses, published: publishedCourses },
-      bookings: { total: totalBookings, confirmed: confirmedBookings, pending: pendingBookings },
       enrollments: totalEnrollments,
       quizAttempts: totalQuizAttempts,
     };

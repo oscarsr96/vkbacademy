@@ -4,7 +4,6 @@ import { useAuthStore } from '../store/auth.store';
 import { Role } from '@vkbacademy/shared';
 import { useChallengeSummary, useMyChallenges } from '../hooks/useChallenges';
 import { useRecentLessons } from '../hooks/useCourses';
-import { useMyBookings } from '../hooks/useBookings';
 import { useMyCertificates } from '../hooks/useCertificates';
 import { usePageZone } from '../hooks/usePageZone';
 import { tutorsApi, type StudentSummary } from '../api/tutors.api';
@@ -15,14 +14,12 @@ import ProgressBar from '../components/ui/ProgressBar';
 const ROLE_LABELS: Record<string, string> = {
   [Role.STUDENT]: 'Estudiante',
   [Role.TUTOR]: 'Tutor',
-  [Role.TEACHER]: 'Profesor',
   [Role.ADMIN]: 'Administrador',
 };
 
 const ROLE_DESCRIPTION: Record<string, string> = {
-  [Role.STUDENT]: 'Practica con teoría y ejercicios bajo demanda, y reserva clases particulares.',
-  [Role.TUTOR]: 'Consulta el progreso de tus alumnos y gestiona sus reservas de clases.',
-  [Role.TEACHER]: 'Gestiona tus cursos, sube contenido y consulta las reservas de tus alumnos.',
+  [Role.STUDENT]: 'Practica con teoría y ejercicios bajo demanda.',
+  [Role.TUTOR]: 'Consulta el progreso de tus alumnos.',
   [Role.ADMIN]: 'Administra usuarios, cursos y visualiza las métricas globales de la plataforma.',
 };
 
@@ -52,16 +49,11 @@ export default function DashboardPage() {
             to: '/challenges',
           },
         ]
-      : user.role === Role.TEACHER
-        ? [
-            { icon: 'book', label: 'Mis cursos', desc: 'Gestiona tu contenido', to: '/courses' },
-            { icon: 'calendar', label: 'Mis reservas', desc: 'Consulta tus clases', to: '/bookings' },
-          ]
-        : [
-            { icon: 'book', label: 'Cursos', desc: 'Gestiona todos los cursos', to: '/courses' },
-            { icon: 'users', label: 'Usuarios', desc: 'Gestiona roles y accesos', to: '/admin' },
-            { icon: 'chart', label: 'Métricas', desc: 'Estadísticas de la plataforma', to: '/admin' },
-          ];
+      : [
+          { icon: 'book', label: 'Cursos', desc: 'Gestiona todos los cursos', to: '/courses' },
+          { icon: 'users', label: 'Usuarios', desc: 'Gestiona roles y accesos', to: '/admin' },
+          { icon: 'chart', label: 'Métricas', desc: 'Estadísticas de la plataforma', to: '/admin' },
+        ];
 
   const mainContent = (
     <>
@@ -177,12 +169,11 @@ export default function DashboardPage() {
   return <div style={S.page}>{mainContent}</div>;
 }
 
-// ─── Rail lateral del alumno: continuar, retos en marcha, próxima clase, trofeos ─
+// ─── Rail lateral del alumno: continuar, retos en marcha, trofeos ──────────────
 
 function StudentRail({ onNavigate }: { onNavigate: (to: string) => void }) {
   const { data: recentLessons } = useRecentLessons();
   const { data: challengesData } = useMyChallenges();
-  const { data: bookings } = useMyBookings();
   const { data: certs } = useMyCertificates();
 
   // Continuar donde lo dejaste: primera lección reciente sin completar
@@ -194,21 +185,13 @@ function StudentRail({ onNavigate }: { onNavigate: (to: string) => void }) {
     .sort((a, b) => b.progress / b.target - a.progress / a.target)
     .slice(0, 3);
 
-  // Próxima clase: la reserva futura más cercana no cancelada
-  const now = Date.now();
-  const nextBooking =
-    (bookings ?? [])
-      .filter((b) => b.status !== 'CANCELLED' && new Date(b.startAt).getTime() > now)
-      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())[0] ?? null;
-
   // Últimos trofeos
   const latestCerts = (certs ?? [])
     .slice()
     .sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime())
     .slice(0, 2);
 
-  const isEmpty =
-    !nextLesson && activeChallenges.length === 0 && !nextBooking && latestCerts.length === 0;
+  const isEmpty = !nextLesson && activeChallenges.length === 0 && latestCerts.length === 0;
 
   return (
     <aside style={S.rail}>
@@ -252,26 +235,6 @@ function StudentRail({ onNavigate }: { onNavigate: (to: string) => void }) {
           <button className="btn btn-dark btn-full" style={S.railGhostBtn} onClick={() => onNavigate('/challenges')}>
             Ver todos los retos
           </button>
-        </RailCard>
-      )}
-
-      {nextBooking && (
-        <RailCard icon="calendar" label="Próxima clase" delay={260}>
-          <p style={S.railTitle}>
-            {new Date(nextBooking.startAt).toLocaleDateString('es-ES', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-            })}
-          </p>
-          <p style={S.railMeta}>
-            {new Date(nextBooking.startAt).toLocaleTimeString('es-ES', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-            {nextBooking.teacher?.user.name ? ` · con ${nextBooking.teacher.user.name}` : ''}
-            {nextBooking.mode === 'ONLINE' ? ' · online' : ''}
-          </p>
         </RailCard>
       )}
 

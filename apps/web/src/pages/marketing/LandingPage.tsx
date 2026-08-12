@@ -72,10 +72,10 @@ const FEATURES = [
       'Al superar los exámenes del club, recibe un certificado digital descargable en PDF que acredita su progreso.',
   },
   {
-    icon: 'calendar',
-    title: 'Reserva clases con sus profes',
+    icon: 'chat',
+    title: 'Un tutor que no se cansa',
     description:
-      'Tú gestionas las clases particulares directamente desde la plataforma, tanto presenciales como online.',
+      'Cuando se atasca a las once de la noche, pregunta y recibe una explicación al momento. Sin esperar a la próxima clase.',
   },
   {
     icon: 'chart',
@@ -97,8 +97,7 @@ const ICONS: Record<string, string> = {
   check: '<path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/>',
   graduation:
     '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/><path d="M22 10v6"/>',
-  calendar:
-    '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/>',
+  chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
   chart:
     '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
   trophy:
@@ -165,7 +164,7 @@ const STEPS = [
     number: '3',
     title: 'Tú lo ves todo',
     description:
-      'Consulta su progreso, sus certificados y reserva clases con los profesores del club desde tu propio panel.',
+      'Consulta su progreso, sus certificados y su actividad reciente desde tu propio panel.',
   },
 ];
 
@@ -309,7 +308,7 @@ export default function LandingPage() {
           {/* Subtítulo */}
           <p style={styles.heroSubtitle}>
             La metodología real de Vallekas Basket en formato digital. Ejercicios personalizados de
-            cualquier tema, exámenes con certificado y clases particulares — todo en un solo lugar,
+            cualquier tema, exámenes con certificado y un tutor de IA — todo en un solo lugar,
             supervisado por ti.
           </p>
 
@@ -430,7 +429,7 @@ export default function LandingPage() {
               </div>
               <ul style={styles.pricingCardList}>
                 <li>✓ Todo lo del plan Básico</li>
-                <li>✓ Clases particulares online y presenciales</li>
+                <li>✓ Ejercicios personalizados generados por IA</li>
                 <li>✓ Actividades interactivas avanzadas</li>
                 <li>✓ Tutor virtual con IA 24/7</li>
                 <li>✓ Acceso prioritario a nuevo contenido</li>

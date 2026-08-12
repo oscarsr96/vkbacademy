@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { Role } from '@prisma/client';
 
 export class CreateAdminUserDto {
@@ -13,7 +13,9 @@ export class CreateAdminUserDto {
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
   password: string;
 
-  @IsEnum(Role)
+  @IsIn([Role.STUDENT, Role.TUTOR, Role.ADMIN, Role.SUPER_ADMIN], {
+    message: 'Rol no válido',
+  })
   role: Role;
 
   @IsString()

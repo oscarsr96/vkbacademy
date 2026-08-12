@@ -199,7 +199,11 @@ describe('Auth — /auth', () => {
 
   describe('POST /auth/logout', () => {
     it('revoca el refresh token correctamente', async () => {
-      const { refreshToken } = await login('teacher@vkbacademy.com');
+      // Actor cualquiera: el test valida la revocación, no el rol. Se usa
+      // superadmin porque es el único de la seed que no inicia sesión en otro
+      // punto de este fichero (dos logins del mismo usuario en el mismo segundo
+      // generan el mismo refresh JWT y chocan con el índice único de `token`).
+      const { refreshToken } = await login('superadmin@vkbacademy.com');
 
       const logoutRes = await publicPost('/auth/logout', { refreshToken });
       expect(logoutRes.status).toBe(200);

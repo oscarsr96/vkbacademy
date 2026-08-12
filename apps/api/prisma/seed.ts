@@ -13,8 +13,6 @@ async function main() {
   await prisma.userChallenge.deleteMany();
   await prisma.challenge.deleteMany();
   await prisma.redemption.deleteMany();
-  await prisma.booking.deleteMany();
-  await prisma.availabilitySlot.deleteMany();
   await prisma.quizAttempt.deleteMany();
   await prisma.userProgress.deleteMany();
   await prisma.enrollment.deleteMany();
@@ -24,7 +22,6 @@ async function main() {
   await prisma.lesson.deleteMany();
   await prisma.module.deleteMany();
   await prisma.course.deleteMany();
-  await prisma.teacherProfile.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.user.deleteMany();
   await prisma.schoolYear.deleteMany();
@@ -93,31 +90,6 @@ async function main() {
       role: Role.ADMIN,
       name: 'admin-oscar',
       academyMembers: { create: { academyId: cbOscar.id } },
-    },
-  });
-
-  // Crear teacher
-  const teacher = await prisma.user.create({
-    data: {
-      email: 'teacher@vkbacademy.com',
-      passwordHash,
-      role: Role.TEACHER,
-      name: 'teacher',
-      teacherProfile: {
-        create: {
-          bio: 'Entrenador de baloncesto con 10 años de experiencia.',
-          availability: {
-            createMany: {
-              data: [
-                { dayOfWeek: 1, startTime: '09:00', endTime: '10:00' },
-                { dayOfWeek: 1, startTime: '10:00', endTime: '11:00' },
-                { dayOfWeek: 3, startTime: '16:00', endTime: '17:00' },
-                { dayOfWeek: 5, startTime: '09:00', endTime: '10:00' },
-              ],
-            },
-          },
-        },
-      },
     },
   });
 
@@ -460,7 +432,6 @@ async function main() {
   console.log(`   👤 SuperAdmin: ${superAdmin.email}`);
   console.log(`   👤 Admin VKB:  ${admin.email}`);
   console.log(`   👤 Admin Oscar: ${adminOscar.email}`);
-  console.log(`   👤 Teacher:  ${teacher.email} (compartido)`);
   console.log(`   👤 Tutor:    ${tutor.email} → alumno: ${student.name} (VKB)`);
   console.log(`   👤 Student:  ${student.email} (${sy3eso.label}, VKB) → tutor: ${tutor.name}`);
   console.log(`   📚 Curso:    ${course.title} (${sy3eso.label})`);

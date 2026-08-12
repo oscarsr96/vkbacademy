@@ -38,7 +38,6 @@ model Academy {
   members        AcademyMember[]
   billingConfig  BillingConfig?
   enrollments    Enrollment[]
-  bookings       Booking[]
   redemptions    Redemption[]
   userChallenges UserChallenge[]
 }
@@ -64,7 +63,6 @@ model AcademyMember {
 enum Role {
   STUDENT
   TUTOR
-  TEACHER
   ADMIN
   SUPER_ADMIN
 }
@@ -99,8 +97,6 @@ model User {
   // Relaciones
   progress          UserProgress[]
   quizAttempts      QuizAttempt[]
-  bookingsAsStudent Booking[]       @relation("StudentBookings")
-  teacherProfile    TeacherProfile?
   refreshTokens     RefreshToken[]
   enrollments       Enrollment[]
   userChallenges    UserChallenge[]
@@ -148,7 +144,6 @@ model Course {
   subject String?
 
   modules       Module[]
-  bookings      Booking[]
   enrollments   Enrollment[]
   examQuestions ExamQuestion[] @relation("CourseExamQuestions")
   examAttempts  ExamAttempt[]  @relation("CourseExamAttempts")
@@ -296,71 +291,6 @@ model UserProgress {
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lessonId])
-}
-
-// ─────────────────────────────────────────────────────────
-// RESERVAS
-// ─────────────────────────────────────────────────────────
-
-model TeacherProfile {
-  id     String  @id @default(cuid())
-  userId String  @unique
-  bio    String?
-
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  availability AvailabilitySlot[]
-  bookings     Booking[]
-}
-
-model AvailabilitySlot {
-  id          String  @id @default(cuid())
-  teacherId   String
-  dayOfWeek   Int // 0=Dom, 1=Lun, ..., 6=Sáb
-  startTime   String // "09:00"
-  endTime     String // "10:00"
-  isRecurring Boolean @default(true)
-
-  teacher TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-
-  @@index([teacherId, dayOfWeek])
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-}
-
-enum BookingMode {
-  IN_PERSON
-  ONLINE
-}
-
-model Booking {
-  id         String        @id @default(cuid())
-  studentId  String
-  teacherId  String
-  startAt    DateTime
-  endAt      DateTime
-  status     BookingStatus @default(PENDING)
-  mode       BookingMode   @default(IN_PERSON)
-  notes      String?
-  courseId   String?
-  academyId  String?
-  /// URL de sala Daily.co — solo presente cuando mode=ONLINE y status=CONFIRMED
-  meetingUrl String?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-
-  student User           @relation("StudentBookings", fields: [studentId], references: [id])
-  teacher TeacherProfile @relation(fields: [teacherId], references: [id])
-  course  Course?        @relation(fields: [courseId], references: [id])
-  academy Academy?       @relation(fields: [academyId], references: [id])
-
-  @@index([studentId])
-  @@index([teacherId])
-  @@index([startAt])
-  @@index([academyId])
 }
 
 // ─────────────────────────────────────────────────────────

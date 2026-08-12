@@ -28,15 +28,14 @@ const STUDENT_FEATURES = [
 // Lo que obtiene el tutor/padre
 const TUTOR_FEATURES = [
   { icon: '📊', text: 'Seguimiento en tiempo real del progreso de tu hijo/a' },
-  { icon: '📅', text: 'Reserva de clases particulares con los profesores del club' },
   { icon: '📋', text: 'Historial completo de intentos, exámenes y certificados' },
-  { icon: '🔔', text: 'Notificaciones de avance y recordatorios de clases' },
+  { icon: '🔔', text: 'Notificaciones de avance de tu hijo/a' },
 ];
 
 const FAQS = [
   {
     q: '¿Cómo apunto a mi hijo/a?',
-    a: 'Contacta con la administración del club. Ellos crearán la cuenta de tu hijo/a y te asignarán como tutor. A partir de ahí, tú gestionas las reservas y sigues su progreso.',
+    a: 'Contacta con la administración del club. Ellos crearán la cuenta de tu hijo/a y te asignarán como tutor. A partir de ahí, sigues su progreso desde tu propio panel.',
   },
   {
     q: '¿Qué necesita mi hijo/a para acceder?',
@@ -45,10 +44,6 @@ const FAQS = [
   {
     q: '¿Puedo ver lo que estudia mi hijo/a?',
     a: 'Sí. Como tutor tienes acceso a su progreso: lecciones completadas, resultados de tests y exámenes, y certificados obtenidos.',
-  },
-  {
-    q: '¿Las clases particulares tienen coste adicional?',
-    a: 'El sistema de reservas está incluido. El precio de las sesiones con los profesores lo fija el club de forma independiente a la suscripción de la plataforma.',
   },
   {
     q: '¿Se adapta al nivel educativo de mi hijo/a?',
@@ -189,7 +184,6 @@ export default function PricingPage() {
                 'Lecciones interactivas y tests',
                 'Exámenes y certificados PDF',
                 'Sistema de retos y puntos',
-                'Reservas de clases particulares',
               ].map((item) => (
                 <li key={item} style={S.planCheck}>
                   <span style={S.planCheckmark}>✓</span>
@@ -228,8 +222,8 @@ export default function PricingPage() {
               <div>
                 <p style={S.infoPanelTitle}>Tu rol como tutor</p>
                 <p style={S.infoPanelText}>
-                  Tienes tu propio acceso para ver el progreso de tu hijo/a, reservar clases con los
-                  profesores del club y recibir notificaciones de avance.
+                  Tienes tu propio acceso para ver el progreso de tu hijo/a, sus certificados y
+                  recibir notificaciones de avance.
                 </p>
               </div>
             </div>

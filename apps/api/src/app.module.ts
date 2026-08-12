@@ -10,8 +10,6 @@ import { UsersModule } from './users/users.module';
 import { CoursesModule } from './courses/courses.module';
 import { QuizzesModule } from './quizzes/quizzes.module';
 import { ProgressModule } from './progress/progress.module';
-import { BookingsModule } from './bookings/bookings.module';
-import { AvailabilityModule } from './availability/availability.module';
 import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
@@ -59,8 +57,6 @@ import { MustChangePasswordInterceptor } from './auth/interceptors/must-change-p
     CoursesModule,
     QuizzesModule,
     ProgressModule,
-    BookingsModule,
-    AvailabilityModule,
     MediaModule,
     NotificationsModule,
     AdminModule,

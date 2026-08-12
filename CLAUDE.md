@@ -6,9 +6,9 @@
 
 ## 1. Descripción
 
-App educativa web y móvil para jugadores de Vallekas Basket (y otras academias). Similar a Moodle: cursos con vídeos, ejercicios y tests, reserva de clases particulares, gamificación con retos y tienda. Multi-tenant.
+App educativa web y móvil para jugadores de Vallekas Basket (y otras academias). Similar a Moodle: cursos con vídeos, ejercicios y tests, gamificación con retos y tienda. Multi-tenant.
 
-Usuarios: alumnos, tutores (padres), profesores, admins, super_admin.
+Usuarios: alumnos, tutores (padres), admins, super_admin.
 
 ---
 
@@ -40,7 +40,6 @@ Usuarios: alumnos, tutores (padres), profesores, admins, super_admin.
 | Autenticación        | JWT + Refresh tokens (implementación propia) |
 | Almacenamiento vídeo | AWS S3 + URLs firmadas                       |
 | Email transaccional  | Resend                                       |
-| Videollamadas        | Daily.co                                     |
 | Estado global (web)  | Zustand                                      |
 | Data fetching        | React Query (TanStack Query v5)              |
 | HTTP client          | Axios                                        |
@@ -68,29 +67,30 @@ Usuarios: alumnos, tutores (padres), profesores, admins, super_admin.
 
 ### Módulos del backend (`apps/api/src/`)
 
-`auth`, `users`, `courses`, `quizzes`, `progress`, `bookings`, `availability`, `media`, `notifications`, `admin`, `challenges`, `certificates`, `school-years`, `tutors`, `academies`, `exams`. Cada módulo sigue `controller → service → repository (Prisma)`.
+`auth`, `users`, `courses`, `quizzes`, `progress`, `media`, `notifications`, `admin`,
+`challenges`, `certificates`, `school-years`, `tutors`, `academies`, `exams`, `ai`,
+`exercises`, `study-plans`, `theory`, `tutor`, `username`, `youtube`. Cada módulo sigue `controller → service → repository (Prisma)`.
+
+> `tutor` (singular) es el **tutor IA** con chat en streaming. `tutors` (plural) es
+> el rol TUTOR de los padres. No confundirlos.
 
 ---
 
 ## 5. Roles y permisos
 
-| Acción                       | student | tutor | teacher | admin | super_admin |
-| ---------------------------- | :-----: | :---: | :-----: | :---: | :---------: |
-| Ver cursos asignados         |   ✅    |  ✅   |   ✅    |  ✅   |     ✅      |
-| Ver todos los cursos         |   ❌    |  ✅   |   ✅    |  ✅   |     ✅      |
-| Crear / editar cursos        |   ❌    |  ❌   |  ✅\*   |  ✅   |     ✅      |
-| Subir vídeos                 |   ❌    |  ❌   |  ✅\*   |  ✅   |     ✅      |
-| Realizar tests               |   ✅    |  ✅   |   ✅    |  ✅   |     ✅      |
-| Ver resultados de todos      |   ❌    |  ✅   |   ✅    |  ✅   |     ✅      |
-| Crear reservas (sus alumnos) |   ❌    |  ✅   |   ❌    |  ✅   |     ✅      |
-| Gestionar disponibilidad     |   ❌    |  ❌   |   ✅    |  ✅   |     ✅      |
-| Gestionar usuarios           |   ❌    |  ❌   |   ❌    |  ✅   |     ✅      |
-| Ver métricas globales        |   ❌    |  ❌   |   ❌    |  ✅   |     ✅      |
-| Canjear puntos               |   ✅    |  ✅   |   ❌    |  ❌   |     ❌      |
-| Gestionar retos (CRUD)       |   ❌    |  ❌   |   ❌    |  ✅   |     ✅      |
-| Gestionar academias          |   ❌    |  ❌   |   ❌    |  ❌   |     ✅      |
-
-\*Solo en cursos donde estén asignados como autor.
+| Acción                  | student | tutor | admin | super_admin |
+| ------------------------ | :-----: | :---: | :---: | :---------: |
+| Ver cursos asignados    |   ✅    |  ✅   |  ✅   |     ✅      |
+| Ver todos los cursos    |   ❌    |  ✅   |  ✅   |     ✅      |
+| Crear / editar cursos   |   ❌    |  ❌   |  ✅   |     ✅      |
+| Subir vídeos            |   ❌    |  ❌   |  ✅   |     ✅      |
+| Realizar tests          |   ✅    |  ✅   |  ✅   |     ✅      |
+| Ver resultados de todos |   ❌    |  ✅   |  ✅   |     ✅      |
+| Gestionar usuarios      |   ❌    |  ❌   |  ✅   |     ✅      |
+| Ver métricas globales   |   ❌    |  ❌   |  ✅   |     ✅      |
+| Canjear puntos          |   ✅    |  ✅   |  ❌   |     ❌      |
+| Gestionar retos (CRUD)  |   ❌    |  ❌   |  ✅   |     ✅      |
+| Gestionar academias     |   ❌    |  ❌   |  ❌   |     ✅      |
 
 **Filtrado por nivel:** `GET /courses` para STUDENT devuelve solo los cursos del `schoolYear` asignado. `GET /courses/:id` devuelve 403 si STUDENT intenta acceder a un curso de otro nivel.
 
@@ -99,20 +99,19 @@ Usuarios: alumnos, tutores (padres), profesores, admins, super_admin.
 ## 6. Modelo de datos — enums y relaciones clave
 
 ```prisma
-enum Role          { STUDENT TUTOR TEACHER ADMIN SUPER_ADMIN }
+enum Role          { STUDENT TUTOR ADMIN SUPER_ADMIN }
 enum LessonType    { VIDEO QUIZ EXERCISE MATCH SORT FILL_BLANK }
-enum BookingStatus { PENDING CONFIRMED CANCELLED }
-enum BookingMode   { IN_PERSON ONLINE }
 enum ChallengeType {
-  LESSON_COMPLETED MODULE_COMPLETED COURSE_COMPLETED
-  QUIZ_SCORE BOOKING_ATTENDED STREAK_WEEKLY TOTAL_HOURS
+  EXERCISE_COMPLETED EXERCISE_SCORE THEORY_COMPLETED
+  EXAM_COMPLETED EXAM_SCORE STREAK_WEEKLY
+  TOTAL_HOURS_EXERCISE TOTAL_HOURS_THEORY TOTAL_HOURS_EXAM
 }
 enum CertificateType {
   MODULE_COMPLETION COURSE_COMPLETION MODULE_EXAM COURSE_EXAM
 }
 ```
 
-Entidades principales: `User`, `SchoolYear`, `Academy`, `AcademyMember`, `Course`, `Module`, `Lesson`, `Quiz`, `Question`, `Answer`, `ExamQuestion`, `ExamAnswer`, `ExamAttempt`, `Booking`, `Challenge`, `UserChallenge`, `Redemption`, `Certificate`.
+Entidades principales: `User`, `SchoolYear`, `Academy`, `AcademyMember`, `Course`, `Module`, `Lesson`, `Quiz`, `Question`, `Answer`, `ExamQuestion`, `ExamAnswer`, `ExamAttempt`, `Challenge`, `UserChallenge`, `Redemption`, `Certificate`.
 
 Campo crítico: `Lesson.content: Json?` almacena la estructura de MATCH/SORT/FILL_BLANK (no hay modelos separados). Tipos en `packages/shared/src/types/course.types.ts`.
 
@@ -136,11 +135,11 @@ POST /auth/logout
 ```
 GET  /courses                    → filtrada por schoolYear para STUDENT
 GET  /courses/:id                → detalle con módulos
-POST /courses                    [TEACHER, ADMIN]
+POST /courses                    [ADMIN]
 GET  /courses/:id/progress
 GET  /lessons/:id                → sin isCorrect en answers
 POST /lessons/:id/complete
-POST /media/upload-url           [TEACHER, ADMIN]
+POST /media/upload-url           [ADMIN]
 GET  /media/view-url/:key        → presigned URL 1h
 ```
 
@@ -156,20 +155,6 @@ GET  /exams/info?courseId=&moduleId=
 POST /exams/start                → Fisher-Yates shuffle + snapshot
 POST /exams/:attemptId/submit    → corrección server-side
 GET  /exams/history
-```
-
-### Reservas y disponibilidad
-
-```
-GET    /teachers
-GET    /teachers/:id/slots?from=&to=
-POST   /bookings                 [TUTOR, ADMIN]
-PATCH  /bookings/:id/confirm     [TEACHER, ADMIN]
-PATCH  /bookings/:id/cancel
-GET    /bookings/mine
-GET    /availability/mine        [TEACHER, ADMIN]
-POST   /availability             [TEACHER, ADMIN]
-DELETE /availability/:id         [TEACHER, ADMIN]
 ```
 
 ### Niveles, tutores, retos, certificados
@@ -200,7 +185,7 @@ DELETE /academies/:id/members/:userId    [ADMIN, SUPER_ADMIN]
 
 ### Admin (prefijo `/admin/*`)
 
-Namespaces: `users`, `courses`, `courses/:id/modules`, `modules/:id/lessons`, `lessons/:id/quiz`, `quizzes/:id/questions`, `exam-questions`, `exam-attempts`, `challenges`, `redemptions`, `certificates`, `metrics`, `analytics`, `billing`. Todos `[ADMIN, SUPER_ADMIN]` salvo `super-admin-only`.
+Namespaces: `users`, `courses`, `courses/:id/modules`, `modules/:id/lessons`, `lessons/:id/quiz`, `quizzes/:id/questions`, `exam-questions`, `exam-attempts`, `challenges`, `redemptions`, `certificates`, `metrics`, `analytics`. Todos `[ADMIN, SUPER_ADMIN]` salvo `super-admin-only`.
 
 Ver swagger o los controllers de `apps/api/src/admin/` para firmas exactas.
 
@@ -265,11 +250,10 @@ pnpm build
 2. **JWT + refresh propio** → sin dependencia de Auth0.
 3. **Corrección de tests en servidor** → el cliente nunca ve respuestas correctas.
 4. **Presigned URLs S3** → contenido protegido.
-5. **Daily.co** para reservas online → sala creada al confirmar, borrada al cancelar.
-6. **Gamificación event-driven** con `void checkAndAward(...)` → no bloquea HTTP.
-7. **Puntos denormalizados** en `User.totalPoints`.
-8. **Contenido interactivo como JSON** (no modelos separados) → validación en TypeScript.
-9. **Health endpoint sin BD** → readiness probe robusto.
+5. **Gamificación event-driven** con `void checkAndAward(...)` → no bloquea HTTP.
+6. **Puntos denormalizados** en `User.totalPoints`.
+7. **Contenido interactivo como JSON** (no modelos separados) → validación en TypeScript.
+8. **Health endpoint sin BD** → readiness probe robusto.
 
 ---
 
@@ -293,6 +277,7 @@ pnpm build
 | 10   | Multi-tenancy                                                                     |   ✅   |
 | 10.5 | Entorno PRE + pipeline progresivo (#11)                                           |   ✅   |
 | 10.6 | Auto-asignación de vídeos YouTube (#22)                                           |   ✅   |
+| 10.7 | Poda de reservas y rol TEACHER ([spec](docs/superpowers/specs/2026-08-11-fase1-poda-reservas-teacher-design.md)) |   ✅   |
 | 11   | App móvil                                                                         |   ⬜   |
 | 12   | Testing completo                                                                  |   ⬜   |
 | 13   | Deployment completo                                                               |   ⬜   |
@@ -326,12 +311,14 @@ pnpm build
 
 ## 14. Multi-tenancy (fase 10)
 
-BD compartida con columna discriminadora `academyId`. Profesores y cursos son globales; alumnos, tutores y admins pertenecen a una academia vía `AcademyMember`.
+BD compartida con columna discriminadora `academyId`. Los cursos son globales; alumnos, tutores y admins pertenecen a una academia vía `AcademyMember`.
 
 **Rol `SUPER_ADMIN`**: gestiona todas las academias, pasa por chequeos de `ADMIN`, puede operar en contexto de cualquier academia vía header `X-Academy-Id`.
 
-**Scoped por `academyId`**: `Enrollment`, `Booking`, `Redemption`, `UserChallenge`, `BillingConfig`.
+**Scoped por `academyId`**: `Enrollment`, `Redemption`, `UserChallenge`, `BillingConfig`.
 **Globales**: `User`, `Course`, `Module`, `Lesson`, `Quiz`, `Challenge`, `Certificate`, `SchoolYear`, `ExamQuestion`.
+
+> `BillingConfig` está **dormida**: se conserva en el schema (decisión D5) pero desde la poda de facturación ningún código en `apps/api/src`, `apps/web/src` ni `packages/shared/src` la lee ni la escribe.
 
 Resolución: JWT → payload con `academyId` → `AcademyGuard` lo adjunta a `request.academyId` → decorador `@CurrentAcademy()`.
 
@@ -379,4 +366,4 @@ push main → tests → deploy PRE → smoke PRE
 
 ---
 
-_Última actualización: abril 2026. Infra: Render + Vercel + Neon. CLAUDE.md condensado — histórico por fase en [`docs/history/`](docs/history/)._
+_Última actualización: agosto 2026. Infra: Render + Vercel + Neon. CLAUDE.md condensado — histórico por fase en [`docs/history/`](docs/history/)._

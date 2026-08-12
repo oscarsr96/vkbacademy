@@ -24,8 +24,7 @@ const ICONS: Record<string, string> = {
   check: '<path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/>',
   graduation:
     '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/><path d="M22 10v6"/>',
-  calendar:
-    '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/>',
+  chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
   chart:
     '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
 };
@@ -81,9 +80,9 @@ const FEATURES = [
     desc: 'Al superar los exámenes, recibe un certificado digital descargable en PDF.',
   },
   {
-    icon: 'calendar',
-    title: 'Reserva clases particulares',
-    desc: 'Gestiona clases particulares directamente desde la plataforma, presenciales u online.',
+    icon: 'chat',
+    title: 'Un tutor que no se cansa',
+    desc: 'Pregunta cualquier duda y recibe una explicación al momento, a cualquier hora.',
   },
   {
     icon: 'chart',
@@ -302,7 +301,7 @@ export default function AcademyLandingPage() {
             }}
           >
             La metodología real de {academy.name} en formato digital. Cursos, lecciones
-            interactivas, exámenes con certificado y clases particulares — todo en un solo lugar,
+            interactivas, exámenes con certificado y un tutor de IA — todo en un solo lugar,
             supervisado por ti.
           </p>
 

@@ -1,7 +1,6 @@
 export enum Role {
   STUDENT = 'STUDENT',
   TUTOR = 'TUTOR',
-  TEACHER = 'TEACHER',
   ADMIN = 'ADMIN',
   SUPER_ADMIN = 'SUPER_ADMIN',
 }
@@ -38,13 +37,6 @@ export interface PublicUser {
   name: string;
   avatarUrl?: string | null;
   role: Role;
-}
-
-export interface TeacherProfile {
-  id: string;
-  userId: string;
-  bio?: string | null;
-  user: PublicUser;
 }
 
 /** Payload del JWT — role como string porque el JWT es JSON puro */

@@ -111,7 +111,7 @@ describe('Tutors — /tutors', () => {
       expect(res.status).toBe(200);
     });
 
-    it('la respuesta contiene student, period, lessons, quizzes, exams, certificates, sessions, courses y activity', async () => {
+    it('la respuesta contiene student, period, lessons, quizzes, exams, certificates, courses y activity', async () => {
       const res = await authGet(`/tutors/my-students/${studentId}/stats`, tutorToken);
 
       expect(res.status).toBe(200);
@@ -121,7 +121,6 @@ describe('Tutors — /tutors', () => {
       expect(res.body).toHaveProperty('quizzes');
       expect(res.body).toHaveProperty('exams');
       expect(res.body).toHaveProperty('certificates');
-      expect(res.body).toHaveProperty('sessions');
       expect(res.body).toHaveProperty('courses');
       expect(res.body).toHaveProperty('activity');
     });
