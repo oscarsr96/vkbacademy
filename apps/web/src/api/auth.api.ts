@@ -20,7 +20,7 @@ export interface NewStudentPayload {
 
 export interface RegisterStudentsPayload {
   guardianEmail: string;
-  academySlug?: string;
+  academySlug: string;
   students: NewStudentPayload[];
 }
 
