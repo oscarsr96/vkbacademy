@@ -4,6 +4,7 @@ import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterTutorDto } from './dto/register-tutor.dto';
+import { RegisterStudentsDto } from './dto/register-students.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -26,6 +27,11 @@ export class AuthController {
   @Post('register-tutor')
   registerTutor(@Body() dto: RegisterTutorDto) {
     return this.authService.registerTutor(dto);
+  }
+
+  @Post('register-students')
+  registerStudents(@Body() dto: RegisterStudentsDto) {
+    return this.authService.registerStudents(dto);
   }
 
   @Post('login')

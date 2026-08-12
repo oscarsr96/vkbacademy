@@ -14,6 +14,7 @@ import { UsernameService } from '../username/username.service';
 import { DEFAULT_STUDENT_PASSWORD } from './auth.constants';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterTutorDto } from './dto/register-tutor.dto';
+import { RegisterStudentsDto } from './dto/register-students.dto';
 import { LoginDto } from './dto/login.dto';
 import type { AuthTokens, JwtPayload } from '@vkbacademy/shared';
 
@@ -192,6 +193,64 @@ export class AuthService {
     });
 
     return { ...tokens, user: this.toPublic(tutor, academy.id, academy) };
+  }
+
+  /**
+   * Registro por familia: el padre o la madre da de alta a sus hijos y no
+   * obtiene cuenta. Su email queda como dato de contacto en cada alumno.
+   * Devuelve los usernames generados — es el único momento en que se muestran.
+   */
+  async registerStudents(dto: RegisterStudentsDto): Promise<{
+    students: { name: string; username: string; schoolYear: string | null }[];
+  }> {
+    // 1. Resolver academia si se indicó
+    let academyId: string | null = null;
+    if (dto.academySlug) {
+      const academy = await this.prisma.academy.findUnique({
+        where: { slug: dto.academySlug },
+      });
+      if (!academy) {
+        throw new NotFoundException(`La academia "${dto.academySlug}" no existe`);
+      }
+      if (!academy.isActive) {
+        throw new BadRequestException(`La academia "${dto.academySlug}" no está activa`);
+      }
+      academyId = academy.id;
+    }
+
+    // 2. Usernames únicos, también entre hermanos del mismo formulario
+    const usernames = await this.usernames.allocate(dto.students.map((s) => s.name));
+
+    // 3. Hash independiente por alumno
+    const passwordHashes = await Promise.all(dto.students.map((s) => bcrypt.hash(s.password, 10)));
+
+    // 4. Todos los hermanos o ninguno
+    const created = await this.prisma.$transaction((tx) =>
+      Promise.all(
+        dto.students.map((studentDto, index) =>
+          tx.user.create({
+            data: {
+              username: usernames[index],
+              passwordHash: passwordHashes[index],
+              name: studentDto.name,
+              role: 'STUDENT',
+              guardianEmail: dto.guardianEmail,
+              ...(studentDto.schoolYearId ? { schoolYearId: studentDto.schoolYearId } : {}),
+              ...(academyId ? { academyMembers: { create: { academyId } } } : {}),
+            },
+            include: { schoolYear: true },
+          }),
+        ),
+      ),
+    );
+
+    return {
+      students: created.map((u) => ({
+        name: u.name,
+        username: u.username!,
+        schoolYear: u.schoolYear?.label ?? null,
+      })),
+    };
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
