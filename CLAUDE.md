@@ -318,6 +318,8 @@ BD compartida con columna discriminadora `academyId`. Los cursos son globales; a
 **Scoped por `academyId`**: `Enrollment`, `Redemption`, `UserChallenge`, `BillingConfig`.
 **Globales**: `User`, `Course`, `Module`, `Lesson`, `Quiz`, `Challenge`, `Certificate`, `SchoolYear`, `ExamQuestion`.
 
+> `BillingConfig` está **dormida**: se conserva en el schema (decisión D5) pero desde la poda de facturación ningún código en `apps/api/src`, `apps/web/src` ni `packages/shared/src` la lee ni la escribe.
+
 Resolución: JWT → payload con `academyId` → `AcademyGuard` lo adjunta a `request.academyId` → decorador `@CurrentAcademy()`.
 
 Seed crea academias `vallekas-basket` y `cb-oscar`.
