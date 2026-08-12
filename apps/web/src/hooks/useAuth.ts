@@ -24,7 +24,7 @@ export function useLogin() {
       setTokens({ accessToken, refreshToken });
       setUser(user);
       queryClient.setQueryData(['me'], user);
-      navigate(user.mustChangePassword ? '/change-password' : '/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     },
   });
 }

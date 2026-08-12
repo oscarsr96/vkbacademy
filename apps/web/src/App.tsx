@@ -7,14 +7,12 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import ChangePasswordPage from './pages/ChangePasswordPage';
 import ProfilePage from './pages/ProfilePage';
 import DashboardPage from './pages/DashboardPage';
 import CoursesPage from './pages/CoursesPage';
 import CoursePage from './pages/CoursePage';
 import LessonPage from './pages/LessonPage';
 import ChallengesPage from './pages/ChallengesPage';
-import TutorStudentsPage from './pages/TutorStudentsPage';
 import CertificatesPage from './pages/CertificatesPage';
 import SubjectsPage from './pages/SubjectsPage';
 import AcademyLandingPage from './pages/marketing/AcademyLandingPage';
@@ -81,158 +79,147 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Suspense fallback={<RouteLoadingFallback />}>
-    <BrandSync />
-    <Routes>
-      {/* ── Ruta raíz: si dominio de academia, renderiza sin PublicLayout ── */}
-      <Route path="/" element={<RootIndex />} />
+      <BrandSync />
+      <Routes>
+        {/* ── Ruta raíz: si dominio de academia, renderiza sin PublicLayout ── */}
+        <Route path="/" element={<RootIndex />} />
 
-      {/* ── Rutas de marketing (públicas, con navbar + footer de VKB) ── */}
-      <Route element={<PublicLayout />}>
-        {/* /nosotros → página Sobre nosotros */}
-        <Route path="/nosotros" element={<AboutPage />} />
-        {/* /precios → página de precios */}
-        <Route path="/precios" element={<PricingPage />} />
-      </Route>
+        {/* ── Rutas de marketing (públicas, con navbar + footer de VKB) ── */}
+        <Route element={<PublicLayout />}>
+          {/* /nosotros → página Sobre nosotros */}
+          <Route path="/nosotros" element={<AboutPage />} />
+          {/* /precios → página de precios */}
+          <Route path="/precios" element={<PricingPage />} />
+        </Route>
 
-      {/* ── Landing por academia (sin layout compartido — tiene su propio navbar) ── */}
-      <Route path="/a/:slug" element={<AcademyLandingPage />} />
+        {/* ── Landing por academia (sin layout compartido — tiene su propio navbar) ── */}
+        <Route path="/a/:slug" element={<AcademyLandingPage />} />
 
-      {/* ── Rutas de autenticación (sin layout compartido) ── */}
-      <Route
-        path="/login"
-        element={
-          <PublicOnlyRoute>
-            <LoginPage />
-          </PublicOnlyRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicOnlyRoute>
-            <RegisterPage />
-          </PublicOnlyRoute>
-        }
-      />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route
-        path="/change-password"
-        element={
-          <PrivateRoute>
-            <ChangePasswordPage />
-          </PrivateRoute>
-        }
-      />
-
-      {/* ── Rutas privadas con sidebar (AppLayout) ── */}
-      <Route
-        element={
-          <PrivateRoute>
-            <AppLayout />
-          </PrivateRoute>
-        }
-      >
-        {/* Dashboard es la raíz privada */}
-        <Route path="dashboard" element={<DashboardPage />} />
-
-        {/* Asignaturas — auto-matriculación del alumno */}
-        <Route path="subjects" element={<SubjectsPage />} />
-
-        {/* Fase 2 — Cursos */}
-        <Route path="courses" element={<CoursesPage />} />
-        <Route path="courses/:courseId" element={<CoursePage />} />
-        <Route path="courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
-
-        {/* Tutor */}
-        <Route path="tutor/students" element={<TutorStudentsPage />} />
-
-        {/* Fase 7 — Retos/Gamificación */}
-        <Route path="challenges" element={<ChallengesPage />} />
-
-        {/* Fase 8 — Exámenes */}
-        <Route path="exam" element={<ExamPage />} />
-
-        {/* Estudiar — curso generado por IA (teoría + ejercicios + examen) */}
-        <Route path="study" element={<StudyPage />} />
-        <Route path="study/plan/:id" element={<StudyPlanPage />} />
-
-        {/* Fase 9 — Certificados */}
-        <Route path="certificates" element={<CertificatesPage />} />
-
-        {/* Perfil de usuario */}
-        <Route path="profile" element={<ProfilePage />} />
-
-        {/* Fase 6 — Panel de administración */}
+        {/* ── Rutas de autenticación (sin layout compartido) ── */}
         <Route
-          path="admin"
+          path="/login"
           element={
-            <AdminRoute>
-              <AdminDashboardPage />
-            </AdminRoute>
+            <PublicOnlyRoute>
+              <LoginPage />
+            </PublicOnlyRoute>
           }
         />
         <Route
-          path="admin/users"
+          path="/register"
           element={
-            <AdminRoute>
-              <AdminUsersPage />
-            </AdminRoute>
+            <PublicOnlyRoute>
+              <RegisterPage />
+            </PublicOnlyRoute>
           }
         />
-        <Route
-          path="admin/courses"
-          element={
-            <AdminRoute>
-              <AdminCoursesPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="admin/courses/:courseId"
-          element={
-            <AdminRoute>
-              <AdminCourseDetailPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="admin/challenges"
-          element={
-            <AdminRoute>
-              <AdminChallengesPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="admin/redemptions"
-          element={
-            <AdminRoute>
-              <AdminRedemptionsPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="admin/exam-banks"
-          element={
-            <AdminRoute>
-              <AdminExamBankPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="admin/academies"
-          element={
-            <AdminRoute>
-              <AdminAcademiesPage />
-            </AdminRoute>
-          }
-        />
-      </Route>
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Fallback — cualquier ruta desconocida va al inicio */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* ── Rutas privadas con sidebar (AppLayout) ── */}
+        <Route
+          element={
+            <PrivateRoute>
+              <AppLayout />
+            </PrivateRoute>
+          }
+        >
+          {/* Dashboard es la raíz privada */}
+          <Route path="dashboard" element={<DashboardPage />} />
+
+          {/* Asignaturas — auto-matriculación del alumno */}
+          <Route path="subjects" element={<SubjectsPage />} />
+
+          {/* Fase 2 — Cursos */}
+          <Route path="courses" element={<CoursesPage />} />
+          <Route path="courses/:courseId" element={<CoursePage />} />
+          <Route path="courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
+
+          {/* Fase 7 — Retos/Gamificación */}
+          <Route path="challenges" element={<ChallengesPage />} />
+
+          {/* Fase 8 — Exámenes */}
+          <Route path="exam" element={<ExamPage />} />
+
+          {/* Estudiar — curso generado por IA (teoría + ejercicios + examen) */}
+          <Route path="study" element={<StudyPage />} />
+          <Route path="study/plan/:id" element={<StudyPlanPage />} />
+
+          {/* Fase 9 — Certificados */}
+          <Route path="certificates" element={<CertificatesPage />} />
+
+          {/* Perfil de usuario */}
+          <Route path="profile" element={<ProfilePage />} />
+
+          {/* Fase 6 — Panel de administración */}
+          <Route
+            path="admin"
+            element={
+              <AdminRoute>
+                <AdminDashboardPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="admin/users"
+            element={
+              <AdminRoute>
+                <AdminUsersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="admin/courses"
+            element={
+              <AdminRoute>
+                <AdminCoursesPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="admin/courses/:courseId"
+            element={
+              <AdminRoute>
+                <AdminCourseDetailPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="admin/challenges"
+            element={
+              <AdminRoute>
+                <AdminChallengesPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="admin/redemptions"
+            element={
+              <AdminRoute>
+                <AdminRedemptionsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="admin/exam-banks"
+            element={
+              <AdminRoute>
+                <AdminExamBankPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="admin/academies"
+            element={
+              <AdminRoute>
+                <AdminAcademiesPage />
+              </AdminRoute>
+            }
+          />
+        </Route>
+
+        {/* Fallback — cualquier ruta desconocida va al inicio */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </Suspense>
   );
 }
