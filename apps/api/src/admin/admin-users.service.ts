@@ -26,6 +26,7 @@ export class AdminUsersService {
             OR: [
               { name: { contains: params.search, mode: 'insensitive' as const } },
               { email: { contains: params.search, mode: 'insensitive' as const } },
+              { username: { contains: params.search, mode: 'insensitive' as const } },
             ],
           }
         : {}),
@@ -39,6 +40,7 @@ export class AdminUsersService {
         select: {
           id: true,
           email: true,
+          username: true,
           name: true,
           role: true,
           avatarUrl: true,
@@ -184,5 +186,20 @@ export class AdminUsersService {
   async unenroll(userId: string, courseId: string) {
     await this.prisma.enrollment.deleteMany({ where: { userId, courseId } });
     return { message: 'Matrícula eliminada' };
+  }
+
+  /** Restablece la contraseña de un usuario. Es la única vía de recuperación
+   *  para alumnos, que no tienen email con el que usar forgot-password. */
+  async resetPassword(userId: string, password: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    return { message: 'Contraseña restablecida' };
   }
 }

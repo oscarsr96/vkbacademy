@@ -18,6 +18,7 @@ import { LessonType, QuestionType, Role } from '@vkbacademy/shared';
 export interface AdminUser {
   id: string;
   email: string | null;
+  username: string | null;
   name: string;
   role: Role;
   avatarUrl?: string | null;
@@ -329,6 +330,11 @@ export const adminApi = {
 
   deleteUser: (userId: string) =>
     api.delete<{ message: string }>(`/admin/users/${userId}`).then((r) => r.data),
+
+  resetUserPassword: (userId: string, password: string) =>
+    api
+      .patch<{ message: string }>(`/admin/users/${userId}/password`, { password })
+      .then((r) => r.data),
 
   // ─── Matrículas manuales ────────────────────────────────────────────────────
 

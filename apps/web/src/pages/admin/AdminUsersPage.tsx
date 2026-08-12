@@ -84,6 +84,12 @@ export default function AdminUsersPage() {
     },
   });
 
+  const resetPassword = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      adminApi.resetUserPassword(userId, password),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<Role | ''>('');
   const [showCreate, setShowCreate] = useState(false);
@@ -141,6 +147,22 @@ export default function AdminUsersPage() {
       showToast('Usuario eliminado', true);
     } catch {
       showToast('Error al eliminar el usuario', false);
+    }
+  }
+
+  async function handleResetPassword(userId: string) {
+    const password = window.prompt('Nueva contraseña (mínimo 8 caracteres):');
+    if (!password) return;
+    if (password.length < 8) {
+      showToast('La contraseña debe tener al menos 8 caracteres', false);
+      return;
+    }
+    try {
+      await resetPassword.mutateAsync({ userId, password });
+      showToast('Contraseña restablecida', true);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      showToast(err?.response?.data?.message ?? 'Error al restablecer la contraseña', false);
     }
   }
 
@@ -243,7 +265,13 @@ export default function AdminUsersPage() {
                   onDeleteConfirm={() => handleDelete(user.id)}
                   onDeleteCancel={() => setDeleteId(null)}
                   onEnrollments={() => setEnrollmentTarget(user)}
-                  isPending={updateRole.isPending || assignTutor.isPending || deleteUser.isPending}
+                  onResetPassword={() => handleResetPassword(user.id)}
+                  isPending={
+                    updateRole.isPending ||
+                    assignTutor.isPending ||
+                    deleteUser.isPending ||
+                    resetPassword.isPending
+                  }
                 />
               ))}
             </tbody>
@@ -306,6 +334,7 @@ function UserRow({
   onDeleteConfirm,
   onDeleteCancel,
   onEnrollments,
+  onResetPassword,
   isPending,
 }: {
   user: AdminUser;
@@ -318,6 +347,7 @@ function UserRow({
   onDeleteConfirm: () => void;
   onDeleteCancel: () => void;
   onEnrollments: () => void;
+  onResetPassword: () => void;
   isPending: boolean;
 }) {
   const initials = user.name
@@ -358,7 +388,12 @@ function UserRow({
           </span>
         </div>
       </td>
-      <td style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>{user.email}</td>
+      <td style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+        {user.email}
+        {user.username && (
+          <div style={{ fontSize: '0.72rem', opacity: 0.75 }}>@{user.username}</div>
+        )}
+      </td>
       <td>
         <select
           style={{
@@ -436,6 +471,14 @@ function UserRow({
                 📚
               </button>
             )}
+            <button
+              style={s.iconBtn}
+              title="Restablecer contraseña"
+              disabled={isPending}
+              onClick={onResetPassword}
+            >
+              🔑
+            </button>
             <button style={s.iconBtn} title="Editar" onClick={onEdit}>
               ✏️
             </button>

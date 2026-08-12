@@ -32,6 +32,7 @@ import { GenerateQuestionDto } from './dto/generate-question.dto';
 import { AssignTutorDto } from './dto/assign-tutor.dto';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 import { UpdateAdminUserDto } from './dto/update-admin-user.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
@@ -98,6 +99,11 @@ export class AdminController {
   @Delete('users/:id')
   deleteUser(@Param('id') id: string) {
     return this.adminUsersService.deleteUser(id);
+  }
+
+  @Patch('users/:id/password')
+  resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
+    return this.adminUsersService.resetPassword(id, dto.password);
   }
 
   // ─── Matrículas manuales ──────────────────────────────────────────────────
