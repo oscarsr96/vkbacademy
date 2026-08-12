@@ -62,7 +62,6 @@ model AcademyMember {
 
 enum Role {
   STUDENT
-  TUTOR
   ADMIN
   SUPER_ADMIN
 }
@@ -72,7 +71,6 @@ model User {
   email        String?  @unique
   username     String?  @unique // identificador de login del alumno (slug del nombre)
   passwordHash String
-  mustChangePassword Boolean @default(false) // true tras crear/restablecer hasta que el alumno la cambie
   role         Role     @default(STUDENT)
   name         String
   avatarUrl    String?
@@ -85,11 +83,6 @@ model User {
   // Nivel educativo (solo relevante para STUDENTs)
   schoolYearId String?
   schoolYear   SchoolYear? @relation(fields: [schoolYearId], references: [id])
-
-  // Relación tutor-alumno (solo relevante para STUDENTs y TUTORs)
-  tutorId  String?
-  tutor    User?   @relation("TutorStudents", fields: [tutorId], references: [id])
-  students User[]  @relation("TutorStudents")
 
   // Gamificación — racha y puntos
   currentStreak  Int     @default(0) // semanas consecutivas con actividad
@@ -113,7 +106,6 @@ model User {
   studyPlans        StudyPlan[]
 
   @@index([schoolYearId])
-  @@index([tutorId])
 }
 
 model RefreshToken {
