@@ -106,7 +106,7 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
                 el.style.filter = 'none';
               }}
             >
-              Acceder →
+              Acceder
             </button>
           </span>
 
@@ -139,7 +139,7 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
                 navigate('/login');
               }}
             >
-              Acceder →
+              Acceder
             </button>
           </div>
         )}
@@ -218,7 +218,7 @@ const styles: Record<string, React.CSSProperties> = {
   navAccentLine: {
     height: 2,
     background:
-      'linear-gradient(90deg, transparent 0%, #f5911e 30%, #fbb04a 50%, #13aff0 80%, transparent 100%)',
+      'linear-gradient(90deg, transparent 0%, #f5911e 30%, #fbb04a 55%, #e07b06 80%, transparent 100%)',
     opacity: 0.75,
   },
   navInner: {
@@ -226,7 +226,7 @@ const styles: Record<string, React.CSSProperties> = {
     maxWidth: 1200,
     margin: '0 auto',
     padding: '0 2rem',
-    height: 64,
+    height: 84,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -242,14 +242,14 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   brandLogo: {
-    height: 38,
+    height: 54,
     width: 'auto',
     objectFit: 'contain' as const,
     filter: 'drop-shadow(0 0 8px rgba(245,145,30,0.40))',
   },
   brandText: {
     fontFamily: "'Unbounded', 'Inter', sans-serif",
-    background: 'linear-gradient(135deg, #f5911e 0%, #fbb04a 50%, #13aff0 100%)',
+    background: 'linear-gradient(135deg, #f5911e 0%, #fbb04a 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
@@ -274,8 +274,8 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'linear-gradient(135deg, #f5911e 0%, #fbb04a 100%)',
     color: '#ffffff',
     border: 'none',
-    borderRadius: 10,
-    padding: '10px 22px',
+    borderRadius: 999,
+    padding: '13px 30px',
     fontSize: '0.9375rem',
     fontWeight: 700,
     cursor: 'pointer',
@@ -283,8 +283,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     whiteSpace: 'nowrap',
     boxShadow: '0 4px 18px rgba(245,145,30,0.50)',
-    letterSpacing: '0.01em',
-    fontFamily: "'Inter', sans-serif",
+    letterSpacing: '-0.005em',
+    fontFamily: "'Gabarito', 'Inter', sans-serif",
   },
 
   // Main content
@@ -305,7 +305,7 @@ const styles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     height: 3,
-    background: 'linear-gradient(90deg, #f5911e 0%, #fbb04a 35%, #cb2027 65%, #13aff0 100%)',
+    background: 'linear-gradient(90deg, #f5911e 0%, #fbb04a 40%, #cb2027 100%)',
   },
   footerInner: {
     maxWidth: 1200,
@@ -332,7 +332,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Unbounded', 'Inter', sans-serif",
     fontWeight: 800,
     fontSize: '1.125rem',
-    background: 'linear-gradient(135deg, #f5911e 0%, #fbb04a 60%, #13aff0 100%)',
+    background: 'linear-gradient(135deg, #f5911e 0%, #fbb04a 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',

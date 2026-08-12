@@ -98,16 +98,21 @@ describe('LandingPage — responsividad móvil', () => {
     }
   });
 
-  test('la grid de features usa auto-fit/minmax o tiene override de media query para 1 columna', () => {
+  test('el listado de características apila en móvil (multi-columna solo bajo min-width)', () => {
     const hasAutoFit = src.includes('auto-fit') || src.includes('auto-fill');
-    const hasMediaOverride = src.match(/lp-features-grid.*grid-template-columns/s);
-    expect(hasAutoFit || hasMediaOverride).toBeTruthy();
+    // Diseño mobile-first: la fila de la lista es de una columna por defecto y
+    // sus columnas adicionales se declaran dentro de un @media (min-width: …)
+    const mobileFirstRow =
+      /@media \(min-width: \d+px\)[\s\S]*\.lp-list-row[\s\S]*?grid-template-columns/.test(src);
+    expect(hasAutoFit || mobileFirstRow).toBeTruthy();
   });
 
-  test('la grid de merchandising usa flexWrap: wrap', () => {
-    // El merchand grid siempre debe envolver
-    expect(src).toMatch(/merchGrid|lp-merch-grid/);
-    expect(src).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
+  test('el bloque de recompensas no impone anchos fijos', () => {
+    expect(src).toMatch(/merchGrid|lp-merch/);
+    // La tabla de canje ocupa el ancho disponible en vez de anchos fijos en px
+    const hasFluidTable = /\.lp-table\s*\{[^}]*width:\s*100%/s.test(src);
+    const hasWrap = /flexWrap.*wrap|flex-wrap.*wrap/.test(src);
+    expect(hasFluidTable || hasWrap).toBeTruthy();
   });
 });
 
@@ -262,8 +267,13 @@ describe('Todas las páginas de marketing — verificaciones generales', () => {
 
   test.each(files)('%s: las imágenes o logos tienen altura auto o maxWidth 100%', (file) => {
     const src = readSource(file);
-    // Los logos deben tener height fija + width: auto o max-width: 100%
-    const hasAutoWidth = src.includes("width: 'auto'") || src.includes("maxWidth: '100%'");
+    // Los logos deben tener height fija + width: auto o max-width: 100%.
+    // Se acepta tanto la forma inline de JSX como la declaración en CSS plano.
+    const hasAutoWidth =
+      src.includes("width: 'auto'") ||
+      src.includes("maxWidth: '100%'") ||
+      /max-width:\s*100%/.test(src) ||
+      /width:\s*auto/.test(src);
     expect(hasAutoWidth).toBeTruthy();
   });
 });

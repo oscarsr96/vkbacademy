@@ -1,1366 +1,1552 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-// Paleta oficial Vallekas Basket — naranja primario, cyan como acento puntual
-const C = {
-  orange: '#f5911e',
-  orangeLight: '#fbb04a',
-  orangeDeep: '#e07b06',
-  cyan: '#13aff0',
-  cyanLight: '#46d4fe',
-  red: '#cb2027',
-  navy: '#0a1628',
-  navyMid: '#0d1b2a',
-  navyDeep: '#080e1a',
-};
+// ── Datos de la página ────────────────────────────────────────────────────────
 
-// Gradientes reutilizables
-const G = {
-  primary: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeLight} 100%)`,
-  primaryDeep: `linear-gradient(135deg, ${C.orangeDeep} 0%, ${C.orange} 100%)`,
-  // Multicolor "firma" del club — naranja domina, cyan toque final
-  signature: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeLight} 55%, ${C.cyan} 100%)`,
-  hero: `linear-gradient(135deg, ${C.navyDeep} 0%, ${C.navyMid} 55%, ${C.navy} 100%)`,
-};
-
-// Tipografía
-const F = {
-  display: "'Bebas Neue', 'Unbounded', Impact, sans-serif",
-  brand: "'Unbounded', 'Inter', sans-serif",
-  body: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-};
-
-// Merchandising del club — `icon` referencia una clave del registro SVG (ver ICONS)
-const MERCH = [
-  { icon: 'sticker', name: 'Pack de stickers VKB', pts: 100 },
-  { icon: 'bottle', name: 'Botella termo del club', pts: 200 },
-  { icon: 'cap', name: 'Gorra oficial VKB', pts: 350 },
-  { icon: 'shirt', name: 'Camiseta oficial del club', pts: 500 },
-  { icon: 'basketball', name: 'Balón firmado por el equipo', pts: 1000 },
-];
-
-// Datos de las tarjetas de características — enfocadas en el padre/tutor.
-// `icon` referencia una clave del registro de iconos SVG (ver ICONS abajo).
-const FEATURES = [
-  {
-    icon: 'target',
-    title: 'Ejercicios bajo demanda',
-    description:
-      'Tu hijo/a genera ejercicios al instante de cualquier tema: polinomios, sintaxis, el Renacimiento… La IA crea actividades a su medida, justo cuando las necesita.',
-  },
-  {
-    icon: 'shapes',
-    title: 'Aprende jugando',
-    description:
-      'Cada ejercicio es interactivo: emparejar, ordenar, rellenar huecos o test. Más entretenido que un libro y mil veces más rápido que una ficha.',
-  },
-  {
-    icon: 'video',
-    title: 'Vídeos curados automáticamente',
-    description:
-      'Cada práctica se acompaña de los mejores vídeos sobre el tema, seleccionados por la IA. Sin perder horas buscando en YouTube.',
-  },
-  {
-    icon: 'check',
-    title: 'Corrección automática',
-    description:
-      'Tu hijo/a comprueba lo que ha aprendido en el momento, con explicación al fallar. Sin esperar a la próxima clase.',
-  },
-  {
-    icon: 'graduation',
-    title: 'Exámenes y certificados',
-    description:
-      'Al superar los exámenes del club, recibe un certificado digital descargable en PDF que acredita su progreso.',
-  },
-  {
-    icon: 'chat',
-    title: 'Un tutor que no se cansa',
-    description:
-      'Cuando se atasca a las once de la noche, pregunta y recibe una explicación al momento. Sin esperar a la próxima clase.',
-  },
-  {
-    icon: 'chart',
-    title: 'Tú siempre al tanto',
-    description:
-      'Como tutor, ves en tiempo real qué ejercicios ha completado, sus resultados y los certificados que ha obtenido.',
-  },
-];
-
-// Registro de iconos SVG (estilo línea, 24×24, heredan color vía currentColor).
-// Sustituyen a los emojis para un acabado profesional y consistente en todas
-// las plataformas (los emojis dependen de la fuente del sistema).
-const ICONS: Record<string, string> = {
-  target:
-    '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/>',
-  shapes:
-    '<path d="M8.3 10a.7.7 0 0 1-.62-1.05l3.7-6.36a.7.7 0 0 1 1.2 0l3.7 6.36A.7.7 0 0 1 15.7 10Z"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><circle cx="17.5" cy="17.5" r="3.5"/>',
-  video: '<path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
-  check: '<path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/>',
-  graduation:
-    '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/><path d="M22 10v6"/>',
-  chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
-  chart:
-    '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
-  trophy:
-    '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
-  sticker:
-    '<path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9.5l6.5-6.5V5a2 2 0 0 0-2-2Z"/><path d="M15 21v-4a2 2 0 0 1 2-2h4"/><path d="M9 11h.01"/><path d="M14 11h.01"/><path d="M9.5 14.5s1 1.2 2.5 1.2 2.5-1.2 2.5-1.2"/>',
-  bottle:
-    '<path d="M9 2h6"/><path d="M9.5 2v2.4a3 3 0 0 1-.55 1.73l-.9 1.27A3 3 0 0 0 7.5 9.1V20a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2V9.1a3 3 0 0 0-.55-1.7l-.9-1.27A3 3 0 0 1 14.5 4.4V2"/><path d="M7.5 13h9"/>',
-  cap: '<path d="M4 15a8 6 0 0 1 16 0H4Z"/><path d="M20 15c2.2 0 4 .7 4 1.7 0 .7-.8 1-1.8 1H14"/><path d="M12 9V7"/>',
-  shirt:
-    '<path d="M20.4 3.5 16 2a4 4 0 0 1-8 0L3.6 3.5a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.17a1 1 0 0 0 .99-.84l.58-3.47A2 2 0 0 0 20.4 3.5Z"/>',
-  basketball:
-    '<circle cx="12" cy="12" r="10"/><path d="M4.9 4.9C8 8 8 16 4.9 19.1"/><path d="M19.1 4.9C16 8 16 16 19.1 19.1"/><path d="M2 12h20"/><path d="M12 2v20"/>',
-};
-
-// ── Icono SVG de línea reutilizable ──
-function Icon({
-  name,
-  size = 26,
-  color = 'currentColor',
-  strokeWidth = 1.85,
-}: {
-  name: string;
-  size?: number | string;
-  color?: string;
-  strokeWidth?: number;
-}) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-      dangerouslySetInnerHTML={{ __html: ICONS[name] ?? '' }}
-    />
-  );
-}
-
-const STATS = [
-  { value: '6', label: 'Niveles educativos' },
-  { value: '24/7', label: 'Disponible siempre' },
+// Cifras reales del catálogo curricular (apps/api/prisma/data/curriculum/).
+const SCOREBOARD = [
+  { value: '6', label: 'Niveles' },
+  { value: '104', label: 'Cursos' },
+  { value: '1.225', label: 'Unidades de temario' },
 ];
 
 const STEPS = [
   {
-    number: '1',
-    title: 'Contacta con el club',
+    number: '01',
+    title: 'Eliges los temas',
     description:
-      'La administración de Vallekas Basket crea la cuenta de tu hijo/a y te asigna como tutor.',
+      'Los seleccionas del temario oficial de tu curso, uno solo o varios a la vez. Si falta alguno, lo pides y se añade.',
   },
   {
-    number: '2',
-    title: 'Tu hijo/a empieza a aprender',
+    number: '02',
+    title: 'Repites hasta que sale',
     description:
-      'Accede a los cursos de su nivel, completa lecciones y realiza los tests a su ritmo, desde cualquier dispositivo.',
+      'Actividades con corrección inmediata. Vuelves sobre el tema las veces que haga falta y nadie te mira mientras.',
   },
   {
-    number: '3',
-    title: 'Tú lo ves todo',
-    description:
-      'Consulta su progreso, sus certificados y su actividad reciente desde tu propio panel.',
+    number: '03',
+    title: 'Lo demuestras',
+    description: 'Superas el examen del club y te llevas un certificado que acredita lo que sabes.',
   },
 ];
 
+const FEATURES = [
+  {
+    title: 'Actividades, no fichas',
+    description:
+      'Emparejar, ordenar, rellenar huecos, test. Se hacen con el pulgar y se acaban en cinco minutos.',
+  },
+  {
+    title: 'Vídeos elegidos, no buscados',
+    description:
+      'Cada tema llega con los vídeos que mejor lo explican. Sin caer en el agujero de YouTube.',
+  },
+  {
+    title: 'Corrección en el momento',
+    description:
+      'Marcas la respuesta y sabes al instante si va bien, con la explicación de por qué fallaste.',
+  },
+  {
+    title: 'Un entrenador de IA que no se cansa',
+    description:
+      'Cuando te atascas, preguntas y te contesta. Las veces que haga falta, sin juzgar y sin prisa.',
+  },
+  {
+    title: 'Exámenes con certificado',
+    description: 'Los exámenes del club generan un PDF verificable con el sello de Vallekas Basket.',
+  },
+  {
+    title: 'Puntos por cada sesión',
+    description: 'Lo que estudias suma. Lo que suma se canjea por material del club.',
+  },
+];
+
+// Los tres pilares de la generación: velocidad, calidad del material y marca del club.
+const PILLARS = [
+  {
+    title: 'Tarda segundos, no días',
+    text: 'El tiempo que se tarda en leer esta frase. Ni fichas fotocopiadas ni esperar a la próxima clase.',
+  },
+  {
+    title: 'Apuntes que se leen',
+    text: 'En web y en PDF, ordenados por ideas y no por ladrillos de texto, con una metodología de comunicación pensada para que un chaval de quince años los abra por gusto.',
+  },
+  {
+    title: 'Con el escudo del club',
+    text: 'El material lleva los colores y el escudo de Vallekas Basket. Estudiar con la camiseta puesta no es lo mismo.',
+  },
+];
+
+const MERCH = [
+  { name: 'Pack de stickers', pts: 100 },
+  { name: 'Botella termo', pts: 200 },
+  { name: 'Gorra oficial', pts: 350 },
+  { name: 'Camiseta oficial', pts: 500 },
+  { name: 'Balón firmado por el equipo', pts: 1000 },
+];
+
+const PLANS = [
+  {
+    name: 'Básico',
+    price: '10',
+    featured: false,
+    items: [
+      'Todos los cursos de su nivel',
+      'Vídeos y actividades interactivas',
+      'Exámenes del club con certificado',
+      'Puntos, retos y recompensas',
+    ],
+  },
+  {
+    name: 'Avanzado',
+    price: '20',
+    featured: true,
+    items: [
+      'Todo lo del plan Básico',
+      'Ejercicios generados al instante de cualquier tema',
+      'Actividades interactivas avanzadas',
+      'Entrenador de IA disponible 24/7',
+      'Acceso prioritario al contenido nuevo',
+    ],
+  },
+];
+
+const FAMILY = [
+  {
+    title: 'Temario oficial',
+    text: 'El currículo de la Comunidad de Madrid, curso por curso. No es contenido genérico de internet.',
+  },
+  {
+    title: 'Certificados que acreditan',
+    text: 'Cada examen superado genera un PDF verificable con el sello del club.',
+  },
+  {
+    title: 'Menos que una clase suelta',
+    text: 'Una hora de clase particular cuesta 20-30 €. Aquí es un mes entero de acceso ilimitado.',
+  },
+];
+
+// ── Página ────────────────────────────────────────────────────────────────────
+
 export default function LandingPage() {
-  const navigate = useNavigate();
-
-  function handleScrollToFeatures(e: React.MouseEvent) {
-    e.preventDefault();
-    const el = document.getElementById('features');
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  }
-
   return (
-    <div style={styles.page}>
-      {/* Animaciones + responsive overrides — no se pueden hacer con inline styles */}
-      <style>{`
-        @keyframes lp-glow-pulse {
-          0%, 100% { opacity: 0.65; transform: translate(-50%, 0) scale(1); }
-          50%      { opacity: 1;    transform: translate(-50%, 0) scale(1.06); }
-        }
-        @keyframes lp-glow-pulse-side {
-          0%, 100% { opacity: 0.55; transform: scale(1); }
-          50%      { opacity: 0.9;  transform: scale(1.08); }
-        }
-        @keyframes lp-shimmer {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 200% 50%; }
-        }
-        .lp-shimmer-text {
-          background: linear-gradient(
-            90deg,
-            ${C.orange} 0%,
-            ${C.orangeLight} 25%,
-            ${C.cyan} 50%,
-            ${C.orangeLight} 75%,
-            ${C.orange} 100%
-          );
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          color: transparent;
-          animation: lp-shimmer 6s linear infinite;
-        }
-        .lp-glow-center { animation: lp-glow-pulse 7s ease-in-out infinite; }
-        .lp-glow-side   { animation: lp-glow-pulse-side 9s ease-in-out infinite; }
+    <div className="lp-page">
+      <style>{CSS}</style>
 
-        /* Foco visible para navegación por teclado (accesibilidad) */
-        .lp-focusable:focus-visible {
-          outline: 3px solid ${C.cyanLight};
-          outline-offset: 3px;
-          border-radius: 14px;
-        }
+      {/* ═══ HERO ═══ */}
+      <section className="lp-hero">
+        <CourtLines />
 
-        /* Respeta la preferencia de movimiento reducido del sistema */
-        @media (prefers-reduced-motion: reduce) {
-          .lp-shimmer-text,
-          .lp-glow-center,
-          .lp-glow-side {
-            animation: none !important;
-          }
-        }
+        <div className="lp-shell lp-hero-inner">
+          <p className="lp-tag">
+            <span className="lp-tag-dot" />
+            La academia del Vallekas Basket
+          </p>
 
-        @media (max-width: 768px) {
-          .lp-hero { min-height: auto !important; padding: 3rem 1.25rem !important; }
-          .lp-pricing-hl { padding: 3rem 1.25rem !important; }
-          .lp-pricing-cards { flex-direction: column !important; align-items: center !important; }
-          .lp-pricing-card { width: 100% !important; max-width: 360px !important; }
-          .lp-stats-inner { gap: 1.5rem !important; padding: 1.75rem 1.25rem !important; }
-          .lp-stat-value { font-size: 2.75rem !important; }
-          .lp-features { padding: 3.5rem 1.25rem !important; }
-          .lp-features-grid { grid-template-columns: 1fr !important; }
-          .lp-merch { padding: 3.5rem 1.25rem !important; }
-          .lp-merch-grid { gap: 0.75rem !important; }
-          .lp-merch-card { min-width: 120px !important; padding: 1rem 0.75rem !important; }
-          .lp-how { padding: 3.5rem 1.25rem !important; }
-          .lp-steps-row { flex-direction: column !important; align-items: center !important; gap: 2rem !important; }
-          .lp-step-connector { display: none !important; }
-          .lp-step-wrapper { max-width: 100% !important; padding: 0 !important; }
-          .lp-cta-bottom { padding: 4rem 1.25rem !important; }
-        }
-      `}</style>
-
-      {/* ════════════════════════════════════════
-          SECCIÓN 1 — HERO
-      ════════════════════════════════════════ */}
-      <section className="lp-hero" style={styles.hero}>
-        {/* Líneas de cancha decorativas (SVG) */}
-        <svg style={styles.heroCourt} viewBox="0 0 1200 800" preserveAspectRatio="none" aria-hidden>
-          <defs>
-            <linearGradient id="court-line" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor={C.orange} stopOpacity="0" />
-              <stop offset="50%" stopColor={C.orange} stopOpacity="0.55" />
-              <stop offset="100%" stopColor={C.orange} stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <line x1="0" y1="400" x2="1200" y2="400" stroke="url(#court-line)" strokeWidth="1" />
-          <circle
-            cx="600"
-            cy="400"
-            r="120"
-            fill="none"
-            stroke={C.orange}
-            strokeOpacity="0.22"
-            strokeWidth="1.2"
-          />
-          <circle
-            cx="600"
-            cy="400"
-            r="40"
-            fill="none"
-            stroke={C.cyan}
-            strokeOpacity="0.20"
-            strokeWidth="1"
-          />
-        </svg>
-
-        {/* Glow central naranja grande */}
-        <div className="lp-glow-center" style={styles.heroGlowCenter} />
-        {/* Glow lateral naranja secundario */}
-        <div className="lp-glow-side" style={styles.heroGlowSide} />
-        {/* Glow esquina superior izquierda — cyan acento */}
-        <div className="lp-glow-side" style={styles.heroGlowTopLeft} />
-
-        <div style={styles.heroContent}>
-          {/* Badge naranja */}
-          <span style={styles.heroBadge}>
-            <span style={styles.heroBadgeDot} />
-            Para familias de Vallekas Basket
-          </span>
-
-          {/* Titular principal en Bebas Neue */}
-          <h1 style={styles.heroHeadline}>
-            METODOLOGÍA VKB
+          <h1 className="lp-display">
+            Ya es hora de dejar
             <br />
-            <span className="lp-shimmer-text" style={styles.heroHeadlineAccent}>
-              PARA EL RENDIMIENTO ACADÉMICO
-            </span>
+            de preguntar por las notas.
+            <br />
+            <em>Y de empezar a subirlas.</em>
           </h1>
 
-          {/* Subtítulo */}
-          <p style={styles.heroSubtitle}>
-            La metodología real de Vallekas Basket en formato digital. Ejercicios personalizados de
-            cualquier tema, exámenes con certificado y un tutor de IA — todo en un solo lugar,
-            supervisado por ti.
-          </p>
+          <div className="lp-hero-grid">
+            <div className="lp-hero-copy">
+              <p className="lp-lead">
+                Temario, ejercicios y exámenes de tu curso, generados al instante y con el escudo
+                del club detrás. De 1º de la ESO a 2º de Bachillerato.
+              </p>
 
-          {/* Botones CTA */}
-          <div style={styles.heroCtas}>
-            <button
-              onClick={() => navigate('/login')}
-              className="lp-focusable"
-              style={styles.ctaPrimary}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLButtonElement;
-                el.style.transform = 'translateY(-3px)';
-                el.style.boxShadow = `0 16px 48px rgba(245,145,30,0.60), 0 0 24px rgba(19,175,240,0.22)`;
-                el.style.filter = 'brightness(1.08)';
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLButtonElement;
-                el.style.transform = 'translateY(0)';
-                el.style.boxShadow = `0 8px 32px rgba(245,145,30,0.50)`;
-                el.style.filter = 'none';
-              }}
-            >
-              Acceder a la plataforma
-            </button>
-
-            <a
-              href="#features"
-              onClick={handleScrollToFeatures}
-              className="lp-focusable"
-              style={styles.ctaSecondary}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(245,145,30,0.14)';
-                (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(251,176,74,0.7)';
-                (e.currentTarget as HTMLAnchorElement).style.color = C.orangeLight;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
-                (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.35)';
-                (e.currentTarget as HTMLAnchorElement).style.color = '#ffffff';
-              }}
-            >
-              Qué incluye ↓
-            </a>
-          </div>
-
-          {/* Texto informativo sutil */}
-          <p style={styles.heroFootnote}>Disponible de 1º ESO a 2º Bachillerato</p>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════
-          SECCIÓN 1b — PRICING HIGHLIGHT
-      ════════════════════════════════════════ */}
-      <section className="lp-pricing-hl" style={styles.pricingHighlight}>
-        <div style={styles.pricingGlowMain} />
-        <div style={styles.pricingGlowAccent} />
-        <div style={styles.pricingInner}>
-          <p style={styles.pricingEyebrow}>Menos de lo que cuesta una clase particular</p>
-          <h2 style={styles.pricingHeadline}>
-            Todo esto, desde{' '}
-            <span style={styles.pricingAmount}>
-              10 €<span style={styles.pricingPeriod}>/mes</span>
-            </span>
-          </h2>
-
-          <div className="lp-pricing-cards" style={styles.pricingCards}>
-            {/* Plan Básico */}
-            <div
-              className="lp-pricing-card"
-              style={styles.pricingCard}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.transform = 'translateY(-6px)';
-                el.style.boxShadow = `0 20px 50px rgba(245,145,30,0.25)`;
-                el.style.borderColor = 'rgba(245,145,30,0.5)';
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.transform = 'translateY(0)';
-                el.style.boxShadow = '0 4px 24px rgba(0,0,0,0.3)';
-                el.style.borderColor = 'rgba(255,255,255,0.1)';
-              }}
-            >
-              <span style={styles.pricingCardLabel}>Básico</span>
-              <div style={styles.pricingCardPrice}>
-                <span style={styles.pricingCardAmount}>10€</span>
-                <span style={styles.pricingCardPeriod}>/mes</span>
+              <div className="lp-cta-row">
+                <Link className="lp-btn lp-btn-primary" to="/register">
+                  Empezar ahora
+                </Link>
+                <Link className="lp-btn lp-btn-ghost" to="/login">
+                  Ya tengo cuenta
+                </Link>
               </div>
-              <ul style={styles.pricingCardList}>
-                <li>✓ Todos los cursos de su nivel</li>
-                <li>✓ Lecciones en vídeo ilimitadas</li>
-                <li>✓ Tests y exámenes con certificado</li>
-                <li>✓ Seguimiento de progreso para tutores</li>
-                <li>✓ Retos y puntos canjeables</li>
-              </ul>
+
+              <p className="lp-note">
+                La cuenta la abre un adulto de la familia y añade a cada alumno con su curso.
+              </p>
             </div>
 
-            {/* Plan Avanzado */}
-            <div
-              className="lp-pricing-card"
-              style={{ ...styles.pricingCard, ...styles.pricingCardFeatured }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.transform = 'translateY(-6px) scale(1.02)';
-                el.style.boxShadow = `0 24px 60px rgba(245,145,30,0.50), 0 0 24px rgba(19,175,240,0.18)`;
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.transform = 'translateY(0) scale(1)';
-                el.style.boxShadow = `0 12px 40px rgba(245,145,30,0.35)`;
-              }}
-            >
-              <span style={styles.pricingCardBadge}>Popular</span>
-              <span style={styles.pricingCardLabelFeatured}>Avanzado</span>
-              <div style={styles.pricingCardPrice}>
-                <span style={styles.pricingCardAmount}>20€</span>
-                <span style={styles.pricingCardPeriod}>/mes</span>
+            <div className="lp-hero-mock">
+              <ExerciseMock />
+            </div>
+          </div>
+
+          <div className="lp-scoreboard">
+            {SCOREBOARD.map((item) => (
+              <div className="lp-score" key={item.label}>
+                <span className="lp-score-value">{item.value}</span>
+                <span className="lp-score-label">{item.label}</span>
               </div>
-              <ul style={styles.pricingCardList}>
-                <li>✓ Todo lo del plan Básico</li>
-                <li>✓ Ejercicios personalizados generados por IA</li>
-                <li>✓ Actividades interactivas avanzadas</li>
-                <li>✓ Tutor virtual con IA 24/7</li>
-                <li>✓ Acceso prioritario a nuevo contenido</li>
-              </ul>
-            </div>
-          </div>
-
-          <p style={styles.pricingCompare}>
-            Una clase particular = 20-30 €/hora. Aquí tu hijo/a tiene{' '}
-            <strong style={{ color: C.orangeLight }}>acceso ilimitado todo el mes</strong> por menos
-            que eso.
-          </p>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════
-          SECCIÓN 2 — BARRA DE ESTADÍSTICAS
-      ════════════════════════════════════════ */}
-      <section style={styles.statsBar}>
-        {/* Banda multicolor naranja-dominante */}
-        <div style={styles.statsAccentLine} />
-        <div className="lp-stats-inner" style={styles.statsInner}>
-          {STATS.map((stat, idx) => (
-            <div key={idx} style={styles.statItem}>
-              <span className="lp-stat-value" style={styles.statValue}>
-                {stat.value}
-              </span>
-              <span style={styles.statLabel}>{stat.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════
-          SECCIÓN 3 — CARACTERÍSTICAS
-      ════════════════════════════════════════ */}
-      <section id="features" className="lp-features" style={styles.features}>
-        <div style={styles.sectionContainer}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.sectionEyebrow}>Plataforma</span>
-            <h2 style={styles.sectionTitle}>
-              TODO LO QUE TU HIJO/A NECESITA{' '}
-              <span style={styles.sectionTitleAccent}>PARA MEJORAR</span>
-            </h2>
-            <p style={styles.sectionSubtitle}>
-              Una plataforma pensada para optimizar el rendimiento escolar, con acceso y seguimiento
-              para padres y tutores
-            </p>
-          </div>
-
-          <div className="lp-features-grid" style={styles.featuresGrid}>
-            {FEATURES.map((feat, idx) => (
-              <FeatureCard key={idx} {...feat} index={idx} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* ════════════════════════════════════════
-          SECCIÓN 3b — MERCHANDISING
-      ════════════════════════════════════════ */}
-      <section className="lp-merch" style={styles.merchSection}>
-        <div style={styles.sectionContainer}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.sectionEyebrow}>Recompensas</span>
-            <h2 style={styles.sectionTitle}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  verticalAlign: '-0.12em',
-                  marginRight: '0.35em',
-                  color: C.orange,
-                }}
+      {/* ═══ MANIFIESTO ═══ */}
+      <section className="lp-block lp-manifesto">
+        <div className="lp-shell">
+          <SectionHead
+            index="01"
+            kicker="Por qué existe esto"
+            title="Todos los clubes preguntan."
+            accent="Casi ninguno ayuda."
+          />
+
+          <div className="lp-manifesto-grid">
+            <p className="lp-manifesto-lead">
+              «¿Cómo llevas los estudios?». Esa es toda la ayuda académica que da el 99 % de los
+              clubes deportivos: una pregunta en el entrenamiento y una charla cuando ya es tarde.
+            </p>
+
+            <div className="lp-manifesto-body">
+              <p className="lp-text">
+                Vallekas Basket dejó de preguntar. Ahora entrega: el temario oficial de tu curso,
+                ejercicios ilimitados de cualquier tema y exámenes que acreditan lo que sabes. Con el
+                escudo del club, no en una app cualquiera.
+              </p>
+              <Link className="lp-btn lp-btn-primary" to="/register">
+                Empezar ahora
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ PROCESO ═══ */}
+      <section className="lp-block lp-block-alt">
+        <div className="lp-shell">
+          <SectionHead index="02" kicker="Cómo va" title="Tres pasos." accent="Cero excusas." />
+
+          <ol className="lp-steps">
+            {STEPS.map((step) => (
+              <li className="lp-step" key={step.number}>
+                <span className="lp-step-num">{step.number}</span>
+                <h3 className="lp-step-title">{step.title}</h3>
+                <p className="lp-text">{step.description}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* ═══ PRODUCTO ═══ */}
+      <section className="lp-block">
+        <div className="lp-shell">
+          <SectionHead
+            index="03"
+            kicker="Lo que ningún club te ha dado"
+            title="Cualquier tema."
+            accent="Al instante."
+          />
+
+          <div className="lp-showcase-grid">
+            <div className="lp-showcase-copy">
+              <p className="lp-showcase-lead">
+                Eliges los temas y el material aparece: apuntes, ejercicios y examen.
+              </p>
+              <p className="lp-text">
+                Un tema suelto o el curso entero, lo que necesites esa semana. Y si el tema que
+                buscas no está en el catálogo, lo pides y se añade.
+              </p>
+              <Link className="lp-btn lp-btn-ghost lp-btn-inline" to="/register">
+                Probarlo con mi temario
+              </Link>
+            </div>
+
+            <GenerationMock />
+          </div>
+
+          <div className="lp-pillars">
+            {PILLARS.map((pillar) => (
+              <article className="lp-pillar" key={pillar.title}>
+                <h3 className="lp-pillar-title">{pillar.title}</h3>
+                <p className="lp-text">{pillar.text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ CLAIM ═══ */}
+      <section className="lp-claim">
+        <div className="lp-shell">
+          <p className="lp-claim-text">
+            El talento no se hereda.
+            <br />
+            <em>Se entrena.</em>
+          </p>
+          <p className="lp-claim-foot">
+            En la pista nadie espera a que llegue el talento: se repite el gesto hasta que sale. Con
+            el temario, exactamente igual.
+          </p>
+        </div>
+      </section>
+
+      {/* ═══ PRESTACIONES ═══ */}
+      <section className="lp-block lp-block-alt" id="features">
+        <div className="lp-shell">
+          <SectionHead
+            index="04"
+            kicker="La plataforma"
+            title="Esto es lo que tienes."
+            accent="Desde el primer día."
+          />
+
+          <ul className="lp-list">
+            {FEATURES.map((feature, i) => (
+              <li className="lp-list-row" key={feature.title}>
+                <span className="lp-list-num">{String(i + 1).padStart(2, '0')}</span>
+                <h3 className="lp-list-title">{feature.title}</h3>
+                <p className="lp-text">{feature.description}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* ═══ RECOMPENSAS ═══ */}
+      <section className="lp-block lp-merch">
+        <div className="lp-shell">
+          <SectionHead
+            index="05"
+            kicker="Recompensas"
+            title="El esfuerzo suma."
+            accent="Y se canjea."
+          />
+
+          <table className="lp-table">
+            <tbody>
+              {MERCH.map((item) => (
+                <tr key={item.name}>
+                  <th scope="row">{item.name}</th>
+                  <td>{item.pts.toLocaleString('es-ES')} pts</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="lp-table-note">
+            Los puntos se ganan completando sesiones, exámenes y rachas semanales.
+          </p>
+        </div>
+      </section>
+
+      {/* ═══ FAMILIAS Y PRECIO ═══ */}
+      <section className="lp-block lp-block-alt">
+        <div className="lp-shell">
+          <SectionHead
+            index="06"
+            kicker="Para las familias"
+            title="Lo que estás pagando."
+            accent="Y lo que recibes."
+          />
+
+          <div className="lp-family">
+            {FAMILY.map((item) => (
+              <div className="lp-family-item" key={item.title}>
+                <h3 className="lp-family-title">{item.title}</h3>
+                <p className="lp-text">{item.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="lp-plans">
+            {PLANS.map((plan) => (
+              <article
+                className={plan.featured ? 'lp-plan lp-plan-featured' : 'lp-plan'}
+                key={plan.name}
               >
-                <Icon name="trophy" size="0.85em" color={C.orange} strokeWidth={1.75} />
-              </span>
-              EL ESFUERZO <span style={styles.sectionTitleAccent}>TIENE PREMIO</span>
-            </h2>
-            <p style={styles.sectionSubtitle}>
-              Tu hijo/a gana puntos completando lecciones y retos. Canjéalos por merchandising
-              exclusivo de Vallekas Basket.
-            </p>
-          </div>
-          <div className="lp-merch-grid" style={styles.merchGrid}>
-            {MERCH.map((item) => (
-              <MerchCard key={item.name} item={item} />
-            ))}
-          </div>
-          <p style={styles.merchNote}>
-            Puntos acumulables completando lecciones, módulos, exámenes y manteniendo la racha
-            semanal de estudio.
-          </p>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════
-          SECCIÓN 4 — CÓMO FUNCIONA
-      ════════════════════════════════════════ */}
-      <section className="lp-how" style={styles.howItWorks}>
-        <div style={styles.sectionContainer}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.sectionEyebrow}>Proceso</span>
-            <h2 style={styles.sectionTitle}>
-              ¿CÓMO <span style={styles.sectionTitleAccent}>FUNCIONA?</span>
-            </h2>
-          </div>
-
-          <div className="lp-steps-row" style={styles.stepsRow}>
-            {STEPS.map((step, idx) => (
-              <div key={idx} className="lp-step-wrapper" style={styles.stepWrapper}>
-                <div style={styles.stepCircle}>
-                  <span style={styles.stepCircleNumber}>{step.number}</span>
+                <div className="lp-plan-head">
+                  <span className="lp-plan-name">{plan.name}</span>
+                  {plan.featured && <span className="lp-plan-badge">Más elegido</span>}
                 </div>
 
-                {idx < STEPS.length - 1 && (
-                  <div className="lp-step-connector" style={styles.stepConnector} />
-                )}
+                <p className="lp-plan-price">
+                  <span className="lp-plan-amount">{plan.price}</span>
+                  <span className="lp-plan-unit">€ al mes</span>
+                </p>
 
-                <div style={styles.stepContent}>
-                  <h3 style={styles.stepTitle}>{step.title}</h3>
-                  <p style={styles.stepDescription}>{step.description}</p>
-                </div>
-              </div>
+                <ul className="lp-plan-list">
+                  {plan.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+
+                <Link
+                  className={
+                    plan.featured
+                      ? 'lp-btn lp-btn-primary lp-btn-full'
+                      : 'lp-btn lp-btn-ghost lp-btn-full'
+                  }
+                  to="/register"
+                >
+                  Elegir {plan.name}
+                </Link>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ════════════════════════════════════════
-          SECCIÓN 5 — CTA FINAL
-      ════════════════════════════════════════ */}
-      <section className="lp-cta-bottom" style={styles.ctaBottom}>
-        <div className="lp-glow-center" style={styles.ctaBottomGlow} />
-        <div className="lp-glow-side" style={styles.ctaBottomGlowAccent} />
-        <div style={styles.ctaBottomContent}>
-          <h2 style={styles.ctaBottomTitle}>
-            ¿TU HIJO/A YA ES DE{' '}
-            <span className="lp-shimmer-text" style={styles.ctaBottomTitleAccent}>
-              VALLEKAS BASKET
-            </span>
-            ?
+      {/* ═══ CIERRE ═══ */}
+      <section className="lp-final">
+        <CourtLines />
+        <div className="lp-shell lp-final-inner">
+          <h2 className="lp-display lp-final-title">
+            ¿Empezamos?
           </h2>
-          <p style={styles.ctaBottomSubtitle}>
-            Entra con las credenciales que te ha facilitado el club y empieza hoy.
+          <p className="lp-lead">
+            Crea la cuenta y haz el primer ejercicio antes de que acabe el descanso.
           </p>
-          <button
-            onClick={() => navigate('/login')}
-            className="lp-focusable"
-            style={styles.ctaBottomButton}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLButtonElement;
-              el.style.transform = 'translateY(-3px)';
-              el.style.boxShadow = `0 20px 56px rgba(245,145,30,0.65), 0 0 32px rgba(19,175,240,0.22)`;
-              el.style.filter = 'brightness(1.08)';
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLButtonElement;
-              el.style.transform = 'translateY(0)';
-              el.style.boxShadow = `0 8px 32px rgba(245,145,30,0.50)`;
-              el.style.filter = 'none';
-            }}
-          >
-            Entrar a la plataforma
-          </button>
+          <Link className="lp-btn lp-btn-primary lp-btn-lg" to="/register">
+            Crear la cuenta ahora
+          </Link>
         </div>
       </section>
     </div>
   );
 }
 
-// ── Componente de tarjeta de característica ──
-function FeatureCard({
-  icon,
-  title,
-  description,
+// ── Piezas ────────────────────────────────────────────────────────────────────
+
+// Título en dos tiempos: la primera frase en blanco, la segunda en naranja.
+function SectionHead({
   index,
+  kicker,
+  title,
+  accent,
 }: {
-  icon: string;
+  index: string;
+  kicker: string;
   title: string;
-  description: string;
-  index: number;
+  accent: string;
 }) {
-  // Naranja domina; cyan aparece como 1 de cada 3 para variedad visual
-  const useCyan = index % 3 === 1;
-  const accent = useCyan ? C.cyan : C.orange;
-  const accentRgb = useCyan ? '19,175,240' : '245,145,30';
+  return (
+    <header className="lp-head">
+      <p className="lp-head-kicker">
+        <span className="lp-head-index" aria-hidden="true">
+          {index}
+        </span>
+        {kicker}
+      </p>
+      <h2 className="lp-head-title">
+        {title}
+        <em>{accent}</em>
+      </h2>
+    </header>
+  );
+}
+
+/**
+ * Media cancha FIBA a escala real. El viewBox son centímetros: 1500 de ancho
+ * (15 m) por 1400 de largo (media pista de 28 m), con la línea de fondo abajo.
+ *
+ * Cotas oficiales usadas:
+ *   centro del aro     1,575 m de la línea de fondo
+ *   tablero            1,20 m de la línea de fondo, 1,80 m de ancho
+ *   zona               4,90 m de ancho × 5,80 m (1,20 + 4,60 hasta tiros libres)
+ *   círculo de tiros libres  r 1,80 m
+ *   triple             r 6,75 m desde el aro; rectas a 0,90 m de la banda
+ *   semicírculo de no carga  r 1,25 m
+ *   círculo central    r 1,80 m
+ *
+ * El arranque del arco sale de la propia geometría: √(675² − 660²) ≈ 141,5,
+ * así que las rectas miden 2,99 m, que es la medida oficial.
+ */
+function CourtLines() {
+  const line = 'rgba(245,145,30,0.24)';
+  const lineSoft = 'rgba(245,145,30,0.15)';
 
   return (
-    <div
-      style={{
-        ...featureCardStyle.card,
-        // Borde superior con color de acento
-        borderTop: `3px solid ${accent}`,
-      }}
-      onMouseEnter={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = 'translateY(-6px)';
-        el.style.boxShadow = `0 18px 48px rgba(${accentRgb},0.24)`;
-        el.style.borderColor = `rgba(${accentRgb},0.40)`;
-      }}
-      onMouseLeave={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = 'translateY(0)';
-        el.style.boxShadow = '0 4px 24px rgba(0,0,0,0.08)';
-        el.style.borderColor = '#e2e8f0';
-      }}
+    <svg
+      className="lp-court"
+      viewBox="0 0 1500 1400"
+      preserveAspectRatio="xMidYMax slice"
+      fill="none"
+      strokeWidth="4"
+      aria-hidden="true"
     >
-      <span
-        style={{
-          ...featureCardStyle.iconChip,
-          background: `rgba(${accentRgb},0.10)`,
-          color: accent,
-        }}
-      >
-        <Icon name={icon} size={26} color={accent} strokeWidth={1.9} />
-      </span>
-      <h3 style={featureCardStyle.title}>{title}</h3>
-      <p style={featureCardStyle.description}>{description}</p>
+      {/* Línea de fondo y bandas */}
+      <path d="M 0 1400 H 1500 M 4 1400 V 0 M 1496 1400 V 0" stroke={line} />
+
+      {/* Línea de triple: rectas a 0,90 m de cada banda + arco de 6,75 m */}
+      <path d="M 90 1400 V 1101 A 675 675 0 0 1 1410 1101 V 1400" stroke={line} />
+
+      {/* Zona y línea de tiros libres */}
+      <path d="M 505 1400 V 820 H 995 V 1400" stroke={lineSoft} />
+      <circle cx="750" cy="820" r="180" stroke={lineSoft} />
+
+      {/* Tablero, aro y semicírculo de no carga */}
+      <path d="M 660 1280 H 840" stroke={line} />
+      <circle cx="750" cy="1242.5" r="22.5" stroke={line} />
+      <path d="M 625 1242.5 A 125 125 0 0 1 875 1242.5" stroke={lineSoft} />
+
+      {/* Medio campo */}
+      <path d="M 0 0 H 1500 M 570 0 A 180 180 0 0 0 930 0" stroke={lineSoft} />
+    </svg>
+  );
+}
+
+// ── Maquetas de producto ──────────────────────────────────────────────────────
+
+function ExerciseMock() {
+  return (
+    <div
+      className="lp-mock"
+      role="img"
+      aria-label="Ejemplo de la plataforma: un ejercicio de matemáticas de 3º de la ESO con la respuesta correcta marcada y diez puntos ganados"
+    >
+      <div aria-hidden="true">
+        <div className="lp-mock-head">
+          <span className="lp-mock-course">Matemáticas · 3º ESO</span>
+          <span className="lp-mock-count">3/10</span>
+        </div>
+
+        <p className="lp-mock-question">Resuelve la ecuación</p>
+        <p className="lp-mock-formula">x² − 5x + 6 = 0</p>
+
+        <div className="lp-mock-options">
+          <span className="lp-mock-option lp-mock-option-ok">x = 2 y x = 3</span>
+          <span className="lp-mock-option">x = −2 y x = −3</span>
+          <span className="lp-mock-option">x = 1 y x = 6</span>
+        </div>
+
+        <div className="lp-mock-foot">
+          <span className="lp-mock-points">+10 puntos</span>
+          <span className="lp-mock-streak">Racha de 4 días</span>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ── Componente de tarjeta de merch ──
-function MerchCard({ item }: { item: { icon: string; name: string; pts: number } }) {
+function GenerationMock() {
   return (
     <div
-      className="lp-merch-card"
-      style={merchCardStyle.card}
-      onMouseEnter={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = 'translateY(-5px)';
-        el.style.boxShadow = `0 12px 32px rgba(245,145,30,0.24)`;
-        el.style.borderColor = 'rgba(245,145,30,0.45)';
-      }}
-      onMouseLeave={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = 'translateY(0)';
-        el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-        el.style.borderColor = '#e2e8f0';
-      }}
+      className="lp-gen"
+      role="img"
+      aria-label="Ejemplo de generación: al escribir el tema ecuaciones de segundo grado, la plataforma prepara diez actividades, tres vídeos y un examen con certificado"
     >
-      <span style={merchCardStyle.iconChip}>
-        <Icon name={item.icon} size={30} color={C.orange} strokeWidth={1.75} />
-      </span>
-      <span style={merchCardStyle.name}>{item.name}</span>
-      <span style={merchCardStyle.pts}>{item.pts.toLocaleString('es-ES')} pts</span>
+      <div aria-hidden="true">
+        <span className="lp-gen-label">Escribe el tema</span>
+        <p className="lp-gen-input">
+          Ecuaciones de segundo grado<span className="lp-gen-caret" />
+        </p>
+
+        <ul className="lp-gen-out">
+          <li>
+            <span className="lp-gen-num">10</span> actividades interactivas
+          </li>
+          <li>
+            <span className="lp-gen-num">03</span> vídeos que lo explican bien
+          </li>
+          <li>
+            <span className="lp-gen-num">01</span> examen con certificado
+          </li>
+        </ul>
+      </div>
     </div>
   );
 }
 
-const featureCardStyle: Record<string, React.CSSProperties> = {
-  card: {
-    background: '#ffffff',
-    border: '1.5px solid #e2e8f0',
-    borderRadius: 18,
-    padding: '2rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-    transition: 'transform 0.22s, box-shadow 0.22s, border-color 0.22s',
-    cursor: 'default',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-  },
-  iconChip: {
-    width: 54,
-    height: 54,
-    borderRadius: 15,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  title: {
-    fontSize: '1.0625rem',
-    fontWeight: 700,
-    color: C.navy,
-    margin: 0,
-    fontFamily: F.body,
-  },
-  description: {
-    fontSize: '0.9rem',
-    color: '#64748b',
-    lineHeight: 1.6,
-    margin: 0,
-    fontFamily: F.body,
-  },
-};
+// ── Estilos ───────────────────────────────────────────────────────────────────
+// Atmósfera monocroma: navy de arriba abajo, sin zonas claras. El naranja es
+// acento (acción, cifras, segunda frase de cada titular). Sin cyan.
 
-const merchCardStyle: Record<string, React.CSSProperties> = {
-  card: {
-    background: '#fff',
-    border: '1.5px solid #e2e8f0',
-    borderRadius: 16,
-    padding: '1.5rem 1.25rem',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '0.6rem',
-    minWidth: 148,
-    textAlign: 'center',
-    transition: 'transform 0.22s, box-shadow 0.22s, border-color 0.22s',
-    cursor: 'default',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-  },
-  iconChip: {
-    width: 56,
-    height: 56,
-    borderRadius: '50%',
-    background: 'rgba(245,145,30,0.10)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  name: {
-    fontSize: '0.825rem',
-    fontWeight: 600,
-    color: C.navy,
-    lineHeight: 1.3,
-    fontFamily: F.body,
-  },
-  pts: {
-    fontSize: '0.78rem',
-    fontWeight: 800,
-    color: '#ffffff',
-    background: G.signature,
-    padding: '4px 14px',
-    borderRadius: 999,
-    letterSpacing: '0.04em',
-    fontFamily: F.brand,
-  },
-};
+const CSS = `
+.lp-page {
+  --lp-bg: #070d18;
+  --lp-bg-alt: #0a1322;
+  --lp-surface: rgba(255, 255, 255, 0.03);
+  --lp-rule: rgba(255, 255, 255, 0.1);
+  --lp-rule-soft: rgba(255, 255, 255, 0.07);
+  --lp-fg: #ffffff;
+  --lp-fg-mid: rgba(255, 255, 255, 0.74);
+  --lp-fg-low: rgba(255, 255, 255, 0.56);
+  --lp-display: 'Gabarito', 'Unbounded', var(--font-sans);
+  --lp-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* El SplashScreen tapa la landing 3,6 s (sale a los 2,8 s). La entrada del
+     hero arranca a los 3,2 s para encadenar con esa salida en vez de aparecer
+     de golpe. Si algún día se retira el splash, hay que bajar este valor a 0. */
+  --lp-enter: 3200ms;
 
-// ── Estilos principales ──
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    fontFamily: F.body,
-    overflowX: 'hidden',
-  },
+  /* clip recorta sin crear contenedor de scroll; hidden sí lo crea y eso deja
+     sin scroller de referencia a las animaciones view(). El hidden queda como
+     respaldo para navegadores sin soporte de clip. */
+  overflow-x: hidden;
+  overflow-x: clip;
+  background: var(--lp-bg);
+  color: var(--lp-fg);
+  font-family: var(--font-sans);
+}
 
-  // Hero
-  hero: {
-    minHeight: '100vh',
-    background: G.hero,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '5rem 2rem',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  heroCourt: {
-    position: 'absolute',
-    inset: 0,
-    width: '100%',
-    height: '100%',
-    pointerEvents: 'none',
-    opacity: 0.55,
-  },
-  heroGlowCenter: {
-    position: 'absolute',
-    top: '15%',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: 900,
-    height: 900,
-    background: `radial-gradient(circle, rgba(245,145,30,0.22) 0%, transparent 60%)`,
-    pointerEvents: 'none',
-    borderRadius: '50%',
-    filter: 'blur(8px)',
-  },
-  heroGlowSide: {
-    position: 'absolute',
-    bottom: '-120px',
-    right: '-120px',
-    width: 520,
-    height: 520,
-    background: `radial-gradient(circle, rgba(245,145,30,0.18) 0%, transparent 70%)`,
-    pointerEvents: 'none',
-    borderRadius: '50%',
-  },
-  heroGlowTopLeft: {
-    position: 'absolute',
-    top: '-160px',
-    left: '-160px',
-    width: 460,
-    height: 460,
-    background: `radial-gradient(circle, rgba(19,175,240,0.13) 0%, transparent 70%)`,
-    pointerEvents: 'none',
-    borderRadius: '50%',
-  },
-  heroContent: {
-    maxWidth: '100%',
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-    gap: '1.5rem',
-    position: 'relative',
-    zIndex: 1,
-  },
-  heroBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    background: 'rgba(245,145,30,0.16)',
-    border: '1px solid rgba(245,145,30,0.50)',
-    color: C.orangeLight,
-    borderRadius: 999,
-    padding: '0.45rem 1.2rem',
-    fontSize: '0.875rem',
-    fontWeight: 600,
-    letterSpacing: '0.02em',
-    fontFamily: F.body,
-    backdropFilter: 'blur(6px)',
-  },
-  heroBadgeDot: {
-    display: 'inline-block',
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    background: C.orange,
-    boxShadow: `0 0 12px ${C.orange}`,
-  },
-  heroHeadline: {
-    fontFamily: F.display,
-    fontSize: 'clamp(3rem, 7.5vw, 6.25rem)',
-    fontWeight: 400,
-    color: '#ffffff',
-    letterSpacing: '0.005em',
-    lineHeight: 0.92,
-    margin: 0,
-    textTransform: 'uppercase',
-  },
-  heroHeadlineAccent: {
-    fontFamily: F.display,
-    display: 'inline-block',
-  },
-  heroSubtitle: {
-    color: 'rgba(255,255,255,0.68)',
-    fontSize: '1.125rem',
-    lineHeight: 1.7,
-    maxWidth: 600,
-    margin: '0.5rem 0 0',
-    fontFamily: F.body,
-  },
-  heroCtas: {
-    display: 'flex',
-    gap: '1rem',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginTop: '0.75rem',
-  },
-  ctaPrimary: {
-    background: G.primary,
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: 12,
-    padding: '15px 34px',
-    fontSize: '1.0625rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s, filter 0.2s',
-    boxShadow: `0 8px 32px rgba(245,145,30,0.50)`,
-    letterSpacing: '0.005em',
-    fontFamily: F.body,
-  },
-  ctaSecondary: {
-    background: 'transparent',
-    color: '#ffffff',
-    border: '1.5px solid rgba(255,255,255,0.35)',
-    borderRadius: 12,
-    padding: '15px 32px',
-    fontSize: '1.0625rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'background 0.2s, border-color 0.2s, color 0.2s',
-    textDecoration: 'none',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: F.body,
-  },
-  heroFootnote: {
-    color: 'rgba(255,255,255,0.38)',
-    fontSize: '0.8rem',
-    margin: 0,
-    letterSpacing: '0.01em',
-    fontFamily: F.body,
-  },
+.lp-page img,
+.lp-page svg {
+  max-width: 100%;
+}
 
-  // Pricing highlight
-  pricingHighlight: {
-    background: `linear-gradient(180deg, ${C.navyMid} 0%, ${C.navy} 100%)`,
-    padding: '5rem 2rem',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  pricingGlowMain: {
-    position: 'absolute',
-    top: '50%',
-    left: '40%',
-    transform: 'translate(-50%, -50%)',
-    width: 720,
-    height: 720,
-    background: `radial-gradient(circle, rgba(245,145,30,0.14) 0%, transparent 65%)`,
-    pointerEvents: 'none',
-    borderRadius: '50%',
-  },
-  pricingGlowAccent: {
-    position: 'absolute',
-    top: '50%',
-    right: '-100px',
-    transform: 'translateY(-50%)',
-    width: 460,
-    height: 460,
-    background: `radial-gradient(circle, rgba(19,175,240,0.10) 0%, transparent 65%)`,
-    pointerEvents: 'none',
-    borderRadius: '50%',
-  },
-  pricingInner: {
-    maxWidth: 820,
-    margin: '0 auto',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-    gap: '2rem',
-    position: 'relative',
-    zIndex: 1,
-  },
-  pricingEyebrow: {
-    color: C.orangeLight,
-    fontSize: '0.85rem',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.18em',
-    margin: 0,
-    fontFamily: F.brand,
-  },
-  pricingHeadline: {
-    fontFamily: F.display,
-    fontSize: 'clamp(2rem, 4.5vw, 3.25rem)',
-    fontWeight: 400,
-    color: '#ffffff',
-    letterSpacing: '0.005em',
-    lineHeight: 1.05,
-    margin: 0,
-    textTransform: 'uppercase',
-  },
-  pricingAmount: {
-    fontFamily: F.display,
-    background: G.signature,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-  },
-  pricingPeriod: {
-    fontSize: '0.55em',
-    fontWeight: 400,
-  },
-  pricingCards: {
-    display: 'flex',
-    gap: '1.5rem',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginTop: '0.5rem',
-  },
-  pricingCard: {
-    background: 'rgba(255,255,255,0.04)',
-    border: '1.5px solid rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    padding: '2.5rem 2rem',
-    width: 300,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '1rem',
-    transition: 'transform 0.25s, box-shadow 0.25s, border-color 0.25s',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
-    position: 'relative',
-  },
-  pricingCardFeatured: {
-    background: `linear-gradient(135deg, rgba(245,145,30,0.18) 0%, rgba(19,175,240,0.06) 100%)`,
-    border: '2px solid rgba(245,145,30,0.55)',
-    boxShadow: `0 12px 40px rgba(245,145,30,0.35)`,
-  },
-  pricingCardBadge: {
-    position: 'absolute',
-    top: -12,
-    background: G.signature,
-    color: '#fff',
-    fontSize: '0.72rem',
-    fontWeight: 800,
-    padding: '5px 18px',
-    borderRadius: 999,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    fontFamily: F.brand,
-    boxShadow: `0 4px 16px rgba(245,145,30,0.50)`,
-  },
-  pricingCardLabel: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: '0.85rem',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.14em',
-    fontFamily: F.brand,
-  },
-  pricingCardLabelFeatured: {
-    color: C.orangeLight,
-    fontSize: '0.85rem',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.14em',
-    fontFamily: F.brand,
-  },
-  pricingCardPrice: {
-    display: 'flex',
-    alignItems: 'baseline',
-    gap: '2px',
-  },
-  pricingCardAmount: {
-    fontFamily: F.display,
-    fontSize: '3.75rem',
-    fontWeight: 400,
-    color: '#ffffff',
-    lineHeight: 1,
-    letterSpacing: '0.005em',
-  },
-  pricingCardPeriod: {
-    fontSize: '1rem',
-    color: 'rgba(255,255,255,0.55)',
-    fontWeight: 600,
-    fontFamily: F.body,
-  },
-  pricingCardList: {
-    listStyle: 'none',
-    padding: 0,
-    margin: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.6rem',
-    textAlign: 'left',
-    fontSize: '0.9rem',
-    color: 'rgba(255,255,255,0.78)',
-    lineHeight: 1.5,
-    fontFamily: F.body,
-  },
-  pricingCompare: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: '0.95rem',
-    margin: 0,
-    maxWidth: 520,
-    lineHeight: 1.6,
-    fontFamily: F.body,
-  },
+.lp-page :focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
 
-  // Stats bar
-  statsBar: {
-    background: '#ffffff',
-    borderBottom: '1px solid #e2e8f0',
-    position: 'relative',
-  },
-  statsAccentLine: {
-    height: 4,
-    background: `linear-gradient(90deg, ${C.orange} 0%, ${C.orangeLight} 30%, ${C.red} 65%, ${C.cyan} 100%)`,
-  },
-  statsInner: {
-    maxWidth: 900,
-    margin: '0 auto',
-    padding: '3rem 2rem',
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '4rem',
-    flexWrap: 'wrap',
-  },
-  statItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '0.4rem',
-  },
-  statValue: {
-    fontFamily: F.display,
-    fontSize: '4rem',
-    fontWeight: 400,
-    background: G.signature,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-    lineHeight: 1,
-    letterSpacing: '0.005em',
-  },
-  statLabel: {
-    fontSize: '0.78rem',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: '0.14em',
-    fontWeight: 700,
-    fontFamily: F.brand,
-  },
+.lp-shell {
+  width: min(1200px, 100% - 2.5rem);
+  margin-inline: auto;
+}
 
-  // Features section
-  features: {
-    background: '#f8fafc',
-    padding: '6rem 2rem',
-  },
-  sectionContainer: {
-    maxWidth: 1100,
-    margin: '0 auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '3rem',
-  },
-  sectionHeader: {
-    textAlign: 'center',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-    alignItems: 'center',
-  },
-  sectionEyebrow: {
-    color: C.orange,
-    fontSize: '0.78rem',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.18em',
-    fontFamily: F.brand,
-  },
-  sectionTitle: {
-    fontFamily: F.display,
-    fontSize: 'clamp(2rem, 4.5vw, 3.5rem)',
-    fontWeight: 400,
-    color: C.navy,
-    letterSpacing: '0.005em',
-    lineHeight: 1.0,
-    margin: 0,
-    textTransform: 'uppercase',
-  },
-  sectionTitleAccent: {
-    fontFamily: F.display,
-    background: G.signature,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-  },
-  sectionSubtitle: {
-    fontSize: '1rem',
-    color: '#64748b',
-    maxWidth: 580,
-    margin: '0.25rem auto 0',
-    lineHeight: 1.6,
-    fontFamily: F.body,
-  },
-  featuresGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
-    gap: '1.5rem',
-  },
+/* ── Tipografía ── */
 
-  // Merchandising section
-  merchSection: {
-    background: '#ffffff',
-    padding: '6rem 2rem',
-  },
-  merchGrid: {
-    display: 'flex',
-    gap: '1rem',
-    flexWrap: 'wrap' as const,
-    justifyContent: 'center',
-  },
-  merchNote: {
-    textAlign: 'center' as const,
-    fontSize: '0.825rem',
-    color: '#94a3b8',
-    margin: '0.5rem auto 0',
-    maxWidth: 480,
-    lineHeight: 1.5,
-    fontFamily: F.body,
-  },
+.lp-display {
+  margin: 0;
+  font-family: var(--lp-display);
+  font-weight: 800;
+  font-size: clamp(2.25rem, 5.6vw, 4.25rem);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  color: var(--lp-fg);
+}
 
-  // How it works section
-  howItWorks: {
-    background: '#f8fafc',
-    padding: '6rem 2rem',
-  },
-  stepsRow: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    gap: 0,
-    flexWrap: 'wrap',
-    position: 'relative',
-  },
-  stepWrapper: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-    flex: '1 1 240px',
-    maxWidth: 300,
-    position: 'relative',
-    padding: '0 1.5rem',
-  },
-  stepCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: '50%',
-    background: G.primary,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '1.25rem',
-    flexShrink: 0,
-    boxShadow: `0 8px 24px rgba(245,145,30,0.55), inset 0 0 0 2px rgba(255,255,255,0.18)`,
-    position: 'relative',
-    zIndex: 1,
-  },
-  stepCircleNumber: {
-    fontFamily: F.display,
-    color: '#ffffff',
-    fontSize: '1.85rem',
-    fontWeight: 400,
-    letterSpacing: '0.005em',
-    lineHeight: 1,
-  },
-  stepConnector: {
-    position: 'absolute',
-    top: 34,
-    left: 'calc(50% + 34px)',
-    right: 'calc(-50% + 34px)',
-    height: 2,
-    borderTop: `2px dashed ${C.orange}`,
-    opacity: 0.4,
-    zIndex: 0,
-  },
-  stepContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  stepTitle: {
-    fontSize: '1.0625rem',
-    fontWeight: 700,
-    color: C.navy,
-    margin: 0,
-    fontFamily: F.body,
-  },
-  stepDescription: {
-    fontSize: '0.9rem',
-    color: '#64748b',
-    lineHeight: 1.6,
-    margin: 0,
-    fontFamily: F.body,
-  },
+.lp-display em {
+  font-style: normal;
+  color: var(--brand);
+}
 
-  // CTA final
-  ctaBottom: {
-    background: G.hero,
-    padding: '7rem 2rem',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  ctaBottomGlow: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 720,
-    height: 720,
-    background: `radial-gradient(circle, rgba(245,145,30,0.22) 0%, transparent 65%)`,
-    pointerEvents: 'none',
-    borderRadius: '50%',
-  },
-  ctaBottomGlowAccent: {
-    position: 'absolute',
-    bottom: '-100px',
-    left: '-100px',
-    width: 440,
-    height: 440,
-    background: `radial-gradient(circle, rgba(19,175,240,0.14) 0%, transparent 70%)`,
-    pointerEvents: 'none',
-    borderRadius: '50%',
-  },
-  ctaBottomContent: {
-    maxWidth: 720,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-    gap: '1.5rem',
-    position: 'relative',
-    zIndex: 1,
-  },
-  ctaBottomTitle: {
-    fontFamily: F.display,
-    fontSize: 'clamp(2.25rem, 5vw, 4rem)',
-    fontWeight: 400,
-    color: '#ffffff',
-    letterSpacing: '0.005em',
-    margin: 0,
-    lineHeight: 1.0,
-    textTransform: 'uppercase',
-  },
-  ctaBottomTitleAccent: {
-    fontFamily: F.display,
-  },
-  ctaBottomSubtitle: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: '1.0625rem',
-    margin: 0,
-    lineHeight: 1.6,
-    fontFamily: F.body,
-  },
-  ctaBottomButton: {
-    background: G.primary,
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: 12,
-    padding: '17px 42px',
-    fontSize: '1.0625rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s, filter 0.2s',
-    boxShadow: `0 8px 32px rgba(245,145,30,0.50)`,
-    letterSpacing: '0.01em',
-    fontFamily: F.body,
-  },
-};
+.lp-lead {
+  margin: 0;
+  font-size: clamp(1rem, 2.2vw, 1.125rem);
+  line-height: 1.62;
+  color: var(--lp-fg-mid);
+  max-width: 44ch;
+}
+
+.lp-text {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--lp-fg-mid);
+  max-width: 52ch;
+}
+
+.lp-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--lp-fg-low);
+  max-width: 38ch;
+}
+
+/* ── Botones ── */
+
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 1.85rem;
+  border: none;
+  border-radius: 999px;
+  font-family: var(--lp-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.lp-btn-primary {
+  background: var(--brand);
+  color: var(--brand-contrast);
+}
+
+.lp-btn-primary:hover {
+  background: #ffa63c;
+}
+
+.lp-btn-ghost {
+  background: transparent;
+  color: var(--lp-fg);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.26);
+}
+
+.lp-btn-ghost:hover {
+  box-shadow: inset 0 0 0 1.5px var(--brand);
+  color: var(--brand);
+}
+
+.lp-btn-full {
+  width: 100%;
+}
+
+.lp-btn-lg {
+  min-height: 60px;
+  padding: 0 2.5rem;
+  font-size: 1.0625rem;
+}
+
+/* CTA que acompaña a un párrafo, sin robarle el protagonismo al principal */
+.lp-btn-inline {
+  align-self: flex-start;
+  min-height: 46px;
+  padding: 0 1.4rem;
+  font-size: 0.9375rem;
+}
+
+/* ── Líneas de cancha ── */
+
+.lp-court {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  /* Ancho contenido para que la escala del slice deje ver el arco de triple
+     completo y no solo la franja del aro */
+  width: min(1180px, 100%);
+  height: 78%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* ── Hero ── */
+
+.lp-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(2.5rem, 7vw, 4.5rem) 0 0;
+  background:
+    radial-gradient(120% 70% at 50% -20%, rgba(245, 145, 30, 0.18), transparent 62%),
+    var(--lp-bg);
+}
+
+.lp-hero-inner {
+  position: relative;
+}
+
+.lp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 clamp(1.25rem, 3.5vw, 2rem);
+  font-family: var(--lp-display);
+  font-size: clamp(1rem, 2.4vw, 1.3125rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--lp-fg-mid);
+}
+
+.lp-tag-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.lp-hero-grid {
+  display: grid;
+  gap: clamp(2rem, 5vw, 3.5rem);
+  margin-top: clamp(1.75rem, 4vw, 2.75rem);
+  align-items: start;
+}
+
+.lp-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.lp-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Marcador: única aparición del ámbar, reservado a cifras */
+.lp-scoreboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+  border-top: 1px solid var(--lp-rule);
+}
+
+.lp-score {
+  padding: 1.5rem 0 1.75rem;
+  border-right: 1px solid var(--lp-rule);
+}
+
+.lp-score:last-child {
+  border-right: none;
+}
+
+.lp-score-value {
+  display: block;
+  font-family: var(--lp-display);
+  font-size: clamp(2.25rem, 6vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--amber-led);
+  text-shadow: var(--amber-glow);
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-score-label {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--lp-fg-low);
+}
+
+/* ── Maqueta de ejercicio ── */
+
+.lp-mock {
+  border: 1px solid var(--lp-rule);
+  border-radius: 16px;
+  background: rgba(4, 8, 16, 0.66);
+  padding: 1.5rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.lp-mock-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--lp-rule-soft);
+}
+
+.lp-mock-course {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--lp-fg-low);
+}
+
+.lp-mock-count {
+  font-family: var(--lp-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--amber-led);
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-mock-question {
+  margin: 1.25rem 0 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--lp-fg-low);
+}
+
+/* La fórmula va en Inter: la incógnita debe ir en minúscula */
+.lp-mock-formula {
+  margin: 0 0 1.25rem;
+  font-size: clamp(1.375rem, 4vw, 1.75rem);
+  font-weight: 600;
+  color: var(--lp-fg);
+}
+
+.lp-mock-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lp-mock-option {
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--lp-rule);
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  color: var(--lp-fg-mid);
+}
+
+.lp-mock-option-ok {
+  border-color: var(--brand);
+  background: rgba(245, 145, 30, 0.14);
+  color: var(--lp-fg);
+  font-weight: 600;
+}
+
+.lp-mock-foot {
+  display: flex;
+  align-items: baseline;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--lp-rule-soft);
+}
+
+.lp-mock-points {
+  font-family: var(--lp-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.lp-mock-streak {
+  font-size: 0.8125rem;
+  color: var(--lp-fg-low);
+}
+
+/* ── Encabezado de sección ── */
+
+.lp-head {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--lp-rule);
+}
+
+.lp-head-kicker {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 0 0 0.7rem;
+  font-family: var(--lp-display);
+  font-size: clamp(1rem, 2.2vw, 1.25rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--lp-fg-mid);
+}
+
+.lp-head-index {
+  font-family: var(--lp-display);
+  font-size: clamp(1rem, 2.2vw, 1.25rem);
+  font-weight: 800;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-head-title {
+  margin: 0;
+  font-family: var(--lp-display);
+  font-weight: 800;
+  font-size: clamp(1.875rem, 4.6vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--lp-fg);
+}
+
+/* La segunda frase siempre en línea propia: el titular es una sentencia
+   en dos tiempos, no un párrafo que se parte donde caiga */
+.lp-head-title em {
+  display: block;
+  font-style: normal;
+  color: var(--brand);
+}
+
+/* ── Bloques ── */
+
+.lp-block {
+  padding: clamp(3rem, 8vw, 5.5rem) 0;
+  background: var(--lp-bg);
+}
+
+.lp-block-alt {
+  background: var(--lp-bg-alt);
+}
+
+/* ── Manifiesto ── */
+
+.lp-manifesto-grid {
+  display: grid;
+  gap: clamp(1.75rem, 4vw, 3rem);
+  margin-top: clamp(2rem, 5vw, 3rem);
+}
+
+.lp-manifesto-lead {
+  margin: 0;
+  font-family: var(--lp-display);
+  font-size: clamp(1.375rem, 3.4vw, 2.125rem);
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  color: var(--lp-fg);
+}
+
+.lp-manifesto-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+/* ── Pilares del producto ── */
+
+.lp-pillars {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: clamp(2.25rem, 5vw, 3rem);
+  padding-top: clamp(1.75rem, 4vw, 2.25rem);
+  border-top: 1px solid var(--lp-rule-soft);
+}
+
+.lp-pillar-title {
+  margin: 0 0 0.5rem;
+  font-family: var(--lp-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--brand);
+}
+
+/* ── Proceso ── */
+
+.lp-steps {
+  display: grid;
+  gap: 0;
+  margin: clamp(2rem, 5vw, 3rem) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-step {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--lp-rule-soft);
+}
+
+.lp-step:first-child {
+  border-top: 1px solid var(--lp-rule-soft);
+}
+
+.lp-step-num {
+  display: block;
+  font-family: var(--lp-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--brand);
+}
+
+.lp-step-title {
+  margin: 0.6rem 0 0.45rem;
+  font-family: var(--lp-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--lp-fg);
+}
+
+/* ── Producto ── */
+
+.lp-showcase-grid {
+  display: grid;
+  gap: clamp(2rem, 5vw, 3.5rem);
+  margin-top: clamp(2rem, 5vw, 3rem);
+  align-items: center;
+}
+
+.lp-showcase-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lp-showcase-lead {
+  margin: 0;
+  font-family: var(--lp-display);
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--lp-fg);
+  max-width: 24ch;
+}
+
+.lp-gen {
+  border: 1px solid var(--lp-rule);
+  border-radius: 16px;
+  background: var(--lp-surface);
+  padding: clamp(1.35rem, 4vw, 1.85rem);
+}
+
+.lp-gen-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--lp-fg-low);
+}
+
+.lp-gen-input {
+  display: flex;
+  align-items: center;
+  margin: 0.6rem 0 1.5rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid rgba(245, 145, 30, 0.45);
+  border-radius: 999px;
+  background: rgba(245, 145, 30, 0.08);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--lp-fg);
+}
+
+.lp-gen-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 3px;
+  background: var(--brand);
+}
+
+.lp-gen-out {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-gen-out li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--lp-rule-soft);
+  font-size: 0.9375rem;
+  color: var(--lp-fg-mid);
+}
+
+.lp-gen-num {
+  font-family: var(--lp-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--amber-led);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.2ch;
+}
+
+/* ── Claim ── */
+
+.lp-claim {
+  padding: clamp(4rem, 11vw, 7.5rem) 0;
+  background:
+    radial-gradient(80% 90% at 20% 50%, rgba(245, 145, 30, 0.14), transparent 60%),
+    var(--lp-bg);
+  border-top: 1px solid var(--lp-rule-soft);
+  border-bottom: 1px solid var(--lp-rule-soft);
+}
+
+.lp-claim-text {
+  margin: 0;
+  font-family: var(--lp-display);
+  font-weight: 800;
+  font-size: clamp(2.25rem, 6.5vw, 5rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  color: var(--lp-fg);
+}
+
+.lp-claim-text em {
+  font-style: normal;
+  color: var(--brand);
+}
+
+.lp-claim-foot {
+  margin: clamp(1.25rem, 3vw, 1.75rem) 0 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--lp-fg-mid);
+  max-width: 46ch;
+}
+
+/* ── Lista de prestaciones ── */
+
+.lp-list {
+  margin: clamp(2rem, 5vw, 3rem) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--lp-rule-soft);
+}
+
+.lp-list-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  padding: 1.35rem 0;
+  border-bottom: 1px solid var(--lp-rule-soft);
+}
+
+.lp-list-num {
+  grid-row: span 2;
+  font-family: var(--lp-display);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.5;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-list-title {
+  margin: 0;
+  font-family: var(--lp-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--lp-fg);
+}
+
+/* ── Recompensas ── */
+
+.lp-table {
+  width: 100%;
+  margin-top: clamp(2rem, 5vw, 3rem);
+  border-collapse: collapse;
+}
+
+.lp-table th {
+  padding: 1rem 0;
+  text-align: left;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--lp-fg-mid);
+  border-bottom: 1px solid var(--lp-rule-soft);
+}
+
+.lp-table tr:first-child th,
+.lp-table tr:first-child td {
+  border-top: 1px solid var(--lp-rule-soft);
+}
+
+.lp-table td {
+  padding: 1rem 0;
+  text-align: right;
+  font-family: var(--lp-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--amber-led);
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--lp-rule-soft);
+  white-space: nowrap;
+}
+
+.lp-table-note {
+  margin: 1.1rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--lp-fg-low);
+}
+
+/* ── Familias ── */
+
+.lp-family {
+  display: grid;
+  gap: 1.5rem 2.5rem;
+  margin-top: clamp(2rem, 5vw, 2.75rem);
+}
+
+.lp-family-title {
+  margin: 0 0 0.4rem;
+  font-family: var(--lp-display);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--lp-fg);
+}
+
+/* ── Planes ── */
+
+.lp-plans {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: clamp(2.25rem, 5vw, 3.25rem);
+}
+
+.lp-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.85rem 1.6rem;
+  border: 1px solid var(--lp-rule);
+  border-radius: 18px;
+  background: var(--lp-surface);
+}
+
+.lp-plan-featured {
+  border-color: var(--brand);
+  background: rgba(245, 145, 30, 0.07);
+}
+
+.lp-plan-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.lp-plan-name {
+  font-family: var(--lp-display);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--lp-fg);
+}
+
+.lp-plan-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.lp-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--lp-rule-soft);
+}
+
+.lp-plan-amount {
+  font-family: var(--lp-display);
+  font-size: clamp(3rem, 8vw, 3.75rem);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: var(--lp-fg);
+}
+
+.lp-plan-unit {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--lp-fg-low);
+}
+
+.lp-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--lp-fg-mid);
+  flex: 1;
+}
+
+.lp-plan-list li {
+  position: relative;
+  padding-left: 1.1rem;
+}
+
+.lp-plan-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+/* ── Cierre ── */
+
+.lp-final {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(4rem, 11vw, 7.5rem) 0;
+  background:
+    radial-gradient(90% 70% at 50% 120%, rgba(245, 145, 30, 0.2), transparent 62%),
+    var(--lp-bg);
+  border-top: 1px solid var(--lp-rule-soft);
+}
+
+.lp-final-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.lp-final-title {
+  font-size: clamp(2.75rem, 8vw, 6rem);
+}
+
+/* ── Estructura a partir de tablet ── */
+
+@media (min-width: 700px) {
+  .lp-steps {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0 2.5rem;
+    border-top: 1px solid var(--lp-rule-soft);
+  }
+
+  .lp-step,
+  .lp-step:first-child {
+    border-top: none;
+    border-bottom: none;
+    padding: 1.75rem 0 0;
+  }
+
+  .lp-family,
+  .lp-pillars {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
+  }
+
+  .lp-list-row {
+    grid-template-columns: auto 1fr 1.4fr;
+    align-items: baseline;
+    gap: 1.5rem;
+  }
+
+  .lp-list-num {
+    grid-row: auto;
+  }
+
+  .lp-plans {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .lp-hero-grid {
+    grid-template-columns: 1fr minmax(0, 420px);
+    gap: 4rem;
+  }
+
+  .lp-showcase-grid {
+    grid-template-columns: 1fr minmax(0, 460px);
+    gap: 4rem;
+  }
+
+  .lp-manifesto-grid {
+    grid-template-columns: 1.1fr 1fr;
+    align-items: start;
+    gap: 4rem;
+  }
+
+  .lp-plan {
+    padding: 2.25rem 2rem;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MOVIMIENTO
+   1. Entrada del hero: encadena con la salida del splash.
+   2. Revelado por scroll: scroll-driven, sin JS ni observers.
+   3. Feedback: solo en lo que de verdad es interactivo.
+   ══════════════════════════════════════════════════════════════════ */
+
+@keyframes lp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lp-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* 1 · Entrada del hero, escalonada 70 ms entre bloques */
+.lp-hero-inner > * {
+  animation: lp-rise 520ms var(--lp-ease-out) both;
+}
+
+.lp-hero-inner > *:nth-child(1) {
+  animation-delay: var(--lp-enter);
+}
+.lp-hero-inner > *:nth-child(2) {
+  animation-delay: calc(var(--lp-enter) + 70ms);
+}
+.lp-hero-inner > *:nth-child(3) {
+  animation-delay: calc(var(--lp-enter) + 140ms);
+}
+.lp-hero-inner > *:nth-child(4) {
+  animation-delay: calc(var(--lp-enter) + 210ms);
+}
+
+/* El cursor del campo de ejemplo: parpadea porque es lo que hace un cursor */
+.lp-gen-caret {
+  animation: lp-caret 1.1s step-end infinite;
+}
+
+/* 2 · Revelado por scroll. Dentro de @supports: si el navegador no lo
+   soporta, el contenido se ve sin más en vez de quedarse invisible. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lp-block .lp-head,
+    .lp-steps,
+    .lp-showcase-grid,
+    .lp-list,
+    .lp-table,
+    .lp-family,
+    .lp-plans,
+    .lp-claim-text,
+    .lp-claim-foot,
+    .lp-final-inner {
+      animation: lp-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 8% cover 24%;
+    }
+  }
+}
+
+/* 3 · Feedback. El movimiento de hover solo con ratón; el de pulsación
+   también en táctil, que ahí es donde más se agradece. */
+.lp-btn {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease,
+    transform 100ms var(--lp-ease-out);
+}
+
+.lp-btn:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lp-mock-option,
+  .lp-plan {
+    transition: border-color 150ms ease;
+  }
+}
+
+/* Sin movimiento: contenido visible de inmediato, sin esperas ni desplazamientos */
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero-inner > *,
+  .lp-gen-caret {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .lp-btn {
+    width: 100%;
+  }
+
+  .lp-scoreboard {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-score {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 0;
+    border-right: none;
+    border-bottom: 1px solid var(--lp-rule-soft);
+  }
+
+  .lp-score-label {
+    margin-top: 0;
+  }
+}
+`;
