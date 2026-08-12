@@ -157,6 +157,11 @@ export default function AdminUsersPage() {
       showToast('La contraseña debe tener al menos 8 caracteres', false);
       return;
     }
+    const confirmation = window.prompt('Repite la contraseña para confirmar:');
+    if (confirmation !== password) {
+      showToast('Las contraseñas no coinciden', false);
+      return;
+    }
     try {
       await resetPassword.mutateAsync({ userId, password });
       showToast('Contraseña restablecida', true);
@@ -173,7 +178,8 @@ export default function AdminUsersPage() {
       const matchesSearch =
         !search ||
         u.name.toLowerCase().includes(search.toLowerCase()) ||
-        (u.email ?? '').toLowerCase().includes(search.toLowerCase());
+        (u.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.username ?? '').toLowerCase().includes(search.toLowerCase());
       const matchesRole = !filterRole || u.role === filterRole;
       return matchesSearch && matchesRole;
     }) ?? [];
@@ -214,7 +220,7 @@ export default function AdminUsersPage() {
       <div style={s.filters}>
         <input
           style={s.input}
-          placeholder="Buscar por nombre o email..."
+          placeholder="Buscar por nombre, email o username..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
