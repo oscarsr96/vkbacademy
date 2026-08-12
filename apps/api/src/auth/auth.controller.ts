@@ -2,8 +2,6 @@ import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs
 import { Throttle } from '@nestjs/throttler';
 import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { RegisterTutorDto } from './dto/register-tutor.dto';
 import { RegisterStudentsDto } from './dto/register-students.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
@@ -18,16 +16,6 @@ import { AllowWhenMustChange } from './decorators/allow-when-must-change.decorat
 @Throttle({ default: { ttl: 60000, limit: 10 } })
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
-  }
-
-  @Post('register-tutor')
-  registerTutor(@Body() dto: RegisterTutorDto) {
-    return this.authService.registerTutor(dto);
-  }
 
   @Post('register-students')
   registerStudents(@Body() dto: RegisterStudentsDto) {

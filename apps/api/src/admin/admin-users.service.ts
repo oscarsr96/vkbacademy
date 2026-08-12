@@ -45,9 +45,6 @@ export class AdminUsersService {
           role: true,
           avatarUrl: true,
           createdAt: true,
-          tutorId: true,
-          tutor: { select: { id: true, name: true } },
-          _count: { select: { students: true } },
           academyMembers: {
             select: { academy: { select: { id: true, slug: true, name: true } } },
           },
@@ -58,29 +55,6 @@ export class AdminUsersService {
     ]);
 
     return { data: items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
-  }
-
-  async assignTutor(studentId: string, tutorId: string | null | undefined) {
-    // Si se proporciona tutorId, verificar que el usuario tiene rol TUTOR
-    if (tutorId) {
-      const tutorUser = await this.prisma.user.findUnique({ where: { id: tutorId } });
-      if (!tutorUser) throw new NotFoundException('Tutor no encontrado');
-      if (tutorUser.role !== Role.TUTOR) {
-        throw new BadRequestException('El usuario especificado no tiene el rol TUTOR');
-      }
-    }
-
-    return this.prisma.user.update({
-      where: { id: studentId },
-      data: { tutorId: tutorId ?? null },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        tutorId: true,
-        tutor: { select: { id: true, name: true } },
-      },
-    });
   }
 
   async updateRole(userId: string, role: Role) {
@@ -103,7 +77,6 @@ export class AdminUsersService {
         passwordHash,
         role: dto.role,
         schoolYearId: dto.schoolYearId ?? null,
-        tutorId: dto.tutorId ?? null,
         ...(academyId ? { academyMembers: { create: { academyId } } } : {}),
       },
       select: {
@@ -113,9 +86,6 @@ export class AdminUsersService {
         role: true,
         avatarUrl: true,
         createdAt: true,
-        tutorId: true,
-        tutor: { select: { id: true, name: true } },
-        _count: { select: { students: true } },
         academyMembers: {
           select: { academy: { select: { id: true, slug: true, name: true } } },
         },
@@ -150,9 +120,6 @@ export class AdminUsersService {
         role: true,
         avatarUrl: true,
         createdAt: true,
-        tutorId: true,
-        tutor: { select: { id: true, name: true } },
-        _count: { select: { students: true } },
       },
     });
   }

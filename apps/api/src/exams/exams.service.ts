@@ -45,7 +45,7 @@ export class ExamsService {
    * Un STUDENT solo puede consultar/iniciar exámenes de cursos en los que está
    * matriculado (igual que `getAvailable`). Para un banco de módulo se exige
    * matrícula en el curso al que pertenece el módulo. Los roles no-alumno
-   * (tutores/admin) mantienen su acceso actual.
+   * (admin) mantienen su acceso actual.
    */
   private async assertBankAccess(
     userId: string,

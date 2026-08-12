@@ -59,7 +59,6 @@ describe('AuthService.registerStudents', () => {
   let mockJwt: { sign: jest.Mock };
   let mockConfig: { get: jest.Mock };
   let mockNotifications: {
-    sendTutorWelcomeWithStudents: jest.Mock;
     sendPasswordReset: jest.Mock;
   };
   let mockUsernames: { slugify: jest.Mock; allocate: jest.Mock };
@@ -125,7 +124,6 @@ describe('AuthService.registerStudents', () => {
       }),
     };
     mockNotifications = {
-      sendTutorWelcomeWithStudents: jest.fn().mockResolvedValue(undefined),
       sendPasswordReset: jest.fn().mockResolvedValue(undefined),
     };
     mockUsernames = {

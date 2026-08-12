@@ -33,9 +33,6 @@ describe('AdminUsersService', () => {
     passwordHash: '$2b$10$hashedpassword',
     avatarUrl: null,
     createdAt: new Date('2026-01-01'),
-    tutorId: null,
-    tutor: null,
-    _count: { students: 0 },
   };
 
   const fakeCourse = {

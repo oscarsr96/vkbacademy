@@ -14,7 +14,6 @@ import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
 import { SchoolYearsModule } from './school-years/school-years.module';
-import { TutorsModule } from './tutors/tutors.module';
 import { ChallengesModule } from './challenges/challenges.module';
 import { ExamsModule } from './exams/exams.module';
 import { CertificatesModule } from './certificates/certificates.module';
@@ -61,7 +60,6 @@ import { MustChangePasswordInterceptor } from './auth/interceptors/must-change-p
     NotificationsModule,
     AdminModule,
     SchoolYearsModule,
-    TutorsModule,
     ChallengesModule,
     ExamsModule,
     CertificatesModule,

@@ -77,7 +77,7 @@ export class CoursesController {
 
   @Get(':id/student-progress/:studentId')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.ADMIN)
   getStudentCourseProgress(
     @Param('id') id: string,
     @Param('studentId') studentId: string,

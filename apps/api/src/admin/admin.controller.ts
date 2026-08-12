@@ -29,7 +29,6 @@ import { CreateQuestionDto, UpdateQuestionDto } from './dto/create-question.dto'
 import { GenerateModuleDto } from './dto/generate-module.dto';
 import { GenerateLessonDto } from './dto/generate-lesson.dto';
 import { GenerateQuestionDto } from './dto/generate-question.dto';
-import { AssignTutorDto } from './dto/assign-tutor.dto';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 import { UpdateAdminUserDto } from './dto/update-admin-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -79,11 +78,6 @@ export class AdminController {
   @Patch('users/:id/role')
   updateRole(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
     return this.adminUsersService.updateRole(id, dto.role);
-  }
-
-  @Patch('users/:id/tutor')
-  assignTutor(@Param('id') id: string, @Body() dto: AssignTutorDto) {
-    return this.adminUsersService.assignTutor(id, dto.tutorId);
   }
 
   @Post('users')
