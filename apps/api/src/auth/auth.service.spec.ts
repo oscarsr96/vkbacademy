@@ -201,7 +201,6 @@ describe('AuthService', () => {
         avatarUrl: null,
         schoolYearId: null,
         schoolYear: null,
-        mustChangePassword: true,
         academyMembers: [],
       });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
@@ -211,7 +210,6 @@ describe('AuthService', () => {
       expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({ where: { username: 'juan-garcia' } }),
       );
-      expect(result.user.mustChangePassword).toBe(true);
       expect(result.user.username).toBe('juan-garcia');
     });
   });
@@ -311,7 +309,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── resetPassword: limpia mustChangePassword al fijar contraseña propia ─────
+  // ─── resetPassword: fija la nueva contraseña del usuario ────────────────────
 
   describe('resetPassword', () => {
     beforeEach(() => {
@@ -319,7 +317,7 @@ describe('AuthService', () => {
       mockJwt.verify.mockReturnValue({ sub: 'u1', purpose: 'reset' });
     });
 
-    it('actualiza passwordHash y limpia mustChangePassword', async () => {
+    it('actualiza passwordHash con el hash de la nueva contraseña', async () => {
       mockJwt.decode.mockReturnValue({ sub: 'st1', purpose: 'reset' });
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'st1',
@@ -332,26 +330,7 @@ describe('AuthService', () => {
 
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'st1' },
-        data: {
-          passwordHash: 'newhash',
-          mustChangePassword: false,
-        },
-      });
-    });
-  });
-
-  // ─── changePassword: cambio de contraseña del usuario autenticado ────────────
-
-  describe('changePassword', () => {
-    it('hashea la nueva contraseña y limpia mustChangePassword', async () => {
-      (bcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$new');
-      mockPrisma.user.update.mockResolvedValue({});
-
-      await service.changePassword('user-1', 'nuevaPass123');
-
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-1' },
-        data: { passwordHash: '$2b$10$new', mustChangePassword: false },
+        data: { passwordHash: 'newhash' },
       });
     });
   });

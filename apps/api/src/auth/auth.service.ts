@@ -24,7 +24,6 @@ export type AuthResponse = AuthTokens & {
     name: string;
     role: string;
     avatarUrl: string | null;
-    mustChangePassword: boolean;
     schoolYearId: string | null;
     schoolYear: { id: string; name: string; label: string } | null;
     academyId: string | null;
@@ -242,22 +241,11 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    // Al fijar una contraseña propia, el alumno deja de estar obligado a cambiarla
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash, mustChangePassword: false },
+      data: { passwordHash },
     });
 
-    return { message: 'Contraseña actualizada correctamente' };
-  }
-
-  /** Cambia la contraseña del usuario autenticado y limpia el flag de cambio obligatorio */
-  async changePassword(userId: string, newPassword: string): Promise<{ message: string }> {
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash, mustChangePassword: false },
-    });
     return { message: 'Contraseña actualizada correctamente' };
   }
 
@@ -296,7 +284,6 @@ export class AuthService {
       name: string;
       role: string;
       avatarUrl: string | null;
-      mustChangePassword?: boolean;
       schoolYearId?: string | null;
       schoolYear?: { id: string; name: string; label: string } | null;
     },
@@ -317,7 +304,6 @@ export class AuthService {
       name: user.name,
       role: user.role,
       avatarUrl: user.avatarUrl,
-      mustChangePassword: user.mustChangePassword ?? false,
       schoolYearId: user.schoolYearId ?? null,
       schoolYear: user.schoolYear ?? null,
       academyId: academyId ?? null,

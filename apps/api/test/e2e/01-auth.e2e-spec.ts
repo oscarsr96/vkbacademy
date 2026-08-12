@@ -1,4 +1,4 @@
-import { createApp, closeApp, login, publicGet, publicPost, authPost, getPrisma } from './setup';
+import { createApp, closeApp, login, publicPost } from './setup';
 
 describe('Auth — /auth', () => {
   beforeAll(async () => {
@@ -193,78 +193,6 @@ describe('Auth — /auth', () => {
       });
 
       expect([400, 401, 404]).toContain(res.status);
-    });
-  });
-
-  // ─── Cambio de contraseña forzado ────────────────────────────────────────────
-
-  describe('POST /auth/change-password', () => {
-    let schoolYearId: string;
-
-    beforeAll(async () => {
-      const res = await publicGet('/school-years');
-      schoolYearId = res.body[0].id;
-    });
-
-    it('un alumno con mustChangePassword puede cambiar su contraseña y luego usarla', async () => {
-      // Registrar un tutor con un alumno fresco
-      await publicPost('/auth/register-tutor', {
-        name: 'tutor-cambio-pass',
-        email: 'tutor.cambio.pass@test.com',
-        password: 'password123',
-        academySlug: 'vallekas-basket',
-        students: [{ name: 'alumno-cambio-pass', schoolYearId }],
-      });
-
-      const prisma = getPrisma();
-      const student = await prisma.user.findFirst({
-        where: { name: 'alumno-cambio-pass', role: 'STUDENT' },
-        select: { username: true },
-      });
-      expect(student?.username).toBeTruthy();
-
-      // Login con la contraseña por defecto
-      const loginRes = await publicPost('/auth/login', {
-        identifier: student!.username,
-        password: 'cambiar123',
-      });
-      expect(loginRes.status).toBe(200);
-      const token = loginRes.body.accessToken;
-
-      // Cambio de contraseña (permitido pese a mustChangePassword)
-      const changeRes = await authPost('/auth/change-password', token, {
-        newPassword: 'nuevaPassword123',
-      });
-      expect(changeRes.status).toBe(200);
-      expect(changeRes.body).toHaveProperty('message');
-
-      // La nueva contraseña funciona; la antigua ya no
-      const newLogin = await publicPost('/auth/login', {
-        identifier: student!.username,
-        password: 'nuevaPassword123',
-      });
-      expect(newLogin.status).toBe(200);
-
-      const oldLogin = await publicPost('/auth/login', {
-        identifier: student!.username,
-        password: 'cambiar123',
-      });
-      expect(oldLogin.status).toBe(401);
-    });
-
-    it('devuelve 401 sin token', async () => {
-      const res = await authPost('/auth/change-password', '', {
-        newPassword: 'nuevaPassword123',
-      });
-      expect(res.status).toBe(401);
-    });
-
-    it('devuelve 400 si la nueva contraseña es demasiado corta', async () => {
-      const { accessToken } = await login('student@vkbacademy.com');
-      const res = await authPost('/auth/change-password', accessToken, {
-        newPassword: '123',
-      });
-      expect(res.status).toBe(400);
     });
   });
 });
