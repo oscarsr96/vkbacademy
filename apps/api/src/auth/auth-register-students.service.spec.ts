@@ -1,12 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  ValidationPipe,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { Prisma } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsernameService } from '../username/username.service';
+import { RegisterStudentsDto } from './dto/register-students.dto';
 
 // Mockear bcrypt para evitar el coste de rondas reales en los tests
 jest.mock('bcrypt');
@@ -46,6 +53,7 @@ describe('AuthService.registerStudents', () => {
     };
     academy: { findUnique: jest.Mock };
     academyMember: { create: jest.Mock };
+    schoolYear: { findMany: jest.Mock };
     $transaction: jest.Mock;
   };
   let mockJwt: { sign: jest.Mock };
@@ -95,6 +103,14 @@ describe('AuthService.registerStudents', () => {
       },
       academy: { findUnique: jest.fn().mockResolvedValue(fakeAcademy) },
       academyMember: { create: jest.fn() },
+      // Por defecto todos los cursos pedidos existen
+      schoolYear: {
+        findMany: jest
+          .fn()
+          .mockImplementation((args: { where: { id: { in: string[] } } }) =>
+            Promise.resolve(args.where.id.in.map((id) => ({ id }))),
+          ),
+      },
       // $transaction ejecuta el callback con el cliente transaccional mockTx
       $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) => fn(mockTx)),
     };
@@ -224,6 +240,119 @@ describe('AuthService.registerStudents', () => {
     ).rejects.toThrow(NotFoundException);
 
     expect(mockTx.user.create).not.toHaveBeenCalled();
+  });
+
+  it('cada alumno recibe SU nombre, SU username y SU hash — sin cruces de índices', async () => {
+    mockUsernames.allocate.mockResolvedValue(['ana-perez', 'luis-perez']);
+    await service.registerStudents({
+      guardianEmail: 'padre@example.com',
+      academySlug: 'vallekas-basket',
+      students: [
+        { name: 'Ana Pérez', schoolYearId: 'sy1', password: 'clave12345' },
+        { name: 'Luis Pérez', schoolYearId: 'sy1', password: 'otraClave99' },
+      ],
+    });
+
+    const creates = mockTx.user.create.mock.calls;
+    expect(creates[0][0].data).toMatchObject({
+      name: 'Ana Pérez',
+      username: 'ana-perez',
+      passwordHash: '$2b$10$hashed_clave12345',
+    });
+    expect(creates[1][0].data).toMatchObject({
+      name: 'Luis Pérez',
+      username: 'luis-perez',
+      passwordHash: '$2b$10$hashed_otraClave99',
+    });
+  });
+
+  it('lanza BadRequestException si algún schoolYearId no existe, en vez de un 500 de Prisma', async () => {
+    mockUsernames.allocate.mockResolvedValue(['ana-perez']);
+    mockPrisma.schoolYear.findMany.mockResolvedValue([]); // "pwned" no existe
+
+    await expect(
+      service.registerStudents({
+        guardianEmail: 'padre@example.com',
+        academySlug: 'vallekas-basket',
+        students: [{ name: 'Ana Pérez', schoolYearId: 'pwned', password: 'clave12345' }],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(mockTx.user.create).not.toHaveBeenCalled();
+  });
+
+  it('traduce el P2002 de username a ConflictException, no a un 500 opaco', async () => {
+    mockUsernames.allocate.mockResolvedValue(['ana-perez']);
+    mockTx.user.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['username'] },
+      }),
+    );
+
+    await expect(
+      service.registerStudents({
+        guardianEmail: 'padre@example.com',
+        academySlug: 'vallekas-basket',
+        students: [{ name: 'Ana Pérez', schoolYearId: 'sy1', password: 'clave12345' }],
+      }),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('rechaza más de 10 alumnos por solicitud (400 en el ValidationPipe)', async () => {
+    const pipe = new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    });
+    const payload = {
+      guardianEmail: 'padre@example.com',
+      academySlug: 'vallekas-basket',
+      students: Array.from({ length: 11 }, (_, i) => ({
+        name: `Alumno ${i}`,
+        schoolYearId: 'sy1',
+        password: 'clave12345',
+      })),
+    };
+
+    await expect(
+      pipe.transform(payload, { type: 'body', metatype: RegisterStudentsDto }),
+    ).rejects.toThrow(BadRequestException);
+
+    // 10 sí pasan
+    await expect(
+      pipe.transform(
+        { ...payload, students: payload.students.slice(0, 10) },
+        { type: 'body', metatype: RegisterStudentsDto },
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it('exige academySlug y normaliza el guardianEmail (trim + lowercase)', async () => {
+    const pipe = new ValidationPipe({ whitelist: true, transform: true });
+
+    // Sin academia → 400: un alumno sin academia no lo ve ningún admin
+    await expect(
+      pipe.transform(
+        {
+          guardianEmail: 'padre@example.com',
+          students: [{ name: 'Ana Pérez', schoolYearId: 'sy1', password: 'clave12345' }],
+        },
+        { type: 'body', metatype: RegisterStudentsDto },
+      ),
+    ).rejects.toThrow(BadRequestException);
+
+    const normalized = (await pipe.transform(
+      {
+        guardianEmail: '  Padre@Example.COM  ',
+        academySlug: 'vallekas-basket',
+        students: [{ name: 'Ana Pérez', schoolYearId: 'sy1', password: 'clave12345' }],
+      },
+      { type: 'body', metatype: RegisterStudentsDto },
+    )) as RegisterStudentsDto;
+    expect(normalized.guardianEmail).toBe('padre@example.com');
   });
 
   it('lanza BadRequestException si la academia está inactiva', async () => {

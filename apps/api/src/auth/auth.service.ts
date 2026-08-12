@@ -8,6 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsernameService } from '../username/username.service';
@@ -203,46 +204,67 @@ export class AuthService {
   async registerStudents(dto: RegisterStudentsDto): Promise<{
     students: { name: string; username: string; schoolYear: string | null }[];
   }> {
-    // 1. Resolver academia si se indicó
-    let academyId: string | null = null;
-    if (dto.academySlug) {
-      const academy = await this.prisma.academy.findUnique({
-        where: { slug: dto.academySlug },
-      });
-      if (!academy) {
-        throw new NotFoundException(`La academia "${dto.academySlug}" no existe`);
-      }
-      if (!academy.isActive) {
-        throw new BadRequestException(`La academia "${dto.academySlug}" no está activa`);
-      }
-      academyId = academy.id;
+    // 1. Resolver academia (obligatoria: sin ella el alumno no lo vería ningún admin)
+    const academy = await this.prisma.academy.findUnique({
+      where: { slug: dto.academySlug },
+    });
+    if (!academy) {
+      throw new NotFoundException(`La academia "${dto.academySlug}" no existe`);
+    }
+    if (!academy.isActive) {
+      throw new BadRequestException(`La academia "${dto.academySlug}" no está activa`);
+    }
+    const academyId = academy.id;
+
+    // 2. Validar los cursos antes de tocar nada: un id inventado debe ser 400, no
+    //    un fallo de clave foránea de Prisma sin envolver
+    const requestedYearIds = [...new Set(dto.students.map((s) => s.schoolYearId))];
+    const foundYears = await this.prisma.schoolYear.findMany({
+      where: { id: { in: requestedYearIds } },
+      select: { id: true },
+    });
+    const foundYearIds = new Set(foundYears.map((y) => y.id));
+    const missingYearIds = requestedYearIds.filter((id) => !foundYearIds.has(id));
+    if (missingYearIds.length > 0) {
+      throw new BadRequestException(`Curso no válido: ${missingYearIds.join(', ')}`);
     }
 
-    // 2. Usernames únicos, también entre hermanos del mismo formulario
+    // 3. Usernames únicos, también entre hermanos del mismo formulario
     const usernames = await this.usernames.allocate(dto.students.map((s) => s.name));
 
-    // 3. Hash independiente por alumno
+    // 4. Hash independiente por alumno
     const passwordHashes = await Promise.all(dto.students.map((s) => bcrypt.hash(s.password, 10)));
 
-    // 4. Todos los hermanos o ninguno
-    const created = await this.prisma.$transaction((tx) =>
-      Promise.all(
-        dto.students.map((studentDto, index) =>
-          tx.user.create({
-            data: {
-              username: usernames[index],
-              passwordHash: passwordHashes[index],
-              name: studentDto.name,
-              role: 'STUDENT',
-              guardianEmail: dto.guardianEmail,
-              ...(studentDto.schoolYearId ? { schoolYearId: studentDto.schoolYearId } : {}),
-              ...(academyId ? { academyMembers: { create: { academyId } } } : {}),
-            },
-            include: { schoolYear: true },
-          }),
+    // 5. Todos los hermanos o ninguno
+    const created = await this.prisma
+      .$transaction((tx) =>
+        Promise.all(
+          dto.students.map((studentDto, index) =>
+            tx.user.create({
+              data: {
+                username: usernames[index],
+                passwordHash: passwordHashes[index],
+                name: studentDto.name,
+                role: 'STUDENT',
+                guardianEmail: dto.guardianEmail,
+                schoolYearId: studentDto.schoolYearId,
+                academyMembers: { create: { academyId } },
+              },
+              include: { schoolYear: true },
+            }),
+          ),
         ),
-      ),
-    );
+      )
+      .catch((error: unknown) => {
+        // Carrera con otro registro simultáneo que se llevó el mismo username:
+        // los usernames se reservan fuera de la transacción, así que puede colisionar
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          throw new ConflictException(
+            'No se ha podido completar el registro por un conflicto de nombres. Inténtalo de nuevo.',
+          );
+        }
+        throw error;
+      });
 
     return {
       students: created.map((u) => ({

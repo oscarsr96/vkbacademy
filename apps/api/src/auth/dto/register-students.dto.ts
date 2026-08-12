@@ -1,14 +1,17 @@
 import {
   IsArray,
   IsEmail,
-  IsOptional,
   IsString,
   MaxLength,
   MinLength,
+  ArrayMaxSize,
   ArrayMinSize,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+
+/** Tope de alumnos por solicitud: el endpoint es público y cada alumno cuesta un bcrypt. */
+export const MAX_STUDENTS_PER_REQUEST = 10;
 
 export class NewStudentDto {
   @IsString()
@@ -27,16 +30,25 @@ export class NewStudentDto {
 }
 
 export class RegisterStudentsDto {
-  /** Email del padre o la madre. Solo dato de contacto: no crea cuenta. */
+  /**
+   * Email del padre o la madre. Solo dato de contacto: no crea cuenta.
+   * Se normaliza porque es la única clave que relaciona a los hermanos de una
+   * familia: sin trim/lowercase, "Padre@Example.com" sería otra familia.
+   */
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail({}, { message: 'Email inválido' })
   guardianEmail: string;
 
-  @IsOptional()
-  @IsString()
-  academySlug?: string;
+  /** Obligatorio: sin academia el alumno no sería visible para ningún admin. */
+  @IsString({ message: 'Debes indicar la academia' })
+  @MinLength(1, { message: 'Debes indicar la academia' })
+  academySlug: string;
 
   @IsArray()
   @ArrayMinSize(1, { message: 'Debes registrar al menos un alumno' })
+  @ArrayMaxSize(MAX_STUDENTS_PER_REQUEST, {
+    message: 'Puedes registrar como máximo 10 alumnos por solicitud',
+  })
   @ValidateNested({ each: true })
   @Type(() => NewStudentDto)
   students: NewStudentDto[];
