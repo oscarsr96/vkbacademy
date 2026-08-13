@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
@@ -25,25 +25,25 @@ const STUDENT_FEATURES = [
   { icon: '🏆', text: 'Retos y puntos canjeables por merchandising del club' },
 ];
 
-// Lo que obtiene el tutor/padre
-const TUTOR_FEATURES = [
-  { icon: '📊', text: 'Seguimiento en tiempo real del progreso de tu hijo/a' },
-  { icon: '📋', text: 'Historial completo de intentos, exámenes y certificados' },
-  { icon: '🔔', text: 'Notificaciones de avance de tu hijo/a' },
+// Lo que gestiona el padre, madre o tutor legal
+const GUARDIAN_FEATURES = [
+  { icon: '📝', text: 'Da de alta a todos sus hijos/as en un único formulario' },
+  { icon: '🔑', text: 'Elige la contraseña de cada hijo/a en el momento de inscribirlo' },
+  { icon: '🏫', text: 'Si pierde los datos de acceso, la academia se los facilita' },
 ];
 
 const FAQS = [
   {
     q: '¿Cómo apunto a mi hijo/a?',
-    a: 'Contacta con la administración del club. Ellos crearán la cuenta de tu hijo/a y te asignarán como tutor. A partir de ahí, sigues su progreso desde tu propio panel.',
+    a: 'Rellena el formulario de inscripción con tu email de contacto y los datos de tu hijo/a, eligiendo su contraseña. Al terminar verás su nombre de usuario en pantalla: apúntalo, porque no se vuelve a mostrar.',
   },
   {
     q: '¿Qué necesita mi hijo/a para acceder?',
-    a: 'Solo un navegador web (ordenador, tablet o móvil) y las credenciales que le proporcionará el club. No hace falta instalar ninguna aplicación.',
+    a: 'Solo un navegador web (ordenador, tablet o móvil) y el usuario y contraseña que elegiste al inscribirlo. No hace falta instalar ninguna aplicación.',
   },
   {
     q: '¿Puedo ver lo que estudia mi hijo/a?',
-    a: 'Sí. Como tutor tienes acceso a su progreso: lecciones completadas, resultados de tests y exámenes, y certificados obtenidos.',
+    a: 'No hay un panel de seguimiento para padres o tutores: el progreso lo ve tu hijo/a desde su propia cuenta. Si quieres saber cómo le va, pregúntale directamente a él/ella o a la academia.',
   },
   {
     q: '¿Se adapta al nivel educativo de mi hijo/a?',
@@ -151,8 +151,8 @@ export default function PricingPage() {
           </h1>
           <p style={S.heroSub}>
             Por solo <strong style={{ color: '#fb923c' }}>15 € al mes</strong>, tu hijo/a accede a
-            todos los cursos, lecciones interactivas y exámenes del club. Tú sigues su progreso en
-            tiempo real.
+            todos los cursos, lecciones interactivas y exámenes del club. Tú lo das de alta y eliges
+            su contraseña en un momento.
           </p>
         </div>
       </section>
@@ -210,7 +210,11 @@ export default function PricingPage() {
               Acceder a la plataforma
             </button>
             <p style={S.planNote}>
-              ¿Aún no tienes cuenta? Contacta con el club para que te den de alta.
+              ¿Aún no has inscrito a tu hijo/a?{' '}
+              <Link to="/register" style={{ color: ORANGE, fontWeight: 600 }}>
+                Regístrale aquí
+              </Link>
+              .
             </p>
           </div>
 
@@ -220,10 +224,10 @@ export default function PricingPage() {
             <div style={S.infoPanelItem}>
               <span style={S.infoPanelIcon}>👨‍👩‍👧</span>
               <div>
-                <p style={S.infoPanelTitle}>Tu rol como tutor</p>
+                <p style={S.infoPanelTitle}>Tu papel como familia</p>
                 <p style={S.infoPanelText}>
-                  Tienes tu propio acceso para ver el progreso de tu hijo/a, sus certificados y
-                  recibir notificaciones de avance.
+                  Inscribes a tu hijo/a y eliges su contraseña. Al terminar recibes su nombre de
+                  usuario en pantalla — apúntalo, porque no vuelve a mostrarse.
                 </p>
               </div>
             </div>
@@ -268,14 +272,14 @@ export default function PricingPage() {
             </ul>
           </div>
 
-          {/* Columna tutor */}
+          {/* Columna padre/madre/tutor legal */}
           <div style={S.featureCol}>
             <div style={S.featureColHeader}>
-              <span style={S.featureColIconWrap}>👀</span>
-              <h2 style={S.featureColTitle}>Tú como tutor puedes…</h2>
+              <span style={S.featureColIconWrap}>📝</span>
+              <h2 style={S.featureColTitle}>Tú te encargas de…</h2>
             </div>
             <ul style={S.featureList}>
-              {TUTOR_FEATURES.map((f) => (
+              {GUARDIAN_FEATURES.map((f) => (
                 <FeatureItem key={f.text} {...f} />
               ))}
             </ul>
@@ -292,13 +296,13 @@ export default function PricingPage() {
             {[
               {
                 n: '1',
-                title: 'Contacta con el club',
-                desc: 'Habla con la administración de Vallekas Basket para que creen la cuenta de tu hijo/a.',
+                title: 'Rellena el formulario',
+                desc: 'Inscribe a tu hijo/a con sus datos y elige su contraseña. No hace falta llamar ni esperar a que te den de alta.',
               },
               {
                 n: '2',
-                title: 'Recibe tus credenciales',
-                desc: 'El club te facilita el acceso. Tú como tutor también recibes tu propio usuario.',
+                title: 'Recibe su usuario',
+                desc: 'Al terminar, verás en pantalla el nombre de usuario de tu hijo/a. Apúntalo: es la única vez que se muestra.',
               },
               {
                 n: '3',

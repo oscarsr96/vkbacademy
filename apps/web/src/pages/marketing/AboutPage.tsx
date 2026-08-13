@@ -43,14 +43,14 @@ const VALUES = [
     icon: '📚',
     title: 'Formación integral',
     description:
-      'Combinamos el deporte con herramientas digitales para que tú, como tutor, tengas siempre una visión completa del progreso.',
+      'Combinamos el deporte con herramientas digitales fáciles de dar de alta, para que cada familia decida cuándo empieza su hijo/a.',
   },
 ];
 
 // Puntos de la sección "Por qué creamos VKB Academy"
 const WHY_POINTS = [
   'Para que tu hijo/a no pierda ritmo entre entrenamientos',
-  'Para que puedas ver su progreso en tiempo real, sin esperar al profe',
+  'Para que puedas apuntarle en minutos, sin depender de la administración',
   'Para que tenga un tutor de IA disponible siempre que se atasque',
 ];
 
