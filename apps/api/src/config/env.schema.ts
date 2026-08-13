@@ -69,8 +69,8 @@ export const envValidationSchema = Joi.object({
   ANTHROPIC_API_KEY: Joi.string().allow('').optional(),
   AI_PROVIDER: Joi.string().valid('gemini', 'haiku', 'auto').default('auto'),
   // Modelo de Gemini. Sin valor usa el pinneado en AiProviderService. No pongas
-  // un alias "-latest": Google los repunta sin avisar y cambia la semántica del
-  // thinking, que es lo que tumbó la generación en agosto de 2026.
+  // un alias "-latest": Google los repunta sin avisar y con ellos cambia la
+  // semántica del thinking, que es lo que tumbó la generación en agosto de 2026.
   GEMINI_MODEL: Joi.string().allow('').optional(),
   // Timeout por llamada a Gemini/Haiku (ms). Evita que una IA colgada bloquee la request HTTP.
   AI_TIMEOUT_MS: Joi.number().integer().min(1000).default(60000),

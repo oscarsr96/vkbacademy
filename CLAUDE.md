@@ -240,11 +240,12 @@ el único proveedor: si su saldo se agota, la API devuelve 400 en cada llamada y
 generación falla. Configura siempre `GEMINI_API_KEY`, también en PRE y PROD.
 
 **Nunca uses un alias de modelo** (`gemini-flash-latest` y similares): Google los repunta
-sin avisar — el 21-01-2026 saltó a Gemini 3, donde `thinkingBudget: 0` dejó de apagar el
-thinking, y los thinking tokens se comieron el `maxOutputTokens` truncando el JSON. El
-modelo va pinneado en `AiProviderService` y se cambia con `GEMINI_MODEL`; el código elige
-solo entre `thinkingBudget` (Gemini ≤2.x) y `thinkingLevel` (≥3), que no pueden viajar
-juntos en la misma request.
+sin avisar y con ellos cambia la semántica de los parámetros. Medido contra la API el
+13-08-2026: el alias con `thinkingBudget: 0` devuelve **400 INVALID_ARGUMENT en cada
+llamada** (sin `thinkingConfig` responde 200), y `gemini-2.5-flash` ya da 404 *"no longer
+available to new users"*. El modelo va pinneado en `AiProviderService` (`gemini-3.5-flash`)
+y se cambia con `GEMINI_MODEL`; el código elige `thinkingBudget` en Gemini ≤2.x y
+`thinkingLevel` en ≥3, que no pueden viajar juntos en la misma request.
 
 ---
 
