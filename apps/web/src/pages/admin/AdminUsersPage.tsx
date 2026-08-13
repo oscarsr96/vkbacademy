@@ -160,7 +160,8 @@ export default function AdminUsersPage() {
         !search ||
         u.name.toLowerCase().includes(search.toLowerCase()) ||
         (u.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        (u.username ?? '').toLowerCase().includes(search.toLowerCase());
+        (u.username ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.guardianEmail ?? '').toLowerCase().includes(search.toLowerCase());
       const matchesRole = !filterRole || u.role === filterRole;
       return matchesSearch && matchesRole;
     }) ?? [];
@@ -201,7 +202,7 @@ export default function AdminUsersPage() {
       <div style={s.filters}>
         <input
           style={s.input}
-          placeholder="Buscar por nombre, email o username..."
+          placeholder="Buscar por nombre, email, username o email del tutor..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -365,6 +366,9 @@ function UserRow({
         {user.email}
         {user.username && (
           <div style={{ fontSize: '0.72rem', opacity: 0.75 }}>@{user.username}</div>
+        )}
+        {user.guardianEmail && (
+          <div style={{ fontSize: '0.72rem', opacity: 0.75 }}>Tutor: {user.guardianEmail}</div>
         )}
       </td>
       <td>

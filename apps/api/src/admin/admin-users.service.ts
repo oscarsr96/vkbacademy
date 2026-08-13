@@ -27,6 +27,7 @@ export class AdminUsersService {
               { name: { contains: params.search, mode: 'insensitive' as const } },
               { email: { contains: params.search, mode: 'insensitive' as const } },
               { username: { contains: params.search, mode: 'insensitive' as const } },
+              { guardianEmail: { contains: params.search, mode: 'insensitive' as const } },
             ],
           }
         : {}),
@@ -41,6 +42,7 @@ export class AdminUsersService {
           id: true,
           email: true,
           username: true,
+          guardianEmail: true,
           name: true,
           role: true,
           avatarUrl: true,

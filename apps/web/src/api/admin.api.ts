@@ -19,6 +19,7 @@ export interface AdminUser {
   id: string;
   email: string | null;
   username: string | null;
+  guardianEmail: string | null;
   name: string;
   role: Role;
   avatarUrl?: string | null;
