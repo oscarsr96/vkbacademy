@@ -8,7 +8,7 @@
 
 App educativa web y móvil para jugadores de Vallekas Basket (y otras academias). Similar a Moodle: cursos con vídeos, ejercicios y tests, gamificación con retos y tienda. Multi-tenant.
 
-Usuarios: alumnos, tutores (padres), admins, super_admin.
+Usuarios: alumnos, admins, super_admin. Los padres/tutores no tienen cuenta: registran a sus hijos desde un formulario público y quedan como email de contacto (`guardianEmail`) en cada alumno.
 
 ---
 
@@ -68,29 +68,30 @@ Usuarios: alumnos, tutores (padres), admins, super_admin.
 ### Módulos del backend (`apps/api/src/`)
 
 `auth`, `users`, `courses`, `quizzes`, `progress`, `media`, `notifications`, `admin`,
-`challenges`, `certificates`, `school-years`, `tutors`, `academies`, `exams`, `ai`,
+`challenges`, `certificates`, `school-years`, `academies`, `exams`, `ai`,
 `exercises`, `study-plans`, `theory`, `tutor`, `username`, `youtube`. Cada módulo sigue `controller → service → repository (Prisma)`.
 
-> `tutor` (singular) es el **tutor IA** con chat en streaming. `tutors` (plural) es
-> el rol TUTOR de los padres. No confundirlos.
+> Solo existe `tutor` (singular): el **tutor IA** con chat en streaming (`POST /tutor/chat`).
+> No hay ningún módulo `tutors` (plural) ni rol de los padres — el rol TUTOR se eliminó
+> (fase 2, refactor tutores/registro familiar). No confundir el tutor IA con la figura del padre/tutor legal.
 
 ---
 
 ## 5. Roles y permisos
 
-| Acción                  | student | tutor | admin | super_admin |
-| ------------------------ | :-----: | :---: | :---: | :---------: |
-| Ver cursos asignados    |   ✅    |  ✅   |  ✅   |     ✅      |
-| Ver todos los cursos    |   ❌    |  ✅   |  ✅   |     ✅      |
-| Crear / editar cursos   |   ❌    |  ❌   |  ✅   |     ✅      |
-| Subir vídeos            |   ❌    |  ❌   |  ✅   |     ✅      |
-| Realizar tests          |   ✅    |  ✅   |  ✅   |     ✅      |
-| Ver resultados de todos |   ❌    |  ✅   |  ✅   |     ✅      |
-| Gestionar usuarios      |   ❌    |  ❌   |  ✅   |     ✅      |
-| Ver métricas globales   |   ❌    |  ❌   |  ✅   |     ✅      |
-| Canjear puntos          |   ✅    |  ✅   |  ❌   |     ❌      |
-| Gestionar retos (CRUD)  |   ❌    |  ❌   |  ✅   |     ✅      |
-| Gestionar academias     |   ❌    |  ❌   |  ❌   |     ✅      |
+| Acción                  | student | admin | super_admin |
+| ------------------------ | :-----: | :---: | :---------: |
+| Ver cursos asignados    |   ✅    |  ✅   |     ✅      |
+| Ver todos los cursos    |   ❌    |  ✅   |     ✅      |
+| Crear / editar cursos   |   ❌    |  ✅   |     ✅      |
+| Subir vídeos            |   ❌    |  ✅   |     ✅      |
+| Realizar tests          |   ✅    |  ✅   |     ✅      |
+| Ver resultados de todos |   ❌    |  ✅   |     ✅      |
+| Gestionar usuarios      |   ❌    |  ✅   |     ✅      |
+| Ver métricas globales   |   ❌    |  ✅   |     ✅      |
+| Canjear puntos          |   ✅    |  ❌   |     ❌      |
+| Gestionar retos (CRUD)  |   ❌    |  ✅   |     ✅      |
+| Gestionar academias     |   ❌    |  ❌   |     ✅      |
 
 **Filtrado por nivel:** `GET /courses` para STUDENT devuelve solo los cursos del `schoolYear` asignado. `GET /courses/:id` devuelve 403 si STUDENT intenta acceder a un curso de otro nivel.
 
@@ -99,7 +100,7 @@ Usuarios: alumnos, tutores (padres), admins, super_admin.
 ## 6. Modelo de datos — enums y relaciones clave
 
 ```prisma
-enum Role          { STUDENT TUTOR ADMIN SUPER_ADMIN }
+enum Role          { STUDENT ADMIN SUPER_ADMIN }
 enum LessonType    { VIDEO QUIZ EXERCISE MATCH SORT FILL_BLANK }
 enum ChallengeType {
   EXERCISE_COMPLETED EXERCISE_SCORE THEORY_COMPLETED
@@ -115,6 +116,8 @@ Entidades principales: `User`, `SchoolYear`, `Academy`, `AcademyMember`, `Course
 
 Campo crítico: `Lesson.content: Json?` almacena la estructura de MATCH/SORT/FILL_BLANK (no hay modelos separados). Tipos en `packages/shared/src/types/course.types.ts`.
 
+`User.guardianEmail` (opcional): email de contacto del padre/madre, capturado en `POST /auth/register-students`. Es solo un dato de contacto — no crea cuenta ni concede acceso. `User.email` y `User.username` son ambos opcionales: los alumnos autorregistrados solo tienen `username`; los usuarios creados desde `/admin/users` (ADMIN, SUPER_ADMIN, o un STUDENT dado de alta manualmente) sí tienen `email`.
+
 Para schema completo: `apps/api/prisma/schema.prisma`.
 
 ---
@@ -124,11 +127,18 @@ Para schema completo: `apps/api/prisma/schema.prisma`.
 ### Auth
 
 ```
-POST /auth/register
-POST /auth/login      → { accessToken, refreshToken }
+POST /auth/register-students   → registra hasta 10 alumnos (padre/madre no crea cuenta);
+                                  no devuelve tokens, responde con los usernames generados
+POST /auth/login       identifier (email o username) + password → { accessToken, refreshToken }
 POST /auth/refresh
 POST /auth/logout
+POST /auth/forgot-password     → email (solo usuarios con email: ADMIN/SUPER_ADMIN o STUDENT dado de alta manualmente)
+POST /auth/reset-password
 ```
+
+**Recuperación de contraseña de alumnos**: los alumnos autorregistrados no tienen email, así que
+`forgot-password` no les sirve. La única vía es que un ADMIN/SUPER_ADMIN use
+`PATCH /admin/users/:id/password` (ver sección Admin).
 
 ### Cursos y lecciones
 
@@ -157,12 +167,10 @@ POST /exams/:attemptId/submit    → corrección server-side
 GET  /exams/history
 ```
 
-### Niveles, tutores, retos, certificados
+### Niveles, retos, certificados
 
 ```
 GET  /school-years
-GET  /tutors/my-students                 [TUTOR, ADMIN]
-GET  /tutors/my-students/:id/courses     [TUTOR, ADMIN]
 GET  /challenges
 GET  /challenges/summary
 POST /challenges/redeem
@@ -186,6 +194,8 @@ DELETE /academies/:id/members/:userId    [ADMIN, SUPER_ADMIN]
 ### Admin (prefijo `/admin/*`)
 
 Namespaces: `users`, `courses`, `courses/:id/modules`, `modules/:id/lessons`, `lessons/:id/quiz`, `quizzes/:id/questions`, `exam-questions`, `exam-attempts`, `challenges`, `redemptions`, `certificates`, `metrics`, `analytics`. Todos `[ADMIN, SUPER_ADMIN]` salvo `super-admin-only`.
+
+`PATCH /admin/users/:id/password` restablece la contraseña de cualquier usuario (típicamente un alumno sin email). Es la única vía de recuperación para alumnos autorregistrados.
 
 Ver swagger o los controllers de `apps/api/src/admin/` para firmas exactas.
 
@@ -278,6 +288,7 @@ pnpm build
 | 10.5 | Entorno PRE + pipeline progresivo (#11)                                           |   ✅   |
 | 10.6 | Auto-asignación de vídeos YouTube (#22)                                           |   ✅   |
 | 10.7 | Poda de reservas y rol TEACHER ([spec](docs/superpowers/specs/2026-08-11-fase1-poda-reservas-teacher-design.md)) |   ✅   |
+| 10.8 | Eliminación del rol TUTOR y registro familiar de alumnos ([spec](docs/superpowers/specs/2026-08-12-fase2-tutores-registro-familiar-design.md)) |   ✅   |
 | 11   | App móvil                                                                         |   ⬜   |
 | 12   | Testing completo                                                                  |   ⬜   |
 | 13   | Deployment completo                                                               |   ⬜   |
@@ -311,7 +322,7 @@ pnpm build
 
 ## 14. Multi-tenancy (fase 10)
 
-BD compartida con columna discriminadora `academyId`. Los cursos son globales; alumnos, tutores y admins pertenecen a una academia vía `AcademyMember`.
+BD compartida con columna discriminadora `academyId`. Los cursos son globales; alumnos y admins pertenecen a una academia vía `AcademyMember`.
 
 **Rol `SUPER_ADMIN`**: gestiona todas las academias, pasa por chequeos de `ADMIN`, puede operar en contexto de cualquier academia vía header `X-Academy-Id`.
 
