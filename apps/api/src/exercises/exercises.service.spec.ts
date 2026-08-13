@@ -1,10 +1,9 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { ExercisesService } from './exercises.service';
 
 describe('ExercisesService', () => {
   let prisma: {
     course: { findUnique: jest.Mock };
-    enrollment: { findFirst: jest.Mock };
   };
   let ai: { generate: jest.Mock };
   let service: ExercisesService;
@@ -18,7 +17,6 @@ describe('ExercisesService', () => {
   beforeEach(() => {
     prisma = {
       course: { findUnique: jest.fn() },
-      enrollment: { findFirst: jest.fn() },
     };
     ai = { generate: jest.fn() };
     service = new ExercisesService(prisma as never, ai as never);
@@ -42,10 +40,9 @@ describe('ExercisesService', () => {
 
     it('hace una llamada IA por tema (no una combinada)', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(easyExerciseJson());
 
-      const result = await service.generateForTopics('user-1', {
+      const result = await service.generateForTopics({
         courseId: 'course-1',
         topics: ['Tema A', 'Tema B'],
         perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -60,10 +57,9 @@ describe('ExercisesService', () => {
 
     it('incluye la instrucción de LaTeX (con escape JSON) en el prompt de generación', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(easyExerciseJson());
 
-      await service.generateForTopics('user-1', {
+      await service.generateForTopics({
         courseId: 'course-1',
         topics: ['Fracciones'],
         perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -75,25 +71,25 @@ describe('ExercisesService', () => {
       expect(prompt).toContain('$\\\\frac{1}{2}$');
     });
 
-    it('lanza ForbiddenException si el alumno no está matriculado', async () => {
+    it('genera sin exigir matrícula: basta con que el curso exista', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue(null);
+      ai.generate.mockResolvedValue(easyExerciseJson());
 
-      await expect(
-        service.generateForTopics('user-1', {
-          courseId: 'course-1',
-          topics: ['Tema A'],
-          perTopic: { easy: 1, medium: 0, hard: 0 },
-        }),
-      ).rejects.toThrow(ForbiddenException);
-      expect(ai.generate).not.toHaveBeenCalled();
+      const result = await service.generateForTopics({
+        courseId: 'course-1',
+        topics: ['Tema A'],
+        perTopic: { easy: 1, medium: 0, hard: 0 },
+      });
+
+      expect(result.exercises).toHaveLength(1);
+      expect(ai.generate).toHaveBeenCalledTimes(1);
     });
 
     it('lanza NotFoundException si el curso no existe', async () => {
       prisma.course.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.generateForTopics('user-1', {
+        service.generateForTopics({
           courseId: 'missing',
           topics: ['Tema A'],
           perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -104,7 +100,6 @@ describe('ExercisesService', () => {
 
     it('reintenta (2x) un tema cuyo conteo por dificultad no cuadra, y acepta si el 2º intento es correcto', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       // 1er intento: la IA devuelve MEDIUM cuando se pidió EASY (conteo incumplido)
       ai.generate
         .mockResolvedValueOnce(
@@ -123,7 +118,7 @@ describe('ExercisesService', () => {
         )
         .mockResolvedValueOnce(easyExerciseJson());
 
-      const result = await service.generateForTopics('user-1', {
+      const result = await service.generateForTopics({
         courseId: 'course-1',
         topics: ['Fracciones'],
         perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -137,7 +132,6 @@ describe('ExercisesService', () => {
 
     it('lanza error tras agotar los 2 intentos si el conteo por dificultad sigue sin cuadrar', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       // Ambos intentos devuelven MEDIUM cuando se pidió EASY
       ai.generate.mockResolvedValue(
         JSON.stringify({
@@ -155,7 +149,7 @@ describe('ExercisesService', () => {
       );
 
       await expect(
-        service.generateForTopics('user-1', {
+        service.generateForTopics({
           courseId: 'course-1',
           topics: ['Fracciones'],
           perTopic: { easy: 1, medium: 0, hard: 0 },

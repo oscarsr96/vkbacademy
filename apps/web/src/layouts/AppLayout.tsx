@@ -40,7 +40,6 @@ function buildNavLinks(role: Role | undefined): NavItem[] {
   // STUDENT por defecto
   return [
     ...base,
-    { to: '/subjects', label: 'Asignaturas', icon: 'book' },
     { to: '/study', label: 'Estudiar', icon: 'brain' },
     { to: '/challenges', label: 'Retos', icon: 'trophy' },
     { to: '/profile', label: 'Mi perfil', icon: 'user' },

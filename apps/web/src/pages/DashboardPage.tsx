@@ -273,9 +273,9 @@ function StudentRail({ onNavigate }: { onNavigate: (to: string) => void }) {
           <button
             className="btn btn-primary btn-full"
             style={{ marginTop: 12, padding: '9px 16px', fontSize: '0.85rem' }}
-            onClick={() => onNavigate('/subjects')}
+            onClick={() => onNavigate('/study')}
           >
-            Elegir asignatura
+            Empezar a estudiar
           </button>
         </RailCard>
       )}
