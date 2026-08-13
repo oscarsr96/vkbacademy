@@ -1,5 +1,4 @@
 import {
-  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -66,8 +65,8 @@ const DIFFICULTY_GUIDANCE: Record<'EASY' | 'MEDIUM' | 'HARD', string> = {
 };
 
 /**
- * Genera ejercicios de práctica bajo demanda para un alumno matriculado
- * en un curso (flujo StudyPlan): una llamada IA por tema con reparto de
+ * Genera ejercicios de práctica bajo demanda sobre una asignatura
+ * (flujo StudyPlan): una llamada IA por tema con reparto de
  * dificultad. Los ejercicios los persiste el plan, no este servicio.
  * También evalúa las respuestas abiertas del alumno con la IA.
  */
@@ -87,7 +86,6 @@ export class ExercisesService {
    * semántico se regenera ese tema (2x).
    */
   async generateForTopics(
-    userId: string,
     params: GenerateExercisesForTopicsParams,
   ): Promise<GenerateTopicExercisesResult> {
     const course = await this.prisma.course.findUnique({
@@ -96,13 +94,6 @@ export class ExercisesService {
     });
     if (!course) {
       throw new NotFoundException(`Curso "${params.courseId}" no encontrado`);
-    }
-
-    const enrollment = await this.prisma.enrollment.findFirst({
-      where: { userId, courseId: params.courseId },
-    });
-    if (!enrollment) {
-      throw new ForbiddenException('No estás matriculado en este curso');
     }
 
     const total = params.perTopic.easy + params.perTopic.medium + params.perTopic.hard;

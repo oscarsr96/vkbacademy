@@ -9,8 +9,7 @@ import { StudyPlansService } from './study-plans.service';
 
 describe('StudyPlansService', () => {
   let prisma: {
-    course: { findUnique: jest.Mock };
-    enrollment: { findFirst: jest.Mock; findMany: jest.Mock };
+    course: { findUnique: jest.Mock; findMany: jest.Mock };
     module: { findUnique: jest.Mock };
     studyPlan: {
       create: jest.Mock;
@@ -44,17 +43,10 @@ describe('StudyPlansService', () => {
     ],
   };
 
-  // Matrículas: curso base de Matemáticas; opcionalmente también Lengua.
-  const mathEnrollment = {
-    id: 'enr-1',
-    courseId: 'course-mates',
-    course: { id: 'course-mates', subject: 'Matemáticas' },
-  };
-  const lenguaEnrollment = {
-    id: 'enr-2',
-    courseId: 'course-lengua',
-    course: { id: 'course-lengua', subject: 'Lengua' },
-  };
+  // Asignaturas publicadas: la base de Matemáticas; opcionalmente también Lengua.
+  // No hay matrícula: cualquier asignatura publicada es estudiable.
+  const mathCourse = { id: 'course-mates', subject: 'Matemáticas' };
+  const lenguaCourse = { id: 'course-lengua', subject: 'Lengua' };
 
   // Sirve tanto a getById como a requireOwnedPlan: mismo mock de
   // studyPlan.findUnique para ambos caminos (union de campos usados por los dos).
@@ -90,11 +82,10 @@ describe('StudyPlansService', () => {
   beforeEach(() => {
     prisma = {
       course: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'course-mates', title: 'Matemáticas 3º ESO' }),
-      },
-      enrollment: {
-        findFirst: jest.fn().mockResolvedValue({ id: 'enr-1' }),
-        findMany: jest.fn().mockResolvedValue([mathEnrollment]),
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ id: 'course-mates', title: 'Matemáticas 3º ESO' }),
+        findMany: jest.fn().mockResolvedValue([mathCourse]),
       },
       module: { findUnique: jest.fn() },
       studyPlan: {
@@ -143,24 +134,24 @@ describe('StudyPlansService', () => {
   // ─── resolveAndAssertTopics: regla de coherencia (criterio 2) ─────────────
 
   describe('resolveAndAssertTopics', () => {
-    it('rechaza con 422 un tema con subject de una materia NO matriculada, listando las válidas', async () => {
-      // Matriculado solo en Matemáticas → "lengua" no es coherente
+    it('rechaza con 422 un tema con subject de una materia inexistente, listando las válidas', async () => {
+      // Solo existe Matemáticas → "lengua" no es coherente
       await expect(
-        service.resolveAndAssertTopics('user-1', 'course-mates', [
+        service.resolveAndAssertTopics('course-mates', [
           { title: 'análisis morfológico', subject: 'lengua' },
         ]),
       ).rejects.toThrow(UnprocessableEntityException);
 
       await expect(
-        service.resolveAndAssertTopics('user-1', 'course-mates', [
+        service.resolveAndAssertTopics('course-mates', [
           { title: 'análisis morfológico', subject: 'lengua' },
         ]),
       ).rejects.toThrow(/Materias válidas: Matemáticas/);
     });
 
-    it('acepta un tema con subject matriculado, ignorando mayúsculas y acentos', async () => {
+    it('acepta un tema con subject de una materia existente, ignorando mayúsculas y acentos', async () => {
       // "matematicas" (sin tilde, minúsculas) debe casar con "Matemáticas"
-      const resolved = await service.resolveAndAssertTopics('user-1', 'course-mates', [
+      const resolved = await service.resolveAndAssertTopics('course-mates', [
         { title: 'ecuaciones de segundo grado', subject: 'matematicas' },
       ]);
       expect(resolved).toHaveLength(1);
@@ -170,7 +161,7 @@ describe('StudyPlansService', () => {
     });
 
     it('atribuye a la asignatura base un tema libre sin subject', async () => {
-      const resolved = await service.resolveAndAssertTopics('user-1', 'course-mates', [
+      const resolved = await service.resolveAndAssertTopics('course-mates', [
         { title: 'proporcionalidad' },
       ]);
       expect(resolved[0]).toMatchObject({
@@ -182,11 +173,11 @@ describe('StudyPlansService', () => {
       });
     });
 
-    it('resuelve un tema de otra asignatura matriculada con el contexto de esa asignatura', async () => {
-      // Matriculado en Mates + Lengua → "análisis morfológico" (lengua) es coherente
-      prisma.enrollment.findMany.mockResolvedValue([mathEnrollment, lenguaEnrollment]);
+    it('resuelve un tema de otra asignatura con el contexto de esa asignatura', async () => {
+      // Existen Mates + Lengua → "análisis morfológico" (lengua) es coherente
+      prisma.course.findMany.mockResolvedValue([mathCourse, lenguaCourse]);
 
-      const resolved = await service.resolveAndAssertTopics('user-1', 'course-mates', [
+      const resolved = await service.resolveAndAssertTopics('course-mates', [
         { title: 'análisis morfológico', subject: 'lengua' },
       ]);
       expect(resolved[0].contextCourseId).toBe('course-lengua');
@@ -200,7 +191,7 @@ describe('StudyPlansService', () => {
         courseId: 'course-mates',
       });
 
-      const resolved = await service.resolveAndAssertTopics('user-1', 'course-mates', [
+      const resolved = await service.resolveAndAssertTopics('course-mates', [
         { moduleId: 'mod-1' },
       ]);
       expect(resolved[0]).toMatchObject({
@@ -215,20 +206,26 @@ describe('StudyPlansService', () => {
       prisma.module.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.resolveAndAssertTopics('user-1', 'course-mates', [{ moduleId: 'mod-fake' }]),
+        service.resolveAndAssertTopics('course-mates', [{ moduleId: 'mod-fake' }]),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('rechaza con 403 un módulo de un curso donde el alumno NO está matriculado', async () => {
+    it('acepta un módulo de otra asignatura sin exigir matrícula, con el curso del módulo como contexto', async () => {
       prisma.module.findUnique.mockResolvedValue({
         id: 'mod-2',
         title: 'Sintaxis',
-        courseId: 'course-lengua', // solo matriculado en Mates
+        courseId: 'course-lengua', // la base es Mates: ya no hace falta matrícula
       });
 
-      await expect(
-        service.resolveAndAssertTopics('user-1', 'course-mates', [{ moduleId: 'mod-2' }]),
-      ).rejects.toThrow(ForbiddenException);
+      const resolved = await service.resolveAndAssertTopics('course-mates', [
+        { moduleId: 'mod-2' },
+      ]);
+      expect(resolved[0]).toMatchObject({
+        source: 'OFFICIAL',
+        moduleId: 'mod-2',
+        title: 'Sintaxis',
+        contextCourseId: 'course-lengua',
+      });
     });
 
     it('rechaza con 422 temas duplicados por moduleId', async () => {
@@ -239,7 +236,7 @@ describe('StudyPlansService', () => {
       });
 
       await expect(
-        service.resolveAndAssertTopics('user-1', 'course-mates', [
+        service.resolveAndAssertTopics('course-mates', [
           { moduleId: 'mod-1' },
           { moduleId: 'mod-1' },
         ]),
@@ -248,7 +245,7 @@ describe('StudyPlansService', () => {
 
     it('rechaza con 422 temas duplicados por título normalizado (acentos/mayúsculas)', async () => {
       await expect(
-        service.resolveAndAssertTopics('user-1', 'course-mates', [
+        service.resolveAndAssertTopics('course-mates', [
           { title: 'Ecuaciones' },
           { title: '  ecuaciónes '.replace('ó', 'o') }, // "ecuaciones" normalizado
         ]),
@@ -257,7 +254,7 @@ describe('StudyPlansService', () => {
 
     it('rechaza con 400 un tema con moduleId y title a la vez', async () => {
       await expect(
-        service.resolveAndAssertTopics('user-1', 'course-mates', [
+        service.resolveAndAssertTopics('course-mates', [
           { moduleId: 'mod-1', title: 'Fracciones' },
         ]),
       ).rejects.toThrow(BadRequestException);
@@ -265,7 +262,7 @@ describe('StudyPlansService', () => {
 
     it('rechaza con 400 un subject acompañando a un moduleId', async () => {
       await expect(
-        service.resolveAndAssertTopics('user-1', 'course-mates', [
+        service.resolveAndAssertTopics('course-mates', [
           { moduleId: 'mod-1', subject: 'lengua' } as never,
         ]),
       ).rejects.toThrow(BadRequestException);
@@ -309,7 +306,7 @@ describe('StudyPlansService', () => {
         courseId: 'course-mates',
         topic: 'Fracciones',
       });
-      expect(exercises.generateForTopics).toHaveBeenCalledWith('user-1', {
+      expect(exercises.generateForTopics).toHaveBeenCalledWith({
         courseId: 'course-mates',
         topics: ['Fracciones'],
         perTopic: { easy: 2, medium: 2, hard: 1 },
@@ -324,7 +321,7 @@ describe('StudyPlansService', () => {
     });
 
     it('la teoría de cada tema usa su contextCourseId (tema de otra asignatura)', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([mathEnrollment, lenguaEnrollment]);
+      prisma.course.findMany.mockResolvedValue([mathCourse, lenguaCourse]);
       prisma.studyPlan.create.mockResolvedValue({
         id: 'plan-1',
         topics: [
@@ -519,7 +516,7 @@ describe('StudyPlansService', () => {
 
       await service.regenerateExercises('user-1', 'plan-1', {});
 
-      expect(exercises.generateForTopics).toHaveBeenCalledWith('user-1', {
+      expect(exercises.generateForTopics).toHaveBeenCalledWith({
         courseId: 'course-mates',
         topics: ['Fracciones'],
         perTopic: { easy: 3, medium: 1, hard: 0 },
@@ -539,7 +536,6 @@ describe('StudyPlansService', () => {
       await service.regenerateExercises('user-1', 'plan-1', { hard: 2 });
 
       expect(exercises.generateForTopics).toHaveBeenCalledWith(
-        'user-1',
         expect.objectContaining({ perTopic: { easy: 3, medium: 1, hard: 2 } }),
       );
     });

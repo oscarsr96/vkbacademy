@@ -5,7 +5,6 @@ import { TheoryService } from './theory.service';
 describe('TheoryService', () => {
   let prisma: {
     course: { findUnique: jest.Mock };
-    enrollment: { findFirst: jest.Mock };
     theoryModule: {
       create: jest.Mock;
       findMany: jest.Mock;
@@ -54,7 +53,6 @@ describe('TheoryService', () => {
   beforeEach(() => {
     prisma = {
       course: { findUnique: jest.fn() },
-      enrollment: { findFirst: jest.fn() },
       theoryModule: {
         create: jest.fn(),
         findMany: jest.fn(),
@@ -74,9 +72,8 @@ describe('TheoryService', () => {
   });
 
   describe('generate', () => {
-    it('persiste el módulo con sus lecciones cuando el alumno está matriculado', async () => {
+    it('persiste el módulo con sus lecciones', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
       const five = Array.from({ length: 5 }, (_, i) => ({
         youtubeId: `vid${i}`,
@@ -121,7 +118,6 @@ describe('TheoryService', () => {
 
     it('pide 5 candidatos a YoutubeService para la lección VIDEO', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
       youtube.findCandidates.mockResolvedValue([]);
       prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
@@ -135,7 +131,6 @@ describe('TheoryService', () => {
 
     it('persiste lección VIDEO con candidates=null y youtubeId=null si YouTube no encuentra resultados', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
       youtube.findCandidates.mockResolvedValue([]);
       prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
@@ -156,18 +151,18 @@ describe('TheoryService', () => {
       expect(ai.generate).not.toHaveBeenCalled();
     });
 
-    it('lanza ForbiddenException si el alumno no está matriculado', async () => {
+    it('genera sin exigir matrícula: basta con que el curso exista', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue(null);
-      await expect(
-        service.generate('user-1', { courseId: 'course-1', topic: 't' }),
-      ).rejects.toThrow(ForbiddenException);
-      expect(ai.generate).not.toHaveBeenCalled();
+      ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
+      youtube.findCandidates.mockResolvedValue([{ youtubeId: 'xyz' }]);
+      prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
+
+      await service.generate('user-1', { courseId: 'course-1', topic: 't' });
+      expect(prisma.theoryModule.create).toHaveBeenCalled();
     });
 
     it('parsea respuesta IA envuelta en ```json```', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(`\`\`\`json\n${JSON.stringify(validAiPayload)}\n\`\`\``);
       youtube.findCandidates.mockResolvedValue([{ youtubeId: 'xyz' }]);
       prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
@@ -178,7 +173,6 @@ describe('TheoryService', () => {
 
     it('lanza error si la IA devuelve JSON inválido', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue('no es json {malformado');
       await expect(
         service.generate('user-1', { courseId: 'course-1', topic: 't' }),
@@ -192,7 +186,6 @@ describe('TheoryService', () => {
         lessons: [{ kind: 'CONTENT', heading: 'sin body' }],
       };
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(JSON.stringify(broken));
       await expect(
         service.generate('user-1', { courseId: 'course-1', topic: 't' }),
@@ -205,7 +198,6 @@ describe('TheoryService', () => {
         lessons: [{ kind: 'UNKNOWN', heading: 'x', body: 'y' }],
       };
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(JSON.stringify(broken));
       await expect(
         service.generate('user-1', { courseId: 'course-1', topic: 't' }),
@@ -214,7 +206,6 @@ describe('TheoryService', () => {
 
     it('incluye título de curso, nivel y tema en el prompt', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
       youtube.findCandidates.mockResolvedValue([]);
       prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });
@@ -232,7 +223,6 @@ describe('TheoryService', () => {
 
     it('el prompt exige la estructura Winston (promesa, cycling, fencing, ejemplos paso a paso, cierre)', async () => {
       prisma.course.findUnique.mockResolvedValue(baseCourse);
-      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr-1' });
       ai.generate.mockResolvedValue(JSON.stringify(validAiPayload));
       youtube.findCandidates.mockResolvedValue([]);
       prisma.theoryModule.create.mockResolvedValue({ id: 'mod-1', lessons: [] });

@@ -67,14 +67,6 @@ export class TheoryService {
       throw new NotFoundException(`Curso "${dto.courseId}" no encontrado`);
     }
 
-    const enrollment = await this.prisma.enrollment.findFirst({
-      where: { userId, courseId: dto.courseId },
-    });
-
-    if (!enrollment) {
-      throw new ForbiddenException('No estás matriculado en este curso');
-    }
-
     const schoolYearLabel = course.schoolYear?.label ?? '';
     const prompt = this.buildPrompt(course.title, schoolYearLabel, dto.topic);
 

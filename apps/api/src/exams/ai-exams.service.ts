@@ -104,11 +104,6 @@ export class AiExamsService {
     });
     if (!course) throw new NotFoundException(`Curso "${params.courseId}" no encontrado`);
 
-    const enrollment = await this.prisma.enrollment.findFirst({
-      where: { userId, courseId: params.courseId },
-    });
-    if (!enrollment) throw new ForbiddenException('No estás matriculado en este curso');
-
     const prompt = this.buildMultiTopicPrompt(
       course.title,
       course.schoolYear?.label ?? '',

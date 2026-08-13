@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { StudyExercisesPerTopic, StudyPlanTopicInput } from '@vkbacademy/shared';
-import { useCourses, useCourse, useSubjects } from '../hooks/useCourses';
+import { useCourse, useSubjects } from '../hooks/useCourses';
 import { useMyStudyPlans, useCreateStudyPlan, useDeleteStudyPlan } from '../hooks/useStudyPlans';
 import { getApiErrorMessage } from '../utils/errorMessage';
 import PageHeader from '../components/ui/PageHeader';
@@ -33,12 +33,11 @@ export default function StudyPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const { data: coursesData } = useCourses(1);
-  const courses = coursesData?.data ?? [];
-
   const [courseId, setCourseId] = useState(searchParams.get('courseId') ?? '');
   const { data: courseDetail } = useCourse(courseId);
+  // Todas las asignaturas disponibles del nivel del alumno: no hace falta estar matriculado.
   const { data: subjects } = useSubjects();
+  const courses = subjects ?? [];
 
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
   const [customTitle, setCustomTitle] = useState('');
@@ -64,13 +63,13 @@ export default function StudyPage() {
     setCustomSubject('');
   }
 
-  // Materias de otras asignaturas matriculadas (con subject propio, distintas de la base),
+  // Materias de otras asignaturas disponibles (con subject propio, distintas de la base),
   // deduplicadas por nombre de materia normalizado.
   const otherSubjectOptions = useMemo(() => {
     if (!subjects) return [];
     const seen = new Map<string, string>();
     for (const c of subjects) {
-      if (!c.isEnrolled || !c.subject || c.id === courseId) continue;
+      if (!c.subject || c.id === courseId) continue;
       const key = c.subject.trim().toLowerCase();
       if (!seen.has(key)) seen.set(key, c.subject.trim());
     }
@@ -348,9 +347,9 @@ export default function StudyPage() {
               Exámenes
             </h3>
             <p style={s.muted}>
-              Los exámenes se generan después, en la pestaña Examen del curso: niveles básico,
-              medio y difícil, de todos los temas juntos o de cada tema por separado. El reto es
-              aprobar los 3 niveles.
+              Los exámenes se generan después, en la pestaña Examen del curso: niveles básico, medio
+              y difícil, de todos los temas juntos o de cada tema por separado. El reto es aprobar
+              los 3 niveles.
             </p>
             {selectedTopics.length === 0 && (
               <p style={s.warn}>Añade al menos 1 tema para poder crear el curso.</p>
@@ -363,7 +362,12 @@ export default function StudyPage() {
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary" disabled={!canSubmit} style={s.submitBtn}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={!canSubmit}
+            style={s.submitBtn}
+          >
             {create.isPending ? (
               <span className="spinner" />
             ) : (
@@ -381,7 +385,10 @@ export default function StudyPage() {
         <h2 className="section-label">Mis cursos de estudio</h2>
         {removePlan.isError && (
           <div className="alert alert-error" style={{ marginTop: 14 }}>
-            {getApiErrorMessage(removePlan.error, 'No se pudo borrar el curso. Inténtalo de nuevo.')}
+            {getApiErrorMessage(
+              removePlan.error,
+              'No se pudo borrar el curso. Inténtalo de nuevo.',
+            )}
           </div>
         )}
         {plansLoading && <p style={s.muted}>Cargando…</p>}
@@ -502,7 +509,12 @@ const s: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 8,
   },
-  topicChip: { width: '100%', justifyContent: 'flex-start', cursor: 'default', padding: '8px 14px' },
+  topicChip: {
+    width: '100%',
+    justifyContent: 'flex-start',
+    cursor: 'default',
+    padding: '8px 14px',
+  },
   topicChipNum: {
     fontFamily: 'var(--font-display)',
     color: 'var(--brand-deep)',
