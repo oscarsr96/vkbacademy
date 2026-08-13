@@ -29,7 +29,9 @@ const STEPS = [
   },
 ];
 
-const FEATURES = [
+// Reciben el nombre del club porque la misma landing sirve a cualquier academia:
+// el dominio principal la muestra con Vallekas y un dominio de academia con el suyo.
+const FEATURES = (club: string) => [
   {
     title: 'Actividades, no fichas',
     description:
@@ -52,7 +54,7 @@ const FEATURES = [
   },
   {
     title: 'Exámenes con certificado',
-    description: 'Los exámenes del club generan un PDF verificable con el sello de Vallekas Basket.',
+    description: `Los exámenes del club generan un PDF verificable con el sello de ${club}.`,
   },
   {
     title: 'Puntos por cada sesión',
@@ -61,7 +63,7 @@ const FEATURES = [
 ];
 
 // Los tres pilares de la generación: velocidad, calidad del material y marca del club.
-const PILLARS = [
+const PILLARS = (club: string) => [
   {
     title: 'Tarda segundos, no días',
     text: 'El tiempo que se tarda en leer esta frase. Ni fichas fotocopiadas ni esperar a la próxima clase.',
@@ -72,7 +74,7 @@ const PILLARS = [
   },
   {
     title: 'Con el escudo del club',
-    text: 'El material lleva los colores y el escudo de Vallekas Basket. Estudiar con la camiseta puesta no es lo mismo.',
+    text: `El material lleva los colores y el escudo de ${club}. Estudiar con la camiseta puesta no es lo mismo.`,
   },
 ];
 
@@ -127,7 +129,12 @@ const FAMILY = [
 
 // ── Página ────────────────────────────────────────────────────────────────────
 
-export default function LandingPage() {
+/**
+ * Landing pública. La sirve tanto el dominio principal (Vallekas por defecto)
+ * como el de cualquier academia, que pasa su propio nombre. El color no se pasa
+ * por props: `applyBrand()` ya inyecta `--brand*` desde `academy.primaryColor`.
+ */
+export default function LandingPage({ clubName = 'Vallekas Basket' }: { clubName?: string }) {
   return (
     <div className="lp-page">
       <style>{CSS}</style>
@@ -139,7 +146,7 @@ export default function LandingPage() {
         <div className="lp-shell lp-hero-inner">
           <p className="lp-tag">
             <span className="lp-tag-dot" />
-            La academia del Vallekas Basket
+            La academia del {clubName}
           </p>
 
           <h1 className="lp-display">
@@ -206,7 +213,7 @@ export default function LandingPage() {
 
             <div className="lp-manifesto-body">
               <p className="lp-text">
-                Vallekas Basket dejó de preguntar. Ahora entrega: el temario oficial de tu curso,
+                {clubName} dejó de preguntar. Ahora entrega: el temario oficial de tu curso,
                 ejercicios ilimitados de cualquier tema y exámenes que acreditan lo que sabes. Con el
                 escudo del club, no en una app cualquiera.
               </p>
@@ -263,7 +270,7 @@ export default function LandingPage() {
           </div>
 
           <div className="lp-pillars">
-            {PILLARS.map((pillar) => (
+            {PILLARS(clubName).map((pillar) => (
               <article className="lp-pillar" key={pillar.title}>
                 <h3 className="lp-pillar-title">{pillar.title}</h3>
                 <p className="lp-text">{pillar.text}</p>
@@ -299,7 +306,7 @@ export default function LandingPage() {
           />
 
           <ul className="lp-list">
-            {FEATURES.map((feature, i) => (
+            {FEATURES(clubName).map((feature, i) => (
               <li className="lp-list-row" key={feature.title}>
                 <span className="lp-list-num">{String(i + 1).padStart(2, '0')}</span>
                 <h3 className="lp-list-title">{feature.title}</h3>
@@ -665,7 +672,7 @@ const CSS = `
 }
 
 .lp-btn-primary:hover {
-  background: #ffa63c;
+  background: var(--brand-light);
 }
 
 .lp-btn-ghost {
