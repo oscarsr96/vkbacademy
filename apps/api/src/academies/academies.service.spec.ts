@@ -177,9 +177,9 @@ describe('AcademiesService', () => {
     it('lanza NotFoundException si no existe academia para ese dominio', async () => {
       mockPrisma.academy.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.findByDomain('dominio-inexistente.com'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.findByDomain('dominio-inexistente.com')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -281,18 +281,19 @@ describe('AcademiesService', () => {
       expect(createCall.data.domain).toBe('mi-dominio-personalizado.com');
     });
 
-    it('crea la academia con 3 usuarios por defecto (admin, tutor, student)', async () => {
+    it('crea la academia con 2 usuarios por defecto (admin, student)', async () => {
       mockPrisma.academy.findUnique.mockResolvedValue(null);
       mockPrisma.academy.create.mockResolvedValue(fakeAcademy);
 
       await service.create(createDto);
 
       const createCall = mockPrisma.academy.create.mock.calls[0][0];
-      const members = createCall.data.members.create as Array<{ user: { create: { role: string } } }>;
-      expect(members).toHaveLength(3);
+      const members = createCall.data.members.create as Array<{
+        user: { create: { role: string } };
+      }>;
+      expect(members).toHaveLength(2);
       const roles = members.map((m) => m.user.create.role);
       expect(roles).toContain('ADMIN');
-      expect(roles).toContain('TUTOR');
       expect(roles).toContain('STUDENT');
     });
 
@@ -424,7 +425,14 @@ describe('AcademiesService', () => {
           academyId: 'academy-uuid-1',
           userId: 'user-uuid-1',
           createdAt: new Date(),
-          user: { id: 'user-uuid-1', name: 'Admin Test', email: 'admin@test.academy', role: 'ADMIN', avatarUrl: null, createdAt: new Date() },
+          user: {
+            id: 'user-uuid-1',
+            name: 'Admin Test',
+            email: 'admin@test.academy',
+            role: 'ADMIN',
+            avatarUrl: null,
+            createdAt: new Date(),
+          },
         },
       ];
       mockPrisma.academyMember.findMany.mockResolvedValue(fakeMembers);
@@ -458,9 +466,9 @@ describe('AcademiesService', () => {
       mockPrisma.academy.findUnique.mockResolvedValue(fakeAcademy);
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.addMember('academy-uuid-1', 'user-inexistente'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.addMember('academy-uuid-1', 'user-inexistente')).rejects.toThrow(
+        NotFoundException,
+      );
       expect(mockPrisma.academyMember.create).not.toHaveBeenCalled();
     });
 
@@ -473,9 +481,9 @@ describe('AcademiesService', () => {
         academyId: 'academy-uuid-1',
       });
 
-      await expect(
-        service.addMember('academy-uuid-1', fakeUser.id),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.addMember('academy-uuid-1', fakeUser.id)).rejects.toThrow(
+        ConflictException,
+      );
       expect(mockPrisma.academyMember.create).not.toHaveBeenCalled();
     });
 
@@ -508,9 +516,9 @@ describe('AcademiesService', () => {
     it('lanza NotFoundException si la membresía no existe', async () => {
       mockPrisma.academyMember.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.removeMember('academy-uuid-1', 'user-inexistente'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.removeMember('academy-uuid-1', 'user-inexistente')).rejects.toThrow(
+        NotFoundException,
+      );
       expect(mockPrisma.academyMember.delete).not.toHaveBeenCalled();
     });
 

@@ -46,7 +46,7 @@ export class CoursesService {
         where.id = { in: [] };
       }
     } else {
-      // TUTOR/ADMIN ven todos los cursos (publicados o no)
+      // ADMIN ve todos los cursos (publicados o no)
       if (schoolYearIdFilter) {
         where.schoolYearId = schoolYearIdFilter;
       }
@@ -141,7 +141,6 @@ export class CoursesService {
   /**
    * Verifica que el solicitante puede ver el progreso de un alumno concreto.
    * - SUPER_ADMIN: ve resultados de todos (matriz de permisos).
-   * - TUTOR: solo sus alumnos asignados (`tutorId`).
    * - ADMIN: solo alumnos de su propia academia (membresía compartida).
    */
   private async assertCanViewStudentProgress(
@@ -149,17 +148,6 @@ export class CoursesService {
     studentId: string,
   ): Promise<void> {
     if (requester.role === Role.SUPER_ADMIN) {
-      return;
-    }
-
-    if (requester.role === Role.TUTOR) {
-      const student = await this.prisma.user.findUnique({
-        where: { id: studentId },
-        select: { tutorId: true },
-      });
-      if (!student || student.tutorId !== requester.id) {
-        throw new ForbiddenException('No tienes acceso a este alumno');
-      }
       return;
     }
 
@@ -245,7 +233,7 @@ export class CoursesService {
   /**
    * Lista las asignaturas disponibles para auto-matricularse: cursos publicados
    * del nivel del alumno (schoolYearId), marcando si ya está matriculado.
-   * Si no se pasa schoolYearId (admin/tutor), no filtra por nivel.
+   * Si no se pasa schoolYearId (admin), no filtra por nivel.
    */
   async listAvailableSubjects(userId: string, schoolYearId: string | null = null) {
     const where: Record<string, unknown> = { published: true };

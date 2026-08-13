@@ -298,26 +298,22 @@ describe('CoursesService', () => {
       expect(mockPrisma.academyMember.findFirst).not.toHaveBeenCalled();
     });
 
-    it('TUTOR con alumno propio: accede', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ tutorId: 'tutor1' });
-
-      const result = await service.getStudentCourseProgress(
-        'course1',
-        'student1',
-        requester(Role.TUTOR, { id: 'tutor1' }),
-      );
-
-      expect(result.courseId).toBe('course1');
-    });
-
-    it('TUTOR con alumno ajeno: lanza ForbiddenException', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ tutorId: 'otroTutor' });
-
+    it('STUDENT: lanza ForbiddenException (ningún rol no admin tiene acceso)', async () => {
       await expect(
         service.getStudentCourseProgress(
           'course1',
           'student1',
-          requester(Role.TUTOR, { id: 'tutor1' }),
+          requester(Role.STUDENT, { id: 'student2' }),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('ADMIN sin academia: lanza ForbiddenException', async () => {
+      await expect(
+        service.getStudentCourseProgress(
+          'course1',
+          'student1',
+          requester(Role.ADMIN, { id: 'admin1', academyId: null }),
         ),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -484,7 +480,7 @@ describe('CoursesService', () => {
       expect(where.schoolYearId).toBe('sy-2eso');
     });
 
-    it('sin schoolYearId del alumno (admin/tutor): no aplica filtro de nivel', async () => {
+    it('sin schoolYearId del alumno (admin): no aplica filtro de nivel', async () => {
       mockPrisma.course.findMany.mockResolvedValue([]);
       mockPrisma.enrollment.findMany.mockResolvedValue([]);
 

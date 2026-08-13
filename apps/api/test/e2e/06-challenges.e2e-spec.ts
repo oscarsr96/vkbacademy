@@ -10,18 +10,13 @@ import {
 
 describe('Challenges — /challenges', () => {
   let studentToken: string;
-  let tutorToken: string;
 
   beforeAll(async () => {
     await createApp();
 
-    const [s, tu] = await Promise.all([
-      login('student@vkbacademy.com'),
-      login('oscar.sanchez@egocogito.com'),
-    ]);
+    const s = await login('student@vkbacademy.com');
 
     studentToken = s.accessToken;
-    tutorToken = tu.accessToken;
   });
 
   afterAll(async () => {
@@ -56,13 +51,6 @@ describe('Challenges — /challenges', () => {
         expect(challenge).toHaveProperty('progress');
         expect(typeof challenge.progress).toBe('number');
       }
-    });
-
-    it('TUTOR también puede ver los retos', async () => {
-      const res = await authGet('/challenges', tutorToken);
-
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
     });
 
     it('devuelve 401 sin autenticación', async () => {

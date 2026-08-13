@@ -117,7 +117,7 @@ describe('AiProviderService', () => {
         response: { text: () => '{"ok":true}' },
       });
 
-      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+      const provider = createProvider({ AI_PROVIDER: 'gemini', GEMINI_MODEL: 'gemini-2.5-flash' });
       await provider.generate('prompt', 512);
 
       expect(mockGeminiGetGenerativeModel).toHaveBeenCalledWith(
@@ -127,6 +127,86 @@ describe('AiProviderService', () => {
           }),
         }),
       );
+    });
+
+    it('en Gemini 3+ usa thinkingLevel (thinkingBudget es de 2.5 y enviar ambos da 400)', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: { text: () => '{"ok":true}' },
+      });
+
+      const provider = createProvider({
+        AI_PROVIDER: 'gemini',
+        GEMINI_MODEL: 'gemini-3-flash-preview',
+      });
+      await provider.generate('prompt', 512);
+
+      const [args] = mockGeminiGetGenerativeModel.mock.calls[0] as unknown as [
+        {
+          generationConfig: { thinkingConfig: Record<string, unknown> };
+        },
+      ];
+      const { generationConfig } = args;
+      expect(generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'minimal' });
+      expect(generationConfig.thinkingConfig).not.toHaveProperty('thinkingBudget');
+    });
+  });
+
+  // Gemini 3 no permite apagar el thinking del todo: los thinking tokens se
+  // descuentan de maxOutputTokens sin aparecer en response.text(), así que el
+  // JSON llega cortado. Sin esta detección el síntoma era un error de parseo
+  // indescifrable dos capas más arriba.
+  describe('truncamiento por MAX_TOKENS', () => {
+    it('convierte una respuesta truncada en un error descriptivo en vez de devolver JSON roto', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: {
+          text: () => '{"title":"a medio gene',
+          candidates: [{ finishReason: 'MAX_TOKENS' }],
+          usageMetadata: { thoughtsTokenCount: 480 },
+        },
+      });
+
+      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+      await expect(provider.generate('prompt', 512)).rejects.toThrow(/truncad|MAX_TOKENS/i);
+    });
+
+    it('menciona los tokens gastados en thinking cuando los hay', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: {
+          text: () => '{"title":"a medio gene',
+          candidates: [{ finishReason: 'MAX_TOKENS' }],
+          usageMetadata: { thoughtsTokenCount: 480 },
+        },
+      });
+
+      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+      await expect(provider.generate('prompt', 512)).rejects.toThrow(/480/);
+    });
+
+    it('en modo auto, un truncamiento de Gemini cae al fallback', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: {
+          text: () => '{"title":"a medio gene',
+          candidates: [{ finishReason: 'MAX_TOKENS' }],
+        },
+      });
+      mockAnthropicCreate.mockResolvedValue({
+        content: [{ type: 'text', text: '{"ok":true}' }],
+      });
+
+      const provider = createProvider();
+      await expect(provider.generate('prompt', 512)).resolves.toBe('{"ok":true}');
+    });
+
+    it('no molesta cuando la respuesta termina bien (finishReason STOP)', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: {
+          text: () => '{"ok":true}',
+          candidates: [{ finishReason: 'STOP' }],
+        },
+      });
+
+      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+      await expect(provider.generate('prompt', 512)).resolves.toBe('{"ok":true}');
     });
   });
 
@@ -138,8 +218,56 @@ describe('AiProviderService', () => {
       const src = fs.readFileSync(path.resolve(__dirname, 'ai-provider.service.ts'), 'utf-8');
       // gemini-2.0-flash sin sufijo está deprecado a partir de 2026
       expect(src).not.toMatch(/['"]gemini-2\.0-flash['"]/);
-      // Debe usar uno de los modelos vivos
-      expect(src).toMatch(/gemini-flash-latest|gemini-2\.5-flash|gemini-2\.0-flash-001/);
+    });
+
+    it('el modelo por defecto está pinneado, no es un alias móvil', async () => {
+      // Un alias ("-latest") lo repunta Google sin avisar: el 21-01-2026
+      // gemini-flash-latest saltó a Gemini 3 y cambió la semántica del
+      // thinking, rompiendo la generación sin tocar el repo.
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: { text: () => '{"ok":true}' },
+      });
+
+      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+      await provider.generate('prompt', 512);
+
+      const [{ model }] = mockGeminiGetGenerativeModel.mock.calls[0] as unknown as [
+        { model: string },
+      ];
+      expect(model).not.toMatch(/-latest$/);
+    });
+
+    it('el modelo por defecto no usa thinkingBudget (medido: el alias lo rechaza con 400)', async () => {
+      // Contra la API real, gemini-flash-latest + thinkingBudget: 0 devuelve
+      // 400 INVALID_ARGUMENT en cada llamada. El default debe ser un modelo
+      // cuya config de thinking esté validada, no heredar la de Gemini 2.5.
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: { text: () => '{"ok":true}' },
+      });
+
+      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+      await provider.generate('prompt', 512);
+
+      const [args] = mockGeminiGetGenerativeModel.mock.calls[0] as unknown as [
+        { generationConfig: { thinkingConfig: Record<string, unknown> } },
+      ];
+      expect(args.generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'minimal' });
+    });
+
+    it('GEMINI_MODEL sobreescribe el modelo por defecto', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: { text: () => '{"ok":true}' },
+      });
+
+      const provider = createProvider({
+        AI_PROVIDER: 'gemini',
+        GEMINI_MODEL: 'gemini-3-flash-preview',
+      });
+      await provider.generate('prompt', 512);
+
+      expect(mockGeminiGetGenerativeModel).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'gemini-3-flash-preview' }),
+      );
     });
   });
 
@@ -151,6 +279,19 @@ describe('AiProviderService', () => {
       await expect(provider.generate('prompt', 512)).rejects.toThrow(
         /Gemini.*Haiku|both providers|ningún proveedor/i,
       );
+    });
+
+    it('cuando fallan los dos, el error nombra ambas causas (no solo la del fallback)', async () => {
+      // El fallo de Gemini se perdía: en los logs solo quedaba el error de
+      // Haiku, que apuntaba a un problema de facturación y no a la causa real.
+      mockGeminiGenerateContent.mockRejectedValue(new Error('Gemini quota exceeded'));
+      mockAnthropicCreate.mockRejectedValue(new Error('credit balance is too low'));
+
+      const provider = createProvider();
+      const err = (await provider.generate('prompt', 512).catch((e: Error) => e)) as Error;
+
+      expect(err.message).toMatch(/quota exceeded/);
+      expect(err.message).toMatch(/credit balance is too low/);
     });
   });
 

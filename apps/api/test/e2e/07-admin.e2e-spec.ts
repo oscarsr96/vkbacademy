@@ -143,11 +143,11 @@ describe('Admin — /admin', () => {
       if (!createdUserId) return;
 
       const res = await authPatch(`/admin/users/${createdUserId}/role`, adminToken, {
-        role: 'TUTOR',
+        role: 'ADMIN',
       });
 
       expect(res.status).toBe(200);
-      expect(res.body.role).toBe('TUTOR');
+      expect(res.body.role).toBe('ADMIN');
     });
 
     it('devuelve 400 si el rol es inválido', async () => {

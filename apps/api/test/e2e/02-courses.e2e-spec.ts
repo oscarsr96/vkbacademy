@@ -3,7 +3,6 @@ import { createApp, closeApp, login, authGet, authPost, publicGet, getPrisma } f
 describe('Courses — /courses', () => {
   let studentToken: string;
   let adminToken: string;
-  let tutorToken: string;
 
   // IDs de cursos resueltos desde la BD
   let course3esoId: string; // Fundamentos del Baloncesto (3ºESO)
@@ -14,15 +13,13 @@ describe('Courses — /courses', () => {
   beforeAll(async () => {
     await createApp();
 
-    const [s, a, tu] = await Promise.all([
+    const [s, a] = await Promise.all([
       login('student@vkbacademy.com'),
       login('admin@vkbacademy.com'),
-      login('oscar.sanchez@egocogito.com'),
     ]);
 
     studentToken = s.accessToken;
     adminToken = a.accessToken;
-    tutorToken = tu.accessToken;
 
     // Resolver IDs de cursos desde la BD
     const prisma = getPrisma();
@@ -71,13 +68,6 @@ describe('Courses — /courses', () => {
 
       expect(titles).toContain('Técnicas de Pase');
       expect(titles).toContain('Defensa Avanzada');
-    });
-
-    it('TUTOR ve todos los cursos', async () => {
-      const res = await authGet('/courses', tutorToken);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.length).toBeGreaterThanOrEqual(4);
     });
 
     it('devuelve 401 sin token de autenticación', async () => {
@@ -179,15 +169,6 @@ describe('Courses — /courses', () => {
       const res = await authPost('/courses', studentToken, {
         title: 'Intento de Curso',
         description: 'Un alumno no debería poder crear cursos',
-      });
-
-      expect(res.status).toBe(403);
-    });
-
-    it('TUTOR no puede crear un curso (403)', async () => {
-      const res = await authPost('/courses', tutorToken, {
-        title: 'Intento de Curso',
-        description: 'Un tutor no debería poder crear cursos',
       });
 
       expect(res.status).toBe(403);

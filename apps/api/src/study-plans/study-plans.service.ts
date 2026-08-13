@@ -32,7 +32,7 @@ const EXAM_LEVEL_PRESETS: Record<
   HARD: { numQuestions: 10, difficulty: 'HARD' },
 };
 
-// Tema del payload ya resuelto contra matrículas y temario (regla de coherencia).
+// Tema del payload ya resuelto contra las asignaturas y el temario (regla de coherencia).
 export interface ResolvedTopic {
   source: StudyTopicSource;
   moduleId: string | null;
@@ -68,36 +68,37 @@ export class StudyPlansService {
       .replace(/[\u0300-\u036f]/g, '');
   }
 
-  private async assertEnrolled(userId: string, courseId: string): Promise<void> {
-    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+  private async assertCourseExists(courseId: string): Promise<void> {
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true },
+    });
     if (!course) throw new NotFoundException(`Curso "${courseId}" no encontrado`);
-    const enrollment = await this.prisma.enrollment.findFirst({ where: { userId, courseId } });
-    if (!enrollment) throw new ForbiddenException('No estás matriculado en este curso');
   }
 
   /**
    * Regla de coherencia (determinista, sin IA) — única fuente de verdad, se
-   * ejecuta dentro del create. Para cada tema del payload, en orden:
-   *  1. moduleId (OFFICIAL): válido si el alumno está matriculado en el curso
-   *     del módulo (base u otro). contextCourseId = curso del módulo.
+   * ejecuta dentro del create. No exige matrícula: el alumno puede estudiar
+   * cualquier asignatura publicada. Para cada tema del payload, en orden:
+   *  1. moduleId (OFFICIAL): válido si el módulo existe. contextCourseId =
+   *     curso del módulo.
    *  2. title sin subject (CUSTOM in-subject): coherente por construcción,
    *     se atribuye a la asignatura base. contextCourseId = curso base.
-   *  3. title con subject (CUSTOM fuera de asignatura): válido si y solo si el
-   *     alumno está matriculado en ≥1 curso de esa materia (comparación
-   *     normalizada). contextCourseId = primer curso matriculado de la materia.
+   *  3. title con subject (CUSTOM fuera de asignatura): válido si y solo si
+   *     existe ≥1 asignatura publicada de esa materia (comparación
+   *     normalizada). contextCourseId = primera asignatura de esa materia.
    * Además: sin temas duplicados (mismo moduleId o mismo título normalizado).
    */
   async resolveAndAssertTopics(
-    userId: string,
     baseCourseId: string,
     topics: StudyPlanTopicInputDto[],
   ): Promise<ResolvedTopic[]> {
-    const enrollments = await this.prisma.enrollment.findMany({
-      where: { userId },
+    // Materias disponibles para etiquetar temas propios: todas las publicadas.
+    const availableCourses = await this.prisma.course.findMany({
+      where: { published: true },
       orderBy: { createdAt: 'asc' },
-      include: { course: { select: { id: true, subject: true } } },
+      select: { id: true, subject: true },
     });
-    const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
 
     const resolved: ResolvedTopic[] = [];
     for (const input of topics) {
@@ -123,11 +124,6 @@ export class StudyPlansService {
         if (!module) {
           throw new NotFoundException(`Módulo "${input.moduleId}" no encontrado`);
         }
-        if (!enrolledCourseIds.has(module.courseId)) {
-          throw new ForbiddenException(
-            `No estás matriculado en el curso al que pertenece el tema "${module.title}"`,
-          );
-        }
         resolved.push({
           source: StudyTopicSource.OFFICIAL,
           moduleId: module.id,
@@ -145,22 +141,22 @@ export class StudyPlansService {
           contextCourseId: baseCourseId,
         });
       } else {
-        // 3. Tema propio de otra asignatura: exige matrícula en esa materia
+        // 3. Tema propio de otra asignatura: exige que la materia exista
         const wanted = this.normalize(input.subject);
-        const match = enrollments.find(
-          (e) => e.course.subject && this.normalize(e.course.subject) === wanted,
+        const match = availableCourses.find(
+          (c) => c.subject && this.normalize(c.subject) === wanted,
         );
         if (!match) {
           const subjects = [
             ...new Set(
-              enrollments
-                .map((e) => e.course.subject)
+              availableCourses
+                .map((c) => c.subject)
                 .filter((s): s is string => !!s && s.trim().length > 0),
             ),
           ];
           throw new UnprocessableEntityException(
             `El tema "${input.title!.trim()}" está etiquetado como "${input.subject.trim()}", ` +
-              `pero no estás matriculado en ninguna asignatura de esa materia. ` +
+              `pero no hay ninguna asignatura de esa materia. ` +
               `Materias válidas: ${subjects.join(', ') || '(ninguna)'}`,
           );
         }
@@ -169,7 +165,7 @@ export class StudyPlansService {
           moduleId: null,
           title: input.title!.trim(),
           subject: input.subject.trim(),
-          contextCourseId: match.courseId,
+          contextCourseId: match.id,
         });
       }
     }
@@ -205,10 +201,10 @@ export class StudyPlansService {
   }
 
   async create(userId: string, dto: CreateStudyPlanDto) {
-    await this.assertEnrolled(userId, dto.courseId);
+    await this.assertCourseExists(dto.courseId);
     this.assertPerTopicTotal(dto.exercisesPerTopic);
 
-    const resolvedTopics = await this.resolveAndAssertTopics(userId, dto.courseId, dto.topics);
+    const resolvedTopics = await this.resolveAndAssertTopics(dto.courseId, dto.topics);
 
     // Plan "cáscara" + temas en una transacción (nested create)
     const plan = await this.prisma.studyPlan.create({
@@ -247,7 +243,7 @@ export class StudyPlansService {
         ),
       ),
       Promise.allSettled([
-        this.exercises.generateForTopics(userId, {
+        this.exercises.generateForTopics({
           courseId: dto.courseId,
           topics: topicTitles,
           perTopic: dto.exercisesPerTopic,
@@ -313,7 +309,10 @@ export class StudyPlansService {
 
   private buildTitle(topics: { title: string }[]): string {
     // Título por defecto del curso multi-tema; el alumno puede renombrarlo después.
-    return topics.map((t) => t.title).join(' · ').slice(0, 200);
+    return topics
+      .map((t) => t.title)
+      .join(' · ')
+      .slice(0, 200);
   }
 
   async listMine(userId: string) {
@@ -471,7 +470,7 @@ export class StudyPlansService {
     this.assertPerTopicTotal(perTopic as ExercisesPerTopicDto);
 
     // Generar primero: si la IA falla, los ejercicios anteriores quedan intactos.
-    const res = await this.exercises.generateForTopics(userId, {
+    const res = await this.exercises.generateForTopics({
       courseId: plan.courseId,
       topics: plan.topics.map((t) => t.title),
       perTopic,

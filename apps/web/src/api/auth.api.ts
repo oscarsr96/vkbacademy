@@ -12,36 +12,32 @@ export interface LoginPayload {
   password: string;
 }
 
-export interface RegisterPayload {
+export interface NewStudentPayload {
   name: string;
-  email: string;
+  schoolYearId: string;
   password: string;
-  schoolYearId?: string;
-  academySlug?: string;
 }
 
-export interface RegisterStudentPayload {
-  name: string;
-  schoolYearId?: string;
-}
-
-export interface RegisterTutorPayload {
-  name: string;
-  email: string;
-  password: string;
+export interface RegisterStudentsPayload {
+  guardianEmail: string;
   academySlug: string;
-  students: RegisterStudentPayload[];
+  students: NewStudentPayload[];
+}
+
+export interface RegisteredStudent {
+  name: string;
+  username: string;
+  schoolYear: string | null;
 }
 
 export const authApi = {
   login: (payload: LoginPayload) =>
     api.post<AuthResponse>('/auth/login', payload).then((r) => r.data),
 
-  register: (payload: RegisterPayload) =>
-    api.post<AuthResponse>('/auth/register', payload).then((r) => r.data),
-
-  registerTutor: (payload: RegisterTutorPayload) =>
-    api.post<AuthResponse>('/auth/register-tutor', payload).then((r) => r.data),
+  registerStudents: (payload: RegisterStudentsPayload) =>
+    api
+      .post<{ students: RegisteredStudent[] }>('/auth/register-students', payload)
+      .then((r) => r.data),
 
   logout: (refreshToken: string) => api.post('/auth/logout', { refreshToken }).then((r) => r.data),
 
@@ -52,7 +48,4 @@ export const authApi = {
 
   resetPassword: (token: string, password: string) =>
     api.post<{ message: string }>('/auth/reset-password', { token, password }).then((r) => r.data),
-
-  changePassword: (newPassword: string) =>
-    api.post<{ message: string }>('/auth/change-password', { newPassword }).then((r) => r.data),
 };

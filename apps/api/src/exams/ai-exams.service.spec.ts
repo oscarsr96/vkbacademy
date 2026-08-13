@@ -9,7 +9,6 @@ describe('AiExamsService', () => {
 
   const mockPrisma = {
     course: { findUnique: jest.fn() },
-    enrollment: { findFirst: jest.fn() },
     aiExamBank: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -48,7 +47,6 @@ describe('AiExamsService', () => {
         title: 'Mate',
         schoolYear: { label: '3º ESO' },
       });
-      mockPrisma.enrollment.findFirst.mockResolvedValue({ id: 'enr1' });
       mockAi.generate.mockResolvedValue(
         JSON.stringify({
           title: 'Examen',

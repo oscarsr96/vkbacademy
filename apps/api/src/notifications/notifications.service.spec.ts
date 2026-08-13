@@ -97,29 +97,5 @@ describe('NotificationsService', () => {
 
       expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({ from: 'test@vkb.com' }));
     });
-
-    it('sendTutorWelcomeWithStudents incluye username y contraseña por defecto en el HTML', async () => {
-      await service.sendTutorWelcomeWithStudents({
-        tutorEmail: 't@x.com',
-        tutorName: 'Tutor',
-        tutorPassword: 'pass1234',
-        students: [{ name: 'Juan', username: 'juan' }],
-        defaultPassword: 'cambiar123',
-        academyName: 'VKB',
-        loginUrl: 'http://x/login',
-      });
-
-      expect(mockSend).toHaveBeenCalledTimes(1);
-      const [{ html }] = mockSend.mock.calls[0] as [{ html: string }];
-
-      // Muestra el nombre y el username del alumno
-      expect(html).toContain('Juan');
-      expect(html).toContain('juan');
-      // Una sola contraseña por defecto para todos los alumnos
-      expect(html).toContain('cambiar123');
-      // Credenciales del tutor
-      expect(html).toContain('t@x.com');
-      expect(html).toContain('pass1234');
-    });
   });
 });
