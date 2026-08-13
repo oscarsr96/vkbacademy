@@ -117,7 +117,7 @@ describe('AiProviderService', () => {
         response: { text: () => '{"ok":true}' },
       });
 
-      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+      const provider = createProvider({ AI_PROVIDER: 'gemini', GEMINI_MODEL: 'gemini-2.5-flash' });
       await provider.generate('prompt', 512);
 
       expect(mockGeminiGetGenerativeModel).toHaveBeenCalledWith(
@@ -140,9 +140,11 @@ describe('AiProviderService', () => {
       });
       await provider.generate('prompt', 512);
 
-      const [args] = mockGeminiGetGenerativeModel.mock.calls[0] as unknown as [{
-        generationConfig: { thinkingConfig: Record<string, unknown> };
-      }];
+      const [args] = mockGeminiGetGenerativeModel.mock.calls[0] as unknown as [
+        {
+          generationConfig: { thinkingConfig: Record<string, unknown> };
+        },
+      ];
       const { generationConfig } = args;
       expect(generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'minimal' });
       expect(generationConfig.thinkingConfig).not.toHaveProperty('thinkingBudget');
@@ -229,8 +231,27 @@ describe('AiProviderService', () => {
       const provider = createProvider({ AI_PROVIDER: 'gemini' });
       await provider.generate('prompt', 512);
 
-      const [{ model }] = mockGeminiGetGenerativeModel.mock.calls[0] as unknown as [{ model: string }];
+      const [{ model }] = mockGeminiGetGenerativeModel.mock.calls[0] as unknown as [
+        { model: string },
+      ];
       expect(model).not.toMatch(/-latest$/);
+    });
+
+    it('el modelo por defecto no usa thinkingBudget (medido: el alias lo rechaza con 400)', async () => {
+      // Contra la API real, gemini-flash-latest + thinkingBudget: 0 devuelve
+      // 400 INVALID_ARGUMENT en cada llamada. El default debe ser un modelo
+      // cuya config de thinking esté validada, no heredar la de Gemini 2.5.
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: { text: () => '{"ok":true}' },
+      });
+
+      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+      await provider.generate('prompt', 512);
+
+      const [args] = mockGeminiGetGenerativeModel.mock.calls[0] as unknown as [
+        { generationConfig: { thinkingConfig: Record<string, unknown> } },
+      ];
+      expect(args.generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'minimal' });
     });
 
     it('GEMINI_MODEL sobreescribe el modelo por defecto', async () => {
