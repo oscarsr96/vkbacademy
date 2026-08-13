@@ -118,40 +118,44 @@ describe('LandingPage — responsividad móvil', () => {
 
 // ─── AcademyLandingPage ─────────────────────────────────────────────────────────
 
-describe('AcademyLandingPage — responsividad móvil', () => {
+// Ya no tiene diseño propio: delega en PublicLayout y LandingPage, cuya
+// responsividad verifican sus propios bloques. Aquí solo se comprueba que la
+// delegación sigue en pie y que la academia llega a las dos piezas.
+describe('AcademyLandingPage — delegación en la landing común', () => {
   let src: string;
 
   beforeAll(() => {
     src = readSource('AcademyLandingPage.tsx');
   });
 
-  test('inyecta un bloque <style> con media queries para móvil', () => {
-    expect(src).toMatch(/<style>/);
-    expect(src).toMatch(/@media.*max-width/);
+  test('renderiza la landing común dentro de PublicLayout', () => {
+    expect(src).toMatch(/import PublicLayout/);
+    expect(src).toMatch(/import LandingPage/);
+    expect(src).toMatch(/<PublicLayout[\s\S]*<LandingPage[\s\S]*<\/PublicLayout>/);
   });
 
-  test('el navbar de la academia tiene un menú hamburger en móvil', () => {
-    // En móvil los nav links deben ocultarse o usar un menú alternativo
-    expect(src).toMatch(/hamburger|mobile-menu|acad-nav/i);
+  test('pasa el nombre de la academia a ambas piezas', () => {
+    expect(src).toMatch(/<PublicLayout[^>]*clubName=\{academy\.name\}/);
+    expect(src).toMatch(/<LandingPage[^>]*clubName=\{academy\.name\}/);
   });
 
-  test('los botones del hero usan flexWrap: wrap para no desbordarse', () => {
-    expect(src).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
+  test('pasa el logo de la academia al layout', () => {
+    expect(src).toMatch(/logoUrl=\{academy\.logoUrl\}/);
   });
 
-  test('la stats section usa grid con auto-fit o wrap', () => {
-    const hasAutoFit = src.includes('auto-fit') || src.includes('auto-fill');
-    const hasWrap = src.includes("flexWrap: 'wrap'");
-    expect(hasAutoFit || hasWrap).toBeTruthy();
+  test('no reimplementa un diseño propio', () => {
+    expect(src).not.toMatch(/acad-nav|<style>/);
   });
 
-  test('la features section usa grid con auto-fit/minmax responsivo', () => {
-    expect(src).toMatch(/auto-fit|auto-fill/);
+  test('conserva la resolución por slug y por dominio', () => {
+    expect(src).toMatch(/useParams/);
+    expect(src).toMatch(/useAcademyDomain/);
+    expect(src).toMatch(/academies\/by-slug/);
   });
 
-  test('el padding del hero es responsivo (no padding fijo > 60px sin override)', () => {
-    // Debe haber un override de padding en la media query para móvil
-    expect(src).toMatch(/@media.*padding|padding.*@media/s);
+  test('mantiene los estados de carga y de academia no encontrada', () => {
+    expect(src).toMatch(/isLoading/);
+    expect(src).toMatch(/Academia no encontrada/);
   });
 });
 
@@ -253,7 +257,9 @@ describe('PricingPage — responsividad móvil', () => {
 // ─── Verificaciones generales ────────────────────────────────────────────────────
 
 describe('Todas las páginas de marketing — verificaciones generales', () => {
-  const files = ['LandingPage.tsx', 'AcademyLandingPage.tsx', 'AboutPage.tsx', 'PricingPage.tsx'];
+  // AcademyLandingPage queda fuera: ya no tiene estilos propios, solo resuelve la
+  // academia y delega en LandingPage, que sí pasa por estas verificaciones.
+  const files = ['LandingPage.tsx', 'AboutPage.tsx', 'PricingPage.tsx'];
 
   test.each(files)('%s: usa overflowX hidden en el contenedor raíz', (file) => {
     const src = readSource(file);

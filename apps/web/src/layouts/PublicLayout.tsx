@@ -4,10 +4,21 @@ import { Link, Outlet, useNavigate } from 'react-router-dom';
 // Logo oficial Vallekas Basket (versión 2026)
 const VKB_LOGO = 'https://vallekasbasket.com/wp-content/uploads/2026/04/logotipo-vkb-368.webp';
 
-// Navbar fija con glassmorphism para las páginas públicas de marketing
-export default function PublicLayout({ children }: { children?: React.ReactNode }) {
+// Navbar fija con glassmorphism para las páginas públicas de marketing.
+// `clubName` y `logoUrl` solo los pasa la landing de una academia: en el dominio
+// principal y en el resto de páginas de marketing valen los de Vallekas.
+export default function PublicLayout({
+  children,
+  clubName = 'VKB Academy',
+  logoUrl,
+}: {
+  children?: React.ReactNode;
+  clubName?: string;
+  logoUrl?: string | null;
+}) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const logo = logoUrl || VKB_LOGO;
 
   return (
     <div style={styles.shell}>
@@ -76,8 +87,8 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
         <div style={styles.navInner}>
           {/* Logo izquierda */}
           <Link to="/" style={styles.brand}>
-            <img src={VKB_LOGO} alt="Vallekas Basket" style={styles.brandLogo} />
-            <span style={styles.brandText}>VKB Academy</span>
+            <img src={logo} alt={clubName} style={styles.brandLogo} />
+            <span style={styles.brandText}>{clubName}</span>
           </Link>
 
           {/* Links centro — solo visibles en desktop */}
@@ -154,10 +165,10 @@ export default function PublicLayout({ children }: { children?: React.ReactNode 
         <div style={styles.footerStripe} />
         <div style={styles.footerInner}>
           <div style={styles.footerBrand}>
-            <img src={VKB_LOGO} alt="Vallekas Basket" style={styles.footerLogo} />
-            <span style={styles.footerWordmark}>VKB Academy</span>
+            <img src={logo} alt={clubName} style={styles.footerLogo} />
+            <span style={styles.footerWordmark}>{clubName}</span>
           </div>
-          <p style={styles.footerText}>© 2026 Vallekas Basket · Formación deportiva y académica</p>
+          <p style={styles.footerText}>© 2026 {clubName} · Formación deportiva y académica</p>
           <div style={styles.footerLinks}>
             <Link to="/" style={styles.footerLink}>
               Inicio

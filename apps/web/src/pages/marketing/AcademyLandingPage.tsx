@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../lib/axios';
 import { useAcademyDomain } from '../../contexts/AcademyContext';
-import { contrastText, lighten } from '../../utils/color';
+import PublicLayout from '../../layouts/PublicLayout';
+import LandingPage from './LandingPage';
 
 interface AcademyPublic {
   id: string;
@@ -14,88 +14,14 @@ interface AcademyPublic {
   isActive: boolean;
 }
 
-// Registro de iconos SVG (estilo línea, 24×24, heredan color vía currentColor).
-// Sustituyen a los emojis para un acabado profesional y consistente entre
-// plataformas (los emojis dependen de la fuente del sistema).
-const ICONS: Record<string, string> = {
-  video: '<path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
-  shapes:
-    '<path d="M8.3 10a.7.7 0 0 1-.62-1.05l3.7-6.36a.7.7 0 0 1 1.2 0l3.7 6.36A.7.7 0 0 1 15.7 10Z"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><circle cx="17.5" cy="17.5" r="3.5"/>',
-  check: '<path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/>',
-  graduation:
-    '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/><path d="M22 10v6"/>',
-  chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
-  chart:
-    '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
-};
-
-// ── Icono SVG de línea reutilizable ──
-function Icon({
-  name,
-  size = 26,
-  color = 'currentColor',
-  strokeWidth = 1.85,
-}: {
-  name: string;
-  size?: number | string;
-  color?: string;
-  strokeWidth?: number;
-}) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-      dangerouslySetInnerHTML={{ __html: ICONS[name] ?? '' }}
-    />
-  );
-}
-
-const FEATURES = [
-  {
-    icon: 'video',
-    title: 'Lecciones en vídeo',
-    desc: 'Contenido actualizado con los mejores vídeos de cada temática.',
-  },
-  {
-    icon: 'shapes',
-    title: 'Aprende jugando',
-    desc: 'Lecciones interactivas con ejercicios de emparejamiento, ordenación y rellenar huecos.',
-  },
-  {
-    icon: 'check',
-    title: 'Tests con corrección automática',
-    desc: 'Comprueba lo que ha aprendido en el momento, sin esperar a la próxima clase.',
-  },
-  {
-    icon: 'graduation',
-    title: 'Exámenes y certificados',
-    desc: 'Al superar los exámenes, recibe un certificado digital descargable en PDF.',
-  },
-  {
-    icon: 'chat',
-    title: 'Un tutor que no se cansa',
-    desc: 'Pregunta cualquier duda y recibe una explicación al momento, a cualquier hora.',
-  },
-  {
-    icon: 'chart',
-    title: 'Tú tienes el control',
-    desc: 'Das de alta a tu hijo/a y eliges su contraseña. Recibes su usuario en pantalla al momento.',
-  },
-];
-
-const STATS = [
-  { value: '6', label: 'Niveles: 1º ESO a 2º Bachillerato' },
-  { value: '24/7', label: 'Disponible siempre' },
-];
-
+/**
+ * Landing de una academia concreta. Ya no tiene diseño propio: resuelve la
+ * academia (por `/a/:slug` o por dominio) y sirve la misma landing que el
+ * dominio principal, con su nombre y su logo.
+ *
+ * El color no se pasa aquí: `BrandSync` llama a `applyBrand(primaryColor)` y
+ * toda la página deriva de las variables `--brand*`.
+ */
 export default function AcademyLandingPage() {
   const { slug: paramSlug } = useParams<{ slug: string }>();
   const { academy: domainAcademy } = useAcademyDomain();
@@ -125,7 +51,7 @@ export default function AcademyLandingPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#080e1a',
+          background: '#070d18',
         }}
       >
         <span className="spinner" />
@@ -137,564 +63,41 @@ export default function AcademyLandingPage() {
     return (
       <div
         style={{
-          minHeight: '60vh',
+          minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 16,
+          background: '#070d18',
         }}
       >
         <h2 style={{ color: '#f1f5f9', fontSize: '1.5rem' }}>Academia no encontrada</h2>
         <p style={{ color: '#94a3b8' }}>
           No existe ninguna academia con el identificador "{resolvedSlug}"
         </p>
-        <button onClick={() => navigate('/')} style={btnPrimary(null)}>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            background: 'var(--brand)',
+            color: 'var(--brand-contrast)',
+            border: 'none',
+            borderRadius: 999,
+            padding: '13px 30px',
+            fontSize: '0.9375rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
           Ir al inicio
         </button>
       </div>
     );
   }
 
-  const slug = academy.slug;
-
-  const color = academy.primaryColor ?? '#ea580c';
-
   return (
-    <div style={{ background: '#080e1a', overflowX: 'hidden' }}>
-      {/* Overrides responsivos — media queries para el navbar de la academia */}
-      <style>{`
-        .acad-nav-links { display: flex; align-items: center; gap: 24px; }
-        .acad-nav-actions { display: flex; gap: 12px; }
-        .acad-hamburger { display: none; }
-        .acad-mobile-menu { display: none; }
-
-        /* Foco visible para navegación por teclado (accesibilidad) */
-        .acad-focusable:focus-visible {
-          outline: 3px solid ${color};
-          outline-offset: 3px;
-          border-radius: 12px;
-        }
-
-        @media (max-width: 768px) {
-          .acad-nav-links { display: none !important; }
-          .acad-nav-actions { display: none !important; }
-          .acad-hamburger {
-            display: flex !important;
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.25);
-            color: #fff;
-            font-size: 1.25rem;
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            flex-shrink: 0;
-          }
-          .acad-mobile-menu {
-            display: flex !important;
-            flex-direction: column;
-            background: rgba(8,14,26,0.98);
-            border-top: 1px solid rgba(255,255,255,0.08);
-            padding: 0.5rem 0;
-          }
-          .acad-mobile-link {
-            display: block;
-            padding: 0.875rem 1.5rem;
-            color: rgba(255,255,255,0.85);
-            text-decoration: none;
-            font-size: 1rem;
-            font-weight: 500;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            cursor: pointer;
-            background: none;
-            border-left: none;
-            border-right: none;
-            border-top: none;
-            text-align: left;
-          }
-          .acad-hero-section { padding: 3.5rem 1.25rem 3rem !important; }
-          .acad-stats-section { padding: 2rem 1.25rem !important; }
-          .acad-features-section { padding: 3rem 1.25rem !important; }
-          .acad-cta-section { padding: 3rem 1.25rem !important; }
-          .acad-footer { padding: 1.5rem 1.25rem !important; }
-        }
-      `}</style>
-
-      {/* ── Navbar de academia ── */}
-      <AcadNavbar academy={academy} color={color} slug={slug} navigate={navigate} />
-
-      {/* ── Hero ── */}
-      <section
-        className="acad-hero-section"
-        style={{
-          position: 'relative',
-          padding: '100px 2rem 80px',
-          textAlign: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: '-20%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 800,
-            height: 800,
-            background: `radial-gradient(circle, ${color}18 0%, transparent 60%)`,
-            pointerEvents: 'none',
-          }}
-        />
-
-        <div style={{ position: 'relative', maxWidth: 720, margin: '0 auto' }}>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              background: `${color}18`,
-              border: `1px solid ${color}33`,
-              borderRadius: 20,
-              padding: '6px 18px',
-              fontSize: '0.85rem',
-              color,
-              fontWeight: 600,
-              marginBottom: 24,
-            }}
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: color,
-                boxShadow: `0 0 10px ${color}`,
-                flexShrink: 0,
-              }}
-            />
-            {academy.name}
-          </span>
-
-          <h1
-            style={{
-              fontSize: 'clamp(2rem, 5vw, 3.2rem)',
-              fontWeight: 800,
-              color: '#f1f5f9',
-              lineHeight: 1.15,
-              marginBottom: 20,
-            }}
-          >
-            Metodología {academy.slug === 'vallekas-basket' ? 'VKB' : academy.name.split(' ')[0]}{' '}
-            para el <span style={{ color }}>rendimiento académico</span>
-          </h1>
-
-          <p
-            style={{
-              fontSize: '1.1rem',
-              color: 'rgba(255,255,255,0.6)',
-              lineHeight: 1.7,
-              maxWidth: 600,
-              margin: '0 auto 32px',
-            }}
-          >
-            La metodología real de {academy.name} en formato digital. Cursos, lecciones
-            interactivas, exámenes con certificado y un tutor de IA — todo en un solo lugar, que tú
-            das de alta cuando quieras.
-          </p>
-
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => navigate(`/register?academy=${slug}`)}
-              className="acad-focusable"
-              style={{ ...btnPrimary(color), padding: '14px 32px', fontSize: '1.05rem' }}
-            >
-              Registrarse gratis
-            </button>
-            <button
-              className="acad-focusable"
-              onClick={() => {
-                const el = document.getElementById('features');
-                el?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              style={{
-                background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.35)',
-                color: '#fff',
-                padding: '14px 28px',
-                borderRadius: 10,
-                fontSize: '1rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Qué incluye ↓
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Stats ── */}
-      <section className="acad-stats-section" style={{ padding: '40px 2rem 60px' }}>
-        <div
-          style={{
-            maxWidth: 900,
-            margin: '0 auto',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: 24,
-          }}
-        >
-          {STATS.map((stat) => (
-            <div
-              key={stat.label}
-              style={{
-                textAlign: 'center',
-                padding: '24px 16px',
-                background: 'rgba(255,255,255,0.03)',
-                borderRadius: 12,
-                border: '1px solid rgba(255,255,255,0.06)',
-              }}
-            >
-              <div style={{ fontSize: '2rem', fontWeight: 800, color, marginBottom: 4 }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Features ── */}
-      <section
-        id="features"
-        className="acad-features-section"
-        style={{ padding: '60px 2rem 80px' }}
-      >
-        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-          <h2
-            style={{
-              textAlign: 'center',
-              fontSize: '1.8rem',
-              fontWeight: 800,
-              color: '#f1f5f9',
-              marginBottom: 48,
-            }}
-          >
-            Todo lo que necesita tu hijo/a
-          </h2>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: 20,
-            }}
-          >
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: 14,
-                  padding: '28px 24px',
-                }}
-              >
-                <div
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 14,
-                    background: `${color}1a`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: 16,
-                  }}
-                >
-                  <Icon name={f.icon} size={26} color={color} strokeWidth={1.9} />
-                </div>
-                <h3
-                  style={{
-                    color: '#f1f5f9',
-                    fontWeight: 700,
-                    fontSize: '1.05rem',
-                    marginBottom: 8,
-                  }}
-                >
-                  {f.title}
-                </h3>
-                <p
-                  style={{
-                    color: 'rgba(255,255,255,0.5)',
-                    fontSize: '0.9rem',
-                    lineHeight: 1.6,
-                    margin: 0,
-                  }}
-                >
-                  {f.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA final ── */}
-      <section
-        className="acad-cta-section"
-        style={{ padding: '60px 2rem 80px', textAlign: 'center' }}
-      >
-        <div
-          style={{
-            maxWidth: 600,
-            margin: '0 auto',
-            background: `${color}0a`,
-            border: `1px solid ${color}22`,
-            borderRadius: 20,
-            padding: '48px 32px',
-          }}
-        >
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f1f5f9', marginBottom: 12 }}>
-            Empieza hoy
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.55)', marginBottom: 28, fontSize: '1rem' }}>
-            Crea una cuenta gratis y accede a todo el contenido de {academy.name}.
-          </p>
-          <button
-            onClick={() => navigate(`/register?academy=${slug}`)}
-            className="acad-focusable"
-            style={{ ...btnPrimary(color), padding: '14px 36px', fontSize: '1.05rem' }}
-          >
-            Crear cuenta gratis
-          </button>
-        </div>
-      </section>
-
-      {/* ── Footer ── */}
-      <footer
-        className="acad-footer"
-        style={{
-          background: '#060b15',
-          padding: '2rem',
-          borderTop: `1px solid ${color}15`,
-          textAlign: 'center',
-        }}
-      >
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.8125rem', margin: 0 }}>
-          © 2026 {academy.name} · Formación deportiva y académica
-        </p>
-      </footer>
-    </div>
+    <PublicLayout clubName={academy.name} logoUrl={academy.logoUrl}>
+      <LandingPage clubName={academy.name} />
+    </PublicLayout>
   );
-}
-
-// ── Navbar interna de la academia con soporte hamburger en móvil ──
-function AcadNavbar({
-  academy,
-  color,
-  slug,
-  navigate,
-}: {
-  academy: { name: string; logoUrl: string | null };
-  color: string;
-  slug: string;
-  navigate: (path: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        background: 'rgba(8,14,26,0.97)',
-        borderBottom: `1px solid ${color}22`,
-        backdropFilter: 'blur(14px)',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: '0 auto',
-          padding: '0 1.25rem',
-          height: 64,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-        }}
-      >
-        {/* Logo y nombre */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          {academy.logoUrl && (
-            <img
-              src={academy.logoUrl}
-              alt={academy.name}
-              style={{ height: 36, width: 'auto', objectFit: 'contain', maxWidth: '100%' }}
-            />
-          )}
-          <span
-            style={{
-              background: `linear-gradient(135deg, ${color}, ${lighten(color)})`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontWeight: 800,
-              fontSize: '1.125rem',
-            }}
-          >
-            {academy.name}
-          </span>
-        </div>
-
-        {/* Nav links — ocultos en móvil vía CSS */}
-        <nav className="acad-nav-links">
-          <a
-            href="#features"
-            onClick={(e) => {
-              e.preventDefault();
-              document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            style={acadNavLinkStyle}
-          >
-            Inicio
-          </a>
-          <a
-            href="/nosotros"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate('/nosotros');
-            }}
-            style={acadNavLinkStyle}
-          >
-            Sobre nosotros
-          </a>
-          <a
-            href="/precios"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate('/precios');
-            }}
-            style={acadNavLinkStyle}
-          >
-            Precios
-          </a>
-        </nav>
-
-        {/* Botones de acción — ocultos en móvil vía CSS */}
-        <div className="acad-nav-actions">
-          <button
-            onClick={() => navigate('/login')}
-            style={{
-              background: 'transparent',
-              border: `1px solid ${color}66`,
-              color: '#fff',
-              padding: '8px 18px',
-              borderRadius: 8,
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Acceder
-          </button>
-          <button onClick={() => navigate(`/register?academy=${slug}`)} style={btnPrimary(color)}>
-            Registrarse
-          </button>
-        </div>
-
-        {/* Hamburger — visible solo en móvil vía CSS */}
-        <button
-          className="acad-hamburger"
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
-        >
-          {open ? '✕' : '☰'}
-        </button>
-      </div>
-
-      {/* Menú móvil desplegable */}
-      {open && (
-        <div className="acad-mobile-menu">
-          <button
-            className="acad-mobile-link"
-            onClick={() => {
-              setOpen(false);
-              document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          >
-            Inicio
-          </button>
-          <button
-            className="acad-mobile-link"
-            onClick={() => {
-              setOpen(false);
-              navigate('/nosotros');
-            }}
-          >
-            Sobre nosotros
-          </button>
-          <button
-            className="acad-mobile-link"
-            onClick={() => {
-              setOpen(false);
-              navigate('/precios');
-            }}
-          >
-            Precios
-          </button>
-          <button
-            className="acad-mobile-link"
-            onClick={() => {
-              setOpen(false);
-              navigate('/login');
-            }}
-          >
-            Acceder
-          </button>
-          <button
-            className="acad-mobile-link"
-            style={{ color: color, fontWeight: 700 }}
-            onClick={() => {
-              setOpen(false);
-              navigate(`/register?academy=${slug}`);
-            }}
-          >
-            Registrarse gratis
-          </button>
-        </div>
-      )}
-    </header>
-  );
-}
-
-const acadNavLinkStyle: React.CSSProperties = {
-  color: '#ffffff',
-  textDecoration: 'none',
-  fontSize: '0.9375rem',
-  fontWeight: 500,
-  opacity: 0.8,
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-};
-
-function btnPrimary(color?: string | null): React.CSSProperties {
-  const c = color ?? '#ea580c';
-  return {
-    background: `linear-gradient(135deg, ${c} 0%, ${lighten(c)} 100%)`,
-    color: contrastText(c),
-    border: 'none',
-    borderRadius: 10,
-    padding: '10px 24px',
-    fontSize: '0.9375rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-    boxShadow: `0 6px 24px ${c}55`,
-  };
 }
