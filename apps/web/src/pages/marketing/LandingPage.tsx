@@ -167,7 +167,8 @@ export default function LandingPage() {
               </div>
 
               <p className="lp-note">
-                La cuenta la abre un adulto de la familia y añade a cada alumno con su curso.
+                Un adulto de la familia da de alta a cada alumno con su curso y recibe sus
+                usuarios al terminar. La cuenta es del alumno.
               </p>
             </div>
 
