@@ -186,40 +186,8 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
             />
           ))}
 
-          {/* Balón de basket */}
-          <circle cx="80" cy="80" r="52" fill="url(#ballGrad)" />
-          <circle cx="80" cy="80" r="52" fill="url(#ballShine)" />
-
-          {/* Líneas del balón */}
-          <path d="M28 80 Q80 60 132 80" stroke="rgba(0,0,0,0.25)" strokeWidth="2" fill="none" />
-          <path d="M28 80 Q80 100 132 80" stroke="rgba(0,0,0,0.25)" strokeWidth="2" fill="none" />
-          <line x1="80" y1="28" x2="80" y2="132" stroke="rgba(0,0,0,0.25)" strokeWidth="2" />
-
-          {/* Borde brillante */}
-          <circle
-            cx="80"
-            cy="80"
-            r="52"
-            fill="none"
-            stroke="rgba(255,255,255,0.15)"
-            strokeWidth="1.5"
-          />
-
-          {/* Destello */}
-          <circle cx="62" cy="58" r="8" fill="rgba(255,255,255,0.2)" />
-          <circle cx="62" cy="58" r="4" fill="rgba(255,255,255,0.35)" />
-
-          {/* Gradientes */}
+          {/* Gradiente de las órbitas */}
           <defs>
-            <radialGradient id="ballGrad" cx="40%" cy="35%">
-              <stop offset="0%" stopColor="#fbb04a" />
-              <stop offset="50%" stopColor="#f5911e" />
-              <stop offset="100%" stopColor="#e07b06" />
-            </radialGradient>
-            <radialGradient id="ballShine" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-            </radialGradient>
             <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="transparent" />
               <stop offset="50%" stopColor="#f5911e" />
@@ -227,6 +195,22 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
             </linearGradient>
           </defs>
         </svg>
+
+        {/* Escudo del club, dentro de las órbitas */}
+        <img
+          src="/brand/vkb-logo.png"
+          alt="Vallekas Basket"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(184px, 40vmin)',
+            height: 'auto',
+            zIndex: 2,
+            filter: 'drop-shadow(0 0 26px rgba(245, 145, 30, 0.55))',
+          }}
+        />
       </div>
 
       {/* Texto VKB Academy */}
@@ -261,15 +245,18 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
         </h1>
         <p
           style={{
-            color: 'rgba(255, 255, 255, 0.5)',
-            fontSize: 'clamp(0.85rem, 2vw, 1.05rem)',
-            fontWeight: 500,
-            marginTop: 10,
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
+            color: 'rgba(255, 255, 255, 0.82)',
+            fontSize: 'clamp(1.05rem, 3vw, 1.6rem)',
+            fontWeight: 700,
+            marginTop: 14,
+            letterSpacing: '-0.015em',
+            lineHeight: 1.25,
+            maxWidth: '22ch',
+            marginInline: 'auto',
+            fontFamily: "'Gabarito', 'Unbounded', 'Inter', sans-serif",
           }}
         >
-          Rendimiento académico al nivel del club
+          Formando jugadores dentro y fuera de la pista
         </p>
       </div>
 
