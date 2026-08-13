@@ -51,7 +51,7 @@ const FAQS = [
   },
   {
     q: '¿Qué pasa si mi hijo/a deja el club?',
-    a: 'La cuenta se desactiva desde la administración. Los certificados y el historial quedan guardados y pueden exportarse en PDF en cualquier momento.',
+    a: 'Al dar de baja la cuenta, se elimina de forma permanente junto con sus certificados e historial de exámenes. Te recomendamos descargar los certificados en PDF desde la cuenta antes de solicitar la baja.',
   },
 ];
 

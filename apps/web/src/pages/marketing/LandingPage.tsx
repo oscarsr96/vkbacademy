@@ -308,8 +308,8 @@ export default function LandingPage() {
           {/* Subtítulo */}
           <p style={styles.heroSubtitle}>
             La metodología real de Vallekas Basket en formato digital. Ejercicios personalizados de
-            cualquier tema, exámenes con certificado y un tutor de IA — todo en un solo lugar,
-            supervisado por ti.
+            cualquier tema, exámenes con certificado y un tutor de IA — todo en un solo lugar, que
+            tú das de alta cuando quieras.
           </p>
 
           {/* Botones CTA */}
@@ -509,8 +509,8 @@ export default function LandingPage() {
               EL ESFUERZO <span style={styles.sectionTitleAccent}>TIENE PREMIO</span>
             </h2>
             <p style={styles.sectionSubtitle}>
-              Tu hijo/a gana puntos completando lecciones y retos. Canjéalos por merchandising
-              exclusivo de Vallekas Basket.
+              Tu hijo/a gana puntos completando lecciones y retos y los canjea cuando quiera por
+              merchandising exclusivo de Vallekas Basket.
             </p>
           </div>
           <div className="lp-merch-grid" style={styles.merchGrid}>

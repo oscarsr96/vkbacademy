@@ -207,8 +207,8 @@ export default function AboutPage() {
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitleCentered}>🏆 El esfuerzo tiene premio</h2>
             <p style={styles.merchSubtitle}>
-              Tu hijo/a acumula puntos completando lecciones y retos. Tú eliges cuándo canjearlos
-              por merchandising exclusivo del club.
+              Tu hijo/a acumula puntos completando lecciones y retos, y decide cuándo canjearlos por
+              merchandising exclusivo del club.
             </p>
           </div>
           <div style={styles.merchGrid}>
