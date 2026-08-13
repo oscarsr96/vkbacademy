@@ -144,9 +144,12 @@ export default function LandingPage({ clubName = 'Vallekas Basket' }: { clubName
         <CourtLines />
 
         <div className="lp-shell lp-hero-inner">
+          {/* Solo el nombre: los registros de academia lo traen ya con su sufijo
+              ("Vallekas Basket Academy"), y cualquier artículo delante duplicaba
+              la palabra o fallaba de género según el club. */}
           <p className="lp-tag">
             <span className="lp-tag-dot" />
-            La academia del {clubName}
+            {clubName}
           </p>
 
           <h1 className="lp-display">
