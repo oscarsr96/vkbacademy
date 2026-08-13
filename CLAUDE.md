@@ -223,10 +223,28 @@ AWS_REGION / AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_S3_BUCKET
 AWS_SIGNED_URL_EXPIRES=3600
 RESEND_API_KEY / EMAIL_FROM
 YOUTUBE_API_KEY                          # secret "YT" en GCP Secret Manager
+GEMINI_API_KEY                           # IA primaria (gratis) — sin ella no hay generación
+ANTHROPIC_API_KEY                        # fallback de pago (Claude Haiku 4.5)
+AI_PROVIDER=auto                         # auto | gemini | haiku
+GEMINI_MODEL                             # vacío = modelo pinneado en el código; nunca un alias "-latest"
+AI_TIMEOUT_MS=60000
 PORT=3001
 FRONTEND_URL="http://localhost:5173"     # acepta múltiples separados por coma
 NODE_ENV=development
 ```
+
+**IA**: toda la generación (cursos de estudio, teoría, ejercicios, exámenes) pasa por
+`AiProviderService`. En modo `auto` intenta **Gemini Flash latest** y solo cae a **Claude
+Haiku 4.5** si Gemini falla. Sin `GEMINI_API_KEY`, Haiku deja de ser fallback y pasa a ser
+el único proveedor: si su saldo se agota, la API devuelve 400 en cada llamada y toda
+generación falla. Configura siempre `GEMINI_API_KEY`, también en PRE y PROD.
+
+**Nunca uses un alias de modelo** (`gemini-flash-latest` y similares): Google los repunta
+sin avisar — el 21-01-2026 saltó a Gemini 3, donde `thinkingBudget: 0` dejó de apagar el
+thinking, y los thinking tokens se comieron el `maxOutputTokens` truncando el JSON. El
+modelo va pinneado en `AiProviderService` y se cambia con `GEMINI_MODEL`; el código elige
+solo entre `thinkingBudget` (Gemini ≤2.x) y `thinkingLevel` (≥3), que no pueden viajar
+juntos en la misma request.
 
 ---
 
@@ -312,7 +330,7 @@ pnpm build
 **Variables por plataforma:**
 
 - Vercel: `VITE_API_URL=https://<api>.onrender.com/api`
-- Render: `FRONTEND_URL`, `DATABASE_URL` (Neon pooler), `NODE_ENV=production`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `YOUTUBE_API_KEY`
+- Render: `FRONTEND_URL`, `DATABASE_URL` (Neon pooler), `NODE_ENV=production`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `YOUTUBE_API_KEY`, `GEMINI_API_KEY` (obligatoria para la IA), `ANTHROPIC_API_KEY` (fallback, opcional)
 
 **Notas Render**: Dockerfile Path = `apps/api/Dockerfile`, Build Context = `.`. Migraciones **NO** corren en el contenedor — se aplican desde el job `migrate-pre`/`migrate-prod` del pipeline. Cold start ~30-60s en Starter.
 

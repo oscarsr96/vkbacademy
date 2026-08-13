@@ -3,11 +3,19 @@ import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI, GoogleGenerativeAIAbortError } from '@google/generative-ai';
 import Anthropic, { APIConnectionTimeoutError } from '@anthropic-ai/sdk';
 
+// Modelo por defecto, PINNEADO a propósito. No usar alias móviles
+// ("gemini-flash-latest"): Google los repunta sin avisar — el 21-01-2026
+// gemini-flash-latest saltó a Gemini 3, donde `thinkingBudget: 0` dejó de
+// apagar el thinking, y la generación empezó a fallar sin tocar el repo.
+// Overridable con GEMINI_MODEL para migrar sin desplegar código.
+// OJO: gemini-2.5-flash tiene fecha de apagado el 16-10-2026.
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+
 /**
  * Proveedor de IA unificado con fallback automático.
  *
  * Orden de prioridad:
- *  1. Gemini Flash latest (gratis, 15 RPM / 1M TPD)
+ *  1. Gemini Flash (gratis, 15 RPM / 1M TPD)
  *  2. Claude Haiku (fallback de pago)
  *
  * El proveedor principal se configura con AI_PROVIDER:
@@ -25,6 +33,7 @@ export class AiProviderService {
   private readonly gemini?: GoogleGenerativeAI;
   private readonly anthropic?: Anthropic;
   private readonly provider: 'gemini' | 'haiku' | 'auto';
+  private readonly geminiModel: string;
   private readonly timeoutMs: number;
 
   constructor(private readonly config: ConfigService) {
@@ -44,9 +53,10 @@ export class AiProviderService {
     // como string (process.env) o number (ConfigService validado), y así
     // funciona igual en ambos casos.
     this.timeoutMs = Number(this.config.get('AI_TIMEOUT_MS')) || 60000;
+    this.geminiModel = this.config.get<string>('GEMINI_MODEL') || DEFAULT_GEMINI_MODEL;
 
     this.logger.log(
-      `AI Provider inicializado: mode=${this.provider}, gemini=${!!this.gemini}, haiku=${!!this.anthropic}, timeoutMs=${this.timeoutMs}`,
+      `AI Provider inicializado: mode=${this.provider}, gemini=${!!this.gemini} (${this.geminiModel}), haiku=${!!this.anthropic}, timeoutMs=${this.timeoutMs}`,
     );
   }
 
@@ -82,7 +92,17 @@ export class AiProviderService {
       throw new Error(reason);
     }
 
-    return this.callHaiku(prompt, maxTokens);
+    // Si también falla el fallback, el error debe nombrar AMBAS causas: con solo
+    // la de Haiku, un fallo de Gemini se leía como un problema de facturación.
+    try {
+      return await this.callHaiku(prompt, maxTokens);
+    } catch (haikuError) {
+      if (!geminiError) throw haikuError;
+      const haikuMessage = haikuError instanceof Error ? haikuError.message : String(haikuError);
+      throw new Error(
+        `Los dos proveedores fallaron — Gemini: ${geminiError.message} | Haiku: ${haikuMessage}`,
+      );
+    }
   }
 
   private async callGemini(prompt: string, maxTokens: number): Promise<string> {
@@ -90,24 +110,21 @@ export class AiProviderService {
       throw new Error('GEMINI_API_KEY no configurada');
     }
 
-    // `gemini-flash-latest` apunta siempre al último modelo Flash estable.
-    // Evita roturas por deprecación de versiones específicas (ej. gemini-2.0-flash
-    // dejó de aceptar nuevos usuarios en 2026).
-    // Gemini 2.5 Flash tiene dynamic thinking activado por defecto. Los thinking
-    // tokens se descuentan de maxOutputTokens pero no aparecen en response.text(),
-    // lo que provoca truncamientos erráticos del JSON. Forzamos thinkingBudget=0.
-    // El SDK legacy @google/generative-ai@0.24.x no tipa este campo — se pasa
-    // transparentemente al endpoint REST.
+    // El modelo va pinneado (ver DEFAULT_GEMINI_MODEL) y la config de thinking
+    // depende de su familia. El SDK legacy @google/generative-ai@0.24.x no tipa
+    // estos campos — se pasan transparentemente al endpoint REST.
     const model = this.gemini.getGenerativeModel({
-      model: 'gemini-flash-latest',
+      model: this.geminiModel,
       generationConfig: {
         maxOutputTokens: maxTokens,
         responseMimeType: 'application/json',
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: this.thinkingConfigFor(this.geminiModel),
       } as Record<string, unknown>,
     });
 
-    this.logger.debug(`Llamando a Gemini Flash latest (maxTokens=${maxTokens}, timeout=${this.timeoutMs}ms)`);
+    this.logger.debug(
+      `Llamando a Gemini ${this.geminiModel} (maxTokens=${maxTokens}, timeout=${this.timeoutMs}ms)`,
+    );
     let result;
     try {
       result = await model.generateContent(prompt, { timeout: this.timeoutMs });
@@ -118,6 +135,9 @@ export class AiProviderService {
       }
       throw error;
     }
+
+    this.assertNotTruncated(result.response, maxTokens);
+
     const text = result.response.text();
 
     if (!text) {
@@ -127,12 +147,54 @@ export class AiProviderService {
     return text;
   }
 
+  /**
+   * Config de thinking según la familia del modelo. Los thinking tokens se
+   * descuentan de maxOutputTokens pero NO aparecen en response.text(): si el
+   * modelo piensa, el JSON llega truncado. Cada familia lo limita con un
+   * parámetro distinto y enviar los dos en la misma request devuelve 400.
+   *  - Gemini ≤2.x → `thinkingBudget: 0` (apagado real).
+   *  - Gemini ≥3   → `thinkingLevel: 'minimal'` (el mínimo posible; Gemini 3 no
+   *    permite apagarlo del todo, de ahí que además detectemos el truncamiento).
+   */
+  private thinkingConfigFor(model: string): Record<string, unknown> {
+    const major = Number(/gemini-(\d+)/.exec(model)?.[1] ?? 0);
+    return major >= 3 ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 };
+  }
+
+  /**
+   * Un `finishReason: MAX_TOKENS` significa que la respuesta viene cortada a
+   * media frase: el JSON es basura. Sin esto, el fallo emergía dos capas más
+   * arriba como un error de parseo indescifrable ("Unexpected end of JSON
+   * input") que no señalaba ni al modelo ni al thinking.
+   */
+  private assertNotTruncated(response: unknown, maxTokens: number): void {
+    const res = response as {
+      candidates?: { finishReason?: string }[];
+      usageMetadata?: { thoughtsTokenCount?: number };
+    };
+    if (res.candidates?.[0]?.finishReason !== 'MAX_TOKENS') return;
+
+    const thoughts = res.usageMetadata?.thoughtsTokenCount ?? 0;
+    const thinkingNote =
+      thoughts > 0
+        ? ` — ${thoughts} tokens se fueron en thinking pese a la config, sube maxTokens o baja el thinking del modelo`
+        : '';
+    this.logger.error(
+      `Gemini ${this.geminiModel} truncó la respuesta en maxOutputTokens=${maxTokens}${thinkingNote}`,
+    );
+    throw new Error(
+      `Gemini (${this.geminiModel}) devolvió JSON truncado: agotó maxOutputTokens=${maxTokens}${thinkingNote}`,
+    );
+  }
+
   private async callHaiku(prompt: string, maxTokens: number): Promise<string> {
     if (!this.anthropic) {
       throw new Error('ANTHROPIC_API_KEY no configurada');
     }
 
-    this.logger.debug(`Llamando a Claude Haiku (maxTokens=${maxTokens}, timeout=${this.timeoutMs}ms)`);
+    this.logger.debug(
+      `Llamando a Claude Haiku (maxTokens=${maxTokens}, timeout=${this.timeoutMs}ms)`,
+    );
     let message;
     try {
       message = await this.anthropic.messages.create(
