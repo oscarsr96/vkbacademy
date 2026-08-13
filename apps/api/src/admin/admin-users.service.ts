@@ -26,6 +26,8 @@ export class AdminUsersService {
             OR: [
               { name: { contains: params.search, mode: 'insensitive' as const } },
               { email: { contains: params.search, mode: 'insensitive' as const } },
+              { username: { contains: params.search, mode: 'insensitive' as const } },
+              { guardianEmail: { contains: params.search, mode: 'insensitive' as const } },
             ],
           }
         : {}),
@@ -39,13 +41,12 @@ export class AdminUsersService {
         select: {
           id: true,
           email: true,
+          username: true,
+          guardianEmail: true,
           name: true,
           role: true,
           avatarUrl: true,
           createdAt: true,
-          tutorId: true,
-          tutor: { select: { id: true, name: true } },
-          _count: { select: { students: true } },
           academyMembers: {
             select: { academy: { select: { id: true, slug: true, name: true } } },
           },
@@ -56,29 +57,6 @@ export class AdminUsersService {
     ]);
 
     return { data: items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
-  }
-
-  async assignTutor(studentId: string, tutorId: string | null | undefined) {
-    // Si se proporciona tutorId, verificar que el usuario tiene rol TUTOR
-    if (tutorId) {
-      const tutorUser = await this.prisma.user.findUnique({ where: { id: tutorId } });
-      if (!tutorUser) throw new NotFoundException('Tutor no encontrado');
-      if (tutorUser.role !== Role.TUTOR) {
-        throw new BadRequestException('El usuario especificado no tiene el rol TUTOR');
-      }
-    }
-
-    return this.prisma.user.update({
-      where: { id: studentId },
-      data: { tutorId: tutorId ?? null },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        tutorId: true,
-        tutor: { select: { id: true, name: true } },
-      },
-    });
   }
 
   async updateRole(userId: string, role: Role) {
@@ -101,7 +79,6 @@ export class AdminUsersService {
         passwordHash,
         role: dto.role,
         schoolYearId: dto.schoolYearId ?? null,
-        tutorId: dto.tutorId ?? null,
         ...(academyId ? { academyMembers: { create: { academyId } } } : {}),
       },
       select: {
@@ -111,9 +88,6 @@ export class AdminUsersService {
         role: true,
         avatarUrl: true,
         createdAt: true,
-        tutorId: true,
-        tutor: { select: { id: true, name: true } },
-        _count: { select: { students: true } },
         academyMembers: {
           select: { academy: { select: { id: true, slug: true, name: true } } },
         },
@@ -148,9 +122,6 @@ export class AdminUsersService {
         role: true,
         avatarUrl: true,
         createdAt: true,
-        tutorId: true,
-        tutor: { select: { id: true, name: true } },
-        _count: { select: { students: true } },
       },
     });
   }
@@ -184,5 +155,20 @@ export class AdminUsersService {
   async unenroll(userId: string, courseId: string) {
     await this.prisma.enrollment.deleteMany({ where: { userId, courseId } });
     return { message: 'Matrícula eliminada' };
+  }
+
+  /** Restablece la contraseña de un usuario. Es la única vía de recuperación
+   *  para alumnos, que no tienen email con el que usar forgot-password. */
+  async resetPassword(userId: string, password: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    return { message: 'Contraseña restablecida' };
   }
 }

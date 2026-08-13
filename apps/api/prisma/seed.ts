@@ -93,18 +93,7 @@ async function main() {
     },
   });
 
-  // Crear tutor (vinculado a VKB)
-  const tutor = await prisma.user.create({
-    data: {
-      email: 'tutor@vkbacademy.com',
-      passwordHash,
-      role: Role.TUTOR,
-      name: 'maria-lopez',
-      academyMembers: { create: { academyId: vkbAcademy.id } },
-    },
-  });
-
-  // Crear estudiante asignado a 3º ESO, con tutor asignado (vinculado a VKB)
+  // Crear estudiante asignado a 3º ESO, con email de contacto familiar (vinculado a VKB)
   const student = await prisma.user.create({
     data: {
       email: 'student@vkbacademy.com',
@@ -113,7 +102,7 @@ async function main() {
       name: 'juan-garcia',
       username: 'juan-garcia',
       schoolYearId: sy3eso.id,
-      tutorId: tutor.id,
+      guardianEmail: 'maria.lopez@example.com',
       academyMembers: { create: { academyId: vkbAcademy.id } },
     },
   });
@@ -432,8 +421,9 @@ async function main() {
   console.log(`   👤 SuperAdmin: ${superAdmin.email}`);
   console.log(`   👤 Admin VKB:  ${admin.email}`);
   console.log(`   👤 Admin Oscar: ${adminOscar.email}`);
-  console.log(`   👤 Tutor:    ${tutor.email} → alumno: ${student.name} (VKB)`);
-  console.log(`   👤 Student:  ${student.email} (${sy3eso.label}, VKB) → tutor: ${tutor.name}`);
+  console.log(
+    `   👤 Student:  ${student.email} (${sy3eso.label}, VKB) → contacto familiar: ${student.guardianEmail}`,
+  );
   console.log(`   📚 Curso:    ${course.title} (${sy3eso.label})`);
   console.log(`   📚 Curso:    ${courseMath.title} (${sy3eso.label}) ← Juan matriculado`);
   console.log(`   📚 Curso:    ${course2.title} (${sy1eso.label})`);

@@ -18,13 +18,12 @@ import { LessonType, QuestionType, Role } from '@vkbacademy/shared';
 export interface AdminUser {
   id: string;
   email: string | null;
+  username: string | null;
+  guardianEmail: string | null;
   name: string;
   role: Role;
   avatarUrl?: string | null;
   createdAt: string;
-  tutorId?: string | null;
-  tutor?: { id: string; name: string } | null;
-  _count: { students: number };
 }
 
 export interface RedemptionStats {
@@ -42,7 +41,7 @@ export interface CertificateStats {
 }
 
 export interface AdminMetrics {
-  users: { total: number; students: number; tutors: number };
+  users: { total: number; students: number };
   courses: { total: number; published: number };
   enrollments: number;
   quizAttempts: number;
@@ -119,7 +118,6 @@ export interface CreateUserPayload {
   password: string;
   role: Role;
   schoolYearId?: string;
-  tutorId?: string;
 }
 
 export interface UpdateUserPayload {
@@ -318,9 +316,6 @@ export const adminApi = {
   updateRole: (userId: string, role: Role) =>
     api.patch<AdminUser>(`/admin/users/${userId}/role`, { role }).then((r) => r.data),
 
-  assignTutor: (studentId: string, tutorId: string | null) =>
-    api.patch<AdminUser>(`/admin/users/${studentId}/tutor`, { tutorId }).then((r) => r.data),
-
   createUser: (payload: CreateUserPayload) =>
     api.post<AdminUser>('/admin/users', payload).then((r) => r.data),
 
@@ -329,6 +324,11 @@ export const adminApi = {
 
   deleteUser: (userId: string) =>
     api.delete<{ message: string }>(`/admin/users/${userId}`).then((r) => r.data),
+
+  resetUserPassword: (userId: string, password: string) =>
+    api
+      .patch<{ message: string }>(`/admin/users/${userId}/password`, { password })
+      .then((r) => r.data),
 
   // ─── Matrículas manuales ────────────────────────────────────────────────────
 

@@ -86,8 +86,8 @@ const FEATURES = [
   },
   {
     icon: 'chart',
-    title: 'Seguimiento en tiempo real',
-    desc: 'Ve qué lecciones ha completado, sus resultados y los certificados obtenidos.',
+    title: 'Tú tienes el control',
+    desc: 'Das de alta a tu hijo/a y eliges su contraseña. Recibes su usuario en pantalla al momento.',
   },
 ];
 
@@ -301,8 +301,8 @@ export default function AcademyLandingPage() {
             }}
           >
             La metodología real de {academy.name} en formato digital. Cursos, lecciones
-            interactivas, exámenes con certificado y un tutor de IA — todo en un solo lugar,
-            supervisado por ti.
+            interactivas, exámenes con certificado y un tutor de IA — todo en un solo lugar, que tú
+            das de alta cuando quieras.
           </p>
 
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>

@@ -13,14 +13,12 @@ import { useAcademyFilterStore } from '../../store/academy-filter.store';
 
 const ROLE_LABELS: Record<Role, string> = {
   [Role.STUDENT]: 'Alumno',
-  [Role.TUTOR]: 'Tutor',
   [Role.ADMIN]: 'Admin',
   [Role.SUPER_ADMIN]: 'Super Admin',
 };
 
 const ROLE_COLORS: Record<Role, string> = {
   [Role.STUDENT]: '#6366f1',
-  [Role.TUTOR]: '#f59e0b',
   [Role.ADMIN]: '#ef4444',
   [Role.SUPER_ADMIN]: '#dc2626',
 };
@@ -53,12 +51,6 @@ export default function AdminUsersPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
   });
 
-  const assignTutor = useMutation({
-    mutationFn: ({ studentId, tutorId }: { studentId: string; tutorId: string | null }) =>
-      adminApi.assignTutor(studentId, tutorId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
-  });
-
   const createUser = useMutation({
     mutationFn: (payload: CreateUserPayload) => adminApi.createUser(payload),
     onSuccess: () => {
@@ -84,6 +76,12 @@ export default function AdminUsersPage() {
     },
   });
 
+  const resetPassword = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      adminApi.resetUserPassword(userId, password),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<Role | ''>('');
   const [showCreate, setShowCreate] = useState(false);
@@ -103,15 +101,6 @@ export default function AdminUsersPage() {
       showToast('Rol actualizado', true);
     } catch {
       showToast('Error al cambiar el rol', false);
-    }
-  }
-
-  async function handleTutorChange(studentId: string, tutorId: string) {
-    try {
-      await assignTutor.mutateAsync({ studentId, tutorId: tutorId || null });
-      showToast('Tutor actualizado', true);
-    } catch {
-      showToast('Error al asignar el tutor', false);
     }
   }
 
@@ -144,14 +133,35 @@ export default function AdminUsersPage() {
     }
   }
 
-  const tutors = users?.filter((u) => u.role === Role.TUTOR) ?? [];
+  async function handleResetPassword(userId: string) {
+    const password = window.prompt('Nueva contraseña (mínimo 8 caracteres):');
+    if (!password) return;
+    if (password.length < 8) {
+      showToast('La contraseña debe tener al menos 8 caracteres', false);
+      return;
+    }
+    const confirmation = window.prompt('Repite la contraseña para confirmar:');
+    if (confirmation !== password) {
+      showToast('Las contraseñas no coinciden', false);
+      return;
+    }
+    try {
+      await resetPassword.mutateAsync({ userId, password });
+      showToast('Contraseña restablecida', true);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      showToast(err?.response?.data?.message ?? 'Error al restablecer la contraseña', false);
+    }
+  }
 
   const filtered =
     users?.filter((u) => {
       const matchesSearch =
         !search ||
         u.name.toLowerCase().includes(search.toLowerCase()) ||
-        (u.email ?? '').toLowerCase().includes(search.toLowerCase());
+        (u.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.username ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.guardianEmail ?? '').toLowerCase().includes(search.toLowerCase());
       const matchesRole = !filterRole || u.role === filterRole;
       return matchesSearch && matchesRole;
     }) ?? [];
@@ -192,7 +202,7 @@ export default function AdminUsersPage() {
       <div style={s.filters}>
         <input
           style={s.input}
-          placeholder="Buscar por nombre o email..."
+          placeholder="Buscar por nombre, email, username o email del tutor..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -223,8 +233,6 @@ export default function AdminUsersPage() {
                 <th>Usuario</th>
                 <th>Email</th>
                 <th>Rol</th>
-                <th>Tutor</th>
-                <th>Alumnos</th>
                 <th>Registro</th>
                 <th></th>
               </tr>
@@ -234,16 +242,17 @@ export default function AdminUsersPage() {
                 <UserRow
                   key={user.id}
                   user={user}
-                  tutors={tutors}
                   deleteId={deleteId}
                   onRoleChange={handleRoleChange}
-                  onTutorChange={handleTutorChange}
                   onEdit={() => setEditTarget(user)}
                   onDelete={() => setDeleteId(user.id)}
                   onDeleteConfirm={() => handleDelete(user.id)}
                   onDeleteCancel={() => setDeleteId(null)}
                   onEnrollments={() => setEnrollmentTarget(user)}
-                  isPending={updateRole.isPending || assignTutor.isPending || deleteUser.isPending}
+                  onResetPassword={() => handleResetPassword(user.id)}
+                  isPending={
+                    updateRole.isPending || deleteUser.isPending || resetPassword.isPending
+                  }
                 />
               ))}
             </tbody>
@@ -256,11 +265,9 @@ export default function AdminUsersPage() {
         <UserModal
           title="Nuevo usuario"
           schoolYears={schoolYears ?? []}
-          tutors={tutors}
           isPending={createUser.isPending}
           onClose={() => setShowCreate(false)}
           onSubmit={(data) => handleCreate(data as CreateUserPayload)}
-          onTutorCreated={() => qc.invalidateQueries({ queryKey: ['admin', 'users'] })}
           mode="create"
         />
       )}
@@ -271,7 +278,6 @@ export default function AdminUsersPage() {
           title="Editar usuario"
           initial={editTarget}
           schoolYears={schoolYears ?? []}
-          tutors={tutors}
           isPending={updateUser.isPending}
           onClose={() => setEditTarget(null)}
           onSubmit={(data) => handleUpdate(editTarget.id, data as UpdateUserPayload)}
@@ -297,27 +303,25 @@ export default function AdminUsersPage() {
 
 function UserRow({
   user,
-  tutors,
   deleteId,
   onRoleChange,
-  onTutorChange,
   onEdit,
   onDelete,
   onDeleteConfirm,
   onDeleteCancel,
   onEnrollments,
+  onResetPassword,
   isPending,
 }: {
   user: AdminUser;
-  tutors: AdminUser[];
   deleteId: string | null;
   onRoleChange: (id: string, role: Role) => void;
-  onTutorChange: (id: string, tutorId: string) => void;
   onEdit: () => void;
   onDelete: () => void;
   onDeleteConfirm: () => void;
   onDeleteCancel: () => void;
   onEnrollments: () => void;
+  onResetPassword: () => void;
   isPending: boolean;
 }) {
   const initials = user.name
@@ -358,7 +362,15 @@ function UserRow({
           </span>
         </div>
       </td>
-      <td style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>{user.email}</td>
+      <td style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+        {user.email}
+        {user.username && (
+          <div style={{ fontSize: '0.72rem', opacity: 0.75 }}>@{user.username}</div>
+        )}
+        {user.guardianEmail && (
+          <div style={{ fontSize: '0.72rem', opacity: 0.75 }}>Tutor: {user.guardianEmail}</div>
+        )}
+      </td>
       <td>
         <select
           style={{
@@ -376,32 +388,6 @@ function UserRow({
             </option>
           ))}
         </select>
-      </td>
-      <td>
-        {user.role === Role.STUDENT ? (
-          <select
-            style={s.selectInline}
-            value={user.tutorId ?? ''}
-            disabled={isPending}
-            onChange={(e) => onTutorChange(user.id, e.target.value)}
-          >
-            <option value="">Sin tutor</option>
-            {tutors.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span style={s.muted}>—</span>
-        )}
-      </td>
-      <td style={{ textAlign: 'center' as const }}>
-        {user.role === Role.TUTOR ? (
-          <span style={s.badge}>{user._count.students}</span>
-        ) : (
-          <span style={s.muted}>—</span>
-        )}
       </td>
       <td style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>{createdAt}</td>
       <td>
@@ -436,6 +422,14 @@ function UserRow({
                 📚
               </button>
             )}
+            <button
+              style={s.iconBtn}
+              title="Restablecer contraseña"
+              disabled={isPending}
+              onClick={onResetPassword}
+            >
+              🔑
+            </button>
             <button style={s.iconBtn} title="Editar" onClick={onEdit}>
               ✏️
             </button>
@@ -457,21 +451,17 @@ function UserModal({
   title,
   initial,
   schoolYears,
-  tutors,
   isPending,
   onClose,
   onSubmit,
-  onTutorCreated,
   mode,
 }: {
   title: string;
   initial?: AdminUser;
   schoolYears: { id: string; name: string; label: string }[];
-  tutors: AdminUser[];
   isPending: boolean;
   onClose: () => void;
   onSubmit: (data: CreateUserPayload | UpdateUserPayload) => void;
-  onTutorCreated?: () => void;
   mode: 'create' | 'edit';
 }) {
   const [name, setName] = useState(initial?.name ?? '');
@@ -481,25 +471,12 @@ function UserModal({
   const [schoolYearId, setSchoolYearId] = useState(
     (initial as (AdminUser & { schoolYearId?: string }) | undefined)?.schoolYearId ?? '',
   );
-  const [tutorId, setTutorId] = useState(initial?.tutorId ?? '');
-
-  // Lista local de tutores (se puede ampliar si se crea uno nuevo inline)
-  const [localTutors, setLocalTutors] = useState<AdminUser[]>(tutors);
-
-  // Estado del mini-formulario de creación de tutor
-  const [showNewTutor, setShowNewTutor] = useState(false);
-  const [newTutorName, setNewTutorName] = useState('');
-  const [newTutorEmail, setNewTutorEmail] = useState('');
-  const [newTutorPassword, setNewTutorPassword] = useState('');
-  const [creatingTutor, setCreatingTutor] = useState(false);
-  const [tutorError, setTutorError] = useState('');
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (mode === 'create') {
       const payload: CreateUserPayload = { name, email, password, role };
       if (role === Role.STUDENT && schoolYearId) payload.schoolYearId = schoolYearId;
-      if (role === Role.STUDENT && tutorId) payload.tutorId = tutorId;
       onSubmit(payload);
     } else {
       const payload: UpdateUserPayload = {};
@@ -508,32 +485,6 @@ function UserModal({
       if (password) payload.password = password;
       if (role === Role.STUDENT) payload.schoolYearId = schoolYearId || null;
       onSubmit(payload);
-    }
-  }
-
-  async function handleCreateTutor(e: React.SyntheticEvent) {
-    e.preventDefault();
-    setTutorError('');
-    setCreatingTutor(true);
-    try {
-      const newTutor = await adminApi.createUser({
-        name: newTutorName,
-        email: newTutorEmail,
-        password: newTutorPassword,
-        role: Role.TUTOR,
-      });
-      setLocalTutors((prev) => [...prev, newTutor]);
-      setTutorId(newTutor.id);
-      setShowNewTutor(false);
-      setNewTutorName('');
-      setNewTutorEmail('');
-      setNewTutorPassword('');
-      onTutorCreated?.();
-    } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { message?: string } } };
-      setTutorError(apiErr?.response?.data?.message ?? 'Error al crear el tutor');
-    } finally {
-      setCreatingTutor(false);
     }
   }
 
@@ -569,14 +520,7 @@ function UserModal({
           {mode === 'create' && (
             <div className="field" style={{ marginBottom: '0.875rem' }}>
               <label>Rol</label>
-              <select
-                value={role}
-                onChange={(e) => {
-                  setRole(e.target.value as Role);
-                  setTutorId('');
-                  setShowNewTutor(false);
-                }}
-              >
+              <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
                 {ALL_ROLES.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABELS[r]}
@@ -598,125 +542,6 @@ function UserModal({
               </select>
             </div>
           )}
-          {mode === 'create' && role === Role.STUDENT && (
-            <div style={{ marginBottom: '0.875rem' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '0.3rem',
-                }}
-              >
-                <label style={s.label}>Tutor</label>
-                {!showNewTutor && (
-                  <button type="button" style={s.btnLink} onClick={() => setShowNewTutor(true)}>
-                    + Crear nuevo tutor
-                  </button>
-                )}
-              </div>
-              {!showNewTutor ? (
-                <select
-                  style={s.inputBase}
-                  value={tutorId}
-                  onChange={(e) => setTutorId(e.target.value)}
-                >
-                  <option value="">Sin tutor</option>
-                  {localTutors.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} — {t.email}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div style={s.miniForm}>
-                  <p
-                    style={{
-                      margin: '0 0 0.75rem',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      color: 'var(--color-text)',
-                    }}
-                  >
-                    Nuevo tutor
-                  </p>
-                  <div className="field" style={{ marginBottom: '0.625rem' }}>
-                    <label>Nombre del tutor</label>
-                    <input
-                      value={newTutorName}
-                      onChange={(e) => setNewTutorName(e.target.value)}
-                      required={showNewTutor}
-                      minLength={2}
-                      placeholder="Ej: Ana García"
-                    />
-                  </div>
-                  <div className="field" style={{ marginBottom: '0.625rem' }}>
-                    <label>Email del tutor</label>
-                    <input
-                      type="email"
-                      value={newTutorEmail}
-                      onChange={(e) => setNewTutorEmail(e.target.value)}
-                      required={showNewTutor}
-                      placeholder="tutor@ejemplo.com"
-                    />
-                  </div>
-                  <div className="field" style={{ marginBottom: '0.625rem' }}>
-                    <label>Contraseña del tutor</label>
-                    <input
-                      type="password"
-                      value={newTutorPassword}
-                      onChange={(e) => setNewTutorPassword(e.target.value)}
-                      required={showNewTutor}
-                      minLength={8}
-                    />
-                  </div>
-                  {tutorError && (
-                    <p style={{ color: '#ef4444', fontSize: '0.78rem', marginBottom: '0.5rem' }}>
-                      {tutorError}
-                    </p>
-                  )}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      style={{ padding: '7px 14px', fontSize: '0.85rem' }}
-                      disabled={
-                        creatingTutor ||
-                        !newTutorName ||
-                        !newTutorEmail ||
-                        newTutorPassword.length < 8
-                      }
-                      onClick={(e) => handleCreateTutor(e)}
-                    >
-                      {creatingTutor ? 'Creando...' : 'Crear tutor'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      style={{ padding: '7px 14px', fontSize: '0.85rem' }}
-                      onClick={() => {
-                        setShowNewTutor(false);
-                        setTutorError('');
-                      }}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          {mode === 'edit' && role === Role.STUDENT && (
-            <p
-              style={{
-                fontSize: '0.78rem',
-                color: 'var(--color-text-muted)',
-                marginBottom: '0.5rem',
-              }}
-            >
-              El tutor se gestiona desde la columna correspondiente en la tabla.
-            </p>
-          )}
           <div
             style={{
               display: 'flex',
@@ -737,7 +562,7 @@ function UserModal({
               type="submit"
               className="btn btn-primary"
               style={{ padding: '8px 16px' }}
-              disabled={isPending || showNewTutor}
+              disabled={isPending}
             >
               {isPending ? 'Guardando...' : mode === 'create' ? 'Crear usuario' : 'Guardar cambios'}
             </button>
@@ -895,16 +720,6 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--color-text)',
     minWidth: 240,
   },
-  inputBase: {
-    padding: '0.45rem 0.75rem',
-    border: '1px solid var(--color-border)',
-    borderRadius: 8,
-    fontSize: '0.875rem',
-    background: 'var(--color-bg)',
-    color: 'var(--color-text)',
-    width: '100%',
-    boxSizing: 'border-box' as const,
-  },
   select: {
     padding: '0.45rem 0.75rem',
     border: '1px solid var(--color-border)',
@@ -935,15 +750,6 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--color-text)',
     cursor: 'pointer',
   },
-  badge: {
-    display: 'inline-block',
-    padding: '2px 8px',
-    borderRadius: 12,
-    background: 'var(--color-border)',
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    color: 'var(--color-text)',
-  },
   muted: { color: 'var(--color-text-muted)', fontSize: '0.8rem' },
   iconBtn: {
     background: 'transparent',
@@ -963,23 +769,6 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     fontSize: '0.9rem',
     zIndex: 200,
-  },
-  btnLink: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    color: 'var(--color-primary)',
-    fontSize: '0.78rem',
-    fontWeight: 600,
-    padding: 0,
-    textDecoration: 'underline',
-  },
-  miniForm: {
-    background: 'var(--color-bg)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 8,
-    padding: '0.875rem',
-    marginTop: '0.25rem',
   },
   overlay: {
     position: 'fixed' as const,
@@ -1008,12 +797,5 @@ const s: Record<string, React.CSSProperties> = {
     marginBottom: '1.25rem',
     color: 'var(--color-text)',
     marginTop: 0,
-  },
-  label: {
-    display: 'block',
-    fontSize: '0.8rem',
-    fontWeight: 600,
-    color: 'var(--color-text-muted)',
-    marginBottom: '0.3rem',
   },
 };

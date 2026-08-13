@@ -1,6 +1,5 @@
 export enum Role {
   STUDENT = 'STUDENT',
-  TUTOR = 'TUTOR',
   ADMIN = 'ADMIN',
   SUPER_ADMIN = 'SUPER_ADMIN',
 }
@@ -12,12 +11,10 @@ export interface User {
   role: Role;
   name: string;
   avatarUrl?: string | null;
-  mustChangePassword?: boolean;
   createdAt: Date;
   schoolYearId?: string | null;
   schoolYear?: import('./course.types').SchoolYear | null;
-  tutorId?: string | null;
-  tutor?: { id: string; name: string } | null;
+  guardianEmail?: string | null;
   academyId?: string | null;
   academy?: Academy | null;
 }

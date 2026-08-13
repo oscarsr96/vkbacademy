@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -105,114 +105,6 @@ describe('AuthService', () => {
     mockPrisma.refreshToken.create.mockResolvedValue({});
   });
 
-  // ─── register ────────────────────────────────────────────────────────────────
-
-  describe('register', () => {
-    it('lanza ConflictException si el email ya está registrado', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(fakeUser);
-
-      await expect(
-        service.register({
-          email: 'alumno@vkbacademy.es',
-          password: 'pass123',
-          name: 'Alumno Test',
-        }),
-      ).rejects.toThrow(ConflictException);
-    });
-
-    it('no crea usuario si el email ya existe', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(fakeUser);
-
-      try {
-        await service.register({ email: 'alumno@vkbacademy.es', password: 'pass', name: 'Test' });
-      } catch {
-        // ignorar la excepción, solo verificamos el efecto
-      }
-
-      expect(mockPrisma.user.create).not.toHaveBeenCalled();
-    });
-
-    it('hashea la contraseña con bcrypt antes de persistir', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue(fakeUser);
-
-      await service.register({
-        email: 'nuevo@vkbacademy.es',
-        password: 'mi_password_segura',
-        name: 'Nuevo Alumno',
-      });
-
-      expect(mockedBcrypt.hash).toHaveBeenCalledWith('mi_password_segura', 10);
-    });
-
-    it('crea el usuario con el hash de la contraseña, no el texto plano', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue(fakeUser);
-
-      await service.register({
-        email: 'nuevo@vkbacademy.es',
-        password: 'plaintext',
-        name: 'Test',
-      });
-
-      expect(mockPrisma.user.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            email: 'nuevo@vkbacademy.es',
-            passwordHash: '$2b$10$hashed',
-            name: 'Test',
-          }),
-        }),
-      );
-      // Verificar que el campo password no se guarda directamente
-      const createData = mockPrisma.user.create.mock.calls[0][0].data;
-      expect(createData).not.toHaveProperty('password');
-    });
-
-    it('devuelve tokens y datos públicos del usuario creado', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue(fakeUser);
-
-      const result = await service.register({
-        email: 'nuevo@vkbacademy.es',
-        password: 'pass123',
-        name: 'Nuevo Alumno',
-      });
-
-      expect(result.accessToken).toBeDefined();
-      expect(result.refreshToken).toBeDefined();
-      expect(result.user.id).toBe(fakeUser.id);
-      expect(result.user.email).toBe(fakeUser.email);
-      expect(result.user.role).toBe('STUDENT');
-    });
-
-    it('nunca expone passwordHash en la respuesta', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue(fakeUser);
-
-      const result = await service.register({
-        email: 'nuevo@vkbacademy.es',
-        password: 'pass',
-        name: 'Test',
-      });
-
-      expect(result.user).not.toHaveProperty('passwordHash');
-    });
-
-    it('persiste el refresh token en BD tras el registro', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue(fakeUser);
-
-      await service.register({
-        email: 'nuevo@vkbacademy.es',
-        password: 'pass',
-        name: 'Test',
-      });
-
-      expect(mockPrisma.refreshToken.create).toHaveBeenCalledTimes(1);
-    });
-  });
-
   // ─── login ───────────────────────────────────────────────────────────────────
 
   describe('login', () => {
@@ -309,7 +201,6 @@ describe('AuthService', () => {
         avatarUrl: null,
         schoolYearId: null,
         schoolYear: null,
-        mustChangePassword: true,
         academyMembers: [],
       });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
@@ -319,7 +210,6 @@ describe('AuthService', () => {
       expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({ where: { username: 'juan-garcia' } }),
       );
-      expect(result.user.mustChangePassword).toBe(true);
       expect(result.user.username).toBe('juan-garcia');
     });
   });
@@ -419,7 +309,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── resetPassword: limpia mustChangePassword al fijar contraseña propia ─────
+  // ─── resetPassword: fija la nueva contraseña del usuario ────────────────────
 
   describe('resetPassword', () => {
     beforeEach(() => {
@@ -427,12 +317,11 @@ describe('AuthService', () => {
       mockJwt.verify.mockReturnValue({ sub: 'u1', purpose: 'reset' });
     });
 
-    it('actualiza passwordHash y limpia mustChangePassword', async () => {
+    it('actualiza passwordHash con el hash de la nueva contraseña', async () => {
       mockJwt.decode.mockReturnValue({ sub: 'st1', purpose: 'reset' });
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'st1',
         role: 'STUDENT',
-        tutorId: 'tut1',
         passwordHash: 'oldhash',
       });
       mockPrisma.user.update.mockResolvedValue({ id: 'st1' });
@@ -441,26 +330,7 @@ describe('AuthService', () => {
 
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'st1' },
-        data: {
-          passwordHash: 'newhash',
-          mustChangePassword: false,
-        },
-      });
-    });
-  });
-
-  // ─── changePassword: cambio de contraseña del usuario autenticado ────────────
-
-  describe('changePassword', () => {
-    it('hashea la nueva contraseña y limpia mustChangePassword', async () => {
-      (bcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$new');
-      mockPrisma.user.update.mockResolvedValue({});
-
-      await service.changePassword('user-1', 'nuevaPass123');
-
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-1' },
-        data: { passwordHash: '$2b$10$new', mustChangePassword: false },
+        data: { passwordHash: 'newhash' },
       });
     });
   });

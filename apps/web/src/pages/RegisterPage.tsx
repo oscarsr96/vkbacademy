@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useRegisterTutor } from '../hooks/useAuth';
+import { useRegisterStudents } from '../hooks/useAuth';
 import { useSchoolYears } from '../hooks/useCourses';
 import { useAcademyDomain } from '../contexts/AcademyContext';
+import { getApiErrorMessage } from '../utils/errorMessage';
+import type { RegisteredStudent } from '../api/auth.api';
 import Icon from '../components/ui/Icon';
 
 /** Valida formato de email: x@y.z */
@@ -13,12 +15,21 @@ function isValidEmail(email: string): boolean {
 /** Academia por defecto cuando no estamos en un dominio de academia específica. */
 const DEFAULT_ACADEMY_SLUG = 'vallekas-basket';
 
+/**
+ * Tope de alumnos por solicitud. Replica `MAX_STUDENTS_PER_REQUEST` de
+ * `apps/api/src/auth/dto/register-students.dto.ts`: no se importa porque son
+ * paquetes distintos, pero debe mantenerse igual — si el backend cambia el
+ * límite, este valor hay que actualizarlo a mano.
+ */
+const MAX_STUDENTS = 10;
+
 interface StudentForm {
   name: string;
   schoolYearId: string;
+  password: string;
 }
 
-const emptyStudent = (): StudentForm => ({ name: '', schoolYearId: '' });
+const emptyStudent = (): StudentForm => ({ name: '', schoolYearId: '', password: '' });
 
 export default function RegisterPage() {
   const [searchParams] = useSearchParams();
@@ -27,41 +38,28 @@ export default function RegisterPage() {
   // string → default fijo (Vallekas Basket Academy).
   const academySlug = domainAcademy?.slug ?? searchParams.get('academy') ?? DEFAULT_ACADEMY_SLUG;
 
-  // Paso 1: datos del tutor
-  const [step, setStep] = useState<1 | 2>(1);
-  const [tutorName, setTutorName] = useState('');
-  const [tutorEmail, setTutorEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [tutorEmailError, setTutorEmailError] = useState('');
-
-  // Paso 2: datos de los alumnos
+  const [guardianEmail, setGuardianEmail] = useState('');
+  const [guardianEmailError, setGuardianEmailError] = useState('');
   const [students, setStudents] = useState<StudentForm[]>([emptyStudent()]);
+  const [studentErrors, setStudentErrors] = useState<Record<number, string>>({});
 
-  const { mutate, isPending, error } = useRegisterTutor();
+  const { mutate, isPending, error, data } = useRegisterStudents();
   const { data: schoolYears = [] } = useSchoolYears();
 
-  function handleStep1(e: FormEvent) {
-    e.preventDefault();
-    setPasswordError('');
-    setTutorEmailError('');
-
-    if (!isValidEmail(tutorEmail)) {
-      setTutorEmailError('Email inválido — formato requerido: x@y.z');
-      return;
-    }
-    if (password.length < 8) {
-      setPasswordError('La contraseña debe tener al menos 8 caracteres');
-      return;
-    }
-    setStep(2);
+  // El registro ya no inicia sesión: el padre no tiene cuenta. Al resolver la
+  // mutación, la pantalla de confirmación sustituye al formulario para
+  // siempre — no hay vuelta atrás, porque los usuarios no se vuelven a
+  // mostrar en ningún otro sitio.
+  if (data) {
+    return <RegistrationDone students={data.students} />;
   }
 
   function updateStudent(index: number, field: keyof StudentForm, value: string) {
-    setStudents((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
+    setStudents((prev) => prev.map((st, i) => (i === index ? { ...st, [field]: value } : st)));
   }
 
   function addStudent() {
+    if (students.length >= MAX_STUDENTS) return;
     setStudents((prev) => [...prev, emptyStudent()]);
   }
 
@@ -70,25 +68,52 @@ export default function RegisterPage() {
     setStudents((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function handleStep2(e: FormEvent) {
+  /** Valida el formulario entero antes de enviar. Devuelve si es válido. */
+  function validate(): boolean {
+    setGuardianEmailError('');
+    setStudentErrors({});
+    let ok = true;
+
+    if (!isValidEmail(guardianEmail)) {
+      setGuardianEmailError('Email inválido — formato requerido: x@y.z');
+      ok = false;
+    }
+
+    const nextStudentErrors: Record<number, string> = {};
+    students.forEach((st, i) => {
+      if (!st.name.trim() || !st.schoolYearId) {
+        nextStudentErrors[i] = 'Completa el nombre y el curso del alumno';
+      } else if (st.password.length < 8) {
+        nextStudentErrors[i] = 'La contraseña debe tener al menos 8 caracteres';
+      }
+    });
+    if (Object.keys(nextStudentErrors).length > 0) {
+      setStudentErrors(nextStudentErrors);
+      ok = false;
+    }
+
+    return ok;
+  }
+
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const valid = students.every((s) => s.name.trim().length > 0 && s.schoolYearId.length > 0);
-    if (!valid) return;
+    if (!validate()) return;
 
     mutate({
-      name: tutorName,
-      email: tutorEmail,
-      password,
+      guardianEmail,
       academySlug,
-      students: students.map((s) => ({
-        name: s.name.trim(),
-        schoolYearId: s.schoolYearId,
+      students: students.map((st) => ({
+        name: st.name.trim(),
+        schoolYearId: st.schoolYearId,
+        password: st.password,
       })),
     });
   }
 
-  const apiError = (error as { response?: { data?: { message?: string } } } | null)?.response?.data
-    ?.message;
+  const apiError = error
+    ? getApiErrorMessage(error, 'No se pudieron crear las cuentas. Inténtalo de nuevo.')
+    : '';
+  const atMaxStudents = students.length >= MAX_STUDENTS;
 
   return (
     <div style={s.page} className="court-lines sweep-light">
@@ -100,20 +125,12 @@ export default function RegisterPage() {
           <div style={s.logoWrap}>
             <Icon name="basketball" size={32} color="var(--brand-contrast)" />
           </div>
-          <h1 style={s.title}>{step === 1 ? 'Crear cuenta de tutor' : 'Añadir alumnos'}</h1>
+          <h1 style={s.title}>Registrar a tus hijos</h1>
           <p style={s.subtitle}>
-            {step === 1
-              ? domainAcademy
-                ? `Regístrate como tutor en ${domainAcademy.name}`
-                : 'Regístrate como tutor'
-              : 'Añade los datos de tus alumnos (mínimo 1)'}
+            {domainAcademy
+              ? `Crea las cuentas de tus hijos en ${domainAcademy.name}`
+              : 'Crea las cuentas de tus hijos'}
           </p>
-          {/* Indicador de paso */}
-          <div style={s.steps}>
-            <div style={{ ...s.stepDot, ...(step >= 1 ? s.stepDotActive : {}) }} />
-            <div style={s.stepLine} />
-            <div style={{ ...s.stepDot, ...(step >= 2 ? s.stepDotActive : {}) }} />
-          </div>
         </div>
 
         {apiError && (
@@ -123,139 +140,171 @@ export default function RegisterPage() {
           </div>
         )}
 
-        {/* ── Paso 1: Datos del tutor ── */}
-        {step === 1 && (
-          <form onSubmit={handleStep1} style={s.form} noValidate>
-            <div className="field field-dark">
-              <label htmlFor="tutorName">Tu nombre completo</label>
-              <input
-                id="tutorName"
-                type="text"
-                autoComplete="name"
-                value={tutorName}
-                onChange={(e) => setTutorName(e.target.value)}
-                placeholder="María López"
-                required
-              />
-            </div>
+        <form onSubmit={handleSubmit} style={s.form} noValidate>
+          <div className="field field-dark">
+            <label htmlFor="guardianEmail">Email del padre, madre o tutor</label>
+            <input
+              id="guardianEmail"
+              type="email"
+              autoComplete="email"
+              value={guardianEmail}
+              onChange={(e) => {
+                setGuardianEmail(e.target.value);
+                setGuardianEmailError('');
+              }}
+              placeholder="tu@email.com"
+              className={guardianEmailError ? 'error' : ''}
+              style={guardianEmailError ? { borderColor: '#dc2626' } : {}}
+              required
+            />
+            {guardianEmailError && <span style={s.fieldError}>{guardianEmailError}</span>}
+            <span style={s.fieldHint}>
+              Solo es un dato de contacto: no crea una cuenta ni sirve para iniciar sesión.
+            </span>
+          </div>
 
-            <div className="field field-dark">
-              <label htmlFor="tutorEmail">Tu email</label>
-              <input
-                id="tutorEmail"
-                type="email"
-                autoComplete="email"
-                value={tutorEmail}
-                onChange={(e) => {
-                  setTutorEmail(e.target.value);
-                  setTutorEmailError('');
-                }}
-                placeholder="tu@email.com"
-                className={tutorEmailError ? 'error' : ''}
-                style={tutorEmailError ? { borderColor: '#dc2626' } : {}}
-                required
-              />
-              {tutorEmailError && <span style={s.fieldError}>{tutorEmailError}</span>}
-            </div>
-
-            <div className="field field-dark">
-              <label htmlFor="password">Contraseña</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 8 caracteres"
-                className={passwordError ? 'error' : ''}
-                required
-              />
-              {passwordError && <span style={s.fieldError}>{passwordError}</span>}
-            </div>
-
-            <button
-              type="submit"
-              className="btn btn-primary btn-full"
-              style={{ marginTop: 4, padding: '13px 22px', fontSize: '1rem' }}
-            >
-              Siguiente: añadir alumnos
-            </button>
-          </form>
-        )}
-
-        {/* ── Paso 2: Datos de los alumnos ── */}
-        {step === 2 && (
-          <form onSubmit={handleStep2} style={s.form} noValidate>
-            {students.map((student, i) => (
-              <div key={i} style={s.studentCard}>
-                <div style={s.studentHeader}>
-                  <span style={s.studentLabel}>Alumno {i + 1}</span>
-                  {students.length > 1 && (
-                    <button type="button" onClick={() => removeStudent(i)} style={s.removeBtn}>
-                      Eliminar
-                    </button>
-                  )}
-                </div>
-
-                <div className="field field-dark">
-                  <label htmlFor={`student-name-${i}`}>Nombre del alumno</label>
-                  <input
-                    id={`student-name-${i}`}
-                    type="text"
-                    value={student.name}
-                    onChange={(e) => updateStudent(i, 'name', e.target.value)}
-                    placeholder="Juan García"
-                    required
-                  />
-                  <span style={s.fieldHint}>
-                    Le crearemos un usuario de acceso. La primera vez entrará con la contraseña{' '}
-                    <code>cambiar123</code> y deberá cambiarla.
-                  </span>
-                </div>
-
-                <div className="field field-dark">
-                  <label htmlFor={`student-sy-${i}`}>Curso del alumno</label>
-                  <select
-                    id={`student-sy-${i}`}
-                    value={student.schoolYearId}
-                    onChange={(e) => updateStudent(i, 'schoolYearId', e.target.value)}
-                    required
-                  >
-                    <option value="">Selecciona el curso (ej: 3º ESO)</option>
-                    {schoolYears.map((sy) => (
-                      <option key={sy.id} value={sy.id}>
-                        {sy.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+          {students.map((student, i) => (
+            <div key={i} style={s.studentCard}>
+              <div style={s.studentHeader}>
+                <span style={s.studentLabel}>Alumno {i + 1}</span>
+                {students.length > 1 && (
+                  <button type="button" onClick={() => removeStudent(i)} style={s.removeBtn}>
+                    Eliminar
+                  </button>
+                )}
               </div>
-            ))}
 
-            <button type="button" onClick={addStudent} style={s.addBtn}>
-              + Añadir otro alumno
-            </button>
+              <div className="field field-dark">
+                <label htmlFor={`student-name-${i}`}>Nombre del alumno</label>
+                <input
+                  id={`student-name-${i}`}
+                  type="text"
+                  value={student.name}
+                  onChange={(e) => updateStudent(i, 'name', e.target.value)}
+                  placeholder="Juan García"
+                  required
+                />
+              </div>
 
-            <div style={s.step2Actions}>
-              <button type="button" onClick={() => setStep(1)} style={s.backBtn}>
-                Volver
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={isPending}
-                style={{ flex: 1, padding: '13px 22px', fontSize: '1rem' }}
-              >
-                {isPending ? <span className="spinner" /> : 'Crear cuentas'}
-              </button>
+              <div className="field field-dark">
+                <label htmlFor={`student-sy-${i}`}>Curso del alumno</label>
+                <select
+                  id={`student-sy-${i}`}
+                  value={student.schoolYearId}
+                  onChange={(e) => updateStudent(i, 'schoolYearId', e.target.value)}
+                  required
+                >
+                  <option value="">Selecciona el curso (ej: 3º ESO)</option>
+                  {schoolYears.map((sy) => (
+                    <option key={sy.id} value={sy.id}>
+                      {sy.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field field-dark">
+                <label htmlFor={`student-password-${i}`}>Contraseña del alumno</label>
+                <input
+                  id={`student-password-${i}`}
+                  type="password"
+                  autoComplete="new-password"
+                  value={student.password}
+                  onChange={(e) => updateStudent(i, 'password', e.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                />
+              </div>
+
+              {studentErrors[i] && <span style={s.fieldError}>{studentErrors[i]}</span>}
             </div>
-          </form>
-        )}
+          ))}
+
+          <button
+            type="button"
+            onClick={addStudent}
+            disabled={atMaxStudents}
+            style={atMaxStudents ? { ...s.addBtn, ...s.addBtnDisabled } : s.addBtn}
+          >
+            {atMaxStudents
+              ? `Has llegado al máximo de ${MAX_STUDENTS} alumnos por solicitud`
+              : '+ Añadir otro alumno'}
+          </button>
+
+          <button
+            type="submit"
+            className="btn btn-primary btn-full"
+            disabled={isPending}
+            style={{ marginTop: 4, padding: '13px 22px', fontSize: '1rem' }}
+          >
+            {isPending ? <span className="spinner" /> : 'Crear cuentas'}
+          </button>
+        </form>
 
         <p style={s.footerText}>
-          <span style={s.footerMuted}>¿Ya tienes cuenta? </span>
+          <span style={s.footerMuted}>¿Ya tienes cuenta como alumno? </span>
           <Link to="/login" style={s.link}>
             Inicia sesión
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Pantalla de confirmación tras crear las cuentas. Es la única vez que se
+ * muestran los usernames generados: no se envían por email (descartado
+ * expresamente) y no se pueden volver a consultar salvo pidiéndoselos a la
+ * academia. Por eso el aviso va arriba, antes de la lista.
+ */
+function RegistrationDone({ students }: { students: RegisteredStudent[] }) {
+  const [copied, setCopied] = useState(false);
+
+  const plainText = students.map((st) => `${st.name} — usuario: ${st.username}`).join('\n');
+
+  return (
+    <div style={s.page} className="court-lines sweep-light">
+      <div style={s.bgGlow} />
+
+      <div style={s.card} className="animate-in">
+        <div style={s.header}>
+          <div style={s.logoWrap}>
+            <Icon name="basketball" size={32} color="var(--brand-contrast)" />
+          </div>
+          <h1 style={s.title}>Cuentas creadas</h1>
+        </div>
+
+        <p role="alert" style={s.warnBox}>
+          <strong>Apunta estos datos antes de cerrar esta página.</strong> No te los enviamos por
+          email y no se vuelven a mostrar. Si los pierdes, tendrás que pedírselos a la academia.
+        </p>
+
+        <ul style={s.studentsList}>
+          {students.map((st) => (
+            <li key={st.username} style={s.studentsListItem}>
+              <span style={s.studentsListName}>{st.name}</span>
+              <code style={s.usernameCode}>{st.username}</code>
+              {st.schoolYear && <span style={s.studentsListYear}>{st.schoolYear}</span>}
+            </li>
+          ))}
+        </ul>
+
+        <button
+          type="button"
+          className="btn btn-primary btn-full"
+          style={{ padding: '13px 22px', fontSize: '1rem' }}
+          onClick={() => {
+            void navigator.clipboard.writeText(plainText);
+            setCopied(true);
+          }}
+        >
+          {copied ? 'Copiado' : 'Copiar usuarios'}
+        </button>
+
+        <p style={s.footerText}>
+          <Link to="/login" style={s.link}>
+            Ir a iniciar sesión
           </Link>
         </p>
       </div>
@@ -333,27 +382,6 @@ const s: Record<string, React.CSSProperties> = {
     color: 'rgba(255,255,255,0.55)',
     lineHeight: 1.5,
   },
-  steps: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 0,
-    marginTop: 8,
-  },
-  stepDot: {
-    width: 10,
-    height: 10,
-    borderRadius: '50%',
-    background: 'rgba(255,255,255,0.15)',
-    transition: 'background 0.3s',
-  },
-  stepDotActive: {
-    background: 'var(--brand)',
-  },
-  stepLine: {
-    width: 40,
-    height: 2,
-    background: 'rgba(255,255,255,0.1)',
-  },
   errorBox: {
     display: 'flex',
     alignItems: 'flex-start',
@@ -379,6 +407,15 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 800,
     flexShrink: 0,
     marginTop: '1px',
+  },
+  warnBox: {
+    background: 'rgba(245,145,30,0.15)',
+    borderLeft: '4px solid var(--brand)',
+    borderRadius: '8px',
+    padding: '12px 14px',
+    color: '#ffd699',
+    fontSize: '0.875rem',
+    lineHeight: 1.5,
   },
   form: {
     display: 'flex',
@@ -435,19 +472,44 @@ const s: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     textAlign: 'center' as const,
   },
-  step2Actions: {
-    display: 'flex',
-    gap: 12,
-    marginTop: 4,
+  addBtnDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
   },
-  backBtn: {
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.12)',
+  studentsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+  },
+  studentsListItem: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '10px',
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: 10,
-    padding: '13px 20px',
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: '0.95rem',
-    cursor: 'pointer',
+    padding: '12px 14px',
+  },
+  studentsListName: {
+    fontWeight: 600,
+    color: '#ffffff',
+    flexShrink: 0,
+  },
+  usernameCode: {
+    fontFamily: 'var(--font-mono, monospace)',
+    background: 'rgba(255,255,255,0.08)',
+    color: 'var(--brand-light)',
+    padding: '4px 8px',
+    borderRadius: 6,
+    fontSize: '0.9rem',
+  },
+  studentsListYear: {
+    fontSize: '0.78rem',
+    color: 'rgba(255,255,255,0.45)',
   },
   footerText: { textAlign: 'center', fontSize: '0.875rem' },
   footerMuted: { color: 'rgba(255,255,255,0.55)' },

@@ -2,9 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * Guardia de regresión: el RegisterPage debe validar formato de email
- * antes de permitir el envío. Formato requerido: x@y.z
- * Todo lo que no cumpla debe marcarse en rojo e impedir el registro.
+ * Guardia de regresión: el RegisterPage debe validar el formato del email
+ * del padre, madre o tutor antes de permitir el envío. Formato requerido: x@y.z
+ * Modelo actual: un único email (el del tutor, solo dato de contacto, no
+ * crea cuenta); los alumnos no tienen email.
  */
 describe('RegisterPage — validación de email', () => {
   const src = fs.readFileSync(path.resolve(__dirname, 'RegisterPage.tsx'), 'utf-8');
@@ -18,18 +19,8 @@ describe('RegisterPage — validación de email', () => {
     expect(hasValidation).toBeTruthy();
   });
 
-  it('muestra error visual cuando el email es inválido (estado emailError)', () => {
-    // Debe existir un estado de error para emails inválidos
-    expect(src).toMatch(/emailError|tutorEmailError|Email.*inválido|formato.*email/i);
-  });
-
-  it('valida el email del tutor antes de pasar al paso 2', () => {
-    // En handleStep1 debe comprobar el email antes de setStep(2)
-    expect(src).toMatch(/email.*valid|validateEmail|isValidEmail/i);
-  });
-
-  it('valida el email de cada alumno antes de enviar', () => {
-    // En handleStep2 debe comprobar los emails de students
-    expect(src).toMatch(/student.*email.*valid|every.*email/i);
+  it('muestra error visual cuando el email del tutor es inválido (estado guardianEmailError)', () => {
+    // Debe existir un estado de error para el email del tutor inválido
+    expect(src).toMatch(/guardianEmailError|Email.*inválido|formato.*email/i);
   });
 });

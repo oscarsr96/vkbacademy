@@ -79,9 +79,9 @@ const FEATURES = [
   },
   {
     icon: 'chart',
-    title: 'Tú siempre al tanto',
+    title: 'Tú tienes el control',
     description:
-      'Como tutor, ves en tiempo real qué ejercicios ha completado, sus resultados y los certificados que ha obtenido.',
+      'Das de alta a tu hijo/a y eliges su contraseña. Recibes su usuario en pantalla al momento y, si lo pierde, la academia os ayuda a recuperarlo.',
   },
 ];
 
@@ -150,9 +150,9 @@ const STATS = [
 const STEPS = [
   {
     number: '1',
-    title: 'Contacta con el club',
+    title: 'Rellena el formulario',
     description:
-      'La administración de Vallekas Basket crea la cuenta de tu hijo/a y te asigna como tutor.',
+      'Inscribe a tu hijo/a con sus datos y elige su contraseña. No hace falta que nadie te dé de alta.',
   },
   {
     number: '2',
@@ -162,9 +162,9 @@ const STEPS = [
   },
   {
     number: '3',
-    title: 'Tú lo ves todo',
+    title: 'Tú guardas su acceso',
     description:
-      'Consulta su progreso, sus certificados y su actividad reciente desde tu propio panel.',
+      'Al terminar el registro verás su nombre de usuario en pantalla. Si lo pierdes, la academia te lo facilita.',
   },
 ];
 
@@ -308,8 +308,8 @@ export default function LandingPage() {
           {/* Subtítulo */}
           <p style={styles.heroSubtitle}>
             La metodología real de Vallekas Basket en formato digital. Ejercicios personalizados de
-            cualquier tema, exámenes con certificado y un tutor de IA — todo en un solo lugar,
-            supervisado por ti.
+            cualquier tema, exámenes con certificado y un tutor de IA — todo en un solo lugar, que
+            tú das de alta cuando quieras.
           </p>
 
           {/* Botones CTA */}
@@ -401,7 +401,7 @@ export default function LandingPage() {
                 <li>✓ Todos los cursos de su nivel</li>
                 <li>✓ Lecciones en vídeo ilimitadas</li>
                 <li>✓ Tests y exámenes con certificado</li>
-                <li>✓ Seguimiento de progreso para tutores</li>
+                <li>✓ Registro y gestión de acceso para tus hijos/as</li>
                 <li>✓ Retos y puntos canjeables</li>
               </ul>
             </div>
@@ -475,8 +475,8 @@ export default function LandingPage() {
               <span style={styles.sectionTitleAccent}>PARA MEJORAR</span>
             </h2>
             <p style={styles.sectionSubtitle}>
-              Una plataforma pensada para optimizar el rendimiento escolar, con acceso y seguimiento
-              para padres y tutores
+              Una plataforma pensada para optimizar el rendimiento escolar, fácil de dar de alta por
+              padres, madres y tutores en pocos minutos
             </p>
           </div>
 
@@ -509,8 +509,8 @@ export default function LandingPage() {
               EL ESFUERZO <span style={styles.sectionTitleAccent}>TIENE PREMIO</span>
             </h2>
             <p style={styles.sectionSubtitle}>
-              Tu hijo/a gana puntos completando lecciones y retos. Canjéalos por merchandising
-              exclusivo de Vallekas Basket.
+              Tu hijo/a gana puntos completando lecciones y retos y los canjea cuando quiera por
+              merchandising exclusivo de Vallekas Basket.
             </p>
           </div>
           <div className="lp-merch-grid" style={styles.merchGrid}>

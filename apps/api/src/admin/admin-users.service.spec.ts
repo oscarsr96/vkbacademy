@@ -33,9 +33,6 @@ describe('AdminUsersService', () => {
     passwordHash: '$2b$10$hashedpassword',
     avatarUrl: null,
     createdAt: new Date('2026-01-01'),
-    tutorId: null,
-    tutor: null,
-    _count: { students: 0 },
   };
 
   const fakeCourse = {
@@ -281,6 +278,30 @@ describe('AdminUsersService', () => {
       mockPrisma.enrollment.deleteMany.mockResolvedValue({ count: 0 });
 
       await expect(service.unenroll('user-1', 'sin-matricula')).resolves.toBeDefined();
+    });
+  });
+
+  // ─── resetPassword ─────────────────────────────────────────────────────────
+
+  describe('resetPassword', () => {
+    it('hashea la contraseña nueva y la guarda', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ ...fakeUser, role: 'STUDENT' });
+      mockPrisma.user.update.mockResolvedValue({ ...fakeUser });
+
+      await service.resetPassword('user-1', 'nuevaClave123');
+
+      const updateArgs = mockPrisma.user.update.mock.calls[0][0];
+      expect(updateArgs.where).toEqual({ id: 'user-1' });
+      expect(updateArgs.data.passwordHash).toEqual(expect.any(String));
+      expect(updateArgs.data.passwordHash).not.toBe('nuevaClave123');
+    });
+
+    it('lanza NotFoundException si el usuario no existe', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.resetPassword('nope', 'nuevaClave123')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

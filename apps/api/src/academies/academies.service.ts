@@ -130,16 +130,6 @@ export class AcademiesService {
             {
               user: {
                 create: {
-                  email: `tutor@${emailSuffix}`,
-                  name: `tutor-${dto.slug}`,
-                  passwordHash,
-                  role: Role.TUTOR,
-                },
-              },
-            },
-            {
-              user: {
-                create: {
                   email: `student@${emailSuffix}`,
                   name: `student-${dto.slug}`,
                   passwordHash,
@@ -156,7 +146,9 @@ export class AcademiesService {
     // Registrar dominio en Vercel automáticamente
     void this.registerVercelDomain(domain);
 
-    this.logger.log(`Academia "${dto.name}" creada con 3 usuarios por defecto (admin/tutor/student@${emailSuffix})`);
+    this.logger.log(
+      `Academia "${dto.name}" creada con 2 usuarios por defecto (admin/student@${emailSuffix})`,
+    );
 
     return academy;
   }
@@ -190,7 +182,9 @@ export class AcademiesService {
     const token = this.config.get<string>('VERCEL_TOKEN');
     const projectId = this.config.get<string>('VERCEL_PROJECT_ID');
     if (!token || !projectId) {
-      this.logger.warn('VERCEL_TOKEN o VERCEL_PROJECT_ID no configurados — dominio no registrado automáticamente');
+      this.logger.warn(
+        'VERCEL_TOKEN o VERCEL_PROJECT_ID no configurados — dominio no registrado automáticamente',
+      );
       return;
     }
 
@@ -252,7 +246,14 @@ export class AcademiesService {
       where: { academyId },
       include: {
         user: {
-          select: { id: true, name: true, email: true, role: true, avatarUrl: true, createdAt: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            avatarUrl: true,
+            createdAt: true,
+          },
         },
       },
       orderBy: { createdAt: 'desc' },

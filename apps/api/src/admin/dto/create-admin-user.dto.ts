@@ -13,7 +13,7 @@ export class CreateAdminUserDto {
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
   password: string;
 
-  @IsIn([Role.STUDENT, Role.TUTOR, Role.ADMIN, Role.SUPER_ADMIN], {
+  @IsIn([Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN], {
     message: 'Rol no válido',
   })
   role: Role;
@@ -21,8 +21,4 @@ export class CreateAdminUserDto {
   @IsString()
   @IsOptional()
   schoolYearId?: string;
-
-  @IsString()
-  @IsOptional()
-  tutorId?: string;
 }

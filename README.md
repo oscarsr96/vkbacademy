@@ -1,6 +1,6 @@
 # VKBacademy
 
-Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**. Los jugadores acceden a cursos con vídeos, ejercicios interactivos (emparejar, ordenar, rellenar huecos) y tests; los tutores (padres/responsables) siguen el progreso de sus alumnos asignados; los administradores disponen de un panel completo con analytics en tiempo real.
+Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**. Los jugadores acceden a cursos con vídeos, ejercicios interactivos (emparejar, ordenar, rellenar huecos) y tests; los administradores disponen de un panel completo con analytics en tiempo real. Los padres/tutores no tienen cuenta: registran a sus hijos desde un formulario público y su email queda como dato de contacto (`guardianEmail`) en cada alumno.
 
 ---
 
@@ -27,9 +27,11 @@ Plataforma educativa web y móvil para el club de baloncesto **Vallekas Basket**
 
 | Rol | Descripción |
 |-----|-------------|
-| `STUDENT` | Accede a cursos de su nivel, realiza tests |
-| `TUTOR` | Ve el progreso y resultados de sus alumnos asignados |
-| `ADMIN` | Acceso completo: CRUD usuarios, cursos, contenido con IA y analytics avanzado |
+| `STUDENT` | Accede a cursos de su nivel, realiza tests y exámenes |
+| `ADMIN` | Acceso completo: CRUD usuarios, cursos, contenido con IA y analytics avanzado (alcance: su academia) |
+| `SUPER_ADMIN` | Como `ADMIN`, pero para todas las academias — gestiona academias vía `/academies` |
+
+No existe rol para padres/tutores: no tienen cuenta, solo un email de contacto (`guardianEmail`) por alumno.
 
 ---
 
@@ -94,15 +96,16 @@ pnpm --filter @vkbacademy/api exec prisma migrate dev
 pnpm --filter @vkbacademy/api exec prisma db seed
 ```
 
-Usuarios creados por el seed:
+Usuarios creados por el seed (login con email o username + contraseña en `POST /auth/login`):
 
-| Email | Contraseña | Rol |
+| Identifier | Contraseña | Rol |
 |-------|-----------|-----|
 | `superadmin@vkbacademy.com` | `password123` | SUPER_ADMIN |
 | `admin@vkbacademy.com` | `password123` | ADMIN (Vallekas Basket) |
 | `admin@cboscar.com` | `password123` | ADMIN (CB Oscar) |
-| `tutor@vkbacademy.com` | `password123` | TUTOR |
-| `student@vkbacademy.com` | `password123` | STUDENT (3º ESO) |
+| `student@vkbacademy.com` (username `juan-garcia`) | `password123` | STUDENT (3º ESO, Vallekas Basket) — contacto familiar: `maria.lopez@example.com` |
+
+El alumno de seed tiene email porque se creó directamente en `seed.ts`. Los alumnos dados de alta desde `POST /auth/register-students` solo reciben `username` (sin email) — el email de esa solicitud queda como `guardianEmail`, no como credencial de login.
 
 ### 5. Arrancar en desarrollo
 
@@ -131,14 +134,14 @@ pnpm dev
 │   │       ├── courses/       # Cursos, módulos, lecciones, progreso
 │   │       ├── quizzes/       # Tests, corrección en servidor
 │   │       ├── progress/      # Progreso por lección
-│   │       ├── tutors/        # Alumnos asignados a un tutor
 │   │       ├── media/         # S3 upload + URLs firmadas
 │   │       ├── notifications/ # Emails transaccionales (Resend)
 │   │       ├── school-years/  # Niveles educativos
 │   │       ├── exams/         # Bancos de examen por curso/módulo, corrección server-side
 │   │       ├── certificates/  # Certificados digitales con verificación pública
 │   │       ├── admin/         # CRUD usuarios, cursos, analytics, bancos de examen, certificados
-│   │       └── challenges/    # Gamificación: retos, insignias, canjes
+│   │       ├── challenges/    # Gamificación: retos, insignias, canjes
+│   │       └── tutor/         # Tutor IA con chat en streaming (no confundir con el rol de los padres — no existe)
 │   ├── web/                  # React + Vite
 │   │   └── src/
 │   │       ├── api/          # Clientes HTTP (admin.api.ts, challenges.api.ts, certificates.api.ts…)
@@ -154,7 +157,7 @@ pnpm dev
 │   │       │   ├── ExamPage.tsx         # Flujo completo: config → examen → resultados + PDF
 │   │       │   ├── ChallengesPage.tsx   # Retos + tienda de merchandising
 │   │       │   ├── CoursesPage.tsx
-│   │       │   ├── TutorStudentsPage.tsx
+│   │       │   ├── RegisterPage.tsx     # Registro familiar: hasta 10 alumnos por solicitud
 │   │       │   └── …
 │   │       └── utils/
 │   │           ├── certificatePdf.ts    # PDF de certificados con jsPDF
@@ -172,11 +175,17 @@ pnpm dev
 
 ### Auth
 ```
-POST /auth/register
-POST /auth/login      → { accessToken, refreshToken }
+POST /auth/register-students    → registra hasta 10 alumnos (padre/madre no crea cuenta);
+                                   no devuelve tokens, responde con los usernames generados
+POST /auth/login                → identifier (email o username) + password → { accessToken, refreshToken }
 POST /auth/refresh
 POST /auth/logout
+POST /auth/forgot-password      → solo para cuentas con email (ADMIN/SUPER_ADMIN, o STUDENT dado de alta desde /admin/users)
+POST /auth/reset-password
 ```
+
+Los alumnos autorregistrados no tienen email, así que `forgot-password` no les vale — su única
+recuperación es que un admin llame a `PATCH /admin/users/:id/password`.
 
 ### Cursos y lecciones
 ```
@@ -195,12 +204,6 @@ GET  /media/view-url/:key       → URL firmada para reproducir vídeo
 GET  /quizzes/:id               → preguntas SIN isCorrect
 POST /quizzes/:id/submit        → respuestas → { score, correcciones }
 GET  /quizzes/:id/attempts      → historial de intentos
-```
-
-### Tutores
-```
-GET /tutors/my-students                   → alumnos del tutor [TUTOR, ADMIN]
-GET /tutors/my-students/:id/courses       → cursos del alumno [TUTOR, ADMIN]
 ```
 
 ### Tipos de lección
@@ -231,11 +234,15 @@ GET    /admin/users
 POST   /admin/users
 PATCH  /admin/users/:id
 PATCH  /admin/users/:id/role
-PATCH  /admin/users/:id/tutor
+PATCH  /admin/users/:id/password            → restablece contraseña (única recuperación para alumnos sin email)
 DELETE /admin/users/:id
+GET    /admin/users/:id/enrollments
+POST   /admin/users/:id/enrollments         → matrícula manual
+DELETE /admin/users/:id/enrollments/:courseId
 GET    /admin/courses?page=&limit=&schoolYearId=&search=
 GET    /admin/courses/:courseId/detail
 POST   /admin/courses/generate              → generación con IA
+POST   /admin/courses/import                → import fiel entre entornos
 DELETE /admin/courses/:id
 GET    /admin/analytics?from=&to=&granularity=day|week|month&courseId=&schoolYearId=
 GET    /admin/metrics
@@ -248,6 +255,7 @@ GET    /admin/redemptions
 PATCH  /admin/redemptions/:id/deliver
 GET    /admin/exam-questions?courseId=&moduleId=
 POST   /admin/exam-questions
+POST   /admin/exam-questions/import         → import fiel entre entornos
 POST   /admin/exam-questions/generate       → generación IA con contexto curso/módulo
 PATCH  /admin/exam-questions/:id
 DELETE /admin/exam-questions/:id
@@ -286,8 +294,8 @@ Filtros: período (presets 7d/30d/3m/6m/1a o rango personalizado), agrupación d
 ### Gestión de usuarios (`/admin/users`)
 
 - Tabla con búsqueda y filtro por rol
-- Cambio de rol inline, asignación de tutor inline para alumnos
-- Modal de creación: cuando el rol es STUDENT, permite seleccionar un tutor existente **o crear uno nuevo inline** (nombre, email, contraseña) sin salir del modal
+- Cambio de rol inline (STUDENT / ADMIN / SUPER_ADMIN) y restablecimiento de contraseña
+- Modal de creación: nombre, email, contraseña y rol; si el rol es STUDENT, incluye el nivel educativo (`schoolYearId`)
 - Edición y eliminación con confirmación inline en la propia fila
 
 ### Gestión de cursos (`/admin/courses`)
@@ -366,13 +374,13 @@ Los alumnos pueden canjear sus puntos acumulados por artículos del club. Cada c
 
 ### Visibilidad por rol
 
-| Ruta | STUDENT | TUTOR | ADMIN |
-|------|---------|-------|-------|
-| `/challenges` | ✅ | ✅ | ❌ |
-| `/exam` | ✅ | ❌ | ❌ |
-| `/admin/challenges` | ❌ | ❌ | ✅ |
-| `/admin/redemptions` | ❌ | ❌ | ✅ |
-| `/admin/exam-banks` | ❌ | ❌ | ✅ |
+| Ruta | STUDENT | ADMIN |
+|------|---------|-------|
+| `/challenges` | ✅ | ❌ |
+| `/exam` | ✅ | ❌ |
+| `/admin/challenges` | ❌ | ✅ |
+| `/admin/redemptions` | ❌ | ✅ |
+| `/admin/exam-banks` | ❌ | ✅ |
 
 ---
 
@@ -422,6 +430,7 @@ Cada curso y módulo puede tener un banco de preguntas independiente de los quiz
 | 10.5 | Entorno PRE + pipeline progresivo | ✅ |
 | 10.6 | Auto-asignación de vídeos YouTube | ✅ |
 | 10.7 | Poda de reservas y rol TEACHER | ✅ |
+| 10.8 | Eliminación del rol TUTOR y registro familiar de alumnos | ✅ |
 | 11 | App móvil (Expo) | ⬜ Pendiente |
 | 12 | Testing completo | ⬜ Pendiente |
 | 13 | Deployment completo | ⬜ Pendiente |
@@ -457,4 +466,4 @@ Si el usuario ya está autenticado y visita `/`, se redirige automáticamente a 
 
 ---
 
-*Última actualización: Agosto 2026 — Fase 10.7 (Poda de reservas y rol TEACHER) completada*
+*Última actualización: Agosto 2026 — Fase 10.8 (Eliminación del rol TUTOR y registro familiar de alumnos) completada*

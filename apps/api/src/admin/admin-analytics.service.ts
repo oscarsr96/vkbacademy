@@ -329,7 +329,6 @@ export class AdminAnalyticsService {
     const [
       totalUsers,
       totalStudents,
-      totalTutors,
       totalCourses,
       publishedCourses,
       totalEnrollments,
@@ -337,7 +336,6 @@ export class AdminAnalyticsService {
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.user.count({ where: { role: Role.STUDENT } }),
-      this.prisma.user.count({ where: { role: Role.TUTOR } }),
       this.prisma.course.count(),
       this.prisma.course.count({ where: { published: true } }),
       this.prisma.enrollment.count(),
@@ -348,7 +346,6 @@ export class AdminAnalyticsService {
       users: {
         total: totalUsers,
         students: totalStudents,
-        tutors: totalTutors,
       },
       courses: { total: totalCourses, published: publishedCourses },
       enrollments: totalEnrollments,
