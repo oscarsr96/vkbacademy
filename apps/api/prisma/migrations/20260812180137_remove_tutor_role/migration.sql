@@ -14,7 +14,7 @@
 -- Los alumnos sin tutor se quedan con "guardianEmail" nulo: es lo esperado.
 UPDATE "User" s SET "guardianEmail" = t.email
   FROM "User" t
-  WHERE s."tutorId" = t.id AND t.role = 'TUTOR';
+  WHERE s."tutorId" = t.id AND t.role = 'TUTOR' AND s."guardianEmail" IS NULL;
 
 -- Ahora sí, eliminar las cuentas con rol TUTOR.
 -- Va DESPUÉS del UPDATE de rescate (ver arriba) y ANTES de recrear el enum Role:
