@@ -4,12 +4,16 @@ import { GoogleGenerativeAI, GoogleGenerativeAIAbortError } from '@google/genera
 import Anthropic, { APIConnectionTimeoutError } from '@anthropic-ai/sdk';
 
 // Modelo por defecto, PINNEADO a propósito. No usar alias móviles
-// ("gemini-flash-latest"): Google los repunta sin avisar — el 21-01-2026
-// gemini-flash-latest saltó a Gemini 3, donde `thinkingBudget: 0` dejó de
-// apagar el thinking, y la generación empezó a fallar sin tocar el repo.
-// Overridable con GEMINI_MODEL para migrar sin desplegar código.
-// OJO: gemini-2.5-flash tiene fecha de apagado el 16-10-2026.
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+// ("gemini-flash-latest"): Google los repunta sin avisar y con ellos viaja la
+// semántica de los parámetros. Medido contra la API el 13-08-2026:
+//   gemini-flash-latest + thinkingBudget: 0  → 400 INVALID_ARGUMENT (siempre)
+//   gemini-flash-latest sin thinkingConfig   → 200 OK
+//   gemini-3.5-flash    + thinkingLevel      → 200 OK, 0 thinking tokens
+//   gemini-2.5-flash                         → 404 "no longer available to new users"
+// Es decir: el alias saltó a un modelo que rechaza el parámetro de thinking de
+// Gemini 2.5, y cada llamada moría en 400 sin que nadie tocara el repo.
+// Overridable con GEMINI_MODEL para migrar de familia sin desplegar código.
+const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
 
 /**
  * Proveedor de IA unificado con fallback automático.
