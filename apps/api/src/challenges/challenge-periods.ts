@@ -2,7 +2,10 @@ import { ChallengeType } from '@prisma/client';
 
 /** Devuelve la semana ISO como "2026-W07" */
 export function isoWeek(date: Date): string {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  // Partir del día de calendario en Madrid, no de los componentes UTC: si no,
+  // el día y la semana pueden rodar en instantes distintos (ver madridDay).
+  const [year, month, day] = madridDay(date).split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
   // Ajustar al jueves de la semana actual (ISO: la semana empieza el lunes)
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
@@ -27,11 +30,31 @@ export function previousIsoWeek(week: string): string {
   return isoWeek(jan4);
 }
 
-/** Lunes 00:00 UTC de la semana ISO en curso. Es el `since` de los retos WEEKLY. */
+/**
+ * Instante UTC que corresponde al lunes 00:00 de Madrid de la semana en curso.
+ * Es el `since` de los retos WEEKLY.
+ */
 export function currentWeekStart(now: Date): Date {
-  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() || 7) - 1));
-  return d;
+  // Lunes de la semana, en calendario de Madrid (como placeholder UTC de esos
+  // mismos componentes Y/M/D — todavía no es un instante real).
+  const [year, month, day] = madridDay(now).split('-').map(Number);
+  const monday = new Date(Date.UTC(year, month - 1, day));
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() || 7) - 1));
+  // Restar el offset de Madrid de ese lunes para obtener el instante real:
+  // medianoche en Madrid = las 00:00 "wall clock" menos el adelanto sobre UTC.
+  return new Date(monday.getTime() - madridOffsetMs(monday));
+}
+
+/**
+ * Diferencia en ms entre la hora de Madrid y UTC para un instante dado.
+ * Madrid es UTC+1 en invierno (CET) y UTC+2 en verano (CEST); nunca se
+ * hardcodea el número, se deriva comparando el mismo instante formateado en
+ * ambas zonas.
+ */
+function madridOffsetMs(date: Date): number {
+  const utcAsLocal = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const madridAsLocal = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+  return madridAsLocal.getTime() - utcAsLocal.getTime();
 }
 
 /**

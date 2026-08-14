@@ -15,7 +15,14 @@ describe('challenge-periods', () => {
     });
 
     it('devuelve la misma semana para el domingo siguiente', () => {
-      expect(isoWeek(new Date('2026-02-22T23:00:00Z'))).toBe('2026-W08');
+      // 2026-02-22T12:00:00Z son las 13:00 en Madrid (CET, invierno): sigue siendo domingo.
+      expect(isoWeek(new Date('2026-02-22T12:00:00Z'))).toBe('2026-W08');
+    });
+
+    // Frontera: 23:30 UTC del domingo 22 ya son las 00:30 del lunes 23 en Madrid
+    // (CET, +1h). El día de calendario en Madrid manda sobre el de UTC.
+    it('cruza a la semana siguiente si en Madrid ya es lunes aunque en UTC siga siendo domingo', () => {
+      expect(isoWeek(new Date('2026-02-22T23:30:00Z'))).toBe('2026-W09');
     });
   });
 
@@ -30,15 +37,24 @@ describe('challenge-periods', () => {
   });
 
   describe('currentWeekStart', () => {
-    it('devuelve el lunes 00:00 UTC de la semana en curso', () => {
+    // Febrero es CET (UTC+1): medianoche del lunes 16 en Madrid son las 23:00 UTC del domingo 15.
+    it('devuelve el lunes 00:00 de Madrid de la semana en curso, en invierno (CET)', () => {
       expect(currentWeekStart(new Date('2026-02-19T17:45:00Z')).toISOString()).toBe(
-        '2026-02-16T00:00:00.000Z',
+        '2026-02-15T23:00:00.000Z',
       );
     });
 
     it('devuelve el mismo lunes cuando ya es lunes', () => {
       expect(currentWeekStart(new Date('2026-02-16T00:30:00Z')).toISOString()).toBe(
-        '2026-02-16T00:00:00.000Z',
+        '2026-02-15T23:00:00.000Z',
+      );
+    });
+
+    // Verano: agosto es CEST (UTC+2). El 14-08-2026 es viernes, su lunes es el 10;
+    // medianoche del lunes en Madrid son las 22:00 UTC del domingo 9.
+    it('devuelve el lunes 00:00 de Madrid de la semana en curso, en verano (CEST)', () => {
+      expect(currentWeekStart(new Date('2026-08-14T10:00:00Z')).toISOString()).toBe(
+        '2026-08-09T22:00:00.000Z',
       );
     });
   });
