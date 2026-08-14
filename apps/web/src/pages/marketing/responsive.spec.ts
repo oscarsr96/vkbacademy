@@ -19,6 +19,13 @@ function readLayout(filename: string): string {
   return fs.readFileSync(path.join(LAYOUTS_DIR, filename), 'utf-8');
 }
 
+// El sistema lp-* (LpSystem.tsx) es parte de la página que lo consume: los
+// asserts que antes buscaban una regla dentro de la propia página ahora deben
+// buscarla en la página + el módulo compartido, tal y como se sirve en runtime.
+function readWithSystem(filename: string): string {
+  return readSource(filename) + readSource('LpSystem.tsx');
+}
+
 // ─── PublicLayout ───────────────────────────────────────────────────────────────
 
 describe('PublicLayout — responsividad móvil', () => {
@@ -93,25 +100,31 @@ describe('LandingPage — responsividad móvil', () => {
       .filter((w) => w > 400);
 
     if (problemWidths.length > 0) {
-      // Debe haber overrides en la media query
-      expect(src).toMatch(/lp-pricing-card.*width|max-width.*100%/s);
+      // Debe haber overrides en la media query. max-width:100% (.lp-page
+      // img/svg) vive ahora en LpSystem.tsx, de ahí la lectura concatenada.
+      expect(readWithSystem('LandingPage.tsx')).toMatch(/lp-pricing-card.*width|max-width.*100%/s);
     }
   });
 
   test('el listado de características apila en móvil (multi-columna solo bajo min-width)', () => {
-    const hasAutoFit = src.includes('auto-fit') || src.includes('auto-fill');
+    // .lp-list-row vive ahora en LpSystem.tsx (sistema compartido): la
+    // verificación lee la página concatenada con el módulo.
+    const full = readWithSystem('LandingPage.tsx');
+    const hasAutoFit = full.includes('auto-fit') || full.includes('auto-fill');
     // Diseño mobile-first: la fila de la lista es de una columna por defecto y
     // sus columnas adicionales se declaran dentro de un @media (min-width: …)
     const mobileFirstRow =
-      /@media \(min-width: \d+px\)[\s\S]*\.lp-list-row[\s\S]*?grid-template-columns/.test(src);
+      /@media \(min-width: \d+px\)[\s\S]*\.lp-list-row[\s\S]*?grid-template-columns/.test(full);
     expect(hasAutoFit || mobileFirstRow).toBeTruthy();
   });
 
   test('el bloque de recompensas no impone anchos fijos', () => {
     expect(src).toMatch(/merchGrid|lp-merch/);
-    // La tabla de canje ocupa el ancho disponible en vez de anchos fijos en px
-    const hasFluidTable = /\.lp-table\s*\{[^}]*width:\s*100%/s.test(src);
-    const hasWrap = /flexWrap.*wrap|flex-wrap.*wrap/.test(src);
+    // .lp-table vive ahora en LpSystem.tsx: ocupa el ancho disponible en vez
+    // de anchos fijos en px.
+    const full = readWithSystem('LandingPage.tsx');
+    const hasFluidTable = /\.lp-table\s*\{[^}]*width:\s*100%/s.test(full);
+    const hasWrap = /flexWrap.*wrap|flex-wrap.*wrap/.test(full);
     expect(hasFluidTable || hasWrap).toBeTruthy();
   });
 });
@@ -262,7 +275,9 @@ describe('Todas las páginas de marketing — verificaciones generales', () => {
   const files = ['LandingPage.tsx', 'AboutPage.tsx', 'PricingPage.tsx'];
 
   test.each(files)('%s: usa overflowX hidden en el contenedor raíz', (file) => {
-    const src = readSource(file);
+    // .lp-page (overflow-x) vive en LpSystem.tsx para la landing: se lee la
+    // página concatenada con el módulo compartido.
+    const src = readWithSystem(file);
     expect(src).toMatch(/overflowX.*hidden|overflow-x.*hidden/);
   });
 
@@ -272,7 +287,9 @@ describe('Todas las páginas de marketing — verificaciones generales', () => {
   });
 
   test.each(files)('%s: las imágenes o logos tienen altura auto o maxWidth 100%', (file) => {
-    const src = readSource(file);
+    // .lp-page img/svg (max-width: 100%) vive en LpSystem.tsx para la
+    // landing: se lee la página concatenada con el módulo compartido.
+    const src = readWithSystem(file);
     // Los logos deben tener height fija + width: auto o max-width: 100%.
     // Se acepta tanto la forma inline de JSX como la declaración en CSS plano.
     const hasAutoWidth =
