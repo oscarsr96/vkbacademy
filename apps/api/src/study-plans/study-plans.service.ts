@@ -402,7 +402,7 @@ export class StudyPlansService {
     }));
 
     const exercises = Array.isArray(plan.exercises)
-      ? (plan.exercises as unknown as GeneratedTopicExercise[])
+      ? withExerciseIds(plan.exercises as unknown as GeneratedTopicExercise[])
       : null;
 
     return {
@@ -582,4 +582,13 @@ export class StudyPlansService {
     if (plan.userId !== userId) throw new ForbiddenException('No tienes acceso a este plan');
     return plan;
   }
+}
+
+/**
+ * Garantiza que todo ejercicio tenga `id`. Los planes creados antes de
+ * Retos v2 lo llevan vacío: reciben un id derivado del índice, estable
+ * mientras no se regenere el plan.
+ */
+export function withExerciseIds(exercises: GeneratedTopicExercise[]): GeneratedTopicExercise[] {
+  return exercises.map((e, i) => (e.id ? e : { ...e, id: `legacy-${i}` }));
 }
