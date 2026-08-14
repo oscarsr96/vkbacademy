@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ChallengeCadence, ChallengeType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { isWeeklyCapable } from '../challenges/challenge-periods';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
 
@@ -86,13 +87,28 @@ export class AdminGamificationService {
     };
   }
 
+  /**
+   * Los retos de estado (máximos, rachas, variedad acumulada) no admiten
+   * cadencia semanal: reiniciarlos cada lunes no significa nada.
+   */
+  private assertCadence(type: ChallengeType, cadence: ChallengeCadence): void {
+    if (cadence === ChallengeCadence.WEEKLY && !isWeeklyCapable(type)) {
+      throw new BadRequestException(
+        `El tipo ${type} no admite cadencia semanal: mide un estado acumulado, no una cantidad por periodo.`,
+      );
+    }
+  }
+
   async createChallenge(dto: CreateChallengeDto) {
-    return this.prisma.challenge.create({ data: dto });
+    const cadence = dto.cadence ?? ChallengeCadence.PERMANENT;
+    this.assertCadence(dto.type, cadence);
+    return this.prisma.challenge.create({ data: { ...dto, cadence } });
   }
 
   async updateChallenge(id: string, dto: UpdateChallengeDto) {
     const challenge = await this.prisma.challenge.findUnique({ where: { id } });
     if (!challenge) throw new NotFoundException('Reto no encontrado');
+    this.assertCadence(dto.type ?? challenge.type, dto.cadence ?? challenge.cadence);
     return this.prisma.challenge.update({ where: { id }, data: dto });
   }
 
