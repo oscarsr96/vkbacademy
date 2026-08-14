@@ -753,6 +753,8 @@ describe('ChallengesService', () => {
         totalPoints: 300,
         currentStreak: 3,
         longestStreak: 5,
+        currentDailyStreak: 4,
+        longestDailyStreak: 7,
       });
       mockPrisma.userChallenge.findMany.mockResolvedValue([
         {
@@ -777,6 +779,8 @@ describe('ChallengesService', () => {
       expect(result.totalPoints).toBe(300);
       expect(result.currentStreak).toBe(3);
       expect(result.longestStreak).toBe(5);
+      expect(result.currentDailyStreak).toBe(4);
+      expect(result.longestDailyStreak).toBe(7);
       expect(result.completedCount).toBe(2); // solo los completed=true
       expect(result.recentBadges).toHaveLength(2);
       expect(result.recentBadges[0].title).toBe('Primer Módulo');
@@ -790,6 +794,8 @@ describe('ChallengesService', () => {
 
       expect(result.totalPoints).toBe(0);
       expect(result.currentStreak).toBe(0);
+      expect(result.currentDailyStreak).toBe(0);
+      expect(result.longestDailyStreak).toBe(0);
       expect(result.completedCount).toBe(0);
       expect(result.recentBadges).toHaveLength(0);
     });
@@ -822,6 +828,7 @@ describe('ChallengesService', () => {
         id: 'ch1',
         title: 'Completar 10 ejercicios',
         type: ChallengeType.THEORY_COMPLETED,
+        cadence: ChallengeCadence.PERMANENT,
         target: 10,
         points: 100,
         isActive: true,
@@ -829,12 +836,21 @@ describe('ChallengesService', () => {
       };
       mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
       mockPrisma.userChallenge.findMany.mockResolvedValue([
-        { challengeId: 'ch1', progress: 7, completed: false, completedAt: null, awardedPoints: 0 },
+        {
+          challengeId: 'ch1',
+          periodKey: 'ALL',
+          progress: 7,
+          completed: false,
+          completedAt: null,
+          awardedPoints: 0,
+        },
       ]);
       mockPrisma.user.findUnique.mockResolvedValue({
         totalPoints: 0,
         currentStreak: 0,
         longestStreak: 0,
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
       });
 
       const result = await service.getMyProgress('user1');
@@ -851,6 +867,7 @@ describe('ChallengesService', () => {
         id: 'ch2',
         title: 'Quiz Perfecto',
         type: ChallengeType.EXAM_SCORE,
+        cadence: ChallengeCadence.PERMANENT,
         target: 100,
         points: 50,
         isActive: true,
@@ -862,6 +879,8 @@ describe('ChallengesService', () => {
         totalPoints: 200,
         currentStreak: 1,
         longestStreak: 3,
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
       });
 
       const result = await service.getMyProgress('user1');
@@ -871,13 +890,15 @@ describe('ChallengesService', () => {
       expect(result.challenges[0].awardedPoints).toBe(0);
     });
 
-    it('incluye meta con totalPoints, currentStreak y longestStreak del usuario', async () => {
+    it('incluye meta con totalPoints, rachas semanal y diaria del usuario', async () => {
       mockPrisma.challenge.findMany.mockResolvedValue([]);
       mockPrisma.userChallenge.findMany.mockResolvedValue([]);
       mockPrisma.user.findUnique.mockResolvedValue({
         totalPoints: 750,
         currentStreak: 5,
         longestStreak: 8,
+        currentDailyStreak: 2,
+        longestDailyStreak: 6,
       });
 
       const result = await service.getMyProgress('user1');
@@ -886,6 +907,8 @@ describe('ChallengesService', () => {
         totalPoints: 750,
         currentStreak: 5,
         longestStreak: 8,
+        currentDailyStreak: 2,
+        longestDailyStreak: 6,
       });
     });
 
@@ -898,6 +921,126 @@ describe('ChallengesService', () => {
 
       expect(result.meta.totalPoints).toBe(0);
       expect(result.meta.currentStreak).toBe(0);
+      expect(result.meta.currentDailyStreak).toBe(0);
+      expect(result.meta.longestDailyStreak).toBe(0);
+    });
+  });
+
+  describe('getMyProgress', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(WEEK_08);
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('empareja cada reto con la fila de SU periodo', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([
+        {
+          id: 'perm',
+          type: ChallengeType.TUTOR_QUESTIONS,
+          cadence: ChallengeCadence.PERMANENT,
+          target: 10,
+        },
+        {
+          id: 'week',
+          type: ChallengeType.EXERCISES_SOLVED,
+          cadence: ChallengeCadence.WEEKLY,
+          target: 20,
+        },
+      ]);
+      mockPrisma.userChallenge.findMany.mockResolvedValue([
+        {
+          challengeId: 'perm',
+          periodKey: 'ALL',
+          progress: 6,
+          completed: false,
+          completedAt: null,
+          awardedPoints: 0,
+        },
+        {
+          challengeId: 'week',
+          periodKey: ISO_W07,
+          progress: 20,
+          completed: true,
+          completedAt: new Date(),
+          awardedPoints: 15,
+        },
+        {
+          challengeId: 'week',
+          periodKey: ISO_W08,
+          progress: 4,
+          completed: false,
+          completedAt: null,
+          awardedPoints: 0,
+        },
+      ]);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        totalPoints: 120,
+        currentStreak: 2,
+        longestStreak: 5,
+        currentDailyStreak: 3,
+        longestDailyStreak: 8,
+      });
+
+      const result = await service.getMyProgress('user1');
+
+      expect(result.meta.currentDailyStreak).toBe(3);
+      expect(result.meta.longestDailyStreak).toBe(8);
+      // El reto semanal muestra la semana EN CURSO, no la anterior ya completada
+      expect(result.challenges.find((c) => c.id === 'week')).toMatchObject({
+        progress: 4,
+        completed: false,
+      });
+      expect(result.challenges.find((c) => c.id === 'perm')).toMatchObject({ progress: 6 });
+    });
+
+    // Mismo escenario que el test anterior pero con el orden de filas invertido.
+    // Un Map indexado solo por challengeId hace "gana el último insertado" con
+    // clave duplicada: si la fila de la semana pasada llega DESPUÉS que la
+    // actual, ese bug produciría por casualidad el resultado correcto (ver
+    // test anterior, donde W08 es la última fila). Este test invierte el
+    // orden para que el emparejamiento por periodo sea imprescindible.
+    it('empareja el reto semanal aunque la fila de la semana actual llegue ANTES que la antigua', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([
+        {
+          id: 'week',
+          type: ChallengeType.EXERCISES_SOLVED,
+          cadence: ChallengeCadence.WEEKLY,
+          target: 20,
+        },
+      ]);
+      mockPrisma.userChallenge.findMany.mockResolvedValue([
+        {
+          challengeId: 'week',
+          periodKey: ISO_W08,
+          progress: 4,
+          completed: false,
+          completedAt: null,
+          awardedPoints: 0,
+        },
+        {
+          challengeId: 'week',
+          periodKey: ISO_W07,
+          progress: 20,
+          completed: true,
+          completedAt: new Date(),
+          awardedPoints: 15,
+        },
+      ]);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        totalPoints: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
+      });
+
+      const result = await service.getMyProgress('user1');
+
+      expect(result.challenges.find((c) => c.id === 'week')).toMatchObject({
+        progress: 4,
+        completed: false,
+      });
     });
   });
 

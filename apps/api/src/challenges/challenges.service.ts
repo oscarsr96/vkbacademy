@@ -323,25 +323,42 @@ export class ChallengesService {
 
   /** Lista todos los retos activos enriquecidos con el progreso del usuario */
   async getMyProgress(userId: string) {
+    const weekKey = isoWeek(new Date());
+
     const [challenges, userChallenges, user] = await Promise.all([
       this.prisma.challenge.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } }),
-      this.prisma.userChallenge.findMany({ where: { userId } }),
+      this.prisma.userChallenge.findMany({
+        where: { userId, periodKey: { in: ['ALL', weekKey] } },
+      }),
       this.prisma.user.findUnique({
         where: { id: userId },
-        select: { totalPoints: true, currentStreak: true, longestStreak: true },
+        select: {
+          totalPoints: true,
+          currentStreak: true,
+          longestStreak: true,
+          currentDailyStreak: true,
+          longestDailyStreak: true,
+        },
       }),
     ]);
 
-    const progressMap = new Map(userChallenges.map((uc) => [uc.challengeId, uc]));
+    // Indexado por (challengeId, periodKey): un reto semanal tiene una fila
+    // por semana, así que indexar solo por challengeId se queda con una
+    // fila arbitraria (la última que llegue de Prisma).
+    const progressMap = new Map(
+      userChallenges.map((uc) => [`${uc.challengeId}|${uc.periodKey}`, uc]),
+    );
 
     return {
       meta: {
         totalPoints: user?.totalPoints ?? 0,
         currentStreak: user?.currentStreak ?? 0,
         longestStreak: user?.longestStreak ?? 0,
+        currentDailyStreak: user?.currentDailyStreak ?? 0,
+        longestDailyStreak: user?.longestDailyStreak ?? 0,
       },
       challenges: challenges.map((c) => {
-        const uc = progressMap.get(c.id);
+        const uc = progressMap.get(`${c.id}|${this.periodKeyFor(c.cadence, weekKey)}`);
         return {
           ...c,
           progress: uc?.progress ?? 0,
@@ -390,7 +407,13 @@ export class ChallengesService {
     const [user, userChallenges] = await Promise.all([
       this.prisma.user.findUnique({
         where: { id: userId },
-        select: { totalPoints: true, currentStreak: true, longestStreak: true },
+        select: {
+          totalPoints: true,
+          currentStreak: true,
+          longestStreak: true,
+          currentDailyStreak: true,
+          longestDailyStreak: true,
+        },
       }),
       this.prisma.userChallenge.findMany({
         where: { userId },
@@ -414,6 +437,8 @@ export class ChallengesService {
       totalPoints: user?.totalPoints ?? 0,
       currentStreak: user?.currentStreak ?? 0,
       longestStreak: user?.longestStreak ?? 0,
+      currentDailyStreak: user?.currentDailyStreak ?? 0,
+      longestDailyStreak: user?.longestDailyStreak ?? 0,
       completedCount,
       recentBadges,
     };
