@@ -13,6 +13,7 @@ import CoursesPage from './pages/CoursesPage';
 import CoursePage from './pages/CoursePage';
 import LessonPage from './pages/LessonPage';
 import ChallengesPage from './pages/ChallengesPage';
+import ShopPage from './pages/ShopPage';
 import CertificatesPage from './pages/CertificatesPage';
 import SubjectsPage from './pages/SubjectsPage';
 import AcademyLandingPage from './pages/marketing/AcademyLandingPage';
@@ -136,6 +137,7 @@ export default function App() {
 
           {/* Fase 7 — Retos/Gamificación */}
           <Route path="challenges" element={<ChallengesPage />} />
+          <Route path="shop" element={<ShopPage />} />
 
           {/* Fase 8 — Exámenes */}
           <Route path="exam" element={<ExamPage />} />
