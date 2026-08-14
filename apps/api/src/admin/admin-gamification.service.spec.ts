@@ -58,4 +58,17 @@ describe('AdminGamificationService — cadencia', () => {
       service.updateChallenge('c1', { cadence: ChallengeCadence.WEEKLY }),
     ).rejects.toThrow(BadRequestException);
   });
+
+  it('rechaza cambiar el tipo a estado en un reto que ya tiene cadencia WEEKLY', async () => {
+    mockPrisma.challenge.findUnique.mockResolvedValue({
+      id: 'c1',
+      type: ChallengeType.EXERCISES_SOLVED,
+      cadence: ChallengeCadence.WEEKLY,
+    });
+
+    await expect(
+      service.updateChallenge('c1', { type: ChallengeType.STREAK_DAILY }),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockPrisma.challenge.update).not.toHaveBeenCalled();
+  });
 });
