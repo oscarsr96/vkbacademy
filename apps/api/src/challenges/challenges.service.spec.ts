@@ -24,11 +24,12 @@ function awardedPointsCalls(
 describe('ChallengesService', () => {
   let service: ChallengesService;
   let mockPrisma: {
-    user: { findUnique: jest.Mock; update: jest.Mock };
+    user: { findUnique: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
     challenge: { findMany: jest.Mock };
     userChallenge: {
       findUnique: jest.Mock;
       upsert: jest.Mock;
+      updateMany: jest.Mock;
       findMany: jest.Mock;
     };
     userProgress: { count: jest.Mock };
@@ -51,11 +52,12 @@ describe('ChallengesService', () => {
 
   beforeEach(async () => {
     mockPrisma = {
-      user: { findUnique: jest.fn(), update: jest.fn() },
+      user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
       challenge: { findMany: jest.fn() },
       userChallenge: {
         findUnique: jest.fn(),
         upsert: jest.fn(),
+        updateMany: jest.fn(),
         findMany: jest.fn(),
       },
       userProgress: { count: jest.fn() },
@@ -73,8 +75,15 @@ describe('ChallengesService', () => {
         update: jest.fn(),
       },
       tutorMessage: { count: jest.fn() },
+      // $transaction se usa de dos formas: con callback (transacción
+      // interactiva de awardCompletion) y con array (redeemItem).
       $transaction: jest.fn(),
     };
+    mockPrisma.$transaction.mockImplementation((arg: unknown) =>
+      typeof arg === 'function'
+        ? (arg as (tx: typeof mockPrisma) => Promise<unknown>)(mockPrisma)
+        : Promise.all(arg as unknown[]),
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [ChallengesService, { provide: PrismaService, useValue: mockPrisma }],
@@ -420,23 +429,77 @@ describe('ChallengesService', () => {
       mockPrisma.theoryModule.count.mockResolvedValue(5); // exactamente el target
       mockPrisma.userChallenge.findMany.mockResolvedValue([]); // no existía
       mockPrisma.userChallenge.upsert.mockResolvedValue({});
+      mockPrisma.userChallenge.updateMany.mockResolvedValue({ count: 1 });
       mockPrisma.user.update.mockResolvedValue({});
 
       await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
 
+      // La fila se crea sin completar y la completa el updateMany condicionado:
+      // así la transición (y con ella el pago) es de uno solo.
       expect(mockPrisma.userChallenge.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          create: expect.objectContaining({
-            completed: true,
-            awardedPoints: 100,
-          }),
+          update: {},
+          create: expect.objectContaining({ completed: false, awardedPoints: 0 }),
         }),
       );
+      expect(mockPrisma.userChallenge.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user1', challengeId: 'ch1', periodKey: 'ALL', completed: false },
+        data: expect.objectContaining({ completed: true, awardedPoints: 100 }),
+      });
       expect(mockPrisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: { totalPoints: { increment: 100 } },
         }),
       );
+    });
+
+    // C1 — la transición a completado es la que paga, y es atómica
+    it('el pago y la marca de completado van en la misma transacción', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([
+        { id: 'ch1', type: ChallengeType.THEORY_COMPLETED, target: 5, points: 100 },
+      ]);
+      mockPrisma.theoryModule.count.mockResolvedValue(5);
+      mockPrisma.userChallenge.findMany.mockResolvedValue([]);
+      mockPrisma.userChallenge.upsert.mockResolvedValue({});
+      mockPrisma.userChallenge.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
+
+      expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(typeof mockPrisma.$transaction.mock.calls[0][0]).toBe('function');
+      // El incremento ocurre DENTRO del callback de la transacción
+      const tx = {
+        userChallenge: { upsert: jest.fn(), updateMany: jest.fn() },
+        user: { update: jest.fn() },
+      };
+      tx.userChallenge.upsert.mockResolvedValue({});
+      tx.userChallenge.updateMany.mockResolvedValue({ count: 1 });
+      tx.user.update.mockResolvedValue({});
+      await (mockPrisma.$transaction.mock.calls[0][0] as (t: typeof tx) => Promise<void>)(tx);
+      expect(tx.user.update).toHaveBeenCalledWith({
+        where: { id: 'user1' },
+        data: { totalPoints: { increment: 100 } },
+      });
+    });
+
+    it('no paga si otro proceso ya había completado el reto (updateMany no afecta a ninguna fila)', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([
+        { id: 'ch1', type: ChallengeType.THEORY_COMPLETED, target: 5, points: 100 },
+      ]);
+      mockPrisma.theoryModule.count.mockResolvedValue(5);
+      // La fila leída al principio decía "sin completar"...
+      mockPrisma.userChallenge.findMany.mockResolvedValue([
+        { challengeId: 'ch1', periodKey: 'ALL', completed: false, progress: 4 },
+      ]);
+      mockPrisma.userChallenge.upsert.mockResolvedValue({});
+      // ...pero al escribir, otro checkAndAward concurrente ya la había completado
+      mockPrisma.userChallenge.updateMany.mockResolvedValue({ count: 0 });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
+
+      expect(awardedPointsCalls(mockPrisma.user.update)).toHaveLength(0);
     });
 
     it('actualiza el progreso sin completar si no llega al target', async () => {
@@ -484,22 +547,60 @@ describe('ChallengesService', () => {
       expect(awardedPointsCalls(mockPrisma.user.update)).toHaveLength(0);
     });
 
-    it('no incrementa puntos si el reto existía pero no estaba completado y aún no llega al target', async () => {
+    // La fila mockeada DEBE llevar periodKey: sin él, la clave del Map interno
+    // es "ch1|undefined", `existing` sale undefined y la rama "el reto ya
+    // existía" no se ejercita — el test pasaría solo porque 8 < 20.
+    it('actualiza el progreso, sin pagar, si el reto existía sin completar y aún no llega al target', async () => {
       const challenge = {
         id: 'ch1',
         type: ChallengeType.THEORY_COMPLETED,
+        cadence: ChallengeCadence.PERMANENT,
         target: 20,
         points: 500,
       };
       mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
       mockPrisma.theoryModule.count.mockResolvedValue(8);
       mockPrisma.userChallenge.findMany.mockResolvedValue([
-        { challengeId: 'ch1', completed: false, progress: 5 },
+        { challengeId: 'ch1', periodKey: 'ALL', completed: false, progress: 5 },
       ]);
       mockPrisma.userChallenge.upsert.mockResolvedValue({});
 
       await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
 
+      // Se reconoce la fila existente (la clave del Map casa) y se actualiza
+      // su progreso 5 → 8 por la rama de update, sin marcar completado.
+      expect(mockPrisma.userChallenge.upsert).toHaveBeenCalledWith({
+        where: {
+          userId_challengeId_periodKey: { userId: 'user1', challengeId: 'ch1', periodKey: 'ALL' },
+        },
+        update: { progress: 8 },
+        create: expect.objectContaining({ progress: 8, completed: false, awardedPoints: 0 }),
+      });
+      expect(mockPrisma.userChallenge.updateMany).not.toHaveBeenCalled();
+      expect(awardedPointsCalls(mockPrisma.user.update)).toHaveLength(0);
+    });
+
+    // Equivalente semanal del test de permanentes "omite el reto si ya estaba
+    // completado": una misión ya cumplida ESTA semana no vuelve a pagar.
+    it('un reto semanal ya completado esta semana no vuelve a pagar', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([
+        {
+          id: 'c2',
+          type: ChallengeType.EXERCISES_SOLVED,
+          cadence: ChallengeCadence.WEEKLY,
+          target: 3,
+          points: 15,
+        },
+      ]);
+      mockPrisma.exerciseAttempt.count.mockResolvedValue(9); // muy por encima del target
+      mockPrisma.userChallenge.findMany.mockResolvedValue([
+        { challengeId: 'c2', periodKey: ISO_W08, completed: true },
+      ]);
+
+      await service.checkAndAward('user1', ChallengeType.EXERCISES_SOLVED);
+
+      expect(mockPrisma.userChallenge.upsert).not.toHaveBeenCalled();
+      expect(mockPrisma.userChallenge.updateMany).not.toHaveBeenCalled();
       expect(awardedPointsCalls(mockPrisma.user.update)).toHaveLength(0);
     });
 
@@ -627,6 +728,7 @@ describe('ChallengesService', () => {
         { challengeId: 'c2', periodKey: ISO_W07, completed: true },
       ]);
       mockPrisma.userChallenge.upsert.mockResolvedValue({});
+      mockPrisma.userChallenge.updateMany.mockResolvedValue({ count: 1 });
       mockPrisma.user.update.mockResolvedValue({});
 
       await service.checkAndAward('user1', ChallengeType.EXERCISES_SOLVED);
@@ -717,19 +819,50 @@ describe('ChallengesService', () => {
   // ─── bumpCorrectStreak ───────────────────────────────────────────────────────
 
   describe('bumpCorrectStreak', () => {
-    it('incrementa la racha y el record al acertar', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
-        currentCorrectStreak: 4,
+    it('incrementa la racha con una operación atómica, no leyendo y escribiendo', async () => {
+      mockPrisma.user.update.mockResolvedValue({
+        currentCorrectStreak: 5,
         longestCorrectStreak: 4,
       });
-      mockPrisma.user.update.mockResolvedValue({});
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
 
       await service.bumpCorrectStreak('user1', true);
 
+      // El +1 lo hace la BD: dos aciertos en paralelo no pueden perder uno
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user1' },
-        data: { currentCorrectStreak: 5, longestCorrectStreak: 5 },
+        data: { currentCorrectStreak: { increment: 1 } },
+        select: { currentCorrectStreak: true, longestCorrectStreak: true },
       });
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('sube el record solo si la racha lo supera, y nunca lo baja', async () => {
+      mockPrisma.user.update.mockResolvedValue({
+        currentCorrectStreak: 5,
+        longestCorrectStreak: 4,
+      });
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.bumpCorrectStreak('user1', true);
+
+      expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+        // La condición `lt` impide que una escritura concurrente más lenta
+        // devuelva el récord a un valor anterior.
+        where: { id: 'user1', longestCorrectStreak: { lt: 5 } },
+        data: { longestCorrectStreak: 5 },
+      });
+    });
+
+    it('no toca el record si la racha actual no lo supera', async () => {
+      mockPrisma.user.update.mockResolvedValue({
+        currentCorrectStreak: 3,
+        longestCorrectStreak: 9,
+      });
+
+      await service.bumpCorrectStreak('user1', true);
+
+      expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
     });
 
     it('pone la racha a cero al fallar sin tocar el record', async () => {
@@ -798,6 +931,30 @@ describe('ChallengesService', () => {
       expect(result.longestDailyStreak).toBe(0);
       expect(result.completedCount).toBe(0);
       expect(result.recentBadges).toHaveLength(0);
+    });
+
+    // M3 — sin filtro de periodo, completedCount crecía cada semana con las
+    // mismas cinco misiones y recentBadges podía repetir cinco veces la misma.
+    it('solo cuenta el periodo vigente: permanentes y la semana en curso', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(WEEK_08);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        totalPoints: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
+      });
+      mockPrisma.userChallenge.findMany.mockResolvedValue([]);
+
+      await service.getSummary('user1');
+
+      expect(mockPrisma.userChallenge.findMany).toHaveBeenCalledWith({
+        where: { userId: 'user1', periodKey: { in: ['ALL', ISO_W08] } },
+        include: { challenge: true },
+        orderBy: { completedAt: 'desc' },
+      });
+      jest.useRealTimers();
     });
 
     it('limita los badges recientes a 5 aunque haya más completados', async () => {
@@ -1184,6 +1341,100 @@ describe('ChallengesService', () => {
 
     it('STREAK_DAILY lee la racha diaria actual', async () => {
       expect(await progressFor({ type: ChallengeType.STREAK_DAILY })).toBe(1);
+    });
+
+    it('EXAM_COMPLETED cuenta los exámenes entregados', async () => {
+      mockPrisma.examAttempt.count.mockResolvedValue(6);
+
+      expect(await progressFor({ type: ChallengeType.EXAM_COMPLETED })).toBe(6);
+      expect(mockPrisma.examAttempt.count).toHaveBeenCalledWith({
+        where: { userId: 'user1', submittedAt: { not: null } },
+      });
+    });
+
+    it('THEORY_COMPLETED cuenta los decks de teoría del alumno', async () => {
+      mockPrisma.theoryModule.count.mockResolvedValue(11);
+
+      expect(await progressFor({ type: ChallengeType.THEORY_COMPLETED })).toBe(11);
+      expect(mockPrisma.theoryModule.count).toHaveBeenCalledWith({
+        where: { userId: 'user1' },
+      });
+    });
+
+    // ── Ventana semanal: el filtro `since` por tipo ──────────────────────────
+    // El lunes 00:00 de Madrid de la W08 son las 23:00 UTC del domingo 15
+    // (CET). Cada tipo contable debe filtrar por SU campo de fecha.
+    describe('ventana semanal (cadencia WEEKLY)', () => {
+      const MONDAY = new Date('2026-02-15T23:00:00.000Z');
+      const weekly = { cadence: ChallengeCadence.WEEKLY };
+
+      it('TOPICS_STUDIED filtra por la fecha del PLAN, no del tema (el tema no tiene timestamp)', async () => {
+        mockPrisma.studyPlanTopic.count.mockResolvedValue(2);
+
+        await progressFor({ type: ChallengeType.TOPICS_STUDIED, ...weekly });
+
+        expect(mockPrisma.studyPlanTopic.count).toHaveBeenCalledWith({
+          where: { plan: { userId: 'user1', createdAt: { gte: MONDAY } } },
+        });
+      });
+
+      // Único tipo que SUSTITUYE `{ not: null }` por `{ gte }` en vez de
+      // añadir una condición: si se rompiera, contaría también los exámenes
+      // sin entregar de esta semana.
+      it('EXAM_COMPLETED sustituye submittedAt: { not: null } por { gte: lunes }', async () => {
+        mockPrisma.examAttempt.count.mockResolvedValue(1);
+
+        await progressFor({ type: ChallengeType.EXAM_COMPLETED, ...weekly });
+
+        expect(mockPrisma.examAttempt.count).toHaveBeenCalledWith({
+          where: { userId: 'user1', submittedAt: { gte: MONDAY } },
+        });
+      });
+
+      it('THEORY_COMPLETED filtra por createdAt del deck', async () => {
+        mockPrisma.theoryModule.count.mockResolvedValue(1);
+
+        await progressFor({ type: ChallengeType.THEORY_COMPLETED, ...weekly });
+
+        expect(mockPrisma.theoryModule.count).toHaveBeenCalledWith({
+          where: { userId: 'user1', createdAt: { gte: MONDAY } },
+        });
+      });
+
+      it('EXAM_PERFECT mantiene score 100 y acota submittedAt al lunes', async () => {
+        mockPrisma.examAttempt.count.mockResolvedValue(1);
+
+        await progressFor({ type: ChallengeType.EXAM_PERFECT, ...weekly });
+
+        expect(mockPrisma.examAttempt.count).toHaveBeenCalledWith({
+          where: { userId: 'user1', score: 100, submittedAt: { gte: MONDAY } },
+        });
+      });
+
+      it('TUTOR_QUESTIONS mantiene role user y acota createdAt al lunes', async () => {
+        mockPrisma.tutorMessage.count.mockResolvedValue(4);
+
+        await progressFor({ type: ChallengeType.TUTOR_QUESTIONS, ...weekly });
+
+        expect(mockPrisma.tutorMessage.count).toHaveBeenCalledWith({
+          where: { userId: 'user1', role: 'user', createdAt: { gte: MONDAY } },
+        });
+      });
+
+      it('HARD_EXERCISES_SOLVED mantiene la dificultad y acota answeredAt al lunes', async () => {
+        mockPrisma.exerciseAttempt.count.mockResolvedValue(1);
+
+        await progressFor({ type: ChallengeType.HARD_EXERCISES_SOLVED, ...weekly });
+
+        expect(mockPrisma.exerciseAttempt.count).toHaveBeenCalledWith({
+          where: {
+            userId: 'user1',
+            verdict: 'correct',
+            difficulty: 'HARD',
+            answeredAt: { gte: MONDAY },
+          },
+        });
+      });
     });
   });
 });

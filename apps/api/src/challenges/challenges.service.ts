@@ -243,9 +243,7 @@ export class ChallengesService {
         existingList.map((uc) => [`${uc.challengeId}|${uc.periodKey}`, uc]),
       );
 
-      let pointsToAward = 0;
-
-      // 5. Upserts en paralelo (cada uno afecta a una clave distinta)
+      // 5. Escrituras en paralelo (cada una afecta a una clave distinta)
       await Promise.all(
         challenges.map(async (challenge) => {
           const periodKey = this.periodKeyFor(challenge.cadence, weekKey);
@@ -255,43 +253,89 @@ export class ChallengesService {
           if (existing?.completed) return;
 
           const progress = progressByCombo.get(progressKey(challenge)) ?? 0;
-          const completed = progress >= challenge.target;
 
-          await this.prisma.userChallenge.upsert({
-            where: {
-              userId_challengeId_periodKey: { userId, challengeId: challenge.id, periodKey },
-            },
-            update: {
-              progress,
-              ...(completed
-                ? { completed: true, completedAt: new Date(), awardedPoints: challenge.points }
-                : {}),
-            },
-            create: {
-              userId,
-              challengeId: challenge.id,
-              periodKey,
-              progress,
-              completed,
-              completedAt: completed ? new Date() : null,
-              awardedPoints: completed ? challenge.points : 0,
-            },
-          });
+          if (progress < challenge.target) {
+            // Progreso sin completar: no hay pago, así que dos escrituras
+            // concurrentes del mismo número son inocuas.
+            await this.prisma.userChallenge.upsert({
+              where: {
+                userId_challengeId_periodKey: { userId, challengeId: challenge.id, periodKey },
+              },
+              update: { progress },
+              create: {
+                userId,
+                challengeId: challenge.id,
+                periodKey,
+                progress,
+                completed: false,
+                completedAt: null,
+                awardedPoints: 0,
+              },
+            });
+            return;
+          }
 
-          if (completed) pointsToAward += challenge.points;
+          await this.awardCompletion(userId, challenge, periodKey, progress);
         }),
       );
-
-      // 6. Un único incremento de totalPoints
-      if (pointsToAward > 0) {
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: { totalPoints: { increment: pointsToAward } },
-        });
-      }
     } catch (err) {
       this.logger.error(`Error en checkAndAward para userId=${userId}`, err);
     }
+  }
+
+  /**
+   * Marca un reto como completado y paga sus puntos, de forma atómica.
+   *
+   * La transición `completed: false → true` es la que decide el pago: el
+   * `updateMany` condicionado a `completed: false` solo afecta a una fila si
+   * este proceso es el que la completa, y el incremento de `totalPoints` va
+   * en la MISMA transacción. Dos `checkAndAward` concurrentes del mismo
+   * alumno (dos ejercicios enviados casi a la vez, o un ejercicio y un
+   * examen) ya no pueden pagar los mismos puntos dos veces, y un fallo al
+   * sumar puntos revierte también la marca de completado — nunca queda una
+   * medalla sin pagar e irrecuperable.
+   */
+  private async awardCompletion(
+    userId: string,
+    challenge: { id: string; points: number },
+    periodKey: string,
+    progress: number,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // La fila puede no existir todavía (primera vez que se ve el reto).
+      // `update: {}` deja intacta la que ya estuviera: el estado lo decide
+      // el updateMany de abajo, no este upsert.
+      await tx.userChallenge.upsert({
+        where: { userId_challengeId_periodKey: { userId, challengeId: challenge.id, periodKey } },
+        update: {},
+        create: {
+          userId,
+          challengeId: challenge.id,
+          periodKey,
+          progress,
+          completed: false,
+          completedAt: null,
+          awardedPoints: 0,
+        },
+      });
+
+      const transitioned = await tx.userChallenge.updateMany({
+        where: { userId, challengeId: challenge.id, periodKey, completed: false },
+        data: {
+          progress,
+          completed: true,
+          completedAt: new Date(),
+          awardedPoints: challenge.points,
+        },
+      });
+      // Otro proceso ya lo completó y ya pagó: no volver a pagar.
+      if (transitioned.count === 0) return;
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { totalPoints: { increment: challenge.points } },
+      });
+    });
   }
 
   /**
@@ -306,19 +350,24 @@ export class ChallengesService {
       });
       return;
     }
-    const u = await this.prisma.user.findUnique({
+
+    // Incremento atómico en BD: leer-modificar-escribir perdía una unidad
+    // cuando dos aciertos entraban en paralelo, y esa racha paga puntos
+    // (EXERCISES_CORRECT_STREAK).
+    const updated = await this.prisma.user.update({
       where: { id: userId },
+      data: { currentCorrectStreak: { increment: 1 } },
       select: { currentCorrectStreak: true, longestCorrectStreak: true },
     });
-    if (!u) return;
-    const next = u.currentCorrectStreak + 1;
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        currentCorrectStreak: next,
-        longestCorrectStreak: Math.max(u.longestCorrectStreak, next),
-      },
-    });
+
+    // El récord solo sube, nunca baja: la condición `lt` evita que una
+    // escritura concurrente más lenta lo devuelva a un valor anterior.
+    if (updated.currentCorrectStreak > updated.longestCorrectStreak) {
+      await this.prisma.user.updateMany({
+        where: { id: userId, longestCorrectStreak: { lt: updated.currentCorrectStreak } },
+        data: { longestCorrectStreak: updated.currentCorrectStreak },
+      });
+    }
   }
 
   /** Lista todos los retos activos enriquecidos con el progreso del usuario */
@@ -404,6 +453,11 @@ export class ChallengesService {
 
   /** Resumen compacto del usuario */
   async getSummary(userId: string) {
+    // Mismo criterio de periodo que getMyProgress: sin filtrar, las misiones
+    // semanales de semanas pasadas seguirían contando en completedCount y
+    // podrían repetirse cinco veces en recentBadges.
+    const weekKey = isoWeek(new Date());
+
     const [user, userChallenges] = await Promise.all([
       this.prisma.user.findUnique({
         where: { id: userId },
@@ -416,7 +470,7 @@ export class ChallengesService {
         },
       }),
       this.prisma.userChallenge.findMany({
-        where: { userId },
+        where: { userId, periodKey: { in: ['ALL', weekKey] } },
         include: { challenge: true },
         orderBy: { completedAt: 'desc' },
       }),
