@@ -102,17 +102,19 @@ Usuarios: alumnos, admins, super_admin. Los padres/tutores no tienen cuenta: reg
 ```prisma
 enum Role          { STUDENT ADMIN SUPER_ADMIN }
 enum LessonType    { VIDEO QUIZ EXERCISE MATCH SORT FILL_BLANK }
+enum ChallengeCadence { PERMANENT WEEKLY }
 enum ChallengeType {
-  EXERCISE_COMPLETED EXERCISE_SCORE THEORY_COMPLETED
-  EXAM_COMPLETED EXAM_SCORE STREAK_WEEKLY
-  TOTAL_HOURS_EXERCISE TOTAL_HOURS_THEORY TOTAL_HOURS_EXAM
+  STUDY_PLAN_CREATED TOPICS_STUDIED SUBJECT_VARIETY THEORY_COMPLETED
+  EXERCISES_SOLVED HARD_EXERCISES_SOLVED EXERCISES_CORRECT_STREAK
+  EXAM_COMPLETED EXAM_SCORE EXAM_PERFECT EXAM_HARD_SCORE
+  TUTOR_QUESTIONS STREAK_DAILY STREAK_WEEKLY
 }
 enum CertificateType {
   MODULE_COMPLETION COURSE_COMPLETION MODULE_EXAM COURSE_EXAM
 }
 ```
 
-Entidades principales: `User`, `SchoolYear`, `Academy`, `AcademyMember`, `Course`, `Module`, `Lesson`, `Quiz`, `Question`, `Answer`, `ExamQuestion`, `ExamAnswer`, `ExamAttempt`, `Challenge`, `UserChallenge`, `Redemption`, `Certificate`.
+Entidades principales: `User`, `SchoolYear`, `Academy`, `AcademyMember`, `Course`, `Module`, `Lesson`, `Quiz`, `Question`, `Answer`, `ExamQuestion`, `ExamAnswer`, `ExamAttempt`, `Challenge`, `UserChallenge`, `ExerciseAttempt`, `Redemption`, `Certificate`.
 
 Campo crítico: `Lesson.content: Json?` almacena la estructura de MATCH/SORT/FILL_BLANK (no hay modelos separados). Tipos en `packages/shared/src/types/course.types.ts`.
 
