@@ -1,33 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChallengeType } from '@prisma/client';
+import { ChallengeType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-
-/** Devuelve la semana ISO como "2026-W07" */
-function isoWeek(date: Date): string {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  // Ajustar al jueves de la semana actual (ISO: la semana empieza el lunes)
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
-  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
-}
-
-/** Devuelve la semana ISO de la semana anterior a la dada */
-function previousIsoWeek(week: string): string {
-  const [yearStr, wStr] = week.split('-W');
-  const year = parseInt(yearStr, 10);
-  const w = parseInt(wStr, 10);
-  if (w === 1) {
-    // Semana 1 del año: la anterior es la última del año previo
-    const dec28 = new Date(Date.UTC(year - 1, 11, 28));
-    return isoWeek(dec28);
-  }
-  // Calcular lunes de la semana anterior
-  const jan4 = new Date(Date.UTC(year, 0, 4));
-  jan4.setUTCDate(jan4.getUTCDate() - (jan4.getUTCDay() || 7) + 1);
-  jan4.setUTCDate(jan4.getUTCDate() + (w - 2) * 7);
-  return isoWeek(jan4);
-}
+import { isoWeek, previousIsoWeek, madridDay, previousDay } from './challenge-periods';
 
 @Injectable()
 export class ChallengesService {
@@ -35,36 +9,49 @@ export class ChallengesService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Actualiza la racha semanal del usuario */
+  /** Actualiza las rachas semanal y diaria del usuario en una sola escritura */
   async updateStreak(userId: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { currentStreak: true, longestStreak: true, lastActiveWeek: true },
+      select: {
+        currentStreak: true,
+        longestStreak: true,
+        lastActiveWeek: true,
+        currentDailyStreak: true,
+        longestDailyStreak: true,
+        lastActiveDay: true,
+      },
     });
     if (!user) return;
 
-    const currentWeek = isoWeek(new Date());
+    const now = new Date();
+    const currentWeek = isoWeek(now);
+    const currentDay = madridDay(now);
 
-    // Ya se contabilizó esta semana
-    if (user.lastActiveWeek === currentWeek) return;
+    const weekChanged = user.lastActiveWeek !== currentWeek;
+    const dayChanged = user.lastActiveDay !== currentDay;
+    // Ya se contabilizó este día y esta semana: nada que escribir
+    if (!weekChanged && !dayChanged) return;
 
-    let newStreak: number;
-    if (user.lastActiveWeek === previousIsoWeek(currentWeek)) {
-      // Semana consecutiva
-      newStreak = user.currentStreak + 1;
-    } else {
-      // Racha rota o primera actividad
-      newStreak = 1;
+    const data: Prisma.UserUpdateInput = {};
+
+    if (weekChanged) {
+      const nextWeekly =
+        user.lastActiveWeek === previousIsoWeek(currentWeek) ? user.currentStreak + 1 : 1;
+      data.lastActiveWeek = currentWeek;
+      data.currentStreak = nextWeekly;
+      data.longestStreak = Math.max(user.longestStreak, nextWeekly);
     }
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        lastActiveWeek: currentWeek,
-        currentStreak: newStreak,
-        longestStreak: Math.max(user.longestStreak, newStreak),
-      },
-    });
+    if (dayChanged) {
+      const nextDaily =
+        user.lastActiveDay === previousDay(currentDay) ? user.currentDailyStreak + 1 : 1;
+      data.lastActiveDay = currentDay;
+      data.currentDailyStreak = nextDaily;
+      data.longestDailyStreak = Math.max(user.longestDailyStreak, nextDaily);
+    }
+
+    await this.prisma.user.update({ where: { id: userId }, data });
   }
 
   /** Calcula el progreso actual del usuario para un tipo de reto */

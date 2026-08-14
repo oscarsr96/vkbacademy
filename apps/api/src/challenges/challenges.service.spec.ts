@@ -9,6 +9,8 @@ import { PrismaService } from '../prisma/prisma.service';
 const WEEK_08 = new Date('2026-02-16T12:00:00Z'); // lunes de la W08
 const ISO_W08 = '2026-W08';
 const ISO_W07 = '2026-W07';
+const DAY_W08_MON = '2026-02-16'; // el día de WEEK_08 en Europe/Madrid
+const DAY_W08_SUN = '2026-02-15'; // el día anterior
 
 describe('ChallengesService', () => {
   let service: ChallengesService;
@@ -81,6 +83,9 @@ describe('ChallengesService', () => {
         currentStreak: 3,
         longestStreak: 5,
         lastActiveWeek: ISO_W08, // ya activo esta semana
+        currentDailyStreak: 1,
+        longestDailyStreak: 1,
+        lastActiveDay: DAY_W08_MON, // y hoy también
       });
 
       await service.updateStreak('user1');
@@ -93,6 +98,9 @@ describe('ChallengesService', () => {
         currentStreak: 3,
         longestStreak: 5,
         lastActiveWeek: ISO_W07, // semana consecutiva anterior a W08
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
+        lastActiveDay: null,
       });
       mockPrisma.user.update.mockResolvedValue({});
 
@@ -104,6 +112,9 @@ describe('ChallengesService', () => {
           lastActiveWeek: ISO_W08,
           currentStreak: 4, // 3 + 1
           longestStreak: 5, // max(5, 4) = 5 (no bate récord)
+          lastActiveDay: DAY_W08_MON,
+          currentDailyStreak: 1,
+          longestDailyStreak: 1,
         },
       });
     });
@@ -113,6 +124,9 @@ describe('ChallengesService', () => {
         currentStreak: 5,
         longestStreak: 10,
         lastActiveWeek: '2026-W05', // saltó W06 y W07
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
+        lastActiveDay: null,
       });
       mockPrisma.user.update.mockResolvedValue({});
 
@@ -124,6 +138,9 @@ describe('ChallengesService', () => {
           lastActiveWeek: ISO_W08,
           currentStreak: 1, // racha rota
           longestStreak: 10, // max(10, 1) no cambia
+          lastActiveDay: DAY_W08_MON,
+          currentDailyStreak: 1,
+          longestDailyStreak: 1,
         },
       });
     });
@@ -133,6 +150,9 @@ describe('ChallengesService', () => {
         currentStreak: 0,
         longestStreak: 0,
         lastActiveWeek: null,
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
+        lastActiveDay: null,
       });
       mockPrisma.user.update.mockResolvedValue({});
 
@@ -141,6 +161,9 @@ describe('ChallengesService', () => {
       const updateCall = mockPrisma.user.update.mock.calls[0][0];
       expect(updateCall.data.currentStreak).toBe(1);
       expect(updateCall.data.longestStreak).toBe(1); // max(0, 1)
+      expect(updateCall.data.lastActiveDay).toBe(DAY_W08_MON);
+      expect(updateCall.data.currentDailyStreak).toBe(1);
+      expect(updateCall.data.longestDailyStreak).toBe(1);
     });
 
     it('actualiza longestStreak cuando la nueva racha bate el récord', async () => {
@@ -148,6 +171,9 @@ describe('ChallengesService', () => {
         currentStreak: 4, // la racha actual coincide con el récord
         longestStreak: 4,
         lastActiveWeek: ISO_W07,
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
+        lastActiveDay: null,
       });
       mockPrisma.user.update.mockResolvedValue({});
 
@@ -156,6 +182,96 @@ describe('ChallengesService', () => {
       const updateCall = mockPrisma.user.update.mock.calls[0][0];
       expect(updateCall.data.currentStreak).toBe(5); // 4 + 1
       expect(updateCall.data.longestStreak).toBe(5); // nuevo récord
+      expect(updateCall.data.lastActiveDay).toBe(DAY_W08_MON);
+      expect(updateCall.data.currentDailyStreak).toBe(1);
+      expect(updateCall.data.longestDailyStreak).toBe(1);
+    });
+
+    it('inicia la racha diaria a 1 cuando no hay dia previo', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        currentStreak: 0,
+        longestStreak: 0,
+        lastActiveWeek: null,
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
+        lastActiveDay: null,
+      });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.updateStreak('user1');
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user1' },
+        data: {
+          lastActiveWeek: ISO_W08,
+          currentStreak: 1,
+          longestStreak: 1,
+          lastActiveDay: DAY_W08_MON,
+          currentDailyStreak: 1,
+          longestDailyStreak: 1,
+        },
+      });
+    });
+
+    it('incrementa la racha diaria si el dia anterior fue el ultimo activo', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        currentStreak: 2,
+        longestStreak: 4,
+        lastActiveWeek: ISO_W08, // misma semana: la racha semanal no se toca
+        currentDailyStreak: 3,
+        longestDailyStreak: 3,
+        lastActiveDay: DAY_W08_SUN,
+      });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.updateStreak('user1');
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user1' },
+        data: {
+          lastActiveDay: DAY_W08_MON,
+          currentDailyStreak: 4,
+          longestDailyStreak: 4,
+        },
+      });
+    });
+
+    it('reinicia la racha diaria a 1 si se salto un dia', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        currentStreak: 2,
+        longestStreak: 4,
+        lastActiveWeek: ISO_W08,
+        currentDailyStreak: 6,
+        longestDailyStreak: 9,
+        lastActiveDay: '2026-02-13', // saltó el 14 y el 15
+      });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.updateStreak('user1');
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user1' },
+        data: {
+          lastActiveDay: DAY_W08_MON,
+          currentDailyStreak: 1,
+          longestDailyStreak: 9, // el récord no baja
+        },
+      });
+    });
+
+    it('no escribe nada si ya hubo actividad hoy y esta semana', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        currentStreak: 2,
+        longestStreak: 4,
+        lastActiveWeek: ISO_W08,
+        currentDailyStreak: 3,
+        longestDailyStreak: 5,
+        lastActiveDay: DAY_W08_MON,
+      });
+
+      await service.updateStreak('user1');
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
   });
 
@@ -218,11 +334,14 @@ describe('ChallengesService', () => {
     beforeEach(() => {
       jest.useFakeTimers();
       jest.setSystemTime(WEEK_08);
-      // Usuario ya activo esta semana → updateStreak no hace nada
+      // Usuario ya activo hoy y esta semana → updateStreak no hace nada
       mockPrisma.user.findUnique.mockResolvedValue({
         currentStreak: 2,
         longestStreak: 3,
         lastActiveWeek: ISO_W08,
+        currentDailyStreak: 1,
+        longestDailyStreak: 1,
+        lastActiveDay: DAY_W08_MON,
       });
     });
 
