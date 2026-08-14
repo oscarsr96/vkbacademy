@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChallengeType, Prisma } from '@prisma/client';
+import { ChallengeCadence, ChallengeType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { isoWeek, previousIsoWeek, madridDay, previousDay } from './challenge-periods';
+import {
+  isoWeek,
+  previousIsoWeek,
+  madridDay,
+  previousDay,
+  currentWeekStart,
+} from './challenge-periods';
 
 @Injectable()
 export class ChallengesService {
@@ -178,65 +184,93 @@ export class ChallengesService {
     }
   }
 
+  /** Clave de periodo del reto: "ALL" si es permanente, la semana ISO si es semanal */
+  private periodKeyFor(cadence: ChallengeCadence, weekKey: string): string {
+    return cadence === ChallengeCadence.WEEKLY ? weekKey : 'ALL';
+  }
+
   /**
    * Evalúa y otorga retos para el userId dados uno o varios tipos de evento.
    * Llamar con void (sin await) para no bloquear la respuesta HTTP.
    */
   async checkAndAward(userId: string, ...eventTypes: ChallengeType[]): Promise<void> {
     try {
-      // 1. Actualizar racha primero (necesaria para STREAK_WEEKLY)
+      // 1. Actualizar rachas primero (necesarias para STREAK_DAILY / STREAK_WEEKLY)
       await this.updateStreak(userId);
 
-      // 2. Obtener retos activos de los tipos indicados
+      // 2. Los retos de racha se evalúan siempre, los pase o no el punto de llamada
+      const types = [
+        ...new Set([...eventTypes, ChallengeType.STREAK_DAILY, ChallengeType.STREAK_WEEKLY]),
+      ];
       const challenges = await this.prisma.challenge.findMany({
-        where: { isActive: true, type: { in: eventTypes } },
+        where: { isActive: true, type: { in: types } },
       });
-
       if (challenges.length === 0) return;
 
-      // 3. Progreso por tipo único (varios retos pueden compartir tipo; se calcula una sola vez)
-      const uniqueTypes = [...new Set(challenges.map((c) => c.type))];
+      const now = new Date();
+      const weekKey = isoWeek(now);
+      const weekStart = currentWeekStart(now);
+
+      // 3. Progreso por (tipo, cadencia): la ventana cambia el número, así que
+      //    dos retos del mismo tipo con distinta cadencia no comparten cálculo
+      const progressKey = (c: { type: ChallengeType; cadence: ChallengeCadence }) =>
+        `${c.type}|${c.cadence}`;
+      const uniqueCombos = [...new Map(challenges.map((c) => [progressKey(c), c])).values()];
       const progressEntries = await Promise.all(
-        uniqueTypes.map(
-          async (type) => [type, await this.calculateProgress(userId, type)] as const,
+        uniqueCombos.map(
+          async (c) =>
+            [
+              progressKey(c),
+              await this.calculateProgress(
+                userId,
+                c.type,
+                c.cadence === ChallengeCadence.WEEKLY ? weekStart : undefined,
+              ),
+            ] as const,
         ),
       );
-      const progressByType = new Map(progressEntries);
+      const progressByCombo = new Map(progressEntries);
 
-      // 4. UserChallenge existentes en una sola consulta (en vez de un findUnique por reto)
+      // 4. UserChallenge existentes del periodo relevante, en una sola consulta
       const existingList = await this.prisma.userChallenge.findMany({
-        where: { userId, challengeId: { in: challenges.map((c) => c.id) } },
+        where: {
+          userId,
+          challengeId: { in: challenges.map((c) => c.id) },
+          periodKey: { in: ['ALL', weekKey] },
+        },
       });
-      const existingMap = new Map(existingList.map((uc) => [uc.challengeId, uc]));
+      const existingMap = new Map(
+        existingList.map((uc) => [`${uc.challengeId}|${uc.periodKey}`, uc]),
+      );
 
       let pointsToAward = 0;
 
-      // 5. Upserts en paralelo (cada uno afecta a un challengeId distinto, sin condición de carrera entre sí)
+      // 5. Upserts en paralelo (cada uno afecta a una clave distinta)
       await Promise.all(
         challenges.map(async (challenge) => {
-          const existing = existingMap.get(challenge.id);
+          const periodKey = this.periodKeyFor(challenge.cadence, weekKey);
+          const existing = existingMap.get(`${challenge.id}|${periodKey}`);
 
-          // Si ya está completado, no tocar
+          // Si ya está completado en ESTE periodo, no tocar
           if (existing?.completed) return;
 
-          const progress = progressByType.get(challenge.type) ?? 0;
+          const progress = progressByCombo.get(progressKey(challenge)) ?? 0;
           const completed = progress >= challenge.target;
 
           await this.prisma.userChallenge.upsert({
-            // periodKey fijo a "ALL" (retos PERMANENT): la cadencia WEEKLY con su
-            // periodo real por semana ISO se implementa en otra tarea.
             where: {
-              userId_challengeId_periodKey: { userId, challengeId: challenge.id, periodKey: 'ALL' },
+              userId_challengeId_periodKey: { userId, challengeId: challenge.id, periodKey },
             },
             update: {
               progress,
-              ...(completed && !existing?.completed
+              ...(completed
                 ? { completed: true, completedAt: new Date(), awardedPoints: challenge.points }
                 : {}),
             },
             create: {
               userId,
               challengeId: challenge.id,
+              periodKey,
               progress,
               completed,
               completedAt: completed ? new Date() : null,
@@ -244,13 +278,11 @@ export class ChallengesService {
             },
           });
 
-          if (completed && !existing?.completed) {
-            pointsToAward += challenge.points;
-          }
+          if (completed) pointsToAward += challenge.points;
         }),
       );
 
-      // 6. Un único incremento de totalPoints en vez de uno por reto completado
+      // 6. Un único incremento de totalPoints
       if (pointsToAward > 0) {
         await this.prisma.user.update({
           where: { id: userId },
@@ -260,6 +292,33 @@ export class ChallengesService {
     } catch (err) {
       this.logger.error(`Error en checkAndAward para userId=${userId}`, err);
     }
+  }
+
+  /**
+   * Mueve la racha de aciertos en ejercicios. Se llama SOLO al crear un
+   * ExerciseAttempt nuevo: reintentar uno ya respondido no la mueve.
+   */
+  async bumpCorrectStreak(userId: string, correct: boolean): Promise<void> {
+    if (!correct) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { currentCorrectStreak: 0 },
+      });
+      return;
+    }
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { currentCorrectStreak: true, longestCorrectStreak: true },
+    });
+    if (!u) return;
+    const next = u.currentCorrectStreak + 1;
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        currentCorrectStreak: next,
+        longestCorrectStreak: Math.max(u.longestCorrectStreak, next),
+      },
+    });
   }
 
   /** Lista todos los retos activos enriquecidos con el progreso del usuario */
