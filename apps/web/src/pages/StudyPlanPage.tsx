@@ -26,18 +26,8 @@ type Tab = 'theory' | 'exercises' | 'exam';
 
 const STEPS: { key: Tab; label: string; icon: string; desc: string }[] = [
   { key: 'theory', label: 'Apuntes', icon: 'book', desc: 'Estudia cada tema del curso' },
-  {
-    key: 'exercises',
-    label: 'Ejercicios',
-    icon: 'target',
-    desc: 'Practica tema a tema lo aprendido',
-  },
-  {
-    key: 'exam',
-    label: 'Examen',
-    icon: 'graduation',
-    desc: 'Apruébalo en 3 niveles: básico, medio y difícil',
-  },
+  { key: 'exercises', label: 'Ejercicios', icon: 'target', desc: 'Practica tema a tema lo aprendido' },
+  { key: 'exam', label: 'Examen', icon: 'graduation', desc: 'Apruébalo en 3 niveles: básico, medio y difícil' },
 ];
 
 // Niveles del examen con su configuración por defecto (presets del backend).
@@ -362,7 +352,12 @@ function TopicTheoryDeck({
   const regen = useRegenerateTopicTheory(planId);
   return (
     <div className="vkb-card" style={s.deckCard}>
-      <button type="button" className="topic-deck-toggle" onClick={onToggle} aria-expanded={isOpen}>
+      <button
+        type="button"
+        className="topic-deck-toggle"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+      >
         <span style={s.deckNum}>{index + 1}</span>
         <span style={s.deckBody}>
           <span style={s.deckTitle}>{topic.title}</span>
@@ -418,7 +413,9 @@ function ExercisesTab({ plan }: { plan: StudyPlanDetail }) {
   const regen = useRegeneratePlanExercises(plan.id);
   const groups = groupExercisesByTopic(plan.exercises ?? []);
   // Mismo patrón de bloques colapsables por tema que el tab de Apuntes.
-  const [expandedLabel, setExpandedLabel] = useState<string | null>(groups[0]?.topicLabel ?? null);
+  const [expandedLabel, setExpandedLabel] = useState<string | null>(
+    groups[0]?.topicLabel ?? null,
+  );
   if (!plan.exercises || plan.exercises.length === 0) {
     return (
       <MissingSection
@@ -455,10 +452,7 @@ function ExercisesTab({ plan }: { plan: StudyPlanDetail }) {
               <Icon
                 name="chevron-right"
                 size={18}
-                style={{
-                  transform: isOpen ? 'rotate(90deg)' : 'none',
-                  transition: 'transform 0.15s',
-                }}
+                style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}
               />
             </button>
             {isOpen && (
@@ -504,8 +498,8 @@ function ExamTab({ plan, onStart }: { plan: StudyPlanDetail; onStart: (bankId: s
     <div style={s.deckList}>
       <div className="vkb-card" style={s.examIntro}>
         <p style={s.examIntroText}>
-          No te conformes con aprobar el nivel básico: el reto es aprobar{' '}
-          <strong>los 3 niveles</strong>.{mode === 'COMBINED' && ` Llevas ${combinedPassed} de 3.`}
+          No te conformes con aprobar el nivel básico: el reto es aprobar <strong>los 3 niveles</strong>.
+          {mode === 'COMBINED' && ` Llevas ${combinedPassed} de 3.`}
         </p>
         <div style={s.examModeRow} role="group" aria-label="Modo de examen">
           <button
@@ -681,7 +675,11 @@ function ExamLevelCard({
             >
               {busy ? <span className="spinner" /> : 'Generar examen'}
             </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setAdjusting((v) => !v)}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setAdjusting((v) => !v)}
+            >
               {adjusting ? 'Ocultar ajustes' : 'Ajustar'}
             </button>
           </div>

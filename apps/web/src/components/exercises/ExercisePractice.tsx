@@ -97,6 +97,34 @@ export default function ExercisePractice({
     if (!answer) return;
     attemptMutation.mutate({ index, exerciseId: ex.id, answer });
   }
+  // El servidor admite reintentos (actualiza el veredicto, no duplica fila ni mueve
+  // la racha). Reabre el ejercicio: para los de opción también limpia la selección;
+  // para los OPEN se deja el texto escrito, así el alumno lo corrige en vez de
+  // partir de cero.
+  function retryExercise(index: number, ex: PracticeExercise) {
+    setRevealed((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+    setEvaluations((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+    setEvalErrors((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+    if (ex.options.length > 0) {
+      setSelected((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+    }
+  }
 
   if (exercises.length === 0) {
     return <p style={s.muted}>No hay ejercicios en esta unidad.</p>;
@@ -118,6 +146,7 @@ export default function ExercisePractice({
           onChoose={(optIdx) => chooseOption(i, optIdx)}
           onAnswerChange={(value) => updateAnswer(i, value)}
           onCheck={() => submitAttempt(i, ex)}
+          onRetry={() => retryExercise(i, ex)}
         />
       ))}
     </div>
@@ -136,6 +165,7 @@ function ExerciseCard({
   onChoose,
   onAnswerChange,
   onCheck,
+  onRetry,
 }: {
   exercise: PracticeExercise;
   index: number;
@@ -148,6 +178,7 @@ function ExerciseCard({
   onChoose: (optionIndex: number) => void;
   onAnswerChange: (value: string) => void;
   onCheck: () => void;
+  onRetry: () => void;
 }) {
   const hasOptions = exercise.options.length > 0;
   const correctIndex = hasOptions
@@ -217,13 +248,20 @@ function ExerciseCard({
         />
       )}
 
-      <button
-        onClick={handleCheckClick}
-        style={{ ...s.revealBtn, opacity: checkDisabled ? 0.5 : 1 }}
-        disabled={checkDisabled}
-      >
-        {buttonLabel}
-      </button>
+      <div style={s.buttonRow}>
+        <button
+          onClick={handleCheckClick}
+          style={{ ...s.revealBtn, opacity: checkDisabled ? 0.5 : 1 }}
+          disabled={checkDisabled}
+        >
+          {buttonLabel}
+        </button>
+        {revealed && (
+          <button onClick={onRetry} style={s.retryBtn}>
+            ↺ Reintentar
+          </button>
+        )}
+      </div>
 
       {evaluationError && !evaluating && (
         <div style={s.errorBox}>
@@ -231,7 +269,7 @@ function ExerciseCard({
         </div>
       )}
 
-      {revealed && evaluation && (
+      {revealed && evaluation && evaluation.feedback && (
         <div style={{ ...s.verdictBox, ...VERDICT_STYLES[evaluation.verdict] }}>
           <div style={s.verdictHeader}>{verdictLabel(evaluation.verdict)}</div>
           <div style={s.verdictFeedback}>
@@ -368,11 +406,23 @@ const s: Record<string, React.CSSProperties> = {
   optionCorrect: { background: '#dcfce7', border: `1px solid ${GREEN}` },
   optionWrong: { background: '#fee2e2', border: `1px solid ${RED}` },
   optionLetter: { color: 'var(--brand-deep)', fontWeight: 700, minWidth: 20 },
+  buttonRow: { display: 'flex', gap: 10, alignItems: 'center' },
   revealBtn: {
     alignSelf: 'flex-start',
     background: 'transparent',
     border: '1px solid var(--brand-glow)',
     color: 'var(--brand-deep)',
+    padding: '8px 16px',
+    borderRadius: 8,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  retryBtn: {
+    alignSelf: 'flex-start',
+    background: 'transparent',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-text-muted)',
     padding: '8px 16px',
     borderRadius: 8,
     fontSize: '0.875rem',
