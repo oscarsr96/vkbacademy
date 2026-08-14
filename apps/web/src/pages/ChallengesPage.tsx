@@ -465,6 +465,7 @@ export default function ChallengesPage() {
 
   const totalPoints = data?.meta.totalPoints ?? 0;
   const currentStreak = data?.meta.currentStreak ?? 0;
+  const longestStreak = data?.meta.longestStreak ?? 0;
   const currentDailyStreak = data?.meta.currentDailyStreak ?? 0;
   const longestDailyStreak = data?.meta.longestDailyStreak ?? 0;
   const completedCount = (data?.challenges ?? []).filter((c) => c.completed).length;
@@ -522,7 +523,7 @@ export default function ChallengesPage() {
           <div style={{ width: 1, height: 56, background: 'rgba(255,255,255,0.12)' }} />
 
           {/* Stats secundarias */}
-          <div style={{ display: 'flex', gap: 28 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 20 }}>
             <HeroStat icon="flame" value={String(currentDailyStreak)} label="días seguidos" />
             <HeroStat icon="calendar" value={String(currentStreak)} label="semanas racha" />
             <HeroStat
@@ -531,6 +532,7 @@ export default function ChallengesPage() {
               label="retos completados"
             />
             <HeroStat icon="medal" value={String(longestDailyStreak)} label="mejor racha diaria" />
+            <HeroStat icon="medal" value={String(longestStreak)} label="mejor racha semanal" />
           </div>
         </div>
 
