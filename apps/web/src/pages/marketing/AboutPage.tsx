@@ -148,10 +148,12 @@ export default function AboutPage() {
               ))}
             </ul>
 
-            <div>
-              <p className="ab-quote">"La tecnología al servicio del baloncesto de base."</p>
-              <p className="lp-note">Vallekas Basket, 2026</p>
-            </div>
+            <figure className="ab-quote-figure">
+              <blockquote className="ab-quote">
+                «La tecnología al servicio del baloncesto de base».
+              </blockquote>
+              <figcaption className="lp-note">Vallekas Basket, 2026</figcaption>
+            </figure>
           </div>
         </div>
       </section>
@@ -292,6 +294,11 @@ const CSS = `
 
 /* Cita de "Por qué VKB Academy": tamaño de .lp-manifesto-lead,
    sin caja, sin borde izquierdo, sin glow */
+
+/* figure y blockquote traen margen propio del navegador: se anula aquí */
+.ab-quote-figure {
+  margin: 0;
+}
 
 .ab-quote {
   margin: 0 0 1rem;

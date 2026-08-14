@@ -116,8 +116,12 @@ describe('LandingPage — responsividad móvil', () => {
     const hasAutoFit = full.includes('auto-fit') || full.includes('auto-fill');
     // Diseño mobile-first: la fila de la lista es de una columna por defecto y
     // sus columnas adicionales se declaran dentro de un @media (min-width: …)
-    const mobileFirstRow =
-      /@media \(min-width: \d+px\)[\s\S]*\.lp-list-row[\s\S]*?grid-template-columns/.test(full);
+    // Anclado a un bloque concreto: la regla multi-columna de .lp-list-row
+    // tiene que vivir DENTRO de un @media (min-width: …), no en cualquier
+    // punto posterior del archivo.
+    const mobileFirstRow = extractMinWidthMediaBlocks(full).some((block) =>
+      /\.lp-list-row\s*\{[^}]*grid-template-columns/s.test(block),
+    );
     expect(hasAutoFit || mobileFirstRow).toBeTruthy();
   });
 
@@ -187,8 +191,13 @@ describe('AcademyLandingPage — delegación en la landing común', () => {
 // archivos de marketing, y un criterio que los cazara obligaría a quitarlos
 // (como le pasó a AboutPage.tsx con la primera versión de este assert: el
 // rango U+2190-U+2BFF del plan original incluía el bloque de dibujo de caja).
+// Rangos: pictogramas y emojis; símbolos misceláneos y dingbats; flechas
+// (básicas y suplementarias); formas geométricas; elementos de bloque; y
+// símbolos y flechas misceláneos (⭐, ⬆). Quedan fuera a propósito el dibujo
+// de caja (U+2500-257F) y los operadores matemáticos (U+2200-22FF), que la
+// landing usa en las fórmulas del mock (√, −, ≈).
 const DECORATIVE_SYMBOL_RE =
-  /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{25A0}-\u{25FF}]/u;
+  /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{27F0}-\u{27FF}\u{2580}-\u{25FF}\u{2B00}-\u{2BFF}]/u;
 
 const BRAND_HEX_RE = /#(ea580c|f5911e|6366f1|0891b2|0d1b2a)/i;
 
@@ -217,6 +226,31 @@ function readLocalCss(file: string): string {
 // CSS, respetando el anidado de llaves, para poder comprobar qué queda
 // declarado fuera de ellos (mobile-first: lo de una columna no necesita ir
 // bajo ningún media; lo de varias, sí).
+// Devuelve el CONTENIDO de cada bloque @media (min-width: ...) por separado.
+// Necesario para anclar asserts a un único bloque: un regex sobre el archivo
+// entero casaría la apertura de un @media con una regla que vive mucho más
+// abajo, fuera de él, y pasaría aunque la regla se hubiera sacado del media.
+function extractMinWidthMediaBlocks(css: string): string[] {
+  const blocks: string[] = [];
+  let i = 0;
+  while (i < css.length) {
+    const marker = css.indexOf('@media (min-width:', i);
+    if (marker === -1) break;
+    const braceStart = css.indexOf('{', marker);
+    if (braceStart === -1) break;
+    let depth = 1;
+    let j = braceStart + 1;
+    while (j < css.length && depth > 0) {
+      if (css[j] === '{') depth++;
+      else if (css[j] === '}') depth--;
+      j++;
+    }
+    blocks.push(css.slice(braceStart + 1, j - 1));
+    i = j;
+  }
+  return blocks;
+}
+
 function stripMinWidthMediaBlocks(css: string): string {
   let result = '';
   let i = 0;
