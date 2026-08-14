@@ -42,6 +42,7 @@ function buildNavLinks(role: Role | undefined): NavItem[] {
     ...base,
     { to: '/study', label: 'Estudiar', icon: 'brain' },
     { to: '/challenges', label: 'Retos', icon: 'trophy' },
+    { to: '/shop', label: 'Tienda', icon: 'gift' },
     { to: '/profile', label: 'Mi perfil', icon: 'user' },
   ];
 }
