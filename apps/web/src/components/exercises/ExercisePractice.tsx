@@ -20,26 +20,44 @@ interface EvaluationResult {
   feedback: string;
 }
 
-interface EvaluatePayload {
-  statement: string;
-  studentAnswer: string;
+interface AttemptResult {
+  verdict: Verdict;
+  feedback?: string;
   solution: string;
+  explanation: string;
 }
 
-export default function ExercisePractice({ exercises }: { exercises: PracticeExercise[] }) {
+export default function ExercisePractice({
+  exercises,
+  planId,
+}: {
+  exercises: PracticeExercise[];
+  planId: string;
+}) {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [selected, setSelected] = useState<Record<number, number | null>>({});
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [evaluations, setEvaluations] = useState<Record<number, EvaluationResult>>({});
   const [evalErrors, setEvalErrors] = useState<Record<number, string>>({});
 
-  const evalMutation = useMutation({
-    mutationFn: ({ index, ...payload }: EvaluatePayload & { index: number }) =>
+  const attemptMutation = useMutation({
+    mutationFn: ({
+      index,
+      exerciseId,
+      answer,
+    }: {
+      index: number;
+      exerciseId: string;
+      answer: string;
+    }) =>
       api
-        .post<EvaluationResult>('/exercises/evaluate', payload)
+        .post<AttemptResult>(`/study-plans/${planId}/exercises/${exerciseId}/attempt`, { answer })
         .then((r) => ({ index, data: r.data })),
     onSuccess: ({ index, data }) => {
-      setEvaluations((prev) => ({ ...prev, [index]: data }));
+      setEvaluations((prev) => ({
+        ...prev,
+        [index]: { verdict: data.verdict, feedback: data.feedback ?? '' },
+      }));
       setRevealed((prev) => ({ ...prev, [index]: true }));
       setEvalErrors((prev) => {
         const next = { ...prev };
@@ -54,32 +72,30 @@ export default function ExercisePractice({ exercises }: { exercises: PracticeExe
       setEvalErrors((prev) => ({
         ...prev,
         [variables.index]:
-          text ?? 'No se pudo evaluar la respuesta. Inténtalo de nuevo en unos segundos.',
+          text ?? 'No se pudo registrar la respuesta. Inténtalo de nuevo en unos segundos.',
       }));
+      // El alumno no se queda bloqueado: se revela la solución igualmente,
+      // aunque el intento no haya llegado a registrarse.
+      setRevealed((prev) => ({ ...prev, [variables.index]: true }));
     },
   });
 
   const evaluatingIdx =
-    evalMutation.isPending && evalMutation.variables ? evalMutation.variables.index : null;
+    attemptMutation.isPending && attemptMutation.variables ? attemptMutation.variables.index : null;
 
-  function toggleSolution(index: number) {
-    setRevealed((prev) => ({ ...prev, [index]: !prev[index] }));
-  }
   function chooseOption(exerciseIndex: number, optionIndex: number) {
     setSelected((prev) => ({ ...prev, [exerciseIndex]: optionIndex }));
   }
   function updateAnswer(index: number, value: string) {
     setAnswers((prev) => ({ ...prev, [index]: value }));
   }
-  function evaluateOpen(index: number, ex: StudyExercise) {
-    const answer = (answers[index] ?? '').trim();
+  function submitAttempt(index: number, ex: PracticeExercise) {
+    const answer =
+      ex.options.length > 0
+        ? (ex.options[selected[index] ?? -1] ?? '')
+        : (answers[index] ?? '').trim();
     if (!answer) return;
-    evalMutation.mutate({
-      index,
-      statement: ex.statement,
-      studentAnswer: answer,
-      solution: ex.solution,
-    });
+    attemptMutation.mutate({ index, exerciseId: ex.id, answer });
   }
 
   if (exercises.length === 0) {
@@ -101,8 +117,7 @@ export default function ExercisePractice({ exercises }: { exercises: PracticeExe
           evaluating={evaluatingIdx === i}
           onChoose={(optIdx) => chooseOption(i, optIdx)}
           onAnswerChange={(value) => updateAnswer(i, value)}
-          onEvaluate={() => evaluateOpen(i, ex)}
-          onToggle={() => toggleSolution(i)}
+          onCheck={() => submitAttempt(i, ex)}
         />
       ))}
     </div>
@@ -120,8 +135,7 @@ function ExerciseCard({
   evaluating,
   onChoose,
   onAnswerChange,
-  onEvaluate,
-  onToggle,
+  onCheck,
 }: {
   exercise: PracticeExercise;
   index: number;
@@ -133,8 +147,7 @@ function ExerciseCard({
   evaluating: boolean;
   onChoose: (optionIndex: number) => void;
   onAnswerChange: (value: string) => void;
-  onEvaluate: () => void;
-  onToggle: () => void;
+  onCheck: () => void;
 }) {
   const hasOptions = exercise.options.length > 0;
   const correctIndex = hasOptions
@@ -143,6 +156,7 @@ function ExerciseCard({
       )
     : -1;
   const canCheck = hasOptions ? selected !== null : answer.trim().length > 0;
+  const checkDisabled = revealed || !canCheck || evaluating;
 
   function optionStyle(j: number): React.CSSProperties {
     if (revealed) {
@@ -155,19 +169,11 @@ function ExerciseCard({
   }
 
   function handleCheckClick() {
-    if (revealed) {
-      onToggle();
-      return;
-    }
-    if (hasOptions) onToggle();
-    else onEvaluate();
+    if (checkDisabled) return;
+    onCheck();
   }
 
-  const buttonLabel = evaluating
-    ? '⏳ Evaluando...'
-    : revealed
-      ? '🙈 Ocultar solución'
-      : '✓ Comprobar';
+  const buttonLabel = evaluating ? '⏳ Evaluando...' : revealed ? '✓ Comprobado' : '✓ Comprobar';
 
   return (
     <article style={s.card}>
@@ -213,8 +219,8 @@ function ExerciseCard({
 
       <button
         onClick={handleCheckClick}
-        style={{ ...s.revealBtn, opacity: (!revealed && !canCheck) || evaluating ? 0.5 : 1 }}
-        disabled={(!revealed && !canCheck) || evaluating}
+        style={{ ...s.revealBtn, opacity: checkDisabled ? 0.5 : 1 }}
+        disabled={checkDisabled}
       >
         {buttonLabel}
       </button>
@@ -279,7 +285,10 @@ function difficultyStyle(difficulty: StudyDifficulty): React.CSSProperties {
 // de espaciado o notación LaTeX (p. ej. "$x = 2$" vs "$x=2$" deben marcar como
 // la misma opción al revelar). Solo afecta a esta comparación, no al texto mostrado.
 function normalizeForMatch(s: string): string {
-  return s.replace(/\s+/g, '').replace(/\$/g, '').replace(/\\dfrac/g, '\\frac');
+  return s
+    .replace(/\s+/g, '')
+    .replace(/\$/g, '')
+    .replace(/\\dfrac/g, '\\frac');
 }
 
 function labelForType(type: StudyExercise['type']): string {
