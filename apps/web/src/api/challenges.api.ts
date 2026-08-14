@@ -1,21 +1,29 @@
 import api from '../lib/axios';
 
 export type ChallengeType =
-  | 'EXERCISE_COMPLETED'
-  | 'EXERCISE_SCORE'
+  | 'STUDY_PLAN_CREATED'
+  | 'TOPICS_STUDIED'
+  | 'SUBJECT_VARIETY'
   | 'THEORY_COMPLETED'
+  | 'EXERCISES_SOLVED'
+  | 'HARD_EXERCISES_SOLVED'
+  | 'EXERCISES_CORRECT_STREAK'
   | 'EXAM_COMPLETED'
   | 'EXAM_SCORE'
-  | 'STREAK_WEEKLY'
-  | 'TOTAL_HOURS_EXERCISE'
-  | 'TOTAL_HOURS_THEORY'
-  | 'TOTAL_HOURS_EXAM';
+  | 'EXAM_PERFECT'
+  | 'EXAM_HARD_SCORE'
+  | 'TUTOR_QUESTIONS'
+  | 'STREAK_DAILY'
+  | 'STREAK_WEEKLY';
+
+export type ChallengeCadence = 'PERMANENT' | 'WEEKLY';
 
 export interface ChallengeWithProgress {
   id: string;
   title: string;
   description: string;
   type: ChallengeType;
+  cadence: ChallengeCadence;
   target: number;
   points: number;
   badgeIcon: string;
@@ -34,6 +42,8 @@ export interface ChallengesProgressResponse {
     totalPoints: number;
     currentStreak: number;
     longestStreak: number;
+    currentDailyStreak: number;
+    longestDailyStreak: number;
   };
   challenges: ChallengeWithProgress[];
 }
@@ -42,6 +52,8 @@ export interface ChallengeSummary {
   totalPoints: number;
   currentStreak: number;
   longestStreak: number;
+  currentDailyStreak: number;
+  longestDailyStreak: number;
   completedCount: number;
   recentBadges: {
     title: string;

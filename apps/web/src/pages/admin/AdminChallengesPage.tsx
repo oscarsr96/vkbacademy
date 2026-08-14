@@ -11,27 +11,46 @@ import type {
   AdminChallengeType,
   CreateChallengePayload,
 } from '../../api/admin.api';
+import type { ChallengeCadence } from '../../api/challenges.api';
 import AcademyFilter from '../../components/AcademyFilter';
 import { useAcademyFilterStore } from '../../store/academy-filter.store';
 
 const CHALLENGE_TYPE_LABELS: Record<AdminChallengeType, string> = {
-  EXERCISE_COMPLETED: 'Ejercicios completados',
-  EXERCISE_SCORE: 'Puntuación en ejercicio (%)',
-  THEORY_COMPLETED: 'Módulos de teoría',
+  STUDY_PLAN_CREATED: 'Planes de estudio creados',
+  TOPICS_STUDIED: 'Temas estudiados',
+  SUBJECT_VARIETY: 'Asignaturas distintas',
+  THEORY_COMPLETED: 'Mazos de teoría generados',
+  EXERCISES_SOLVED: 'Ejercicios acertados',
+  HARD_EXERCISES_SOLVED: 'Ejercicios difíciles acertados',
+  EXERCISES_CORRECT_STREAK: 'Aciertos seguidos',
   EXAM_COMPLETED: 'Exámenes entregados',
-  EXAM_SCORE: 'Puntuación en examen (%)',
-  STREAK_WEEKLY: 'Racha semanal',
-  TOTAL_HOURS_EXERCISE: 'Horas en ejercicios',
-  TOTAL_HOURS_THEORY: 'Horas en teoría',
-  TOTAL_HOURS_EXAM: 'Horas en exámenes',
+  EXAM_SCORE: 'Nota en un examen (%)',
+  EXAM_PERFECT: 'Exámenes con 100%',
+  EXAM_HARD_SCORE: 'Nota en examen difícil (%)',
+  TUTOR_QUESTIONS: 'Preguntas al tutor',
+  STREAK_DAILY: 'Racha de días',
+  STREAK_WEEKLY: 'Racha de semanas',
 };
 
 const CHALLENGE_TYPES = Object.keys(CHALLENGE_TYPE_LABELS) as AdminChallengeType[];
 
+// Debe coincidir con WEEKLY_CAPABLE_TYPES de apps/api/src/challenges/challenge-periods.ts
+const WEEKLY_CAPABLE_TYPES: AdminChallengeType[] = [
+  'STUDY_PLAN_CREATED',
+  'TOPICS_STUDIED',
+  'THEORY_COMPLETED',
+  'EXERCISES_SOLVED',
+  'HARD_EXERCISES_SOLVED',
+  'EXAM_COMPLETED',
+  'EXAM_PERFECT',
+  'TUTOR_QUESTIONS',
+];
+
 const EMPTY_FORM: CreateChallengePayload = {
   title: '',
   description: '',
-  type: 'EXERCISE_COMPLETED',
+  type: 'EXERCISES_SOLVED',
+  cadence: 'PERMANENT',
   target: 1,
   points: 10,
   badgeIcon: '🏅',
@@ -128,7 +147,17 @@ function ChallengeForm({ initial, onSubmit, onCancel, isPending, title }: Challe
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           <div className="field">
             <label>Tipo de reto</label>
-            <select value={form.type} onChange={(e) => set('type', e.target.value)}>
+            <select
+              value={form.type}
+              onChange={(e) => {
+                const type = e.target.value as AdminChallengeType;
+                setForm((prev) => ({
+                  ...prev,
+                  type,
+                  cadence: WEEKLY_CAPABLE_TYPES.includes(type) ? prev.cadence : 'PERMANENT',
+                }));
+              }}
+            >
               {CHALLENGE_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {CHALLENGE_TYPE_LABELS[t]}
@@ -138,6 +167,21 @@ function ChallengeForm({ initial, onSubmit, onCancel, isPending, title }: Challe
           </div>
 
           <div className="field">
+            <label>Cadencia</label>
+            <select
+              value={form.cadence}
+              onChange={(e) => set('cadence', e.target.value as ChallengeCadence)}
+            >
+              <option value="PERMANENT">Permanente (logro)</option>
+              <option value="WEEKLY" disabled={!WEEKLY_CAPABLE_TYPES.includes(form.type)}>
+                Semanal (misión)
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className="field">
             <label>Objetivo</label>
             <input
               type="number"
@@ -146,9 +190,7 @@ function ChallengeForm({ initial, onSubmit, onCancel, isPending, title }: Challe
               onChange={(e) => set('target', parseInt(e.target.value, 10) || 1)}
             />
           </div>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           <div className="field">
             <label>Puntos al completar</label>
             <input
@@ -158,7 +200,9 @@ function ChallengeForm({ initial, onSubmit, onCancel, isPending, title }: Challe
               onChange={(e) => set('points', parseInt(e.target.value, 10) || 1)}
             />
           </div>
+        </div>
 
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
           <div className="field">
             <label>Color badge</label>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -353,6 +397,11 @@ export default function AdminChallengesPage() {
                     >
                       {CHALLENGE_TYPE_LABELS[c.type]}
                     </span>
+                    {c.cadence === 'WEEKLY' && (
+                      <span className="chip" style={{ marginLeft: 6 }}>
+                        Semanal
+                      </span>
+                    )}
                   </td>
 
                   {/* Objetivo */}
