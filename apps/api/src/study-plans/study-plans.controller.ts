@@ -18,6 +18,7 @@ import { CreateStudyPlanDto } from './dto/create-study-plan.dto';
 import { GeneratePlanExamDto } from './dto/generate-plan-exam.dto';
 import { RenameStudyPlanDto } from './dto/rename-study-plan.dto';
 import { RegeneratePlanExercisesDto } from './dto/regenerate-plan-exercises.dto';
+import { SubmitExerciseAttemptDto } from './dto/submit-exercise-attempt.dto';
 
 @Controller('study-plans')
 @UseGuards(JwtAuthGuard)
@@ -90,5 +91,18 @@ export class StudyPlansController {
     @Body() dto: GeneratePlanExamDto,
   ) {
     return this.studyPlans.generateExam(user.id, id, dto);
+  }
+
+  // Los ejercicios OPEN llaman a la IA para evaluar: mismo límite que /exercises/evaluate.
+  /** Registra el intento de un ejercicio del plan, corregido en servidor. */
+  @Post(':id/exercises/:exerciseId/attempt')
+  @Throttle({ default: { ttl: 3600000, limit: 30 } })
+  submitExerciseAttempt(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Param('exerciseId') exerciseId: string,
+    @Body() dto: SubmitExerciseAttemptDto,
+  ) {
+    return this.studyPlans.submitExerciseAttempt(user.id, id, exerciseId, dto);
   }
 }

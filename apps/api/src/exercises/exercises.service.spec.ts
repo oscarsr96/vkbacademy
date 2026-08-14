@@ -1,5 +1,15 @@
 import { NotFoundException } from '@nestjs/common';
-import { ExercisesService } from './exercises.service';
+import { ExercisesService, normalizeForMatch } from './exercises.service';
+
+describe('normalizeForMatch', () => {
+  it('ignora espacios, dolares y dfrac frente a frac', () => {
+    expect(normalizeForMatch('$\\dfrac{1}{2}$')).toBe(normalizeForMatch('\\frac{1}{2}'));
+  });
+
+  it('distingue respuestas realmente distintas', () => {
+    expect(normalizeForMatch('12')).not.toBe(normalizeForMatch('21'));
+  });
+});
 
 describe('ExercisesService', () => {
   let prisma: {
@@ -128,6 +138,21 @@ describe('ExercisesService', () => {
       expect(result.exercises).toHaveLength(1);
       expect(result.exercises[0].difficulty).toBe('EASY');
       expect(result.exercises[0].topicLabel).toBe('Fracciones');
+    });
+
+    it('inyecta un id unico en cada ejercicio generado', async () => {
+      prisma.course.findUnique.mockResolvedValue(baseCourse);
+      ai.generate.mockResolvedValue(easyExerciseJson());
+
+      const res = await service.generateForTopics({
+        courseId: 'course-1',
+        topics: ['Tema A', 'Tema B'],
+        perTopic: { easy: 1, medium: 0, hard: 0 },
+      });
+
+      const ids = res.exercises.map((e) => e.id);
+      expect(ids.every((id) => typeof id === 'string' && id.length > 0)).toBe(true);
+      expect(new Set(ids).size).toBe(ids.length);
     });
 
     it('lanza error tras agotar los 2 intentos si el conteo por dificultad sigue sin cuadrar', async () => {

@@ -457,7 +457,7 @@ function ExercisesTab({ plan }: { plan: StudyPlanDetail }) {
             </button>
             {isOpen && (
               <div style={s.deckContent}>
-                <ExercisePractice exercises={g.items} />
+                <ExercisePractice exercises={g.items} planId={plan.id} />
               </div>
             )}
           </div>

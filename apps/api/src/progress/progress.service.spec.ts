@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { ChallengeType } from '@prisma/client';
 import { ProgressService } from './progress.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesService } from '../challenges/challenges.service';
@@ -200,16 +199,12 @@ describe('ProgressService', () => {
       expect(result).toEqual(fakeProgress);
     });
 
-    it('dispara checkAndAward con los tipos de evento de un ejercicio', async () => {
+    it('dispara checkAndAward sin tipos de evento — el temario clásico solo alimenta rachas', async () => {
       mockPrisma.userProgress.upsert.mockResolvedValue({});
 
       await service.completeLesson('lesson1', 'user1');
 
-      expect(mockChallenges.checkAndAward).toHaveBeenCalledWith(
-        'user1',
-        ChallengeType.EXERCISE_COMPLETED,
-        ChallengeType.TOTAL_HOURS_EXERCISE,
-      );
+      expect(mockChallenges.checkAndAward).toHaveBeenCalledWith('user1');
     });
 
     it('llama a checkAndIssueLessonCertificates con el userId y lessonId correctos', async () => {

@@ -7,6 +7,7 @@ export type StudyDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type StudyExerciseType = 'SINGLE' | 'TRUE_FALSE' | 'OPEN';
 
 export interface StudyExercise {
+  id: string; // id estable dentro de StudyPlan.exercises; base de ExerciseAttempt
   statement: string;
   type: StudyExerciseType;
   options: string[];

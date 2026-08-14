@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ChallengeType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesService } from '../challenges/challenges.service';
 import { CertificatesService } from '../certificates/certificates.service';
@@ -87,12 +86,8 @@ export class ProgressService {
       create: { userId, lessonId, completed: true, completedAt: new Date() },
     });
 
-    // Disparar evaluación de retos en segundo plano (sin bloquear la respuesta)
-    void this.challenges.checkAndAward(
-      userId,
-      ChallengeType.EXERCISE_COMPLETED,
-      ChallengeType.TOTAL_HOURS_EXERCISE,
-    );
+    // El temario clásico ya no alimenta ningún reto de ejercicio, pero sigue siendo actividad: la llamada mantiene vivas las rachas diaria y semanal.
+    void this.challenges.checkAndAward(userId);
 
     // Verificar y emitir certificados de completado en segundo plano
     void this.certificates.checkAndIssueLessonCertificates(userId, lessonId);

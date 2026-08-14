@@ -7,11 +7,18 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { Prisma, StudyTopicSource } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import { ChallengeType, Prisma, StudyTopicSource } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TheoryService } from '../theory/theory.service';
-import { ExercisesService, GeneratedTopicExercise } from '../exercises/exercises.service';
+import {
+  EvaluationVerdict,
+  ExercisesService,
+  GeneratedTopicExercise,
+  normalizeForMatch,
+} from '../exercises/exercises.service';
 import { AiExamsService } from '../exams/ai-exams.service';
+import { ChallengesService } from '../challenges/challenges.service';
 import {
   CreateStudyPlanDto,
   ExercisesPerTopicDto,
@@ -20,6 +27,7 @@ import {
 import { GeneratePlanExamDto, StudyPlanExamLevel } from './dto/generate-plan-exam.dto';
 import { RenameStudyPlanDto } from './dto/rename-study-plan.dto';
 import { RegeneratePlanExercisesDto } from './dto/regenerate-plan-exercises.dto';
+import { SubmitExerciseAttemptDto } from './dto/submit-exercise-attempt.dto';
 
 // Presets de los niveles de examen del plan; numQuestions/difficulty son
 // overridables por el alumno al generar.
@@ -57,6 +65,7 @@ export class StudyPlansService {
     private readonly theory: TheoryService,
     private readonly exercises: ExercisesService,
     private readonly aiExams: AiExamsService,
+    private readonly challenges: ChallengesService,
   ) {}
 
   // Normalización para comparar materias y detectar duplicados: minúsculas y sin acentos.
@@ -304,6 +313,14 @@ export class StudyPlansService {
       throw err;
     }
 
+    // Crear un plan es actividad: cuenta para las rachas además de los retos
+    void this.challenges.checkAndAward(
+      userId,
+      ChallengeType.STUDY_PLAN_CREATED,
+      ChallengeType.TOPICS_STUDIED,
+      ChallengeType.SUBJECT_VARIETY,
+    );
+
     return this.getById(userId, plan.id);
   }
 
@@ -402,7 +419,7 @@ export class StudyPlansService {
     }));
 
     const exercises = Array.isArray(plan.exercises)
-      ? (plan.exercises as unknown as GeneratedTopicExercise[])
+      ? withExerciseIds(plan.exercises as unknown as GeneratedTopicExercise[], plan.id)
       : null;
 
     return {
@@ -582,4 +599,141 @@ export class StudyPlansService {
     if (plan.userId !== userId) throw new ForbiddenException('No tienes acceso a este plan');
     return plan;
   }
+
+  /**
+   * Registra el intento de un ejercicio del plan. La corrección es siempre
+   * server-side: el cliente manda la respuesta, nunca el veredicto — si no,
+   * los puntos se farmearían desde la consola del navegador.
+   */
+  async submitExerciseAttempt(
+    userId: string,
+    planId: string,
+    exerciseId: string,
+    dto: SubmitExerciseAttemptDto,
+  ): Promise<{
+    verdict: EvaluationVerdict;
+    feedback?: string;
+    solution: string;
+    explanation: string;
+  }> {
+    const plan = await this.requireOwnedPlan(userId, planId);
+
+    const exercises = withExerciseIds(
+      Array.isArray(plan.exercises) ? (plan.exercises as unknown as GeneratedTopicExercise[]) : [],
+      plan.id,
+    );
+    const exercise = exercises.find((e) => e.id === exerciseId);
+    if (!exercise) {
+      throw new NotFoundException('Ejercicio no encontrado en este plan');
+    }
+
+    let verdict: EvaluationVerdict;
+    let feedback: string | undefined;
+
+    if (exercise.type === 'OPEN') {
+      const evaluation = await this.exercises.evaluate({
+        statement: exercise.statement,
+        studentAnswer: dto.answer,
+        solution: exercise.solution,
+      });
+      verdict = evaluation.verdict;
+      feedback = evaluation.feedback;
+    } else {
+      verdict =
+        normalizeForMatch(dto.answer) === normalizeForMatch(exercise.solution)
+          ? 'correct'
+          : 'incorrect';
+    }
+
+    // Upsert en vez de findUnique + create: dos envíos simultáneos del mismo
+    // ejercicio hacían que el segundo chocase con el unique (userId, exerciseId)
+    // y saliera un 500 con el error crudo de Prisma.
+    const isFirstAttempt = await this.recordAttempt(userId, plan.id, exerciseId, verdict, {
+      topicLabel: exercise.topicLabel ?? '',
+      difficulty: exercise.difficulty ?? 'MEDIUM',
+    });
+
+    if (isFirstAttempt) {
+      // Solo los intentos nuevos mueven la racha; reintentar no la mueve.
+      // Debe resolverse (await) antes de checkAndAward para que la racha esté fresca.
+      await this.challenges.bumpCorrectStreak(userId, verdict === 'correct');
+    }
+
+    // No bloquear la respuesta HTTP por la evaluación de retos.
+    void this.challenges.checkAndAward(
+      userId,
+      ChallengeType.EXERCISES_SOLVED,
+      ChallengeType.HARD_EXERCISES_SOLVED,
+      ChallengeType.EXERCISES_CORRECT_STREAK,
+    );
+
+    return { verdict, feedback, solution: exercise.solution, explanation: exercise.explanation };
+  }
+
+  /**
+   * Guarda el intento (uno por ejercicio) y responde si lo ha CREADO.
+   *
+   * El id se genera aquí en vez de dejarlo a `@default(cuid())`: es la forma
+   * fiable de distinguir creación de actualización sin una segunda consulta
+   * —la fila devuelta lleva nuestro id solo si la ha insertado este upsert—,
+   * y de eso depende llamar o no a `bumpCorrectStreak`.
+   */
+  private async recordAttempt(
+    userId: string,
+    studyPlanId: string,
+    exerciseId: string,
+    verdict: EvaluationVerdict,
+    meta: { topicLabel: string; difficulty: string },
+  ): Promise<boolean> {
+    const newAttemptId = randomUUID();
+    try {
+      const attempt = await this.prisma.exerciseAttempt.upsert({
+        where: { userId_exerciseId: { userId, exerciseId } },
+        update: { verdict, answeredAt: new Date() },
+        create: {
+          id: newAttemptId,
+          userId,
+          studyPlanId,
+          exerciseId,
+          topicLabel: meta.topicLabel,
+          difficulty: meta.difficulty,
+          verdict,
+        },
+      });
+      return attempt.id === newAttemptId;
+    } catch (err) {
+      // Carrera perdida contra un envío simultáneo del mismo ejercicio: la
+      // fila ya existe, así que esto es un reintento, no un intento nuevo.
+      // Nunca dejar escapar el error crudo de Prisma al cliente.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        await this.prisma.exerciseAttempt.updateMany({
+          where: { userId, exerciseId },
+          data: { verdict, answeredAt: new Date() },
+        });
+        return false;
+      }
+      this.logger.error(`No se pudo registrar el intento del ejercicio ${exerciseId}`, err);
+      throw new InternalServerErrorException(
+        'No se pudo registrar tu respuesta. Inténtalo de nuevo en unos segundos.',
+      );
+    }
+  }
+}
+
+/**
+ * Garantiza que todo ejercicio tenga `id`. Los planes creados antes de
+ * Retos v2 lo llevan vacío: reciben un id derivado del plan y del índice,
+ * estable mientras no se regenere el plan.
+ *
+ * El id DEBE incluir el planId: el unique de `ExerciseAttempt` es
+ * (userId, exerciseId) sin studyPlanId, así que ids "legacy-N" repetidos
+ * entre dos planes antiguos del mismo alumno colisionarían — el ejercicio N
+ * del plan B se resolvería contra el intento del plan A (no contaría como
+ * acierto nuevo, heredaría su dificultad y podría bajar EXERCISES_SOLVED).
+ */
+export function withExerciseIds(
+  exercises: GeneratedTopicExercise[],
+  planId: string,
+): GeneratedTopicExercise[] {
+  return exercises.map((e, i) => (e.id ? e : { ...e, id: `legacy-${planId}-${i}` }));
 }

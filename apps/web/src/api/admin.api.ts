@@ -14,6 +14,7 @@ import type {
   FillBlankContent,
 } from '@vkbacademy/shared';
 import { LessonType, QuestionType, Role } from '@vkbacademy/shared';
+import type { ChallengeCadence } from './challenges.api';
 
 export interface AdminUser {
   id: string;
@@ -248,21 +249,27 @@ export interface AdminRedemption {
 // ─── Challenges (Admin) ───────────────────────────────────────────────────────
 
 export type AdminChallengeType =
-  | 'EXERCISE_COMPLETED'
-  | 'EXERCISE_SCORE'
+  | 'STUDY_PLAN_CREATED'
+  | 'TOPICS_STUDIED'
+  | 'SUBJECT_VARIETY'
   | 'THEORY_COMPLETED'
+  | 'EXERCISES_SOLVED'
+  | 'HARD_EXERCISES_SOLVED'
+  | 'EXERCISES_CORRECT_STREAK'
   | 'EXAM_COMPLETED'
   | 'EXAM_SCORE'
-  | 'STREAK_WEEKLY'
-  | 'TOTAL_HOURS_EXERCISE'
-  | 'TOTAL_HOURS_THEORY'
-  | 'TOTAL_HOURS_EXAM';
+  | 'EXAM_PERFECT'
+  | 'EXAM_HARD_SCORE'
+  | 'TUTOR_QUESTIONS'
+  | 'STREAK_DAILY'
+  | 'STREAK_WEEKLY';
 
 export interface AdminChallenge {
   id: string;
   title: string;
   description: string;
   type: AdminChallengeType;
+  cadence: ChallengeCadence;
   target: number;
   points: number;
   badgeIcon: string;
@@ -277,6 +284,7 @@ export interface CreateChallengePayload {
   title: string;
   description: string;
   type: AdminChallengeType;
+  cadence?: ChallengeCadence;
   target: number;
   points: number;
   badgeIcon?: string;
@@ -287,6 +295,7 @@ export interface UpdateChallengePayload {
   title?: string;
   description?: string;
   type?: AdminChallengeType;
+  cadence?: ChallengeCadence;
   target?: number;
   points?: number;
   badgeIcon?: string;

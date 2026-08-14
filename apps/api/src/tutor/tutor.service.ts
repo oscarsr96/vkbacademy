@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
+import { ChallengeType } from '@prisma/client';
 import { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
+import { ChallengesService } from '../challenges/challenges.service';
 import { TutorChatDto } from './dto/tutor-chat.dto';
 
 @Injectable()
@@ -13,6 +15,7 @@ export class TutorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly challenges: ChallengesService,
   ) {
     this.anthropic = new Anthropic({
       apiKey: this.config.get<string>('ANTHROPIC_API_KEY'),
@@ -40,6 +43,9 @@ export class TutorService {
         lessonId: dto.lessonId ?? null,
       },
     });
+
+    // Preguntar al tutor cuenta como actividad y alimenta TUTOR_QUESTIONS
+    void this.challenges.checkAndAward(userId, ChallengeType.TUTOR_QUESTIONS);
 
     // 3. Construir el system prompt con contexto
     const systemPrompt = this.buildSystemPrompt(dto);
@@ -72,10 +78,7 @@ export class TutorService {
       });
 
       for await (const event of stream) {
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
+        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
           const text = event.delta.text;
           fullResponse += text;
           res.write(`data: ${JSON.stringify({ text })}\n\n`);

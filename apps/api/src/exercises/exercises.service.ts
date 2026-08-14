@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { generateAiJson } from '../ai/ai-json';
@@ -12,6 +13,7 @@ import { EvaluateExerciseDto } from './dto/evaluate-exercise.dto';
 export type ExerciseType = 'SINGLE' | 'TRUE_FALSE' | 'OPEN';
 
 export interface GeneratedExercise {
+  id: string;
   statement: string;
   type: ExerciseType;
   options: string[];
@@ -114,7 +116,10 @@ export class ExercisesService {
       ),
     );
 
-    return { exercises: perTopicResults.flat() };
+    // Id estable por ejercicio: es la clave de ExerciseAttempt y sobrevive a
+    // la regeneración del plan (los intentos viejos siguen contando).
+    const withIds = perTopicResults.flat().map((e) => ({ ...e, id: randomUUID() }));
+    return { exercises: withIds };
   }
 
   /** Genera los ejercicios de UN tema con reparto exacto de dificultad (reintento semántico 2x). */
@@ -315,4 +320,16 @@ Reglas:
 - Para expresiones matemáticas usa SIEMPRE LaTeX en "statement", "options", "solution" y "explanation": inline con $...$ (ej. "$x^2 - 5x + 6 = 0$") y bloques con $$...$$ solo si hace falta una ecuación destacada. NUNCA escribas fórmulas en texto plano. Como respondes JSON, cada barra invertida de LaTeX va escapada con doble barra: escribe "$\\\\frac{1}{2}$", nunca "$\\frac{1}{2}$"
 - Solo devuelve JSON puro, sin markdown ni texto adicional`;
   }
+}
+
+/**
+ * Normaliza una respuesta para compararla con la solución: ignora espacios,
+ * delimitadores LaTeX y la variante \dfrac. Vive aquí porque la corrección
+ * de SINGLE/TRUE_FALSE es server-side.
+ */
+export function normalizeForMatch(value: string): string {
+  return value
+    .replace(/\s+/g, '')
+    .replace(/\$/g, '')
+    .replace(/\\dfrac/g, '\\frac');
 }

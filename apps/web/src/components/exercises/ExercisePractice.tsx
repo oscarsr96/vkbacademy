@@ -20,26 +20,44 @@ interface EvaluationResult {
   feedback: string;
 }
 
-interface EvaluatePayload {
-  statement: string;
-  studentAnswer: string;
+interface AttemptResult {
+  verdict: Verdict;
+  feedback?: string;
   solution: string;
+  explanation: string;
 }
 
-export default function ExercisePractice({ exercises }: { exercises: PracticeExercise[] }) {
+export default function ExercisePractice({
+  exercises,
+  planId,
+}: {
+  exercises: PracticeExercise[];
+  planId: string;
+}) {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [selected, setSelected] = useState<Record<number, number | null>>({});
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [evaluations, setEvaluations] = useState<Record<number, EvaluationResult>>({});
   const [evalErrors, setEvalErrors] = useState<Record<number, string>>({});
 
-  const evalMutation = useMutation({
-    mutationFn: ({ index, ...payload }: EvaluatePayload & { index: number }) =>
+  const attemptMutation = useMutation({
+    mutationFn: ({
+      index,
+      exerciseId,
+      answer,
+    }: {
+      index: number;
+      exerciseId: string;
+      answer: string;
+    }) =>
       api
-        .post<EvaluationResult>('/exercises/evaluate', payload)
+        .post<AttemptResult>(`/study-plans/${planId}/exercises/${exerciseId}/attempt`, { answer })
         .then((r) => ({ index, data: r.data })),
     onSuccess: ({ index, data }) => {
-      setEvaluations((prev) => ({ ...prev, [index]: data }));
+      setEvaluations((prev) => ({
+        ...prev,
+        [index]: { verdict: data.verdict, feedback: data.feedback ?? '' },
+      }));
       setRevealed((prev) => ({ ...prev, [index]: true }));
       setEvalErrors((prev) => {
         const next = { ...prev };
@@ -54,32 +72,60 @@ export default function ExercisePractice({ exercises }: { exercises: PracticeExe
       setEvalErrors((prev) => ({
         ...prev,
         [variables.index]:
-          text ?? 'No se pudo evaluar la respuesta. Inténtalo de nuevo en unos segundos.',
+          text ?? 'No se pudo registrar la respuesta. Inténtalo de nuevo en unos segundos.',
       }));
+      // El alumno no se queda bloqueado: se revela la solución igualmente,
+      // aunque el intento no haya llegado a registrarse.
+      setRevealed((prev) => ({ ...prev, [variables.index]: true }));
     },
   });
 
   const evaluatingIdx =
-    evalMutation.isPending && evalMutation.variables ? evalMutation.variables.index : null;
+    attemptMutation.isPending && attemptMutation.variables ? attemptMutation.variables.index : null;
 
-  function toggleSolution(index: number) {
-    setRevealed((prev) => ({ ...prev, [index]: !prev[index] }));
-  }
   function chooseOption(exerciseIndex: number, optionIndex: number) {
     setSelected((prev) => ({ ...prev, [exerciseIndex]: optionIndex }));
   }
   function updateAnswer(index: number, value: string) {
     setAnswers((prev) => ({ ...prev, [index]: value }));
   }
-  function evaluateOpen(index: number, ex: StudyExercise) {
-    const answer = (answers[index] ?? '').trim();
+  function submitAttempt(index: number, ex: PracticeExercise) {
+    // Una sola petición en vuelo: la mutación es compartida por todas las tarjetas.
+    if (attemptMutation.isPending) return;
+    const answer =
+      ex.options.length > 0
+        ? (ex.options[selected[index] ?? -1] ?? '')
+        : (answers[index] ?? '').trim();
     if (!answer) return;
-    evalMutation.mutate({
-      index,
-      statement: ex.statement,
-      studentAnswer: answer,
-      solution: ex.solution,
+    attemptMutation.mutate({ index, exerciseId: ex.id, answer });
+  }
+  // El servidor admite reintentos (actualiza el veredicto, no duplica fila ni mueve
+  // la racha). Reabre el ejercicio: para los de opción también limpia la selección;
+  // para los OPEN se deja el texto escrito, así el alumno lo corrige en vez de
+  // partir de cero.
+  function retryExercise(index: number, ex: PracticeExercise) {
+    setRevealed((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
     });
+    setEvaluations((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+    setEvalErrors((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+    if (ex.options.length > 0) {
+      setSelected((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+    }
   }
 
   if (exercises.length === 0) {
@@ -99,10 +145,14 @@ export default function ExercisePractice({ exercises }: { exercises: PracticeExe
           evaluation={evaluations[i] ?? null}
           evaluationError={evalErrors[i] ?? null}
           evaluating={evaluatingIdx === i}
+          // La mutación es única para todas las tarjetas: mientras hay una
+          // petición en vuelo, comprobar otra tarjeta dispararía un segundo
+          // intento en paralelo (carrera en el registro y en los puntos).
+          blocked={attemptMutation.isPending}
           onChoose={(optIdx) => chooseOption(i, optIdx)}
           onAnswerChange={(value) => updateAnswer(i, value)}
-          onEvaluate={() => evaluateOpen(i, ex)}
-          onToggle={() => toggleSolution(i)}
+          onCheck={() => submitAttempt(i, ex)}
+          onRetry={() => retryExercise(i, ex)}
         />
       ))}
     </div>
@@ -118,10 +168,11 @@ function ExerciseCard({
   evaluation,
   evaluationError,
   evaluating,
+  blocked,
   onChoose,
   onAnswerChange,
-  onEvaluate,
-  onToggle,
+  onCheck,
+  onRetry,
 }: {
   exercise: PracticeExercise;
   index: number;
@@ -131,10 +182,12 @@ function ExerciseCard({
   evaluation: EvaluationResult | null;
   evaluationError: string | null;
   evaluating: boolean;
+  /** Hay un intento en vuelo (puede ser el de otra tarjeta) */
+  blocked: boolean;
   onChoose: (optionIndex: number) => void;
   onAnswerChange: (value: string) => void;
-  onEvaluate: () => void;
-  onToggle: () => void;
+  onCheck: () => void;
+  onRetry: () => void;
 }) {
   const hasOptions = exercise.options.length > 0;
   const correctIndex = hasOptions
@@ -143,6 +196,7 @@ function ExerciseCard({
       )
     : -1;
   const canCheck = hasOptions ? selected !== null : answer.trim().length > 0;
+  const checkDisabled = revealed || !canCheck || evaluating || blocked;
 
   function optionStyle(j: number): React.CSSProperties {
     if (revealed) {
@@ -155,19 +209,11 @@ function ExerciseCard({
   }
 
   function handleCheckClick() {
-    if (revealed) {
-      onToggle();
-      return;
-    }
-    if (hasOptions) onToggle();
-    else onEvaluate();
+    if (checkDisabled) return;
+    onCheck();
   }
 
-  const buttonLabel = evaluating
-    ? '⏳ Evaluando...'
-    : revealed
-      ? '🙈 Ocultar solución'
-      : '✓ Comprobar';
+  const buttonLabel = evaluating ? '⏳ Evaluando...' : revealed ? '✓ Comprobado' : '✓ Comprobar';
 
   return (
     <article style={s.card}>
@@ -211,13 +257,20 @@ function ExerciseCard({
         />
       )}
 
-      <button
-        onClick={handleCheckClick}
-        style={{ ...s.revealBtn, opacity: (!revealed && !canCheck) || evaluating ? 0.5 : 1 }}
-        disabled={(!revealed && !canCheck) || evaluating}
-      >
-        {buttonLabel}
-      </button>
+      <div style={s.buttonRow}>
+        <button
+          onClick={handleCheckClick}
+          style={{ ...s.revealBtn, opacity: checkDisabled ? 0.5 : 1 }}
+          disabled={checkDisabled}
+        >
+          {buttonLabel}
+        </button>
+        {revealed && (
+          <button onClick={onRetry} style={s.retryBtn}>
+            ↺ Reintentar
+          </button>
+        )}
+      </div>
 
       {evaluationError && !evaluating && (
         <div style={s.errorBox}>
@@ -225,7 +278,7 @@ function ExerciseCard({
         </div>
       )}
 
-      {revealed && evaluation && (
+      {revealed && evaluation && evaluation.feedback && (
         <div style={{ ...s.verdictBox, ...VERDICT_STYLES[evaluation.verdict] }}>
           <div style={s.verdictHeader}>{verdictLabel(evaluation.verdict)}</div>
           <div style={s.verdictFeedback}>
@@ -279,7 +332,10 @@ function difficultyStyle(difficulty: StudyDifficulty): React.CSSProperties {
 // de espaciado o notación LaTeX (p. ej. "$x = 2$" vs "$x=2$" deben marcar como
 // la misma opción al revelar). Solo afecta a esta comparación, no al texto mostrado.
 function normalizeForMatch(s: string): string {
-  return s.replace(/\s+/g, '').replace(/\$/g, '').replace(/\\dfrac/g, '\\frac');
+  return s
+    .replace(/\s+/g, '')
+    .replace(/\$/g, '')
+    .replace(/\\dfrac/g, '\\frac');
 }
 
 function labelForType(type: StudyExercise['type']): string {
@@ -359,11 +415,23 @@ const s: Record<string, React.CSSProperties> = {
   optionCorrect: { background: '#dcfce7', border: `1px solid ${GREEN}` },
   optionWrong: { background: '#fee2e2', border: `1px solid ${RED}` },
   optionLetter: { color: 'var(--brand-deep)', fontWeight: 700, minWidth: 20 },
+  buttonRow: { display: 'flex', gap: 10, alignItems: 'center' },
   revealBtn: {
     alignSelf: 'flex-start',
     background: 'transparent',
     border: '1px solid var(--brand-glow)',
     color: 'var(--brand-deep)',
+    padding: '8px 16px',
+    borderRadius: 8,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  retryBtn: {
+    alignSelf: 'flex-start',
+    background: 'transparent',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-text-muted)',
     padding: '8px 16px',
     borderRadius: 8,
     fontSize: '0.875rem',

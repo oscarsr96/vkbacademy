@@ -70,9 +70,7 @@ type FilterTab = 'all' | 'in-progress' | 'completed';
 
 function ChallengeCard({ c, index }: { c: ChallengeWithProgress; index: number }) {
   const cardStyle: React.CSSProperties = {
-    border: c.completed
-      ? '1.5px solid rgba(255, 210, 77, 0.35)'
-      : '1px solid var(--panel-border)',
+    border: c.completed ? '1.5px solid rgba(255, 210, 77, 0.35)' : '1px solid var(--panel-border)',
     padding: '20px 24px',
     display: 'flex',
     gap: 20,
@@ -468,6 +466,8 @@ export default function ChallengesPage() {
   const totalPoints = data?.meta.totalPoints ?? 0;
   const currentStreak = data?.meta.currentStreak ?? 0;
   const longestStreak = data?.meta.longestStreak ?? 0;
+  const currentDailyStreak = data?.meta.currentDailyStreak ?? 0;
+  const longestDailyStreak = data?.meta.longestDailyStreak ?? 0;
   const completedCount = (data?.challenges ?? []).filter((c) => c.completed).length;
   const totalCount = data?.challenges.length ?? 0;
 
@@ -476,6 +476,9 @@ export default function ChallengesPage() {
     if (filter === 'in-progress') return !c.completed;
     return true;
   });
+
+  const weekly = filtered.filter((c) => c.cadence === 'WEEKLY');
+  const permanent = filtered.filter((c) => c.cadence !== 'WEEKLY');
 
   const handleConfirmRedeem = () => {
     if (!confirmItem) return;
@@ -520,10 +523,16 @@ export default function ChallengesPage() {
           <div style={{ width: 1, height: 56, background: 'rgba(255,255,255,0.12)' }} />
 
           {/* Stats secundarias */}
-          <div style={{ display: 'flex', gap: 28 }}>
-            <HeroStat icon="flame" value={String(currentStreak)} label="semanas racha" />
-            <HeroStat icon="check" value={`${completedCount}/${totalCount}`} label="retos completados" />
-            <HeroStat icon="medal" value={String(longestStreak)} label="mejor racha" />
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 20 }}>
+            <HeroStat icon="flame" value={String(currentDailyStreak)} label="días seguidos" />
+            <HeroStat icon="calendar" value={String(currentStreak)} label="semanas racha" />
+            <HeroStat
+              icon="check"
+              value={`${completedCount}/${totalCount}`}
+              label="retos completados"
+            />
+            <HeroStat icon="medal" value={String(longestDailyStreak)} label="mejor racha diaria" />
+            <HeroStat icon="medal" value={String(longestStreak)} label="mejor racha semanal" />
           </div>
         </div>
 
@@ -598,7 +607,12 @@ export default function ChallengesPage() {
           }}
         >
           {MERCH_ITEMS.map((item) => (
-            <MerchCard key={item.id} item={item} userPoints={totalPoints} onRedeem={setConfirmItem} />
+            <MerchCard
+              key={item.id}
+              item={item}
+              userPoints={totalPoints}
+              onRedeem={setConfirmItem}
+            />
           ))}
         </div>
       </div>
@@ -656,11 +670,47 @@ export default function ChallengesPage() {
         />
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
-        {filtered.map((c, i) => (
-          <ChallengeCard key={c.id} c={c} index={i} />
-        ))}
-      </div>
+      {weekly.length > 0 && (
+        <>
+          <div style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h3
+              style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-text)', margin: 0 }}
+            >
+              Misiones de la semana
+            </h3>
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+              se reinician cada lunes
+            </span>
+          </div>
+          <div
+            style={{ display: 'flex', flexDirection: 'column' as const, gap: 14, marginBottom: 32 }}
+          >
+            {weekly.map((c, i) => (
+              <ChallengeCard key={c.id} c={c} index={i} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {permanent.length > 0 && (
+        <>
+          <h3
+            style={{
+              fontSize: '1rem',
+              fontWeight: 800,
+              color: 'var(--color-text)',
+              margin: '0 0 12px',
+            }}
+          >
+            Logros
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
+            {permanent.map((c, i) => (
+              <ChallengeCard key={c.id} c={c} index={weekly.length + i} />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Modal de confirmación */}
       {confirmItem && (

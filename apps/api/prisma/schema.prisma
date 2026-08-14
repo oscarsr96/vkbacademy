@@ -90,20 +90,27 @@ model User {
   lastActiveWeek String? // "2026-W07" (ISO week)
   totalPoints    Int     @default(0) // puntos acumulados (denormalizado para performance)
 
+  lastActiveDay        String? // "2026-08-14" calculado en Europe/Madrid
+  currentDailyStreak   Int     @default(0)
+  longestDailyStreak   Int     @default(0)
+  currentCorrectStreak Int     @default(0) // aciertos seguidos en ejercicios
+  longestCorrectStreak Int     @default(0)
+
   // Relaciones
-  progress          UserProgress[]
-  quizAttempts      QuizAttempt[]
-  refreshTokens     RefreshToken[]
-  enrollments       Enrollment[]
-  userChallenges    UserChallenge[]
-  redemptions       Redemption[]
-  examAttempts      ExamAttempt[]
-  certificates      Certificate[]
-  tutorMessages     TutorMessage[]
-  academyMembers    AcademyMember[]
-  theoryModules     TheoryModule[]
-  aiExamBanks       AiExamBank[]
-  studyPlans        StudyPlan[]
+  progress         UserProgress[]
+  quizAttempts     QuizAttempt[]
+  refreshTokens    RefreshToken[]
+  enrollments      Enrollment[]
+  userChallenges   UserChallenge[]
+  redemptions      Redemption[]
+  examAttempts     ExamAttempt[]
+  certificates     Certificate[]
+  tutorMessages    TutorMessage[]
+  academyMembers   AcademyMember[]
+  theoryModules    TheoryModule[]
+  aiExamBanks      AiExamBank[]
+  studyPlans       StudyPlan[]
+  exerciseAttempts ExerciseAttempt[]
 
   @@index([schoolYearId])
 }
@@ -314,30 +321,48 @@ model Redemption {
 // GAMIFICACIÓN — RETOS
 // ─────────────────────────────────────────────────────────
 
+enum ChallengeCadence {
+  PERMANENT // logro acumulado de por vida
+  WEEKLY // misión que se reinicia cada semana ISO
+}
+
 enum ChallengeType {
-  EXERCISE_COMPLETED // completa N ejercicios (lessons EXERCISE/MATCH/SORT/FILL_BLANK/QUIZ)
-  EXERCISE_SCORE // consigue ≥ N% en cualquier ejercicio (QuizAttempt.score)
-  THEORY_COMPLETED // genera/lee N módulos de teoría (TheoryModule)
-  EXAM_COMPLETED // entrega N exámenes (ExamAttempt.submittedAt)
+  // ── Plan de estudio ──
+  STUDY_PLAN_CREATED // crea N planes de estudio
+  TOPICS_STUDIED // estudia N temas (StudyPlanTopic)
+  SUBJECT_VARIETY // toca N asignaturas distintas (contextCourseId)
+  THEORY_COMPLETED // genera N mazos de teoría (TheoryModule)
+
+  // ── Ejercicios del plan ──
+  EXERCISES_SOLVED // acierta N ejercicios
+  HARD_EXERCISES_SOLVED // acierta N ejercicios de dificultad HARD
+  EXERCISES_CORRECT_STREAK // N aciertos seguidos sin fallar
+
+  // ── Exámenes ──
+  EXAM_COMPLETED // entrega N exámenes
   EXAM_SCORE // consigue ≥ N% en cualquier examen
-  STREAK_WEEKLY // racha activa de N semanas consecutivas
-  TOTAL_HOURS_EXERCISE // acumula N horas en ejercicios (5 min × completados)
-  TOTAL_HOURS_THEORY // acumula N horas en teoría (10 min × TheoryLesson)
-  TOTAL_HOURS_EXAM // acumula N horas en exámenes (submittedAt − startedAt)
+  EXAM_PERFECT // consigue N exámenes con 100%
+  EXAM_HARD_SCORE // consigue ≥ N% en un examen de nivel HARD
+
+  // ── Hábito ──
+  TUTOR_QUESTIONS // hace N preguntas al tutor IA
+  STREAK_DAILY // racha de N días consecutivos
+  STREAK_WEEKLY // racha de N semanas consecutivas
 }
 
 model Challenge {
-  id          String        @id @default(cuid())
+  id          String           @id @default(cuid())
   title       String
   description String
   type        ChallengeType
+  cadence     ChallengeCadence @default(PERMANENT)
   target      Int // umbral numérico (ej: 5, 80, 3)
   points      Int // puntos al completarse
-  badgeIcon   String        @default("🏅")
-  badgeColor  String        @default("#6366f1")
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  badgeIcon   String           @default("🏅")
+  badgeColor  String           @default("#6366f1")
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   userChallenges UserChallenge[]
 }
@@ -352,13 +377,37 @@ model UserChallenge {
   completedAt   DateTime?
   awardedPoints Int       @default(0)
 
+  periodKey String @default("ALL") // "ALL" en PERMANENT | "2026-W33" en WEEKLY
+
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   academy   Academy?  @relation(fields: [academyId], references: [id])
 
-  @@unique([userId, challengeId])
+  @@unique([userId, challengeId, periodKey])
   @@index([userId])
+  @@index([userId, periodKey])
   @@index([academyId])
+}
+
+// Intento de un ejercicio del plan de estudio. Un ejercicio vive en
+// StudyPlan.exercises (Json) y se identifica por su `id` estable; esta
+// tabla solo guarda el resultado, corregido siempre en servidor.
+model ExerciseAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  studyPlanId String
+  exerciseId  String // id estable del item dentro de StudyPlan.exercises
+  topicLabel  String
+  difficulty  String // EASY | MEDIUM | HARD
+  verdict     String // correct | partial | incorrect
+  answeredAt  DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studyPlan StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+
+  // Un intento por ejercicio: reintentar actualiza la fila, no crea otra.
+  @@unique([userId, exerciseId])
+  @@index([userId, answeredAt])
 }
 
 // ─────────────────────────────────────────────────────────
@@ -625,36 +674,37 @@ enum StudyTopicSource {
 }
 
 model StudyPlan {
-  id       String @id @default(cuid())
-  userId   String
-  courseId String // asignatura base (curso matriculado desde el que se crea el plan)
-  title    String // "Fracciones · Ecuaciones · Proporcionalidad" (generado; renombrable por el alumno)
-  summary  String @db.Text @default("")
+  id              String   @id @default(cuid())
+  userId          String
+  courseId        String // asignatura base (curso matriculado desde el que se crea el plan)
+  title           String // "Fracciones · Ecuaciones · Proporcionalidad" (generado; renombrable por el alumno)
+  summary         String   @default("") @db.Text
   /// Dificultad elegida por el alumno (EASY | MEDIUM | HARD).
-  difficulty String @default("MEDIUM")
+  difficulty      String   @default("MEDIUM")
   /// Ejercicios por tema generados por IA; cada item lleva topicLabel y difficulty.
-  exercises Json?
+  exercises       Json?
   /// Reparto de ejercicios por tema elegido al crear: { easy, medium, hard }.
   exercisesConfig Json?
-  createdAt DateTime @default(now())
+  createdAt       DateTime @default(now())
 
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course           @relation("CourseStudyPlans", fields: [courseId], references: [id], onDelete: Cascade)
-  topics    StudyPlanTopic[]
-  examBanks AiExamBank[] // vía AiExamBank.studyPlanId (uno por nivel/tema, lazy)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course           Course            @relation("CourseStudyPlans", fields: [courseId], references: [id], onDelete: Cascade)
+  topics           StudyPlanTopic[]
+  examBanks        AiExamBank[] // vía AiExamBank.studyPlanId (uno por nivel/tema, lazy)
+  exerciseAttempts ExerciseAttempt[]
 
   @@index([userId, createdAt])
   @@index([userId, courseId])
 }
 
 model StudyPlanTopic {
-  id       String           @id @default(cuid())
-  planId   String
-  order    Int
-  source   StudyTopicSource
-  moduleId String? // source=OFFICIAL: Module del temario oficial
-  title    String // título del tema (copiado del Module o texto libre del alumno)
-  subject  String? // source=CUSTOM fuera de asignatura: subject declarado
+  id              String           @id @default(cuid())
+  planId          String
+  order           Int
+  source          StudyTopicSource
+  moduleId        String? // source=OFFICIAL: Module del temario oficial
+  title           String // título del tema (copiado del Module o texto libre del alumno)
+  subject         String? // source=CUSTOM fuera de asignatura: subject declarado
   /// Curso usado como contexto de generación (module.course | curso base | curso matriculado del subject)
   contextCourseId String
 

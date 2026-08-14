@@ -139,11 +139,7 @@ export class TheoryService {
     });
 
     // Disparar evaluación de retos en segundo plano (sin bloquear la respuesta)
-    void this.challenges.checkAndAward(
-      userId,
-      ChallengeType.THEORY_COMPLETED,
-      ChallengeType.TOTAL_HOURS_THEORY,
-    );
+    void this.challenges.checkAndAward(userId, ChallengeType.THEORY_COMPLETED);
 
     return created;
   }

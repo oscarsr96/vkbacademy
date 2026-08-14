@@ -1,5 +1,5 @@
 import { IsString, IsEnum, IsInt, IsOptional, Min, MinLength } from 'class-validator';
-import { ChallengeType } from '@prisma/client';
+import { ChallengeCadence, ChallengeType } from '@prisma/client';
 
 export class UpdateChallengeDto {
   @IsOptional()
@@ -33,4 +33,8 @@ export class UpdateChallengeDto {
   @IsOptional()
   @IsString()
   badgeColor?: string;
+
+  @IsOptional()
+  @IsEnum(ChallengeCadence)
+  cadence?: ChallengeCadence;
 }
