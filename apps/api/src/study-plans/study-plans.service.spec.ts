@@ -21,11 +21,13 @@ describe('StudyPlansService', () => {
     theoryModule: { update: jest.Mock; delete: jest.Mock };
     aiExamBank: { update: jest.Mock; delete: jest.Mock };
     examAttempt: { groupBy: jest.Mock };
+    exerciseAttempt: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
     $transaction: jest.Mock;
   };
   let theory: { generate: jest.Mock; getById: jest.Mock; deleteById: jest.Mock };
-  let exercises: { generateForTopics: jest.Mock };
+  let exercises: { generateForTopics: jest.Mock; evaluate: jest.Mock };
   let aiExams: { generateForTopics: jest.Mock };
+  let challenges: { checkAndAward: jest.Mock; bumpCorrectStreak: jest.Mock };
   let service: StudyPlansService;
 
   const theoryResult = { id: 'tm-1', title: 'Fracciones', summary: 'resumen', lessons: [] };
@@ -114,6 +116,11 @@ describe('StudyPlansService', () => {
         delete: jest.fn().mockResolvedValue({}),
       },
       examAttempt: { groupBy: jest.fn().mockResolvedValue([]) },
+      exerciseAttempt: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
       $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
     };
     theory = {
@@ -121,13 +128,18 @@ describe('StudyPlansService', () => {
       getById: jest.fn().mockResolvedValue(theoryResult),
       deleteById: jest.fn().mockResolvedValue(undefined),
     };
-    exercises = { generateForTopics: jest.fn().mockResolvedValue(exercisesResult) };
+    exercises = {
+      generateForTopics: jest.fn().mockResolvedValue(exercisesResult),
+      evaluate: jest.fn(),
+    };
     aiExams = { generateForTopics: jest.fn().mockResolvedValue({ id: 'bank-1' }) };
+    challenges = { checkAndAward: jest.fn(), bumpCorrectStreak: jest.fn() };
     service = new StudyPlansService(
       prisma as never,
       theory as never,
       exercises as never,
       aiExams as never,
+      challenges as never,
     );
   });
 
@@ -684,6 +696,99 @@ describe('StudyPlansService', () => {
         ForbiddenException,
       );
       expect(prisma.studyPlan.update).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── submitExerciseAttempt: corrección server-side, racha y checkAndAward ─
+
+  describe('submitExerciseAttempt', () => {
+    const PLAN = {
+      id: 'plan-1',
+      userId: 'user-1',
+      courseId: 'course-mates',
+      topics: [],
+      exercises: [
+        {
+          id: 'ex-1',
+          statement: '¿Cuánto es 1/2 + 1/2?',
+          type: 'SINGLE',
+          options: ['1', '2'],
+          solution: '1',
+          explanation: 'Suma de fracciones con igual denominador.',
+          topicLabel: 'Fracciones',
+          difficulty: 'HARD',
+        },
+      ],
+    };
+
+    it('corrige en servidor y guarda el intento como correcto', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue(PLAN);
+      prisma.exerciseAttempt.findUnique.mockResolvedValue(null);
+      prisma.exerciseAttempt.create.mockResolvedValue({});
+
+      const res = await service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', {
+        answer: '1',
+      });
+
+      expect(res.verdict).toBe('correct');
+      expect(prisma.exerciseAttempt.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'user-1',
+          studyPlanId: 'plan-1',
+          exerciseId: 'ex-1',
+          topicLabel: 'Fracciones',
+          difficulty: 'HARD',
+          verdict: 'correct',
+        },
+      });
+      expect(challenges.bumpCorrectStreak).toHaveBeenCalledWith('user-1', true);
+      expect(challenges.checkAndAward).toHaveBeenCalledWith(
+        'user-1',
+        'EXERCISES_SOLVED',
+        'HARD_EXERCISES_SOLVED',
+        'EXERCISES_CORRECT_STREAK',
+      );
+    });
+
+    it('marca incorrecto cuando la respuesta no coincide', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue(PLAN);
+      prisma.exerciseAttempt.findUnique.mockResolvedValue(null);
+      prisma.exerciseAttempt.create.mockResolvedValue({});
+
+      const res = await service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', {
+        answer: '2',
+      });
+
+      expect(res.verdict).toBe('incorrect');
+      expect(challenges.bumpCorrectStreak).toHaveBeenCalledWith('user-1', false);
+    });
+
+    it('un reintento actualiza sin mover la racha de aciertos', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue(PLAN);
+      prisma.exerciseAttempt.findUnique.mockResolvedValue({ id: 'att-1' });
+      prisma.exerciseAttempt.update.mockResolvedValue({});
+
+      await service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', { answer: '1' });
+
+      expect(prisma.exerciseAttempt.create).not.toHaveBeenCalled();
+      expect(prisma.exerciseAttempt.update).toHaveBeenCalled();
+      expect(challenges.bumpCorrectStreak).not.toHaveBeenCalled();
+    });
+
+    it('devuelve 404 si el ejercicio no esta en el plan', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue(PLAN);
+
+      await expect(
+        service.submitExerciseAttempt('user-1', 'plan-1', 'no-existe', { answer: '1' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('devuelve 403 si el plan no es del alumno', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue({ ...PLAN, userId: 'otro' });
+
+      await expect(
+        service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', { answer: '1' }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

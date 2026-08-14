@@ -7,11 +7,17 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { Prisma, StudyTopicSource } from '@prisma/client';
+import { ChallengeType, Prisma, StudyTopicSource } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TheoryService } from '../theory/theory.service';
-import { ExercisesService, GeneratedTopicExercise } from '../exercises/exercises.service';
+import {
+  EvaluationVerdict,
+  ExercisesService,
+  GeneratedTopicExercise,
+  normalizeForMatch,
+} from '../exercises/exercises.service';
 import { AiExamsService } from '../exams/ai-exams.service';
+import { ChallengesService } from '../challenges/challenges.service';
 import {
   CreateStudyPlanDto,
   ExercisesPerTopicDto,
@@ -20,6 +26,7 @@ import {
 import { GeneratePlanExamDto, StudyPlanExamLevel } from './dto/generate-plan-exam.dto';
 import { RenameStudyPlanDto } from './dto/rename-study-plan.dto';
 import { RegeneratePlanExercisesDto } from './dto/regenerate-plan-exercises.dto';
+import { SubmitExerciseAttemptDto } from './dto/submit-exercise-attempt.dto';
 
 // Presets de los niveles de examen del plan; numQuestions/difficulty son
 // overridables por el alumno al generar.
@@ -57,6 +64,7 @@ export class StudyPlansService {
     private readonly theory: TheoryService,
     private readonly exercises: ExercisesService,
     private readonly aiExams: AiExamsService,
+    private readonly challenges: ChallengesService,
   ) {}
 
   // Normalización para comparar materias y detectar duplicados: minúsculas y sin acentos.
@@ -581,6 +589,86 @@ export class StudyPlansService {
     if (!plan) throw new NotFoundException('Plan de estudio no encontrado');
     if (plan.userId !== userId) throw new ForbiddenException('No tienes acceso a este plan');
     return plan;
+  }
+
+  /**
+   * Registra el intento de un ejercicio del plan. La corrección es siempre
+   * server-side: el cliente manda la respuesta, nunca el veredicto — si no,
+   * los puntos se farmearían desde la consola del navegador.
+   */
+  async submitExerciseAttempt(
+    userId: string,
+    planId: string,
+    exerciseId: string,
+    dto: SubmitExerciseAttemptDto,
+  ): Promise<{
+    verdict: EvaluationVerdict;
+    feedback?: string;
+    solution: string;
+    explanation: string;
+  }> {
+    const plan = await this.requireOwnedPlan(userId, planId);
+
+    const exercises = withExerciseIds(
+      Array.isArray(plan.exercises) ? (plan.exercises as unknown as GeneratedTopicExercise[]) : [],
+    );
+    const exercise = exercises.find((e) => e.id === exerciseId);
+    if (!exercise) {
+      throw new NotFoundException('Ejercicio no encontrado en este plan');
+    }
+
+    let verdict: EvaluationVerdict;
+    let feedback: string | undefined;
+
+    if (exercise.type === 'OPEN') {
+      const evaluation = await this.exercises.evaluate({
+        statement: exercise.statement,
+        studentAnswer: dto.answer,
+        solution: exercise.solution,
+      });
+      verdict = evaluation.verdict;
+      feedback = evaluation.feedback;
+    } else {
+      verdict =
+        normalizeForMatch(dto.answer) === normalizeForMatch(exercise.solution)
+          ? 'correct'
+          : 'incorrect';
+    }
+
+    const existing = await this.prisma.exerciseAttempt.findUnique({
+      where: { userId_exerciseId: { userId, exerciseId } },
+    });
+
+    if (existing) {
+      // Reintento: se guarda el último veredicto, pero no mueve la racha de aciertos.
+      await this.prisma.exerciseAttempt.update({
+        where: { id: existing.id },
+        data: { verdict, answeredAt: new Date() },
+      });
+    } else {
+      await this.prisma.exerciseAttempt.create({
+        data: {
+          userId,
+          studyPlanId: plan.id,
+          exerciseId,
+          topicLabel: exercise.topicLabel ?? '',
+          difficulty: exercise.difficulty ?? 'MEDIUM',
+          verdict,
+        },
+      });
+      // Debe resolverse (await) antes de checkAndAward para que la racha esté fresca.
+      await this.challenges.bumpCorrectStreak(userId, verdict === 'correct');
+    }
+
+    // No bloquear la respuesta HTTP por la evaluación de retos.
+    void this.challenges.checkAndAward(
+      userId,
+      ChallengeType.EXERCISES_SOLVED,
+      ChallengeType.HARD_EXERCISES_SOLVED,
+      ChallengeType.EXERCISES_CORRECT_STREAK,
+    );
+
+    return { verdict, feedback, solution: exercise.solution, explanation: exercise.explanation };
   }
 }
 
