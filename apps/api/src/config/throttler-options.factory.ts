@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
-import { ThrottlerOptions, ThrottlerStorage } from '@nestjs/throttler';
+import { JwtService } from '@nestjs/jwt';
+import { ThrottlerGetTrackerFunction, ThrottlerOptions, ThrottlerStorage } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import Redis from 'ioredis';
 
@@ -11,7 +12,53 @@ import Redis from 'ioredis';
  */
 export interface ResolvedThrottlerOptions {
   throttlers: ThrottlerOptions[];
+  getTracker: ThrottlerGetTrackerFunction;
   storage?: ThrottlerStorage;
+}
+
+/** Forma mínima de la request que necesita el tracker (Express). */
+interface TrackedRequest {
+  ips?: string[];
+  ip?: string;
+  headers?: Record<string, unknown>;
+}
+
+/**
+ * Identidad contra la que se cuentan las peticiones.
+ *
+ * Por defecto `@nestjs/throttler` cuenta por IP, y eso en este producto
+ * significa que dos hermanos en casa comparten el cupo y que un grupo
+ * estudiando en el club lo comparte entre todos: al agotarse, sus intentos
+ * de ejercicio dejan de registrarse y sus aciertos no cuentan.
+ *
+ * El guard global corre ANTES que `JwtAuthGuard`, así que `req.user` todavía
+ * no existe: hay que sacar el usuario del propio Authorization. Se verifica
+ * la firma (no basta con decodificar: cualquiera podría inventarse un `sub`
+ * y estrenar cupo). Si no hay token válido — rutas públicas, login, token
+ * caducado — se vuelve a la IP, que es lo correcto para tráfico anónimo.
+ */
+export function buildTracker(jwt: JwtService, secret?: string): ThrottlerGetTrackerFunction {
+  return (req: Record<string, unknown>): string => {
+    const request = req as TrackedRequest;
+    const userId = secret ? verifiedUserId(jwt, request, secret) : null;
+    if (userId) return `user:${userId}`;
+    // Mismo criterio que el tracker por defecto de @nestjs/throttler.
+    const ip = request.ips?.length ? request.ips[0] : (request.ip ?? 'unknown');
+    return `ip:${ip}`;
+  };
+}
+
+function verifiedUserId(jwt: JwtService, req: TrackedRequest, secret: string): string | null {
+  const header = req.headers?.authorization;
+  if (typeof header !== 'string' || !header.toLowerCase().startsWith('bearer ')) return null;
+  try {
+    const payload = jwt.verify<{ sub?: unknown }>(header.slice(7).trim(), { secret });
+    return typeof payload.sub === 'string' ? payload.sub : null;
+  } catch {
+    // Token inválido o caducado: la petición la rechazará JwtAuthGuard, pero
+    // hasta entonces cuenta contra la IP, no contra un usuario inventado.
+    return null;
+  }
 }
 
 /**
@@ -37,9 +84,12 @@ export function buildThrottlerOptions(config: ConfigService): ResolvedThrottlerO
     },
   ];
 
+  // El cupo se cuenta por usuario autenticado (ver buildTracker), no por IP.
+  const getTracker = buildTracker(new JwtService(), config.get<string>('JWT_SECRET'));
+
   const redisUrl = config.get<string>('REDIS_URL');
   if (!redisUrl) {
-    return { throttlers };
+    return { throttlers, getTracker };
   }
 
   // `lazyConnect: true` evita abrir socket a Redis durante los tests que
@@ -50,5 +100,5 @@ export function buildThrottlerOptions(config: ConfigService): ResolvedThrottlerO
   });
   const storage = new ThrottlerStorageRedisService(redis);
 
-  return { throttlers, storage };
+  return { throttlers, getTracker, storage };
 }
