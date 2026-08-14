@@ -312,6 +312,14 @@ export class StudyPlansService {
       throw err;
     }
 
+    // Crear un plan es actividad: cuenta para las rachas además de los retos
+    void this.challenges.checkAndAward(
+      userId,
+      ChallengeType.STUDY_PLAN_CREATED,
+      ChallengeType.TOPICS_STUDIED,
+      ChallengeType.SUBJECT_VARIETY,
+    );
+
     return this.getById(userId, plan.id);
   }
 

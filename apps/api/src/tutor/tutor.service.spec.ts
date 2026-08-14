@@ -1,8 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { ChallengeType } from '@prisma/client';
 import { Response } from 'express';
 import { TutorService } from './tutor.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ChallengesService } from '../challenges/challenges.service';
 import { TutorChatDto } from './dto/tutor-chat.dto';
 
 const mockTutorMessage = {
@@ -17,6 +19,10 @@ const mockPrisma = {
 
 const mockConfig = {
   get: jest.fn().mockReturnValue('fake-api-key'),
+};
+
+const mockChallenges = {
+  checkAndAward: jest.fn().mockResolvedValue(undefined),
 };
 
 const mockRes = {
@@ -37,6 +43,7 @@ describe('TutorService', () => {
         TutorService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ConfigService, useValue: mockConfig },
+        { provide: ChallengesService, useValue: mockChallenges },
       ],
     }).compile();
 
@@ -46,8 +53,22 @@ describe('TutorService', () => {
   describe('getHistory', () => {
     it('devuelve los últimos 50 mensajes en orden cronológico', async () => {
       const fakeMessages = [
-        { id: '1', role: 'user', content: 'Hola', courseId: null, lessonId: null, createdAt: new Date('2026-01-01') },
-        { id: '2', role: 'assistant', content: 'Hola, ¿en qué te puedo ayudar?', courseId: null, lessonId: null, createdAt: new Date('2026-01-02') },
+        {
+          id: '1',
+          role: 'user',
+          content: 'Hola',
+          courseId: null,
+          lessonId: null,
+          createdAt: new Date('2026-01-01'),
+        },
+        {
+          id: '2',
+          role: 'assistant',
+          content: 'Hola, ¿en qué te puedo ayudar?',
+          courseId: null,
+          lessonId: null,
+          createdAt: new Date('2026-01-02'),
+        },
       ];
       mockTutorMessage.findMany.mockResolvedValue(fakeMessages);
 
@@ -109,15 +130,31 @@ describe('TutorService', () => {
       schoolYear: '2º ESO',
     };
 
+    // El servicio pide orderBy: { createdAt: 'desc' } (más reciente primero) y
+    // luego hace history.reverse() para reconstruir el orden cronológico. El
+    // mock debe devolver el mismo orden desc que Prisma, o el test no
+    // reproduce lo que realmente hace streamChat.
     const historialPrevio = [
-      { id: 'msg-1', role: 'user', content: 'Pregunta anterior', createdAt: new Date('2026-01-01') },
-      { id: 'msg-2', role: 'assistant', content: 'Respuesta anterior', createdAt: new Date('2026-01-02') },
+      {
+        id: 'msg-2',
+        role: 'assistant',
+        content: 'Respuesta anterior',
+        createdAt: new Date('2026-01-02'),
+      },
+      {
+        id: 'msg-1',
+        role: 'user',
+        content: 'Pregunta anterior',
+        createdAt: new Date('2026-01-01'),
+      },
     ];
 
-    const buildMockStream = (chunks: Array<object> = [
-      { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hola' } },
-      { type: 'content_block_delta', delta: { type: 'text_delta', text: ' mundo' } },
-    ]) => ({
+    const buildMockStream = (
+      chunks: Array<object> = [
+        { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hola' } },
+        { type: 'content_block_delta', delta: { type: 'text_delta', text: ' mundo' } },
+      ],
+    ) => ({
       [Symbol.asyncIterator]: async function* () {
         for (const chunk of chunks) {
           yield chunk;
@@ -134,7 +171,11 @@ describe('TutorService', () => {
     };
 
     beforeEach(() => {
-      mockTutorMessage.findMany.mockResolvedValue(historialPrevio);
+      // Copia nueva en cada llamada: streamChat hace history.reverse(), que
+      // muta el array in-place. Reusar la misma referencia entre tests hace
+      // que el orden dependa de cuántas veces se ha invocado antes (bug de
+      // aislamiento del mock, no del servicio).
+      mockTutorMessage.findMany.mockImplementation(() => Promise.resolve([...historialPrevio]));
       mockTutorMessage.create.mockResolvedValue({});
       setMockAnthropic(buildMockStream());
     });
@@ -154,13 +195,34 @@ describe('TutorService', () => {
 
       const streamMock = service['anthropic'].messages.stream as jest.Mock;
       const createCalls = mockTutorMessage.create.mock.calls;
-      const userCreateCallIndex = createCalls.findIndex(
-        (call) => call[0].data.role === 'user',
-      );
+      const userCreateCallIndex = createCalls.findIndex((call) => call[0].data.role === 'user');
       const streamCallOrder = streamMock.mock.invocationCallOrder[0];
-      const userCreateCallOrder = mockTutorMessage.create.mock.invocationCallOrder[userCreateCallIndex];
+      const userCreateCallOrder =
+        mockTutorMessage.create.mock.invocationCallOrder[userCreateCallIndex];
 
       expect(userCreateCallOrder).toBeLessThan(streamCallOrder);
+    });
+
+    it('dispara checkAndAward con TUTOR_QUESTIONS tras persistir el mensaje del alumno, sin bloquear el streaming', async () => {
+      await service.streamChat(userId, dto, mockRes);
+
+      expect(mockChallenges.checkAndAward).toHaveBeenCalledWith(
+        userId,
+        ChallengeType.TUTOR_QUESTIONS,
+      );
+
+      // Debe dispararse tras persistir el mensaje del alumno y antes de iniciar
+      // el streaming (no debe retrasar la respuesta SSE).
+      const streamMock = service['anthropic'].messages.stream as jest.Mock;
+      const createCalls = mockTutorMessage.create.mock.calls;
+      const userCreateCallIndex = createCalls.findIndex((call) => call[0].data.role === 'user');
+      const userCreateCallOrder =
+        mockTutorMessage.create.mock.invocationCallOrder[userCreateCallIndex];
+      const checkAndAwardCallOrder = mockChallenges.checkAndAward.mock.invocationCallOrder[0];
+      const streamCallOrder = streamMock.mock.invocationCallOrder[0];
+
+      expect(userCreateCallOrder).toBeLessThan(checkAndAwardCallOrder);
+      expect(checkAndAwardCallOrder).toBeLessThan(streamCallOrder);
     });
 
     it('incluye historial previo en los mensajes enviados a Anthropic', async () => {
@@ -179,21 +241,15 @@ describe('TutorService', () => {
     it('escribe chunks SSE al response durante el streaming', async () => {
       await service.streamChat(userId, dto, mockRes);
 
-      expect(mockRes.write).toHaveBeenCalledWith(
-        `data: ${JSON.stringify({ text: 'Hola' })}\n\n`,
-      );
-      expect(mockRes.write).toHaveBeenCalledWith(
-        `data: ${JSON.stringify({ text: ' mundo' })}\n\n`,
-      );
+      expect(mockRes.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ text: 'Hola' })}\n\n`);
+      expect(mockRes.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ text: ' mundo' })}\n\n`);
     });
 
     it('guarda la respuesta completa del asistente en BD tras el stream', async () => {
       await service.streamChat(userId, dto, mockRes);
 
       const createCalls = mockTutorMessage.create.mock.calls;
-      const assistantCreate = createCalls.find(
-        (call) => call[0].data.role === 'assistant',
-      );
+      const assistantCreate = createCalls.find((call) => call[0].data.role === 'assistant');
 
       expect(assistantCreate).toBeDefined();
       expect(assistantCreate[0]).toEqual({
