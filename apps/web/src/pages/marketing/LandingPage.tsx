@@ -611,12 +611,6 @@ const CSS = `
   align-items: flex-start;
 }
 
-.lp-cta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
 /* Marcador: única aparición del ámbar, reservado a cifras */
 .lp-scoreboard {
   display: grid;

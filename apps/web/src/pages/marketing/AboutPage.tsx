@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { LP_SHARED_CSS, MERCH, SectionHead } from './LpSystem';
 
-// Datos de la página
+// ─── Datos de la página ────────────────────────────────────────────────────────
 
 // Creadores de VKB Academy. Sin iniciales ni color por fundador (el sistema
 // no usa avatares): solo nombre, rol y enlace a LinkedIn.
@@ -49,14 +49,14 @@ const WHY_POINTS = [
   'Para que tenga un tutor de IA disponible siempre que se atasque',
 ];
 
-// Página
+// ─── Página ────────────────────────────────────────────────────────────────────
 
 export default function AboutPage() {
   return (
     <div className="lp-page">
       <style>{LP_SHARED_CSS + CSS}</style>
 
-      {/* HERO */}
+      {/* ═══ HERO ═══ */}
       <section className="lp-block ab-hero">
         <div className="lp-shell ab-hero-inner">
           <h1 className="lp-display">
@@ -71,7 +71,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 01 - HISTORIA */}
+      {/* ═══ 01 · HISTORIA ═══ */}
       <section className="lp-block lp-block-alt">
         <div className="lp-shell">
           <SectionHead
@@ -110,7 +110,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 02 - MISION Y VALORES */}
+      {/* ═══ 02 · MISION Y VALORES ═══ */}
       <section className="lp-block">
         <div className="lp-shell">
           <SectionHead
@@ -131,7 +131,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 03 - POR QUE VKB ACADEMY */}
+      {/* ═══ 03 · POR QUE VKB ACADEMY ═══ */}
       <section className="lp-block lp-block-alt">
         <div className="lp-shell">
           <SectionHead
@@ -156,7 +156,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 04 - EQUIPO FUNDADOR */}
+      {/* ═══ 04 · EQUIPO FUNDADOR ═══ */}
       <section className="lp-block">
         <div className="lp-shell">
           <SectionHead
@@ -188,7 +188,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 05 - RECOMPENSAS */}
+      {/* ═══ 05 · RECOMPENSAS ═══ */}
       <section className="lp-block lp-block-alt">
         <div className="lp-shell">
           <SectionHead
@@ -217,7 +217,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* CTA FINAL */}
+      {/* ═══ CTA FINAL ═══ */}
       <section className="lp-block ab-final">
         <div className="lp-shell ab-final-inner">
           <h2 className="lp-display">
@@ -229,7 +229,7 @@ export default function AboutPage() {
             Un adulto de la familia da de alta a cada alumno en el formulario de registro y
             recibe su usuario al terminar. La cuenta es del alumno.
           </p>
-          <div className="ab-cta-row">
+          <div className="lp-cta-row">
             <Link className="lp-btn lp-btn-primary lp-btn-lg" to="/register">
               Dar de alta a un alumno
             </Link>
@@ -243,10 +243,10 @@ export default function AboutPage() {
   );
 }
 
-// Estilos locales. Bloque mínimo con prefijo `ab-`: los halos del hero y del
-// cierre reutilizan los mismos radial-gradient rgba(245,145,30,α) de la
-// landing; el resto son envoltorios de espaciado que el sistema compartido
-// no cubre.
+// ─── Estilos ───────────────────────────────────────────────────────────────────
+// Bloque local mínimo con prefijo `ab-`: los halos del hero y del cierre
+// reutilizan los mismos radial-gradient rgba(245,145,30,α) de la landing; el
+// resto son envoltorios de espaciado que el sistema compartido no cubre.
 
 const CSS = `
 /* Halos */
@@ -279,12 +279,6 @@ const CSS = `
   flex-direction: column;
   align-items: flex-start;
   gap: 1.5rem;
-}
-
-.ab-cta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
 }
 
 /* Historia: separación vertical entre los tres párrafos */

@@ -89,7 +89,10 @@ describe('LandingPage — responsividad móvil', () => {
 
   test('los botones CTA del hero usan flexWrap: wrap', () => {
     expect(src).toMatch(/heroCtas|lp-cta/);
-    expect(src).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
+    // .lp-cta-row vive ahora en LpSystem.tsx (consolidada: estaba duplicada
+    // carácter a carácter como .lp-cta-row/.ab-cta-row/.pr-cta-row en las tres
+    // páginas de marketing): se lee la página concatenada con el módulo.
+    expect(readWithSystem('LandingPage.tsx')).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
   });
 
   test('las tarjetas de pricing tienen ancho responsivo (no fixed width > 400px sin override)', () => {

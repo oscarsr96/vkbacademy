@@ -183,6 +183,15 @@ export const LP_SHARED_CSS = `
   font-size: 0.9375rem;
 }
 
+/* Fila de botones CTA (primario + ghost). Estaba duplicada carácter a
+   carácter como .lp-cta-row/.ab-cta-row/.pr-cta-row en las tres páginas;
+   vive aquí una sola vez. */
+.lp-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 /* ── Encabezado de sección ── */
 
 .lp-head {
@@ -531,7 +540,7 @@ export const LP_SHARED_CSS = `
   }
 }
 
-/* Trío de ítems: 1 col → 3 col en 700px (equivale a .lp-pillars/.lp-family de la landing) */
+/* Trío de ítems: de 1 columna a 3 en 700px (equivale a .lp-pillars/.lp-family de la landing) */
 .lp-grid-3 {
   display: grid;
   gap: 1.5rem;

@@ -276,7 +276,7 @@ export default function PricingPage() {
             Dale de alta en unos minutos: eliges su contraseña, recibes su usuario al terminar y
             la cuenta es suya.
           </p>
-          <div className="pr-cta-row">
+          <div className="lp-cta-row">
             <Link className="lp-btn lp-btn-primary lp-btn-lg" to="/register">
               Dar de alta ahora
             </Link>
@@ -318,12 +318,6 @@ const CSS = `
   flex-direction: column;
   align-items: flex-start;
   gap: 1.5rem;
-}
-
-.pr-cta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
 }
 
 /* ── Panel lateral de la tarjeta de plan ── */
