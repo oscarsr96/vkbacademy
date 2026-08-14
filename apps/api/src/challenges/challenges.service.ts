@@ -54,15 +54,76 @@ export class ChallengesService {
     await this.prisma.user.update({ where: { id: userId }, data });
   }
 
-  /** Calcula el progreso actual del usuario para un tipo de reto */
-  private async calculateProgress(userId: string, type: ChallengeType): Promise<number> {
+  /**
+   * Calcula el progreso actual del usuario para un tipo de reto.
+   * `since` llega solo en retos WEEKLY: los tipos contables filtran por
+   * fecha, los de estado (máximos, rachas, variedad) lo ignoran.
+   */
+  private async calculateProgress(
+    userId: string,
+    type: ChallengeType,
+    since?: Date,
+  ): Promise<number> {
     switch (type) {
-      case ChallengeType.THEORY_COMPLETED:
-        return this.prisma.theoryModule.count({ where: { userId } });
+      // ── Plan de estudio ──
+      case ChallengeType.STUDY_PLAN_CREATED:
+        return this.prisma.studyPlan.count({
+          where: { userId, ...(since ? { createdAt: { gte: since } } : {}) },
+        });
 
+      case ChallengeType.TOPICS_STUDIED:
+        // StudyPlanTopic no tiene timestamp propio: la ventana va por el plan
+        return this.prisma.studyPlanTopic.count({
+          where: { plan: { userId, ...(since ? { createdAt: { gte: since } } : {}) } },
+        });
+
+      case ChallengeType.SUBJECT_VARIETY: {
+        // contextCourseId cubre también los temas CUSTOM fuera de la asignatura base
+        const rows = await this.prisma.studyPlanTopic.findMany({
+          where: { plan: { userId } },
+          select: { contextCourseId: true },
+          distinct: ['contextCourseId'],
+        });
+        return rows.length;
+      }
+
+      case ChallengeType.THEORY_COMPLETED:
+        return this.prisma.theoryModule.count({
+          where: { userId, ...(since ? { createdAt: { gte: since } } : {}) },
+        });
+
+      // ── Ejercicios del plan ──
+      case ChallengeType.EXERCISES_SOLVED:
+        return this.prisma.exerciseAttempt.count({
+          where: {
+            userId,
+            verdict: 'correct',
+            ...(since ? { answeredAt: { gte: since } } : {}),
+          },
+        });
+
+      case ChallengeType.HARD_EXERCISES_SOLVED:
+        return this.prisma.exerciseAttempt.count({
+          where: {
+            userId,
+            verdict: 'correct',
+            difficulty: 'HARD',
+            ...(since ? { answeredAt: { gte: since } } : {}),
+          },
+        });
+
+      case ChallengeType.EXERCISES_CORRECT_STREAK: {
+        const u = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { currentCorrectStreak: true },
+        });
+        return u?.currentCorrectStreak ?? 0;
+      }
+
+      // ── Exámenes ──
       case ChallengeType.EXAM_COMPLETED:
         return this.prisma.examAttempt.count({
-          where: { userId, submittedAt: { not: null } },
+          where: { userId, submittedAt: since ? { gte: since } : { not: null } },
         });
 
       case ChallengeType.EXAM_SCORE: {
@@ -71,6 +132,37 @@ export class ChallengesService {
           _max: { score: true },
         });
         return Math.round(agg._max.score ?? 0);
+      }
+
+      case ChallengeType.EXAM_PERFECT:
+        return this.prisma.examAttempt.count({
+          where: {
+            userId,
+            score: 100,
+            submittedAt: since ? { gte: since } : { not: null },
+          },
+        });
+
+      case ChallengeType.EXAM_HARD_SCORE: {
+        const agg = await this.prisma.examAttempt.aggregate({
+          where: { userId, submittedAt: { not: null }, aiExamBank: { level: 'HARD' } },
+          _max: { score: true },
+        });
+        return Math.round(agg._max.score ?? 0);
+      }
+
+      // ── Hábito ──
+      case ChallengeType.TUTOR_QUESTIONS:
+        return this.prisma.tutorMessage.count({
+          where: { userId, role: 'user', ...(since ? { createdAt: { gte: since } } : {}) },
+        });
+
+      case ChallengeType.STREAK_DAILY: {
+        const u = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { currentDailyStreak: true },
+        });
+        return u?.currentDailyStreak ?? 0;
       }
 
       case ChallengeType.STREAK_WEEKLY: {

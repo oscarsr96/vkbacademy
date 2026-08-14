@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ChallengeType } from '@prisma/client';
+import { ChallengeType, ChallengeCadence } from '@prisma/client';
 import { ChallengesService } from './challenges.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -28,6 +28,15 @@ describe('ChallengesService', () => {
     theoryLesson: { count: jest.Mock };
     examAttempt: { count: jest.Mock; aggregate: jest.Mock; findMany: jest.Mock };
     redemption: { create: jest.Mock };
+    studyPlan: { count: jest.Mock };
+    studyPlanTopic: { count: jest.Mock; findMany: jest.Mock };
+    exerciseAttempt: {
+      count: jest.Mock;
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+    };
+    tutorMessage: { count: jest.Mock };
     $transaction: jest.Mock;
   };
 
@@ -46,6 +55,15 @@ describe('ChallengesService', () => {
       theoryLesson: { count: jest.fn() },
       examAttempt: { count: jest.fn(), aggregate: jest.fn(), findMany: jest.fn() },
       redemption: { create: jest.fn() },
+      studyPlan: { count: jest.fn() },
+      studyPlanTopic: { count: jest.fn(), findMany: jest.fn() },
+      exerciseAttempt: {
+        count: jest.fn(),
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+      tutorMessage: { count: jest.fn() },
       $transaction: jest.fn(),
     };
 
@@ -629,6 +647,136 @@ describe('ChallengesService', () => {
 
       expect(result.meta.totalPoints).toBe(0);
       expect(result.meta.currentStreak).toBe(0);
+    });
+  });
+
+  // ─── calculateProgress vía checkAndAward ────────────────────────────────────
+
+  describe('calculateProgress vía checkAndAward', () => {
+    /** Monta un reto y devuelve el progreso que se escribió en el upsert */
+    async function progressFor(challenge: {
+      type: ChallengeType;
+      cadence?: ChallengeCadence;
+      target?: number;
+    }): Promise<number> {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        currentStreak: 1,
+        longestStreak: 1,
+        lastActiveWeek: ISO_W08,
+        currentDailyStreak: 1,
+        longestDailyStreak: 1,
+        lastActiveDay: '2026-02-16',
+        currentCorrectStreak: 7,
+      });
+      mockPrisma.challenge.findMany.mockResolvedValue([
+        {
+          id: 'c1',
+          type: challenge.type,
+          cadence: challenge.cadence ?? ChallengeCadence.PERMANENT,
+          target: challenge.target ?? 999,
+          points: 10,
+        },
+      ]);
+      mockPrisma.userChallenge.findMany.mockResolvedValue([]);
+      mockPrisma.userChallenge.upsert.mockResolvedValue({});
+
+      await service.checkAndAward('user1', challenge.type);
+
+      const call = mockPrisma.userChallenge.upsert.mock.calls[0][0] as {
+        create: { progress: number };
+      };
+      return call.create.progress;
+    }
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(WEEK_08);
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('STUDY_PLAN_CREATED cuenta los planes del alumno', async () => {
+      mockPrisma.studyPlan.count.mockResolvedValue(4);
+
+      expect(await progressFor({ type: ChallengeType.STUDY_PLAN_CREATED })).toBe(4);
+      expect(mockPrisma.studyPlan.count).toHaveBeenCalledWith({ where: { userId: 'user1' } });
+    });
+
+    it('TOPICS_STUDIED cuenta los temas de los planes del alumno', async () => {
+      mockPrisma.studyPlanTopic.count.mockResolvedValue(9);
+
+      expect(await progressFor({ type: ChallengeType.TOPICS_STUDIED })).toBe(9);
+      expect(mockPrisma.studyPlanTopic.count).toHaveBeenCalledWith({
+        where: { plan: { userId: 'user1' } },
+      });
+    });
+
+    it('SUBJECT_VARIETY cuenta cursos de contexto distintos', async () => {
+      mockPrisma.studyPlanTopic.findMany.mockResolvedValue([
+        { contextCourseId: 'mates' },
+        { contextCourseId: 'lengua' },
+      ]);
+
+      expect(await progressFor({ type: ChallengeType.SUBJECT_VARIETY })).toBe(2);
+      expect(mockPrisma.studyPlanTopic.findMany).toHaveBeenCalledWith({
+        where: { plan: { userId: 'user1' } },
+        select: { contextCourseId: true },
+        distinct: ['contextCourseId'],
+      });
+    });
+
+    it('EXERCISES_SOLVED cuenta solo los aciertos', async () => {
+      mockPrisma.exerciseAttempt.count.mockResolvedValue(12);
+
+      expect(await progressFor({ type: ChallengeType.EXERCISES_SOLVED })).toBe(12);
+      expect(mockPrisma.exerciseAttempt.count).toHaveBeenCalledWith({
+        where: { userId: 'user1', verdict: 'correct' },
+      });
+    });
+
+    it('HARD_EXERCISES_SOLVED filtra ademas por dificultad HARD', async () => {
+      mockPrisma.exerciseAttempt.count.mockResolvedValue(3);
+
+      await progressFor({ type: ChallengeType.HARD_EXERCISES_SOLVED });
+
+      expect(mockPrisma.exerciseAttempt.count).toHaveBeenCalledWith({
+        where: { userId: 'user1', verdict: 'correct', difficulty: 'HARD' },
+      });
+    });
+
+    it('EXERCISES_CORRECT_STREAK lee la racha denormalizada', async () => {
+      expect(await progressFor({ type: ChallengeType.EXERCISES_CORRECT_STREAK })).toBe(7);
+    });
+
+    it('EXAM_PERFECT cuenta los examenes con 100', async () => {
+      mockPrisma.examAttempt.count.mockResolvedValue(2);
+
+      expect(await progressFor({ type: ChallengeType.EXAM_PERFECT })).toBe(2);
+      expect(mockPrisma.examAttempt.count).toHaveBeenCalledWith({
+        where: { userId: 'user1', score: 100, submittedAt: { not: null } },
+      });
+    });
+
+    it('EXAM_HARD_SCORE toma el maximo de los examenes de nivel HARD', async () => {
+      mockPrisma.examAttempt.aggregate.mockResolvedValue({ _max: { score: 87.4 } });
+
+      expect(await progressFor({ type: ChallengeType.EXAM_HARD_SCORE })).toBe(87);
+      expect(mockPrisma.examAttempt.aggregate).toHaveBeenCalledWith({
+        where: { userId: 'user1', submittedAt: { not: null }, aiExamBank: { level: 'HARD' } },
+        _max: { score: true },
+      });
+    });
+
+    it('TUTOR_QUESTIONS cuenta solo los mensajes del alumno', async () => {
+      mockPrisma.tutorMessage.count.mockResolvedValue(15);
+
+      expect(await progressFor({ type: ChallengeType.TUTOR_QUESTIONS })).toBe(15);
+      expect(mockPrisma.tutorMessage.count).toHaveBeenCalledWith({
+        where: { userId: 'user1', role: 'user' },
+      });
+    });
+
+    it('STREAK_DAILY lee la racha diaria actual', async () => {
+      expect(await progressFor({ type: ChallengeType.STREAK_DAILY })).toBe(1);
     });
   });
 });
