@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ChallengeType, ChallengeCadence } from '@prisma/client';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ChallengeType, ChallengeCadence, Prisma } from '@prisma/client';
 import { ChallengesService } from './challenges.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -314,18 +315,25 @@ describe('ChallengesService', () => {
   // ─── redeemItem ──────────────────────────────────────────────────────────────
 
   describe('redeemItem', () => {
-    it('lanza error si el usuario no existe', async () => {
+    // Las excepciones son de Nest, no Error pelado: el cliente recibe
+    // { message, statusCode } sin depender de que el controlador lo adivine.
+    it('lanza 404 si el usuario no existe', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
+      await expect(service.redeemItem('user1', 'Camiseta', 500)).rejects.toThrow(NotFoundException);
       await expect(service.redeemItem('user1', 'Camiseta', 500)).rejects.toThrow(
         'Usuario no encontrado',
       );
     });
 
-    it('lanza error si el usuario no tiene puntos suficientes', async () => {
+    it('lanza 400 si el usuario no tiene puntos suficientes, no un 500', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 50 });
 
-      await expect(service.redeemItem('user1', 'Camiseta', 500)).rejects.toThrow(/insuficientes/);
+      const error = await service.redeemItem('user1', 'Camiseta', 500).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getStatus()).toBe(400);
+      expect((error as BadRequestException).message).toMatch(/insuficientes/);
     });
 
     it('ejecuta la transacción atómica y devuelve el resultado del canje', async () => {
@@ -863,6 +871,44 @@ describe('ChallengesService', () => {
       await service.bumpCorrectStreak('user1', true);
 
       expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+    });
+
+    // submitExerciseAttempt espera este método con await (no con void), así
+    // que un error que escape aquí llega al cliente. Con el incremento
+    // atómico ya no hay lectura previa, así que la guarda "usuario que no
+    // existe" tiene que estar en el manejo del P2025.
+    it('no deja escapar el P2025 crudo de Prisma si el usuario ya no existe', async () => {
+      mockPrisma.user.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Record to update not found', {
+          code: 'P2025',
+          clientVersion: '5.22.0',
+        }),
+      );
+
+      await expect(service.bumpCorrectStreak('fantasma', true)).resolves.toBeUndefined();
+      expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('tampoco lo deja escapar al reiniciar la racha por un fallo', async () => {
+      mockPrisma.user.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Record to update not found', {
+          code: 'P2025',
+          clientVersion: '5.22.0',
+        }),
+      );
+
+      await expect(service.bumpCorrectStreak('fantasma', false)).resolves.toBeUndefined();
+    });
+
+    it('un fallo de BD que no sea P2025 sí se propaga (no se traga en silencio)', async () => {
+      mockPrisma.user.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Timed out fetching a connection', {
+          code: 'P2024',
+          clientVersion: '5.22.0',
+        }),
+      );
+
+      await expect(service.bumpCorrectStreak('user1', true)).rejects.toThrow(/Timed out/);
     });
 
     it('pone la racha a cero al fallar sin tocar el record', async () => {

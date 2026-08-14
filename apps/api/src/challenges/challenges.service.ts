@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ChallengeCadence, ChallengeType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -343,30 +343,46 @@ export class ChallengesService {
    * ExerciseAttempt nuevo: reintentar uno ya respondido no la mueve.
    */
   async bumpCorrectStreak(userId: string, correct: boolean): Promise<void> {
-    if (!correct) {
-      await this.prisma.user.update({
+    // Este método SÍ se espera con await (submitExerciseAttempt lo necesita
+    // resuelto antes de evaluar los retos), así que lo que escape de aquí
+    // llega al cliente. La versión anterior, que leía el usuario antes de
+    // escribir, salía por un `if (!u) return`; con el incremento atómico ya
+    // no hay lectura, y un usuario inexistente haría que Prisma lanzara P2025
+    // crudo. Se traduce a "no hay nada que actualizar".
+    try {
+      if (!correct) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { currentCorrectStreak: 0 },
+        });
+        return;
+      }
+
+      // Incremento atómico en BD: leer-modificar-escribir perdía una unidad
+      // cuando dos aciertos entraban en paralelo, y esa racha paga puntos
+      // (EXERCISES_CORRECT_STREAK).
+      const updated = await this.prisma.user.update({
         where: { id: userId },
-        data: { currentCorrectStreak: 0 },
+        data: { currentCorrectStreak: { increment: 1 } },
+        select: { currentCorrectStreak: true, longestCorrectStreak: true },
       });
-      return;
-    }
 
-    // Incremento atómico en BD: leer-modificar-escribir perdía una unidad
-    // cuando dos aciertos entraban en paralelo, y esa racha paga puntos
-    // (EXERCISES_CORRECT_STREAK).
-    const updated = await this.prisma.user.update({
-      where: { id: userId },
-      data: { currentCorrectStreak: { increment: 1 } },
-      select: { currentCorrectStreak: true, longestCorrectStreak: true },
-    });
-
-    // El récord solo sube, nunca baja: la condición `lt` evita que una
-    // escritura concurrente más lenta lo devuelva a un valor anterior.
-    if (updated.currentCorrectStreak > updated.longestCorrectStreak) {
-      await this.prisma.user.updateMany({
-        where: { id: userId, longestCorrectStreak: { lt: updated.currentCorrectStreak } },
-        data: { longestCorrectStreak: updated.currentCorrectStreak },
-      });
+      // El récord solo sube, nunca baja: la condición `lt` evita que una
+      // escritura concurrente más lenta lo devuelva a un valor anterior.
+      if (updated.currentCorrectStreak > updated.longestCorrectStreak) {
+        await this.prisma.user.updateMany({
+          where: { id: userId, longestCorrectStreak: { lt: updated.currentCorrectStreak } },
+          data: { longestCorrectStreak: updated.currentCorrectStreak },
+        });
+      }
+    } catch (err) {
+      // P2025 = la fila del usuario no existe. Es inalcanzable con un JWT
+      // válido, pero no debe convertirse en un 500 con texto de Prisma.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        this.logger.warn(`No se pudo mover la racha: el usuario ${userId} ya no existe`);
+        return;
+      }
+      throw err;
     }
   }
 
@@ -425,10 +441,13 @@ export class ChallengesService {
       where: { id: userId },
       select: { totalPoints: true },
     });
-    if (!user) throw new Error('Usuario no encontrado');
+    // Excepciones de Nest, no Error pelado: el cliente debe recibir
+    // { message, statusCode } y no depender de que el controlador adivine el
+    // código. (La carrera de doble gasto del canje queda fuera de alcance.)
+    if (!user) throw new NotFoundException('Usuario no encontrado');
 
     if (user.totalPoints < cost) {
-      throw new Error(
+      throw new BadRequestException(
         `Puntos insuficientes. Tienes ${user.totalPoints} pts y necesitas ${cost} pts.`,
       );
     }

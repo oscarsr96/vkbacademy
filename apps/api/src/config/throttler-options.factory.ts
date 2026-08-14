@@ -42,7 +42,10 @@ export function buildTracker(jwt: JwtService, secret?: string): ThrottlerGetTrac
     const request = req as TrackedRequest;
     const userId = secret ? verifiedUserId(jwt, request, secret) : null;
     if (userId) return `user:${userId}`;
-    // Mismo criterio que el tracker por defecto de @nestjs/throttler.
+    // El tracker por defecto de @nestjs/throttler devuelve `req.ip` a secas.
+    // Aquí se prefiere la primera IP de la cadena cuando Express la expone
+    // (`trust proxy`): detrás del proxy de Render, `req.ip` sería la del
+    // proxy y todo el tráfico anónimo compartiría un único cupo.
     const ip = request.ips?.length ? request.ips[0] : (request.ip ?? 'unknown');
     return `ip:${ip}`;
   };

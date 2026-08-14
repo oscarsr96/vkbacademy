@@ -109,7 +109,9 @@ describe('buildTracker', () => {
     );
   });
 
-  it('detrás de proxy usa la primera IP de la cadena, como el tracker por defecto', () => {
+  // El tracker por defecto usa `req.ip` a secas; aquí se prefiere la cadena
+  // para que detrás del proxy no comparta cupo todo el tráfico anónimo.
+  it('detrás de proxy usa la primera IP de la cadena, no la del proxy', () => {
     expect(tracker({ ips: ['7.7.7.7', '10.0.0.1'], ip: '10.0.0.1', headers: {} }, ctx)).toBe(
       'ip:7.7.7.7',
     );
