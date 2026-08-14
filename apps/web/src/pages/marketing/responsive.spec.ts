@@ -175,98 +175,138 @@ describe('AcademyLandingPage — delegación en la landing común', () => {
   });
 });
 
-// ─── AboutPage ──────────────────────────────────────────────────────────────────
+// ─── Helpers del sistema lp-* (AboutPage / PricingPage) ────────────────────────
+// El diseño anterior de estas dos páginas se retiró en P2/P3 (precedente PR
+// #70: se sustituyen los tests que verificaban ese diseño por los que
+// verifican el sistema lp-* vigente, no se acumulan sobre los viejos).
 
-describe('AboutPage — responsividad móvil', () => {
+// Símbolos decorativos de interfaz que no deben aparecer en el copy de marca:
+// emojis/pictogramas, flechas, checks, triángulos y estrellas. Deliberadamente
+// NO incluye el bloque de dibujo de caja (U+2500–257F): ese es el rango que
+// usan los separadores de comentario (─/═) de estilo de la casa en los cuatro
+// archivos de marketing, y un criterio que los cazara obligaría a quitarlos
+// (como le pasó a AboutPage.tsx con la primera versión de este assert: el
+// rango U+2190-U+2BFF del plan original incluía el bloque de dibujo de caja).
+const DECORATIVE_SYMBOL_RE =
+  /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{25A0}-\u{25FF}]/u;
+
+const BRAND_HEX_RE = /#(ea580c|f5911e|6366f1|0891b2|0d1b2a)/i;
+
+// Etiquetas <Link ...> completas, sin asumir orden de atributos.
+function extractLinkTags(src: string): string[] {
+  return src.match(/<Link[^>]*>/g) ?? [];
+}
+
+// El bloque `const CSS = \`...\`;` de cada página: el único CSS que le
+// pertenece a ella (el resto lo aporta LpSystem.tsx). Se usa para el check de
+// grids mobile-first, que la sección 3 del plan acota explícitamente al
+// "CSS local" — el sistema compartido tiene sus propios patrones (p. ej.
+// .lp-list-row declara "auto 1fr" fuera de cualquier media porque es un
+// número/icono junto a texto, seguro en cualquier ancho) que no son el objeto
+// de este check.
+function readLocalCss(file: string): string {
+  const src = readSource(file);
+  const marker = 'const CSS = `';
+  const start = src.indexOf(marker);
+  if (start === -1) throw new Error(`No se encontró el bloque "const CSS" en ${file}`);
+  const end = src.lastIndexOf('`;');
+  return src.slice(start + marker.length, end);
+}
+
+// Quita el contenido de los bloques @media (min-width: ...) { ... } de un
+// CSS, respetando el anidado de llaves, para poder comprobar qué queda
+// declarado fuera de ellos (mobile-first: lo de una columna no necesita ir
+// bajo ningún media; lo de varias, sí).
+function stripMinWidthMediaBlocks(css: string): string {
+  let result = '';
+  let i = 0;
+  while (i < css.length) {
+    const marker = css.indexOf('@media (min-width:', i);
+    if (marker === -1) {
+      result += css.slice(i);
+      break;
+    }
+    result += css.slice(i, marker);
+    const braceStart = css.indexOf('{', marker);
+    if (braceStart === -1) {
+      result += css.slice(marker);
+      break;
+    }
+    let depth = 1;
+    let j = braceStart + 1;
+    while (j < css.length && depth > 0) {
+      if (css[j] === '{') depth++;
+      else if (css[j] === '}') depth--;
+      j++;
+    }
+    i = j;
+  }
+  return result;
+}
+
+// Batería común a AboutPage y PricingPage: ambas siguen el mismo sistema
+// lp-* documentado en LpSystem.tsx.
+function describeLpMarketingPage(file: string) {
   let src: string;
 
   beforeAll(() => {
-    src = readSource('AboutPage.tsx');
+    src = readSource(file);
   });
 
-  test('inyecta un bloque <style> con media queries para móvil', () => {
-    expect(src).toMatch(/<style>/);
-    expect(src).toMatch(/@media.*max-width/);
+  test('usa el sistema compartido: importa ./LpSystem, SectionHead y lp-page', () => {
+    expect(src).toMatch(/from\s+'\.\/LpSystem'/);
+    expect(src).toMatch(/SectionHead/);
+    expect(src).toMatch(/className="lp-page"/);
   });
 
-  test('el hero usa padding responsivo con clamp o override de media query', () => {
-    // El hero tiene padding: '6rem 2rem 5rem' — en móvil debe reducirse
-    expect(src).toMatch(/@media.*padding|about-hero/s);
+  test('CTA primario a /register presente; /login nunca lleva la clase de botón primario', () => {
+    const registerTags = extractLinkTags(src).filter((tag) => tag.includes('to="/register"'));
+    expect(registerTags.length).toBeGreaterThan(0);
+    expect(registerTags.some((tag) => tag.includes('lp-btn-primary'))).toBe(true);
+
+    const loginTags = extractLinkTags(src).filter((tag) => tag.includes('to="/login"'));
+    expect(loginTags.length).toBeGreaterThan(0);
+    for (const tag of loginTags) {
+      expect(tag).not.toMatch(/lp-btn-primary/);
+    }
   });
 
-  test('la sección whyInner usa flexWrap: wrap para apilar en móvil', () => {
-    expect(src).toMatch(/whyInner|why-inner/);
-    expect(src).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
+  test('cero emojis y símbolos decorativos de interfaz', () => {
+    // El sistema compartido es parte de lo que la página sirve en runtime.
+    expect(readWithSystem(file)).not.toMatch(DECORATIVE_SYMBOL_RE);
   });
 
-  test('la sección de valores (valuesGrid) usa flexWrap: wrap', () => {
-    expect(src).toMatch(/valuesGrid|values-grid/);
-    expect(src).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
+  test('cero hex de marca literales (siempre var(--brand)/var(--brand-light))', () => {
+    expect(readWithSystem(file)).not.toMatch(BRAND_HEX_RE);
   });
 
-  test('la sección del equipo (teamGrid) usa flexWrap: wrap', () => {
-    expect(src).toMatch(/teamGrid|team-grid/);
-    expect(src).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
+  test('sin !important y sin @media (max-width: 768px) de overrides', () => {
+    const full = readWithSystem(file);
+    expect(full).not.toMatch(/!important/);
+    expect(full).not.toMatch(/@media \(max-width:\s*768px\)/);
   });
 
-  test('la sección de merch (merchGrid) usa flexWrap: wrap', () => {
-    expect(src).toMatch(/merchGrid|merch-grid/);
-    expect(src).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
+  test('grids mobile-first: toda grid-template-columns del CSS local vive bajo @media (min-width:', () => {
+    const outsideMinWidth = stripMinWidthMediaBlocks(readLocalCss(file));
+    expect(outsideMinWidth).not.toMatch(/grid-template-columns/);
   });
+}
 
-  test('la sección de historia tiene padding reducido en móvil', () => {
-    expect(src).toMatch(/storySection|about-story/);
-  });
+// ─── AboutPage ──────────────────────────────────────────────────────────────────
+
+describe('AboutPage — sistema lp-*', () => {
+  describeLpMarketingPage('AboutPage.tsx');
 });
 
 // ─── PricingPage ────────────────────────────────────────────────────────────────
 
-describe('PricingPage — responsividad móvil', () => {
-  let src: string;
+describe('PricingPage — sistema lp-*', () => {
+  describeLpMarketingPage('PricingPage.tsx');
 
-  beforeAll(() => {
-    src = readSource('PricingPage.tsx');
-  });
-
-  test('inyecta un bloque <style> con media queries para móvil', () => {
-    expect(src).toMatch(/<style>/);
-    expect(src).toMatch(/@media.*max-width/);
-  });
-
-  test('el pricingWrap usa flexWrap: wrap para apilar tarjeta e info panel', () => {
-    expect(src).toMatch(/pricingWrap|pricing-wrap/);
-    expect(src).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
-  });
-
-  test('las columnas de features (featuresInner) se apilan en móvil', () => {
-    // featuresInner tiene flex con columnas — en móvil deben apilarse
-    expect(src).toMatch(/featuresInner|features-inner/);
-    // Debe haber un override de flex-direction en la media query
-    expect(src).toMatch(/@media.*flex-direction|flex-direction.*column.*@media/s);
-  });
-
-  test('la sección de pasos (stepsRow) usa flexWrap: wrap', () => {
-    expect(src).toMatch(/stepsRow|steps-row/);
-    expect(src).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
-  });
-
-  test('la grid de merchandising usa flexWrap: wrap', () => {
-    expect(src).toMatch(/merchGrid|merch-grid/);
-    expect(src).toMatch(/flexWrap.*wrap|flex-wrap.*wrap/);
-  });
-
-  test('el hero usa padding responsivo', () => {
-    expect(src).toMatch(/@media.*padding|pricing-hero/s);
-  });
-
-  test('la tarjeta de precio (planCard) no tiene ancho fijo > 400px', () => {
-    // planCard usa flex: '1 1 340px' que es responsivo — verificar que no hay width fijo grande
-    const planCardSection = src.match(/planCard:\s*\{[^}]+\}/s)?.[0] ?? '';
-    const widthMatch = planCardSection.match(/(?<![a-zA-Z])width:\s*(\d+)/);
-    if (widthMatch) {
-      expect(parseInt(widthMatch[1], 10)).toBeLessThanOrEqual(400);
-    }
-    // Si no tiene width fijo, el test pasa
+  test('FAQ nativo con <details>, sin useState', () => {
+    const src = readSource('PricingPage.tsx');
+    expect(src).toMatch(/<details/);
+    expect(src).not.toMatch(/useState/);
   });
 });
 
