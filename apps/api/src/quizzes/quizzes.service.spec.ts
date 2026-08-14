@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { ChallengeType } from '@prisma/client';
 import { QuizzesService } from './quizzes.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesService } from '../challenges/challenges.service';
@@ -219,7 +218,7 @@ describe('QuizzesService', () => {
       );
     });
 
-    it('dispara checkAndAward con EXERCISE_SCORE sin bloquear la respuesta', async () => {
+    it('dispara checkAndAward sin tipos de evento sin bloquear la respuesta', async () => {
       const quiz = buildQuiz(1);
       mockPrisma.quiz.findUnique.mockResolvedValue(quiz);
       mockPrisma.quizAttempt.create.mockResolvedValue({});
@@ -232,10 +231,7 @@ describe('QuizzesService', () => {
         'user1',
       );
 
-      expect(mockChallenges.checkAndAward).toHaveBeenCalledWith(
-        'user1',
-        ChallengeType.EXERCISE_SCORE,
-      );
+      expect(mockChallenges.checkAndAward).toHaveBeenCalledWith('user1');
     });
 
     it('redondea el score a un decimal', async () => {

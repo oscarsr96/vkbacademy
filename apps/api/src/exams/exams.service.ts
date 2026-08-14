@@ -293,7 +293,6 @@ export class ExamsService {
       userId,
       ChallengeType.EXAM_COMPLETED,
       ChallengeType.EXAM_SCORE,
-      ChallengeType.TOTAL_HOURS_EXAM,
     );
 
     return {

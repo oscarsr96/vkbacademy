@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChallengeType, LessonType } from '@prisma/client';
+import { ChallengeType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 /** Devuelve la semana ISO como "2026-W07" */
@@ -67,36 +67,9 @@ export class ChallengesService {
     });
   }
 
-  /** Tipos de Lesson considerados "ejercicio" para los retos */
-  private static readonly EXERCISE_LESSON_TYPES: LessonType[] = [
-    LessonType.EXERCISE,
-    LessonType.MATCH,
-    LessonType.SORT,
-    LessonType.FILL_BLANK,
-    LessonType.QUIZ,
-  ];
-
   /** Calcula el progreso actual del usuario para un tipo de reto */
   private async calculateProgress(userId: string, type: ChallengeType): Promise<number> {
     switch (type) {
-      case ChallengeType.EXERCISE_COMPLETED:
-        return this.prisma.userProgress.count({
-          where: {
-            userId,
-            completed: true,
-            lesson: { type: { in: ChallengesService.EXERCISE_LESSON_TYPES } },
-          },
-        });
-
-      case ChallengeType.EXERCISE_SCORE: {
-        // QuizAttempt es la única fuente de score para ejercicios
-        const agg = await this.prisma.quizAttempt.aggregate({
-          where: { userId },
-          _max: { score: true },
-        });
-        return Math.round(agg._max.score ?? 0);
-      }
-
       case ChallengeType.THEORY_COMPLETED:
         return this.prisma.theoryModule.count({ where: { userId } });
 
@@ -119,38 +92,6 @@ export class ChallengesService {
           select: { currentStreak: true },
         });
         return u?.currentStreak ?? 0;
-      }
-
-      case ChallengeType.TOTAL_HOURS_EXERCISE: {
-        // Heurística: 5 min por ejercicio completado
-        const exercises = await this.prisma.userProgress.count({
-          where: {
-            userId,
-            completed: true,
-            lesson: { type: { in: ChallengesService.EXERCISE_LESSON_TYPES } },
-          },
-        });
-        return Math.floor(exercises * (5 / 60));
-      }
-
-      case ChallengeType.TOTAL_HOURS_THEORY: {
-        // Heurística: 10 min por TheoryLesson en módulos del usuario
-        const theoryLessons = await this.prisma.theoryLesson.count({
-          where: { module: { userId } },
-        });
-        return Math.floor(theoryLessons * (10 / 60));
-      }
-
-      case ChallengeType.TOTAL_HOURS_EXAM: {
-        const exams = await this.prisma.examAttempt.findMany({
-          where: { userId, submittedAt: { not: null } },
-          select: { startedAt: true, submittedAt: true },
-        });
-        const hours = exams.reduce((acc, e) => {
-          if (!e.submittedAt) return acc;
-          return acc + (e.submittedAt.getTime() - e.startedAt.getTime()) / 3_600_000;
-        }, 0);
-        return Math.floor(hours);
       }
 
       default:
@@ -203,7 +144,11 @@ export class ChallengesService {
           const completed = progress >= challenge.target;
 
           await this.prisma.userChallenge.upsert({
-            where: { userId_challengeId: { userId, challengeId: challenge.id } },
+            // periodKey fijo a "ALL" (retos PERMANENT): la cadencia WEEKLY con su
+            // periodo real por semana ISO se implementa en otra tarea.
+            where: {
+              userId_challengeId_periodKey: { userId, challengeId: challenge.id, periodKey: 'ALL' },
+            },
             update: {
               progress,
               ...(completed && !existing?.completed

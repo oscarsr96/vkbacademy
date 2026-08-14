@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ChallengeType, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { ChallengesService } from '../challenges/challenges.service';
@@ -80,8 +80,8 @@ export class QuizzesService {
       },
     });
 
-    // Disparar evaluación de retos en segundo plano (sin bloquear la respuesta)
-    void this.challenges.checkAndAward(userId, ChallengeType.EXERCISE_SCORE);
+    // Íd.: sin tipos, solo registra actividad para las rachas.
+    void this.challenges.checkAndAward(userId);
 
     return {
       score,

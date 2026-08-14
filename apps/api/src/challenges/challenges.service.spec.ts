@@ -234,7 +234,7 @@ describe('ChallengesService', () => {
       mockPrisma.challenge.findMany.mockRejectedValue(new Error('DB error'));
 
       await expect(
-        service.checkAndAward('user1', ChallengeType.EXERCISE_COMPLETED),
+        service.checkAndAward('user1', ChallengeType.EXAM_COMPLETED),
       ).resolves.toBeUndefined();
     });
 
@@ -243,14 +243,14 @@ describe('ChallengesService', () => {
 
       await service.checkAndAward(
         'user1',
-        ChallengeType.EXERCISE_COMPLETED,
+        ChallengeType.THEORY_COMPLETED,
         ChallengeType.EXAM_COMPLETED,
       );
 
       expect(mockPrisma.challenge.findMany).toHaveBeenCalledWith({
         where: {
           isActive: true,
-          type: { in: [ChallengeType.EXERCISE_COMPLETED, ChallengeType.EXAM_COMPLETED] },
+          type: { in: [ChallengeType.THEORY_COMPLETED, ChallengeType.EXAM_COMPLETED] },
         },
       });
     });
@@ -258,17 +258,17 @@ describe('ChallengesService', () => {
     it('crea un nuevo UserChallenge cuando el usuario completa el reto por primera vez', async () => {
       const challenge = {
         id: 'ch1',
-        type: ChallengeType.EXERCISE_COMPLETED,
+        type: ChallengeType.THEORY_COMPLETED,
         target: 5,
         points: 100,
       };
       mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
-      mockPrisma.userProgress.count.mockResolvedValue(5); // exactamente el target
+      mockPrisma.theoryModule.count.mockResolvedValue(5); // exactamente el target
       mockPrisma.userChallenge.findMany.mockResolvedValue([]); // no existía
       mockPrisma.userChallenge.upsert.mockResolvedValue({});
       mockPrisma.user.update.mockResolvedValue({});
 
-      await service.checkAndAward('user1', ChallengeType.EXERCISE_COMPLETED);
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
 
       expect(mockPrisma.userChallenge.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -288,16 +288,16 @@ describe('ChallengesService', () => {
     it('actualiza el progreso sin completar si no llega al target', async () => {
       const challenge = {
         id: 'ch1',
-        type: ChallengeType.EXERCISE_COMPLETED,
+        type: ChallengeType.THEORY_COMPLETED,
         target: 10,
         points: 200,
       };
       mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
-      mockPrisma.userProgress.count.mockResolvedValue(3); // por debajo del target
+      mockPrisma.theoryModule.count.mockResolvedValue(3); // por debajo del target
       mockPrisma.userChallenge.findMany.mockResolvedValue([]);
       mockPrisma.userChallenge.upsert.mockResolvedValue({});
 
-      await service.checkAndAward('user1', ChallengeType.EXERCISE_COMPLETED);
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
 
       expect(mockPrisma.userChallenge.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -311,15 +311,17 @@ describe('ChallengesService', () => {
     it('omite el reto si ya estaba completado — no duplica los puntos', async () => {
       const challenge = {
         id: 'ch1',
-        type: ChallengeType.EXERCISE_COMPLETED,
+        type: ChallengeType.THEORY_COMPLETED,
         target: 5,
         points: 100,
       };
       mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
-      mockPrisma.userProgress.count.mockResolvedValue(10); // supera target
-      mockPrisma.userChallenge.findMany.mockResolvedValue([{ challengeId: 'ch1', completed: true }]); // ya completado
+      mockPrisma.theoryModule.count.mockResolvedValue(10); // supera target
+      mockPrisma.userChallenge.findMany.mockResolvedValue([
+        { challengeId: 'ch1', completed: true },
+      ]); // ya completado
 
-      await service.checkAndAward('user1', ChallengeType.EXERCISE_COMPLETED);
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
 
       // Al estar ya completado, no debe upsertarse ni incrementar puntos
       expect(mockPrisma.userChallenge.upsert).not.toHaveBeenCalled();
@@ -329,18 +331,18 @@ describe('ChallengesService', () => {
     it('no incrementa puntos si el reto existía pero no estaba completado y aún no llega al target', async () => {
       const challenge = {
         id: 'ch1',
-        type: ChallengeType.EXERCISE_COMPLETED,
+        type: ChallengeType.THEORY_COMPLETED,
         target: 20,
         points: 500,
       };
       mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
-      mockPrisma.userProgress.count.mockResolvedValue(8);
+      mockPrisma.theoryModule.count.mockResolvedValue(8);
       mockPrisma.userChallenge.findMany.mockResolvedValue([
         { challengeId: 'ch1', completed: false, progress: 5 },
       ]);
       mockPrisma.userChallenge.upsert.mockResolvedValue({});
 
-      await service.checkAndAward('user1', ChallengeType.EXERCISE_COMPLETED);
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
 
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
@@ -348,7 +350,7 @@ describe('ChallengesService', () => {
     it('no hace nada si no hay retos activos para los tipos de evento', async () => {
       mockPrisma.challenge.findMany.mockResolvedValue([]); // sin retos
 
-      await service.checkAndAward('user1', ChallengeType.EXERCISE_SCORE);
+      await service.checkAndAward('user1', ChallengeType.EXAM_SCORE);
 
       expect(mockPrisma.userChallenge.upsert).not.toHaveBeenCalled();
     });
@@ -431,7 +433,7 @@ describe('ChallengesService', () => {
       const challenge = {
         id: 'ch1',
         title: 'Completar 10 ejercicios',
-        type: ChallengeType.EXERCISE_COMPLETED,
+        type: ChallengeType.THEORY_COMPLETED,
         target: 10,
         points: 100,
         isActive: true,
@@ -460,7 +462,7 @@ describe('ChallengesService', () => {
       const challenge = {
         id: 'ch2',
         title: 'Quiz Perfecto',
-        type: ChallengeType.EXERCISE_SCORE,
+        type: ChallengeType.EXAM_SCORE,
         target: 100,
         points: 50,
         isActive: true,
