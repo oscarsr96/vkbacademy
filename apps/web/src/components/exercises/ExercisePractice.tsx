@@ -90,6 +90,8 @@ export default function ExercisePractice({
     setAnswers((prev) => ({ ...prev, [index]: value }));
   }
   function submitAttempt(index: number, ex: PracticeExercise) {
+    // Una sola petición en vuelo: la mutación es compartida por todas las tarjetas.
+    if (attemptMutation.isPending) return;
     const answer =
       ex.options.length > 0
         ? (ex.options[selected[index] ?? -1] ?? '')
@@ -143,6 +145,10 @@ export default function ExercisePractice({
           evaluation={evaluations[i] ?? null}
           evaluationError={evalErrors[i] ?? null}
           evaluating={evaluatingIdx === i}
+          // La mutación es única para todas las tarjetas: mientras hay una
+          // petición en vuelo, comprobar otra tarjeta dispararía un segundo
+          // intento en paralelo (carrera en el registro y en los puntos).
+          blocked={attemptMutation.isPending}
           onChoose={(optIdx) => chooseOption(i, optIdx)}
           onAnswerChange={(value) => updateAnswer(i, value)}
           onCheck={() => submitAttempt(i, ex)}
@@ -162,6 +168,7 @@ function ExerciseCard({
   evaluation,
   evaluationError,
   evaluating,
+  blocked,
   onChoose,
   onAnswerChange,
   onCheck,
@@ -175,6 +182,8 @@ function ExerciseCard({
   evaluation: EvaluationResult | null;
   evaluationError: string | null;
   evaluating: boolean;
+  /** Hay un intento en vuelo (puede ser el de otra tarjeta) */
+  blocked: boolean;
   onChoose: (optionIndex: number) => void;
   onAnswerChange: (value: string) => void;
   onCheck: () => void;
@@ -187,7 +196,7 @@ function ExerciseCard({
       )
     : -1;
   const canCheck = hasOptions ? selected !== null : answer.trim().length > 0;
-  const checkDisabled = revealed || !canCheck || evaluating;
+  const checkDisabled = revealed || !canCheck || evaluating || blocked;
 
   function optionStyle(j: number): React.CSSProperties {
     if (revealed) {
