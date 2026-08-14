@@ -5,7 +5,8 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { StudyPlansService } from './study-plans.service';
+import { Prisma } from '@prisma/client';
+import { StudyPlansService, withExerciseIds } from './study-plans.service';
 
 describe('StudyPlansService', () => {
   let prisma: {
@@ -21,7 +22,7 @@ describe('StudyPlansService', () => {
     theoryModule: { update: jest.Mock; delete: jest.Mock };
     aiExamBank: { update: jest.Mock; delete: jest.Mock };
     examAttempt: { groupBy: jest.Mock };
-    exerciseAttempt: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
+    exerciseAttempt: { upsert: jest.Mock; updateMany: jest.Mock };
     $transaction: jest.Mock;
   };
   let theory: { generate: jest.Mock; getById: jest.Mock; deleteById: jest.Mock };
@@ -117,9 +118,8 @@ describe('StudyPlansService', () => {
       },
       examAttempt: { groupBy: jest.fn().mockResolvedValue([]) },
       exerciseAttempt: {
-        findUnique: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
+        upsert: jest.fn(),
+        updateMany: jest.fn(),
       },
       $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
     };
@@ -721,26 +721,63 @@ describe('StudyPlansService', () => {
       ],
     };
 
+    // Plan con un ejercicio de respuesta abierta (rama OPEN → exercises.evaluate)
+    const OPEN_PLAN = {
+      ...PLAN,
+      exercises: [
+        {
+          id: 'ex-open',
+          statement: 'Explica cómo se suman fracciones con igual denominador',
+          type: 'OPEN',
+          options: [],
+          solution: 'Se suman los numeradores y se mantiene el denominador',
+          explanation: 'Regla básica.',
+          topicLabel: 'Fracciones',
+          difficulty: 'MEDIUM',
+        },
+      ],
+    };
+
+    // Plan anterior a Retos v2: los ejercicios no llevan `id`
+    const LEGACY_PLAN = {
+      ...PLAN,
+      exercises: [{ ...PLAN.exercises[0], id: undefined }],
+    };
+
+    // El upsert devuelve la fila resultante. Si el id que vuelve es el que
+    // generó el servicio, la fila la ha creado este intento; si no, ya existía.
+    function upsertCreates() {
+      prisma.exerciseAttempt.upsert.mockImplementation((args: { create: { id: string } }) =>
+        Promise.resolve({ id: args.create.id }),
+      );
+    }
+    function upsertFindsExisting() {
+      prisma.exerciseAttempt.upsert.mockResolvedValue({ id: 'att-preexistente' });
+    }
+
     it('corrige en servidor y guarda el intento como correcto', async () => {
       prisma.studyPlan.findUnique.mockResolvedValue(PLAN);
-      prisma.exerciseAttempt.findUnique.mockResolvedValue(null);
-      prisma.exerciseAttempt.create.mockResolvedValue({});
+      upsertCreates();
 
       const res = await service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', {
         answer: '1',
       });
 
       expect(res.verdict).toBe('correct');
-      expect(prisma.exerciseAttempt.create).toHaveBeenCalledWith({
-        data: {
-          userId: 'user-1',
-          studyPlanId: 'plan-1',
-          exerciseId: 'ex-1',
-          topicLabel: 'Fracciones',
-          difficulty: 'HARD',
-          verdict: 'correct',
-        },
-      });
+      expect(prisma.exerciseAttempt.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId_exerciseId: { userId: 'user-1', exerciseId: 'ex-1' } },
+          update: expect.objectContaining({ verdict: 'correct' }),
+          create: expect.objectContaining({
+            userId: 'user-1',
+            studyPlanId: 'plan-1',
+            exerciseId: 'ex-1',
+            topicLabel: 'Fracciones',
+            difficulty: 'HARD',
+            verdict: 'correct',
+          }),
+        }),
+      );
       expect(challenges.bumpCorrectStreak).toHaveBeenCalledWith('user-1', true);
       expect(challenges.checkAndAward).toHaveBeenCalledWith(
         'user-1',
@@ -752,8 +789,7 @@ describe('StudyPlansService', () => {
 
     it('marca incorrecto cuando la respuesta no coincide', async () => {
       prisma.studyPlan.findUnique.mockResolvedValue(PLAN);
-      prisma.exerciseAttempt.findUnique.mockResolvedValue(null);
-      prisma.exerciseAttempt.create.mockResolvedValue({});
+      upsertCreates();
 
       const res = await service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', {
         answer: '2',
@@ -765,14 +801,118 @@ describe('StudyPlansService', () => {
 
     it('un reintento actualiza sin mover la racha de aciertos', async () => {
       prisma.studyPlan.findUnique.mockResolvedValue(PLAN);
-      prisma.exerciseAttempt.findUnique.mockResolvedValue({ id: 'att-1' });
-      prisma.exerciseAttempt.update.mockResolvedValue({});
+      upsertFindsExisting();
 
       await service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', { answer: '1' });
 
-      expect(prisma.exerciseAttempt.create).not.toHaveBeenCalled();
-      expect(prisma.exerciseAttempt.update).toHaveBeenCalled();
+      expect(prisma.exerciseAttempt.upsert).toHaveBeenCalledTimes(1);
       expect(challenges.bumpCorrectStreak).not.toHaveBeenCalled();
+    });
+
+    // I5 — carrera en el registro del intento
+    it('dos envíos simultáneos del mismo ejercicio: el que pierde el unique no da 500 ni mueve la racha', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue(PLAN);
+      prisma.exerciseAttempt.upsert.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: '5.22.0',
+        }),
+      );
+      prisma.exerciseAttempt.updateMany.mockResolvedValue({ count: 1 });
+
+      const res = await service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', { answer: '1' });
+
+      expect(res.verdict).toBe('correct');
+      expect(prisma.exerciseAttempt.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', exerciseId: 'ex-1' },
+        data: expect.objectContaining({ verdict: 'correct' }),
+      });
+      // El intento ya existía: la racha no se mueve dos veces
+      expect(challenges.bumpCorrectStreak).not.toHaveBeenCalled();
+    });
+
+    it('un fallo de BD distinto del unique sale como 500 con mensaje en español, no como error crudo de Prisma', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue(PLAN);
+      prisma.exerciseAttempt.upsert.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Timed out fetching a connection', {
+          code: 'P2024',
+          clientVersion: '5.22.0',
+        }),
+      );
+
+      await expect(
+        service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', { answer: '1' }),
+      ).rejects.toThrow(InternalServerErrorException);
+      await expect(
+        service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', { answer: '1' }),
+      ).rejects.toThrow(/No se pudo registrar tu respuesta/);
+    });
+
+    // M2 — la rama OPEN no tenía cobertura
+    it('un ejercicio OPEN delega la corrección en exercises.evaluate y devuelve su feedback', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue(OPEN_PLAN);
+      upsertCreates();
+      exercises.evaluate.mockResolvedValue({ verdict: 'correct', feedback: 'Bien razonado' });
+
+      const res = await service.submitExerciseAttempt('user-1', 'plan-1', 'ex-open', {
+        answer: 'Se suman los numeradores',
+      });
+
+      expect(exercises.evaluate).toHaveBeenCalledWith({
+        statement: 'Explica cómo se suman fracciones con igual denominador',
+        studentAnswer: 'Se suman los numeradores',
+        solution: 'Se suman los numeradores y se mantiene el denominador',
+      });
+      expect(res.verdict).toBe('correct');
+      expect(res.feedback).toBe('Bien razonado');
+      expect(challenges.bumpCorrectStreak).toHaveBeenCalledWith('user-1', true);
+    });
+
+    it('un veredicto partial en un OPEN no cuenta como acierto: pone la racha a 0', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue(OPEN_PLAN);
+      upsertCreates();
+      exercises.evaluate.mockResolvedValue({ verdict: 'partial', feedback: 'A medias' });
+
+      const res = await service.submitExerciseAttempt('user-1', 'plan-1', 'ex-open', {
+        answer: 'Se suman',
+      });
+
+      expect(res.verdict).toBe('partial');
+      expect(challenges.bumpCorrectStreak).toHaveBeenCalledWith('user-1', false);
+      expect(prisma.exerciseAttempt.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ create: expect.objectContaining({ verdict: 'partial' }) }),
+      );
+    });
+
+    // I1 — ids legacy con el plan dentro
+    it('un plan antiguo sin ids resuelve el ejercicio por su id legacy con el plan dentro', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue(LEGACY_PLAN);
+      upsertCreates();
+
+      const res = await service.submitExerciseAttempt('user-1', 'plan-1', 'legacy-plan-1-0', {
+        answer: '1',
+      });
+
+      expect(res.verdict).toBe('correct');
+      expect(prisma.exerciseAttempt.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId_exerciseId: { userId: 'user-1', exerciseId: 'legacy-plan-1-0' },
+          },
+        }),
+      );
+    });
+
+    it('el id legacy de OTRO plan no resuelve en este (los planes antiguos no comparten ids)', async () => {
+      prisma.studyPlan.findUnique.mockResolvedValue(LEGACY_PLAN);
+
+      // "legacy-0" era el id que colisionaba entre planes antes del arreglo
+      await expect(
+        service.submitExerciseAttempt('user-1', 'plan-1', 'legacy-0', { answer: '1' }),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.submitExerciseAttempt('user-1', 'plan-1', 'legacy-plan-2-0', { answer: '1' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('devuelve 404 si el ejercicio no esta en el plan', async () => {
@@ -790,5 +930,40 @@ describe('StudyPlansService', () => {
         service.submitExerciseAttempt('user-1', 'plan-1', 'ex-1', { answer: '1' }),
       ).rejects.toThrow(ForbiddenException);
     });
+  });
+});
+
+// ─── withExerciseIds: ids legacy únicos por plan (I1) ───────────────────────
+
+describe('withExerciseIds', () => {
+  // Los planes anteriores a Retos v2 llevan el id vacío
+  const legacyExercise = {
+    id: '',
+    topicLabel: 'Fracciones',
+    difficulty: 'EASY' as const,
+    statement: 'x',
+    type: 'OPEN' as const,
+    options: [],
+    solution: 'y',
+    explanation: 'z',
+  };
+
+  it('respeta el id que ya trae el ejercicio', () => {
+    const withId = { ...legacyExercise, id: 'ex-1' };
+    expect(withExerciseIds([withId], 'plan-a')[0].id).toBe('ex-1');
+  });
+
+  it('deriva el id legacy del plan y del índice', () => {
+    const ids = withExerciseIds([legacyExercise, legacyExercise], 'plan-a').map((e) => e.id);
+    expect(ids).toEqual(['legacy-plan-a-0', 'legacy-plan-a-1']);
+  });
+
+  // El unique de ExerciseAttempt es (userId, exerciseId) SIN studyPlanId: si el
+  // id legacy no llevara el plan, el ejercicio 0 de dos planes antiguos del
+  // mismo alumno compartiría fila de intento.
+  it('dos planes antiguos del mismo alumno no comparten ningún id', () => {
+    const a = withExerciseIds([legacyExercise, legacyExercise], 'plan-a').map((e) => e.id);
+    const b = withExerciseIds([legacyExercise, legacyExercise], 'plan-b').map((e) => e.id);
+    expect(a.filter((id) => b.includes(id))).toEqual([]);
   });
 });
