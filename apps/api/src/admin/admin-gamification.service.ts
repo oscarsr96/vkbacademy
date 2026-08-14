@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ChallengeCadence, ChallengeType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { isWeeklyCapable } from '../challenges/challenge-periods';
@@ -109,7 +114,32 @@ export class AdminGamificationService {
     const challenge = await this.prisma.challenge.findUnique({ where: { id } });
     if (!challenge) throw new NotFoundException('Reto no encontrado');
     this.assertCadence(dto.type ?? challenge.type, dto.cadence ?? challenge.cadence);
+    await this.assertCadenceChangeAllowed(id, challenge.cadence, dto.cadence);
     return this.prisma.challenge.update({ where: { id }, data: dto });
+  }
+
+  /**
+   * Cambiar la cadencia de un reto que ya han jugado alumnos vuelve a pagarlo:
+   * las filas del periodo antiguo (`ALL` de un PERMANENT, o la semana de un
+   * WEEKLY) quedan huérfanas, el motor crea la fila del periodo nuevo y todos
+   * los que ya lo tenían completado cobran otra vez — y de PERMANENT a WEEKLY,
+   * además, cada semana. No se borra progreso de alumnos: se bloquea el cambio.
+   */
+  private async assertCadenceChangeAllowed(
+    id: string,
+    current: ChallengeCadence,
+    next?: ChallengeCadence,
+  ): Promise<void> {
+    if (!next || next === current) return;
+
+    const played = await this.prisma.userChallenge.count({ where: { challengeId: id } });
+    if (played === 0) return;
+
+    throw new ConflictException(
+      `No se puede cambiar la cadencia de "${current}" a "${next}": ${played} alumno(s) ya tienen ` +
+        `progreso en este reto y el cambio les volvería a pagar los puntos. ` +
+        `Crea un reto nuevo con la cadencia que quieras y desactiva este.`,
+    );
   }
 
   async deleteChallenge(id: string) {
