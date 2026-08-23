@@ -7,6 +7,9 @@ interface AuthState {
   refreshToken: string | null;
   user: User | null;
   academy: Academy | null;
+  /** false hasta que el arranque decide si hay sesion recuperable (ver session-bootstrap) */
+  sessionReady: boolean;
+  setSessionReady: (ready: boolean) => void;
   setTokens: (tokens: { accessToken: string; refreshToken: string }) => void;
   setUser: (user: User) => void;
   setAcademy: (academy: Academy | null) => void;
@@ -20,10 +23,19 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       academy: null,
+      sessionReady: false,
+      setSessionReady: (sessionReady) => set({ sessionReady }),
       setTokens: ({ accessToken, refreshToken }) => set({ accessToken, refreshToken }),
       setUser: (user) => set({ user, academy: user.academy ?? null }),
       setAcademy: (academy) => set({ academy }),
-      logout: () => set({ accessToken: null, refreshToken: null, user: null, academy: null }),
+      logout: () =>
+        set({
+          accessToken: null,
+          refreshToken: null,
+          user: null,
+          academy: null,
+          sessionReady: true,
+        }),
     }),
     {
       name: 'vkb-auth',
