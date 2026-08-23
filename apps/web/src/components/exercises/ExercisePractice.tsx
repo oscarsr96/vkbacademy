@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { StudyDifficulty, StudyExercise } from '@vkbacademy/shared';
 import api from '../../lib/axios';
 import MathText from '../ui/MathText';
@@ -39,6 +39,7 @@ export default function ExercisePractice({
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [evaluations, setEvaluations] = useState<Record<number, EvaluationResult>>({});
   const [evalErrors, setEvalErrors] = useState<Record<number, string>>({});
+  const queryClient = useQueryClient();
 
   const attemptMutation = useMutation({
     mutationFn: ({
@@ -64,6 +65,11 @@ export default function ExercisePractice({
         delete next[index];
         return next;
       });
+      // El intento mueve retos y puntos en el servidor. Sin esto, el alumno
+      // veria su progreso congelado hasta 5 minutos (staleTime global).
+      // Se invalida con cualquier veredicto: un fallo tambien cuenta, porque
+      // pone a cero la racha de aciertos.
+      void queryClient.invalidateQueries({ queryKey: ['challenges'] });
     },
     onError: (err, variables) => {
       const msg = (err as { response?: { data?: { message?: string | string[] } } } | null)
