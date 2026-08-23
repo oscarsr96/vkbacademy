@@ -248,7 +248,12 @@ const S: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     fontWeight: 500,
     transition: 'background 0.18s, color 0.18s, box-shadow 0.18s',
-    borderLeft: '3px solid transparent',
+    // Longhand a proposito: navItemActive sobrescribe solo borderLeftColor, y
+    // mezclarlo con la abreviada borderLeft hace que React avise de un posible
+    // bug de estilo al re-renderizar.
+    borderLeftWidth: 3,
+    borderLeftStyle: 'solid',
+    borderLeftColor: 'transparent',
   },
   navItemActive: {
     background: 'linear-gradient(90deg, var(--brand-soft) 0%, transparent 100%)',
