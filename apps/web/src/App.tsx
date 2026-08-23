@@ -56,9 +56,12 @@ function RouteLoadingFallback() {
   );
 }
 
-// Guarda: redirige a /dashboard si ya está autenticado
+// Guarda: exige sesión. Espera al arranque antes de decidir, porque el access
+// token no se persiste y al recargar tarda un instante en renovarse.
 function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const sessionReady = useAuthStore((s) => s.sessionReady);
   const isAuthenticated = useAuthStore((s) => !!s.accessToken);
+  if (!sessionReady) return <RouteLoadingFallback />;
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
@@ -71,9 +74,13 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Guarda: redirige al dashboard si ya está autenticado (para /login y /register)
+// Guarda: redirige al dashboard si ya está autenticado (para /login y /register).
+// También espera al arranque: sin ello, recargar en /login enseñaría el
+// formulario un instante antes de saltar al dashboard.
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+  const sessionReady = useAuthStore((s) => s.sessionReady);
   const isAuthenticated = useAuthStore((s) => !!s.accessToken);
+  if (!sessionReady) return <RouteLoadingFallback />;
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 }
 
