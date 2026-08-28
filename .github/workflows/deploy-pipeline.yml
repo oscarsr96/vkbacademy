@@ -416,12 +416,33 @@ jobs:
           echo "Smoke tests PROD superados. Render/Vercel ya sirven la versión nueva."
           echo "Promoción confirmada."
 
+      # Este job espera detrás de una aprobación manual, y entre que pasan los
+      # smoke tests y alguien aprueba pueden pasar horas: Render Starter vuelve
+      # a dormir el servicio. Sin despertarlo primero, la verificación final se
+      # come el arranque en frío (30-60s) y da por malo un despliegue sano.
+      - name: Esperar a que la API PROD responda (puede haberse dormido)
+        env:
+          SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 10 "$SMOKE_API_URL/api/health" > /dev/null 2>&1; then
+              echo "API PROD lista en intento $i"
+              exit 0
+            fi
+            echo "Esperando API PROD... intento $i"
+            sleep 15
+          done
+          echo "API PROD no respondió tras 20 intentos (cold start de Render)"
+          exit 1
+
+      # Con el servicio ya caliente, esta comprobación es deliberadamente
+      # estricta: exige 3 respuestas sanas seguidas y falla al primer tropiezo.
       - name: Verificación final post-promoción
         env:
           SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
         run: |
           for i in 1 2 3; do
-            if curl -fsS --max-time 10 "$SMOKE_API_URL/api/health" | grep -q '"status":"ok"'; then
+            if curl -fsS --max-time 30 "$SMOKE_API_URL/api/health" | grep -q '"status":"ok"'; then
               echo "Health check PROD OK ($i/3)"
               sleep 5
             else
