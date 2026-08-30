@@ -47,6 +47,14 @@ export class AdminUsersService {
           role: true,
           avatarUrl: true,
           createdAt: true,
+          // Actividad del alumno para el panel de admin: la mantiene al día
+          // checkAndAward en cada ejercicio, tema o examen. Es un dato de
+          // seguimiento, no una clasificación — no se ordena ni se muestra
+          // como ranking en la app del alumno.
+          totalPoints: true,
+          currentDailyStreak: true,
+          longestDailyStreak: true,
+          currentStreak: true,
           academyMembers: {
             select: { academy: { select: { id: true, slug: true, name: true } } },
           },

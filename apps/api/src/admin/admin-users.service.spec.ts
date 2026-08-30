@@ -17,6 +17,7 @@ describe('AdminUsersService', () => {
       create: jest.Mock;
       update: jest.Mock;
       delete: jest.Mock;
+      count: jest.Mock;
     };
     enrollment: {
       findMany: jest.Mock;
@@ -49,6 +50,7 @@ describe('AdminUsersService', () => {
         create: jest.fn(),
         update: jest.fn(),
         delete: jest.fn(),
+        count: jest.fn(),
       },
       enrollment: {
         findMany: jest.fn(),
@@ -64,6 +66,36 @@ describe('AdminUsersService', () => {
     service = module.get<AdminUsersService>(AdminUsersService);
     jest.clearAllMocks();
     mockedBcrypt.hash.mockResolvedValue('$2b$10$hashedpassword' as never);
+  });
+
+  // ─── getUsers ──────────────────────────────────────────────────────────────
+
+  describe('getUsers', () => {
+    beforeEach(() => {
+      mockPrisma.user.findMany.mockResolvedValue([]);
+      mockPrisma.user.count.mockResolvedValue(0);
+    });
+
+    it('devuelve la actividad del alumno: puntos y rachas', async () => {
+      await service.getUsers();
+
+      // El panel de admin las pinta en la columna Actividad; si dejan de
+      // pedirse aquí, la columna se queda a cero sin que falle nada.
+      const select = (mockPrisma.user.findMany.mock.calls[0][0] as { select: Record<string, unknown> })
+        .select;
+      expect(select.totalPoints).toBe(true);
+      expect(select.currentDailyStreak).toBe(true);
+      expect(select.longestDailyStreak).toBe(true);
+      expect(select.currentStreak).toBe(true);
+    });
+
+    it('no expone el hash de la contraseña', async () => {
+      await service.getUsers();
+
+      const select = (mockPrisma.user.findMany.mock.calls[0][0] as { select: Record<string, unknown> })
+        .select;
+      expect(select).not.toHaveProperty('passwordHash');
+    });
   });
 
   // ─── createUser ────────────────────────────────────────────────────────────

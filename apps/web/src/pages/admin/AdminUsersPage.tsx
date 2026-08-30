@@ -29,9 +29,19 @@ const ALL_ROLES = Object.values(Role);
 // Página principal
 // ---------------------------------------------------------------------------
 
+/** Criterios de ordenación de la tabla. `registro` es el orden que da la API. */
+type SortBy = 'registro' | 'racha' | 'puntos';
+
+const SORT_LABELS: Record<SortBy, string> = {
+  registro: 'Registro',
+  racha: 'Racha',
+  puntos: 'Puntos',
+};
+
 export default function AdminUsersPage() {
   const selectedAcademyId = useAcademyFilterStore((s) => s.selectedAcademyId);
   const qc = useQueryClient();
+  const [sortBy, setSortBy] = useState<SortBy>('registro');
 
   const { data: usersPage, isLoading } = useQuery({
     queryKey: ['admin', 'users', selectedAcademyId],
@@ -166,6 +176,17 @@ export default function AdminUsersPage() {
       return matchesSearch && matchesRole;
     }) ?? [];
 
+  // Ordenación en cliente: la página ya trae el listado completo (limit 1000)
+  // y filtra aquí mismo, así que ordenar no necesita ida y vuelta a la API.
+  const sorted =
+    sortBy === 'registro'
+      ? filtered
+      : [...filtered].sort((a, b) =>
+          sortBy === 'racha'
+            ? b.currentDailyStreak - a.currentDailyStreak || b.totalPoints - a.totalPoints
+            : b.totalPoints - a.totalPoints || b.currentDailyStreak - a.currentDailyStreak,
+        );
+
   return (
     <div style={s.page}>
       <AcademyFilter />
@@ -218,6 +239,18 @@ export default function AdminUsersPage() {
             </option>
           ))}
         </select>
+        <select
+          style={s.select}
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortBy)}
+          aria-label="Ordenar por"
+        >
+          {(Object.keys(SORT_LABELS) as SortBy[]).map((key) => (
+            <option key={key} value={key}>
+              Ordenar por: {SORT_LABELS[key]}
+            </option>
+          ))}
+        </select>
         <span style={s.count}>
           {filtered.length} usuario{filtered.length !== 1 ? 's' : ''}
         </span>
@@ -233,12 +266,13 @@ export default function AdminUsersPage() {
                 <th>Usuario</th>
                 <th>Email</th>
                 <th>Rol</th>
+                <th>Actividad</th>
                 <th>Registro</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((user) => (
+              {sorted.map((user) => (
                 <UserRow
                   key={user.id}
                   user={user}
@@ -293,6 +327,39 @@ export default function AdminUsersPage() {
       {toast && (
         <div style={{ ...s.toast, background: toast.ok ? '#22c55e' : '#ef4444' }}>{toast.msg}</div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Actividad del alumno
+// ---------------------------------------------------------------------------
+
+/**
+ * Racha diaria y puntos en formato compacto: `🔥 12d · 340 pts`.
+ *
+ * La racha va delante porque es el dato accionable: dice a quién mencionar
+ * hoy. Solo se pinta para alumnos — un admin no juega, y un `0d · 0 pts` en
+ * cada fila de personal sería ruido.
+ */
+function ActivityCell({ user }: { user: AdminUser }) {
+  if (user.role !== Role.STUDENT) {
+    return <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>—</span>;
+  }
+
+  const streak = user.currentDailyStreak;
+  const title = [
+    `Racha diaria actual: ${streak} día${streak !== 1 ? 's' : ''}`,
+    `Mejor racha diaria: ${user.longestDailyStreak}`,
+    `Semanas seguidas activo: ${user.currentStreak}`,
+    `Puntos acumulados: ${user.totalPoints}`,
+  ].join('\n');
+
+  return (
+    <div style={s.activity} title={title}>
+      <span style={{ ...s.streak, opacity: streak > 0 ? 1 : 0.45 }}>🔥 {streak}d</span>
+      <span style={s.activitySep}>·</span>
+      <span style={s.points}>{user.totalPoints} pts</span>
     </div>
   );
 }
@@ -388,6 +455,9 @@ function UserRow({
             </option>
           ))}
         </select>
+      </td>
+      <td>
+        <ActivityCell user={user} />
       </td>
       <td style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>{createdAt}</td>
       <td>
@@ -711,6 +781,16 @@ const s: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap' as const,
   },
   count: { marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--color-text-muted)' },
+  activity: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+    fontSize: '0.8rem',
+    whiteSpace: 'nowrap',
+  },
+  streak: { fontWeight: 600, color: 'var(--color-text)' },
+  activitySep: { color: 'var(--color-text-muted)', opacity: 0.6 },
+  points: { color: 'var(--color-text-muted)' },
   input: {
     padding: '0.45rem 0.75rem',
     border: '1px solid var(--color-border)',
