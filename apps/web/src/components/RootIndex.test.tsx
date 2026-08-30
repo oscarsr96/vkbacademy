@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 // ── Mocks ──
 
@@ -9,9 +9,10 @@ vi.mock('../contexts/AcademyContext', () => ({
   useAcademyDomain: () => mockAcademyDomain(),
 }));
 
+const mockAccessToken = vi.fn<() => string | null>(() => null);
 vi.mock('../store/auth.store', () => ({
   useAuthStore: (selector: (s: { accessToken: string | null }) => unknown) =>
-    selector({ accessToken: null }),
+    selector({ accessToken: mockAccessToken() }),
 }));
 
 vi.mock('./SplashScreen', () => ({
@@ -41,6 +42,7 @@ import RootIndex from './RootIndex';
 describe('RootIndex — splash visibility', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAccessToken.mockReturnValue(null); // por defecto, visitante sin sesión
   });
 
   it('muestra el splash mientras se resuelve el dominio de academia', () => {
@@ -128,5 +130,30 @@ describe('RootIndex — splash visibility', () => {
 
     expect(screen.getByTestId('splash-screen')).toBeInTheDocument();
     expect(screen.getByTestId('landing-page')).toBeInTheDocument();
+  });
+
+  it('redirige a /dashboard si el alumno ya tiene sesión, sin pasar por la landing', () => {
+    // La rama de usuario autenticado no estaba cubierta: romper el <Navigate>
+    // dejaba al alumno con sesión en la página de marketing y ningún test lo veía.
+    mockAccessToken.mockReturnValue('token-valido');
+    mockAcademyDomain.mockReturnValue({
+      academy: null,
+      isAcademyDomain: false,
+      isLoading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<RootIndex />} />
+          <Route path="/dashboard" element={<div data-testid="dashboard">Dashboard</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('dashboard')).toBeInTheDocument();
+    expect(screen.queryByTestId('landing-page')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('academy-landing')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('splash-screen')).not.toBeInTheDocument();
   });
 });

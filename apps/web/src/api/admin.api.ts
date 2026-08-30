@@ -25,6 +25,12 @@ export interface AdminUser {
   role: Role;
   avatarUrl?: string | null;
   createdAt: string;
+  /** Actividad del alumno (columna Actividad del panel). Los mantiene
+   *  checkAndAward en cada ejercicio, tema o examen. */
+  totalPoints: number;
+  currentDailyStreak: number;
+  longestDailyStreak: number;
+  currentStreak: number;
 }
 
 export interface RedemptionStats {

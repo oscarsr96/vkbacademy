@@ -25,7 +25,13 @@ function awardedPointsCalls(
 describe('ChallengesService', () => {
   let service: ChallengesService;
   let mockPrisma: {
-    user: { findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
+    user: {
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
+      update: jest.Mock;
+      updateMany: jest.Mock;
+    };
     challenge: { findMany: jest.Mock };
     userChallenge: {
       groupBy: jest.Mock;
@@ -40,6 +46,7 @@ describe('ChallengesService', () => {
     theoryLesson: { count: jest.Mock };
     examAttempt: { count: jest.Mock; aggregate: jest.Mock; findMany: jest.Mock };
     redemption: { create: jest.Mock };
+    academyMember: { findFirst: jest.Mock };
     studyPlan: { count: jest.Mock };
     studyPlanTopic: { count: jest.Mock; findMany: jest.Mock };
     exerciseAttempt: {
@@ -54,7 +61,13 @@ describe('ChallengesService', () => {
 
   beforeEach(async () => {
     mockPrisma = {
-      user: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
+      user: {
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+      },
       challenge: { findMany: jest.fn() },
       userChallenge: {
         groupBy: jest.fn(),
@@ -69,6 +82,7 @@ describe('ChallengesService', () => {
       theoryLesson: { count: jest.fn() },
       examAttempt: { count: jest.fn(), aggregate: jest.fn(), findMany: jest.fn() },
       redemption: { create: jest.fn() },
+      academyMember: { findFirst: jest.fn() },
       studyPlan: { count: jest.fn() },
       studyPlanTopic: { count: jest.fn(), findMany: jest.fn() },
       exerciseAttempt: {
@@ -317,18 +331,25 @@ describe('ChallengesService', () => {
   // ─── redeemItem ──────────────────────────────────────────────────────────────
 
   describe('redeemItem', () => {
+    beforeEach(() => {
+      mockPrisma.redemption.create.mockResolvedValue({});
+    });
+
     // Las excepciones son de Nest, no Error pelado: el cliente recibe
     // { message, statusCode } sin depender de que el controlador lo adivine.
     it('lanza 404 si el usuario no existe', async () => {
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 0 });
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
       await expect(service.redeemItem('user1', 'Camiseta', 500)).rejects.toThrow(NotFoundException);
       await expect(service.redeemItem('user1', 'Camiseta', 500)).rejects.toThrow(
         'Usuario no encontrado',
       );
+      expect(mockPrisma.redemption.create).not.toHaveBeenCalled();
     });
 
     it('lanza 400 si el usuario no tiene puntos suficientes, no un 500', async () => {
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 0 });
       mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 50 });
 
       const error = await service.redeemItem('user1', 'Camiseta', 500).catch((e: unknown) => e);
@@ -339,11 +360,8 @@ describe('ChallengesService', () => {
     });
 
     it('ejecuta la transacción atómica y devuelve el resultado del canje', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 1000 });
-      mockPrisma.$transaction.mockResolvedValue([
-        { totalPoints: 800 }, // resultado de user.update
-        {}, // resultado de redemption.create
-      ]);
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.user.findUniqueOrThrow.mockResolvedValue({ totalPoints: 800 });
 
       const result = await service.redeemItem('user1', 'Balón firmado', 200);
 
@@ -353,20 +371,35 @@ describe('ChallengesService', () => {
       expect(result.message).toContain('Balón firmado');
     });
 
-    it('la transacción incluye user.update (decrement) y redemption.create', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 500 });
-      mockPrisma.$transaction.mockImplementation((operations: unknown[]) =>
-        Promise.resolve(operations.map(() => ({}))),
+    it('descuenta con la condición de saldo en el WHERE y crea el Redemption', async () => {
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.user.findUniqueOrThrow.mockResolvedValue({ totalPoints: 150 });
+
+      await service.redeemItem('user1', 'Gorra', 350, 'academy1');
+
+      expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+        where: { id: 'user1', totalPoints: { gte: 350 } },
+        data: { totalPoints: { decrement: 350 } },
+      });
+      expect(mockPrisma.redemption.create).toHaveBeenCalledWith({
+        data: { userId: 'user1', itemName: 'Gorra', cost: 350, academyId: 'academy1' },
+      });
+    });
+
+    it('no entrega el artículo si el descuento no afectó a ninguna fila (canje concurrente)', async () => {
+      // Otro canje simultáneo vació el saldo entre la comprobación y la escritura:
+      // el gte del WHERE no se cumple, este canje actualiza 0 filas y aborta.
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 0 });
+      mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 0 });
+
+      await expect(service.redeemItem('user1', 'Balón firmado', 1000)).rejects.toThrow(
+        BadRequestException,
       );
-
-      await service.redeemItem('user1', 'Gorra', 350);
-
-      // La transacción recibe un array de operaciones Prisma
-      const transactionArg = mockPrisma.$transaction.mock.calls[0][0] as unknown[];
-      expect(transactionArg).toHaveLength(2);
+      expect(mockPrisma.redemption.create).not.toHaveBeenCalled();
     });
 
     it('el error de puntos incluye el mensaje con los puntos actuales y necesarios', async () => {
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 0 });
       mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 100 });
 
       await expect(service.redeemItem('user1', 'Botella', 200)).rejects.toThrow(/100/);
@@ -1023,6 +1056,106 @@ describe('ChallengesService', () => {
       const res = await service.getLeaderboard('u-admin', 'academy1');
 
       expect(res.entries).toEqual([]);
+    });
+  });
+
+  // ─── atribución por academia ─────────────────────────────────────────────────
+
+  describe('checkAndAward — academyId de UserChallenge', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(WEEK_08);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        currentStreak: 2,
+        longestStreak: 3,
+        lastActiveWeek: ISO_W08,
+        currentDailyStreak: 1,
+        longestDailyStreak: 1,
+        lastActiveDay: DAY_W08_MON,
+      });
+      mockPrisma.userChallenge.findMany.mockResolvedValue([]);
+      mockPrisma.userChallenge.upsert.mockResolvedValue({});
+      mockPrisma.userChallenge.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.user.update.mockResolvedValue({});
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const challenge = {
+      id: 'ch1',
+      type: ChallengeType.THEORY_COMPLETED,
+      target: 5,
+      points: 100,
+      cadence: ChallengeCadence.PERMANENT,
+    };
+
+    it('toma la academia de la membresía más antigua del alumno', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
+      mockPrisma.theoryModule.count.mockResolvedValue(1); // sin llegar al target
+      mockPrisma.academyMember.findFirst.mockResolvedValue({ academyId: 'academy1' });
+
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
+
+      expect(mockPrisma.academyMember.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'user1' },
+        orderBy: { createdAt: 'asc' },
+        select: { academyId: true },
+      });
+    });
+
+    it('escribe la academia en la fila de progreso que crea', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
+      mockPrisma.theoryModule.count.mockResolvedValue(1); // progreso sin completar
+      mockPrisma.academyMember.findFirst.mockResolvedValue({ academyId: 'academy1' });
+
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
+
+      expect(mockPrisma.userChallenge.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ academyId: 'academy1' }),
+          update: expect.objectContaining({ academyId: 'academy1' }),
+        }),
+      );
+    });
+
+    it('escribe la academia también en la fila que crea al completar y pagar', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
+      mockPrisma.theoryModule.count.mockResolvedValue(5); // llega al target
+      mockPrisma.academyMember.findFirst.mockResolvedValue({ academyId: 'academy1' });
+
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
+
+      expect(mockPrisma.userChallenge.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ academyId: 'academy1' }),
+        }),
+      );
+      // El updateMany que marca completado rellena la academia de las filas
+      // que se escribieron a null antes de este arreglo.
+      expect(mockPrisma.userChallenge.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ academyId: 'academy1', completed: true }),
+        }),
+      );
+    });
+
+    it('deja la academia a null si el alumno no tiene membresía, sin pisar la fila existente', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
+      mockPrisma.theoryModule.count.mockResolvedValue(1);
+      mockPrisma.academyMember.findFirst.mockResolvedValue(null);
+
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
+
+      const call = mockPrisma.userChallenge.upsert.mock.calls[0][0] as {
+        create: { academyId: string | null };
+        update: Record<string, unknown>;
+      };
+      expect(call.create.academyId).toBeNull();
+      // Sin academia que escribir, el update no toca el campo: una fila ya
+      // atribuida no se borra por pasar por aquí sin contexto.
+      expect(call.update).not.toHaveProperty('academyId');
     });
   });
 
