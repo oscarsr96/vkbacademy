@@ -185,13 +185,20 @@ function StudentRail({ onNavigate }: { onNavigate: (to: string) => void }) {
     .sort((a, b) => b.progress / b.target - a.progress / a.target)
     .slice(0, 3);
 
+  // Última insignia: la más reciente de las conseguidas. Va con nombre y fecha
+  // porque un premio que no se puede señalar no funciona como premio.
+  const latestBadge = (challengesData?.challenges ?? [])
+    .filter((c) => c.completed && c.completedAt)
+    .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
+
   // Últimos trofeos
   const latestCerts = (certs ?? [])
     .slice()
     .sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime())
     .slice(0, 2);
 
-  const isEmpty = !nextLesson && activeChallenges.length === 0 && latestCerts.length === 0;
+  const isEmpty =
+    !nextLesson && activeChallenges.length === 0 && latestCerts.length === 0 && !latestBadge;
 
   return (
     <aside style={S.rail}>
@@ -240,6 +247,39 @@ function StudentRail({ onNavigate }: { onNavigate: (to: string) => void }) {
             onClick={() => onNavigate('/challenges')}
           >
             Ver todos los retos
+          </button>
+        </RailCard>
+      )}
+
+      {latestBadge && (
+        <RailCard icon="award" label="Tu última insignia" delay={260}>
+          <div style={S.railBadgeRow}>
+            <span
+              aria-hidden="true"
+              style={{
+                ...S.railBadgeIcon,
+                background: `${latestBadge.badgeColor}22`,
+                border: `1.5px solid ${latestBadge.badgeColor}66`,
+              }}
+            >
+              {latestBadge.badgeIcon}
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <p style={S.railChallengeTitle}>{latestBadge.title}</p>
+              <p style={S.railMeta}>
+                {new Date(latestBadge.completedAt!).toLocaleDateString('es-ES', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </p>
+            </div>
+          </div>
+          <button
+            className="btn btn-dark btn-full"
+            style={S.railGhostBtn}
+            onClick={() => onNavigate('/profile')}
+          >
+            Ver mis insignias
           </button>
         </RailCard>
       )}
@@ -582,6 +622,17 @@ const S: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
+  },
+  railBadgeRow: { display: 'flex', alignItems: 'center', gap: 12 },
+  railBadgeIcon: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    fontSize: '1.2rem',
+    flexShrink: 0,
   },
   railTrophyIcon: {
     display: 'inline-flex',

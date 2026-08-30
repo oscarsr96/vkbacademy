@@ -2,7 +2,9 @@ import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '../store/auth.store';
 import { usersApi } from '../api/users.api';
-import type { User } from '@vkbacademy/shared';
+import { useMyChallenges } from '../hooks/useChallenges';
+import { Role, type User } from '@vkbacademy/shared';
+import BadgeShelf from '../components/BadgeShelf';
 import Icon from '../components/ui/Icon';
 
 // ─── Mapa de etiquetas de rol ───────────────────────────────────────────────
@@ -199,8 +201,12 @@ function ChangePasswordSection() {
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
+  const { data: challengesData } = useMyChallenges();
 
   if (!user) return null;
+
+  // Los admin no juegan: no tienen insignias que enseñar
+  const isStudent = user.role === Role.STUDENT;
 
   const initial = user.name.charAt(0).toUpperCase();
   const roleLabel = ROLE_LABELS[user.role] ?? user.role;
@@ -223,6 +229,11 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Estantería de insignias */}
+      {isStudent && challengesData && (
+        <BadgeShelf challenges={challengesData.challenges} />
+      )}
 
       {/* Formularios */}
       <div style={S.content}>
