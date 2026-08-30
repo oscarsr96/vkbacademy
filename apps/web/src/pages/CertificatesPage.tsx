@@ -188,7 +188,7 @@ function CertificateCard({ cert, index }: { cert: Certificate; index: number }) 
       <button
         className="btn btn-primary"
         style={{ alignSelf: 'flex-start', padding: '9px 18px', fontSize: '0.85rem', marginTop: 4 }}
-        onClick={() => downloadCertificatePdf(cert)}
+        onClick={() => void downloadCertificatePdf(cert)}
       >
         <Icon name="download" size={15} />
         Descargar PDF

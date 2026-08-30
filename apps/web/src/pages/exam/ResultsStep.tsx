@@ -327,7 +327,7 @@ export function ResultsStep({
               color: '#fff',
               boxShadow: '0 4px 16px rgba(22,163,74,0.30)',
             }}
-            onClick={() => downloadCertificatePdf(examCert)}
+            onClick={() => void downloadCertificatePdf(examCert)}
           >
             <Icon name="award" size={16} />
             Descargar certificado
