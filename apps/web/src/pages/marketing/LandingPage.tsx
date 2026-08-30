@@ -26,7 +26,8 @@ const STEPS = [
   {
     number: '03',
     title: 'Lo demuestras',
-    description: 'Superas el examen del club y te llevas un certificado que acredita lo que sabes.',
+    description:
+      'Apruebas los tres niveles del examen y te llevas un certificado que acredita lo que sabes.',
   },
 ];
 
@@ -513,7 +514,7 @@ function GenerationMock() {
     <div
       className="lp-gen"
       role="img"
-      aria-label="Ejemplo de generación: al escribir el tema ecuaciones de segundo grado, la plataforma prepara diez actividades, tres vídeos y un examen con certificado"
+      aria-label="Ejemplo de generación: al escribir el tema ecuaciones de segundo grado, la plataforma prepara diez actividades, tres vídeos y un examen en tres niveles"
     >
       <div aria-hidden="true">
         <span className="lp-gen-label">Escribe el tema</span>
@@ -529,7 +530,7 @@ function GenerationMock() {
             <span className="lp-gen-num">03</span> vídeos que lo explican bien
           </li>
           <li>
-            <span className="lp-gen-num">01</span> examen con certificado
+            <span className="lp-gen-num">03</span> niveles de examen
           </li>
         </ul>
       </div>

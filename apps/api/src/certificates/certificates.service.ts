@@ -13,14 +13,22 @@ type CertificateWithIncludes = {
   userId: string;
   courseId: string | null;
   moduleId: string | null;
+  studyPlanId: string | null;
   user: { id: string; name: string };
   course: { id: string; title: string } | null;
+  studyPlan: { id: string; title: string; courseId: string } | null;
   module: {
     id: string;
     title: string;
     course: { id: string; title: string };
   } | null;
 };
+
+/** Niveles de examen de un curso de estudio; hay que aprobar los tres. */
+const STUDY_EXAM_LEVELS = ['BASIC', 'MEDIUM', 'HARD'] as const;
+
+/** Mismo umbral que muestra la pestaña de Examen al alumno. */
+const STUDY_EXAM_PASS_SCORE = 50;
 
 @Injectable()
 export class CertificatesService {
@@ -36,9 +44,11 @@ export class CertificatesService {
       examScore: c.examScore,
       issuedAt: c.issuedAt.toISOString(),
       recipientName: c.user.name,
-      scopeTitle: c.course?.title ?? c.module?.title ?? '',
-      scopeId: c.courseId ?? c.moduleId ?? '',
-      courseId: c.courseId ?? c.module?.course.id ?? undefined,
+      // En STUDY_EXAM lo que se acredita es el curso de estudio del alumno:
+      // su título es el de sus temas, no el de la asignatura base.
+      scopeTitle: c.studyPlan?.title ?? c.course?.title ?? c.module?.title ?? '',
+      scopeId: c.studyPlanId ?? c.courseId ?? c.moduleId ?? '',
+      courseId: c.studyPlan?.courseId ?? c.courseId ?? c.module?.course.id ?? undefined,
       courseTitle: c.module ? c.module.course.title : undefined,
     };
   }
@@ -145,9 +155,13 @@ export class CertificatesService {
 
     if (!attempt) return;
 
-    // Los bancos generados por IA (flujo de estudio del alumno) no emiten
-    // certificados oficiales: solo los exámenes curados por admin.
-    if (attempt.aiExamBankId) return;
+    // Examen de un curso de estudio (generado por IA). No emite el certificado
+    // oficial del club, sino el suyo propio, y solo con los tres niveles
+    // aprobados: ver issueStudyPlanCertificate.
+    if (attempt.aiExamBankId) {
+      await this.issueStudyPlanCertificate(userId, attempt.aiExamBankId);
+      return;
+    }
 
     if (attempt.courseId) {
       await this.issueCertificate(
@@ -166,6 +180,70 @@ export class CertificatesService {
         score,
       );
     }
+  }
+
+  /**
+   * Certificado de un curso de estudio: se emite al aprobar SUS TRES NIVELES.
+   *
+   * Hasta ahora los exámenes generados por IA no emitían nada, con el criterio
+   * de que solo certificaba lo curado por el club. Pero el flujo oficial
+   * (cursos y módulos con banco de preguntas de admin) ya no tiene entrada en
+   * la app del alumno, así que en la práctica ningún alumno podía obtener un
+   * certificado: la pantalla de Certificados, la de admin y la verificación
+   * pública estaban condenadas a estar vacías.
+   *
+   * Se exige aprobar básico, medio y difícil porque es la meta que la propia
+   * pestaña de Examen ya le plantea al alumno ("Apruébalo en 3 niveles"). Con
+   * un solo examen aprobado el certificado no diría gran cosa.
+   *
+   * La nota que se guarda es la media de la mejor de cada nivel.
+   */
+  private async issueStudyPlanCertificate(userId: string, aiExamBankId: string): Promise<void> {
+    const bank = await this.prisma.aiExamBank.findUnique({
+      where: { id: aiExamBankId },
+      select: { studyPlanId: true },
+    });
+    // Bancos sueltos (un tema, sin plan) o legacy: no hay curso que certificar
+    if (!bank?.studyPlanId) return;
+
+    const existing = await this.prisma.certificate.findFirst({
+      where: { userId, studyPlanId: bank.studyPlanId, type: CertificateType.STUDY_EXAM },
+    });
+    if (existing) return;
+
+    // Mejor nota por nivel, mirando solo los exámenes de ESTE curso de estudio
+    const attempts = await this.prisma.examAttempt.findMany({
+      where: {
+        userId,
+        score: { not: null },
+        aiExamBank: { studyPlanId: bank.studyPlanId, level: { not: null } },
+      },
+      select: { score: true, aiExamBank: { select: { level: true } } },
+    });
+
+    const mejorPorNivel = new Map<string, number>();
+    for (const a of attempts) {
+      const level = a.aiExamBank?.level;
+      if (!level || a.score === null) continue;
+      mejorPorNivel.set(level, Math.max(mejorPorNivel.get(level) ?? 0, a.score));
+    }
+
+    const aprobados = STUDY_EXAM_LEVELS.filter(
+      (level) => (mejorPorNivel.get(level) ?? 0) >= STUDY_EXAM_PASS_SCORE,
+    );
+    if (aprobados.length < STUDY_EXAM_LEVELS.length) return;
+
+    const media =
+      aprobados.reduce((sum, level) => sum + (mejorPorNivel.get(level) ?? 0), 0) / aprobados.length;
+
+    await this.prisma.certificate.create({
+      data: {
+        userId,
+        studyPlanId: bank.studyPlanId,
+        type: CertificateType.STUDY_EXAM,
+        examScore: Math.round(media * 10) / 10,
+      },
+    });
   }
 
   // ─── Emisión manual (admin) ───────────────────────────────────────────────
@@ -192,6 +270,7 @@ export class CertificatesService {
       include: {
         user: { select: { id: true, name: true } },
         course: { select: { id: true, title: true } },
+        studyPlan: { select: { id: true, title: true, courseId: true } },
         module: {
           select: {
             id: true,
@@ -217,6 +296,7 @@ export class CertificatesService {
       include: {
         user: { select: { id: true, name: true } },
         course: { select: { id: true, title: true } },
+        studyPlan: { select: { id: true, title: true, courseId: true } },
         module: {
           select: {
             id: true,
@@ -239,6 +319,7 @@ export class CertificatesService {
       include: {
         user: { select: { id: true, name: true } },
         course: { select: { id: true, title: true } },
+        studyPlan: { select: { id: true, title: true, courseId: true } },
         module: {
           select: {
             id: true,
@@ -261,6 +342,7 @@ export class CertificatesService {
       include: {
         user: { select: { id: true, name: true } },
         course: { select: { id: true, title: true } },
+        studyPlan: { select: { id: true, title: true, courseId: true } },
         module: {
           select: {
             id: true,
@@ -273,7 +355,7 @@ export class CertificatesService {
 
     if (!cert) return { valid: false };
 
-    const scopeTitle = cert.course?.title ?? cert.module?.title ?? '';
+    const scopeTitle = cert.studyPlan?.title ?? cert.course?.title ?? cert.module?.title ?? '';
     const courseTitle = cert.module ? cert.module.course.title : undefined;
 
     return {
@@ -285,8 +367,8 @@ export class CertificatesService {
         examScore: cert.examScore,
         issuedAt: cert.issuedAt.toISOString(),
         scopeTitle,
-        scopeId: cert.courseId ?? cert.moduleId ?? '',
-        courseId: cert.courseId ?? cert.module?.course.id ?? undefined,
+        scopeId: cert.studyPlanId ?? cert.courseId ?? cert.moduleId ?? '',
+        courseId: cert.studyPlan?.courseId ?? cert.courseId ?? cert.module?.course.id ?? undefined,
         courseTitle,
       },
     };
@@ -306,6 +388,7 @@ export class CertificatesService {
         include: {
           user: { select: { id: true, name: true, email: true } },
           course: { select: { id: true, title: true } },
+          studyPlan: { select: { id: true, title: true, courseId: true } },
           module: {
             select: {
               id: true,
@@ -333,7 +416,7 @@ export class CertificatesService {
         issuedAt: c.issuedAt.toISOString(),
         recipientName: c.user.name,
         recipientEmail: c.user.email,
-        scopeTitle: c.course?.title ?? c.module?.title ?? '',
+        scopeTitle: c.studyPlan?.title ?? c.course?.title ?? c.module?.title ?? '',
         courseTitle: c.module ? c.module.course.title : undefined,
       })),
       total,

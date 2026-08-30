@@ -446,6 +446,7 @@ enum CertificateType {
   COURSE_COMPLETION // completó todas las lecciones del curso
   MODULE_EXAM // aprobó el examen del módulo (≥ 50%)
   COURSE_EXAM // aprobó el examen del curso (≥ 50%)
+  STUDY_EXAM // aprobó los 3 niveles del examen de un curso de estudio (IA)
 }
 
 model Certificate {
@@ -453,18 +454,24 @@ model Certificate {
   userId     String
   courseId   String? // null si es certificado de módulo
   moduleId   String? // null si es certificado de curso
+  /// Curso de estudio (StudyPlan) certificado, en los de tipo STUDY_EXAM.
+  /// Se guarda aparte de courseId porque lo que se acredita es el curso que el
+  /// alumno se montó —sus temas y sus tres niveles—, no la asignatura base.
+  studyPlanId String?
   type       CertificateType
   verifyCode String          @unique @default(cuid())
   examScore  Float? // solo para MODULE_EXAM / COURSE_EXAM
   issuedAt   DateTime        @default(now())
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course? @relation("CourseCertificates", fields: [courseId], references: [id])
-  module Module? @relation("ModuleCertificates", fields: [moduleId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course?    @relation("CourseCertificates", fields: [courseId], references: [id])
+  module    Module?    @relation("ModuleCertificates", fields: [moduleId], references: [id])
+  studyPlan StudyPlan? @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([courseId])
   @@index([moduleId])
+  @@index([studyPlanId])
 }
 
 // ─────────────────────────────────────────────────────────
@@ -700,6 +707,7 @@ model StudyPlan {
   topics           StudyPlanTopic[]
   examBanks        AiExamBank[] // vía AiExamBank.studyPlanId (uno por nivel/tema, lazy)
   exerciseAttempts ExerciseAttempt[]
+  certificates     Certificate[]
 
   @@index([userId, createdAt])
   @@index([userId, courseId])

@@ -61,7 +61,8 @@ describe('CertificatesService', () => {
       findUnique: jest.Mock;
       create: jest.Mock;
     };
-    examAttempt: { findUnique: jest.Mock };
+    examAttempt: { findUnique: jest.Mock; findMany: jest.Mock };
+    aiExamBank: { findUnique: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -74,7 +75,8 @@ describe('CertificatesService', () => {
         findUnique: jest.fn(),
         create: jest.fn(),
       },
-      examAttempt: { findUnique: jest.fn() },
+      examAttempt: { findUnique: jest.fn(), findMany: jest.fn() },
+      aiExamBank: { findUnique: jest.fn() },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -319,16 +321,18 @@ describe('CertificatesService', () => {
       expect(mockPrisma.certificate.create).not.toHaveBeenCalled();
     });
 
-    it('NO emite certificado si el intento procede de un banco IA — aunque el score sea ≥ 50', async () => {
+    it('un examen de curso de estudio no emite el certificado oficial de curso', async () => {
       mockPrisma.examAttempt.findUnique.mockResolvedValue({
         courseId: 'course1',
         moduleId: null,
         aiExamBankId: 'bank1',
       });
+      mockPrisma.aiExamBank.findUnique.mockResolvedValue({ studyPlanId: null });
 
       await service.issueExamCertificate('user1', 'attempt1', 100);
 
-      expect(mockPrisma.certificate.findFirst).not.toHaveBeenCalled();
+      // Aprobar un examen generado por IA no puede acreditar el curso oficial
+      // del club: eso sigue saliendo solo de los exámenes curados por admin.
       expect(mockPrisma.certificate.create).not.toHaveBeenCalled();
     });
 
@@ -606,4 +610,87 @@ describe('CertificatesService', () => {
       expect(createCall.data.examScore).toBeNull();
     });
   });
+
+  // ─── Certificado del curso de estudio (3 niveles) ───────────────────────────
+
+  describe('certificado de un curso de estudio', () => {
+    const attemptIA = { courseId: 'course1', moduleId: null, aiExamBankId: 'bank1' };
+
+    beforeEach(() => {
+      mockPrisma.examAttempt.findUnique.mockResolvedValue(attemptIA);
+      mockPrisma.aiExamBank.findUnique.mockResolvedValue({ studyPlanId: 'plan1' });
+      mockPrisma.certificate.findFirst.mockResolvedValue(null);
+      mockPrisma.certificate.create.mockResolvedValue({});
+    });
+
+    const intento = (level: string, score: number) => ({ score, aiExamBank: { level } });
+
+    it('emite el certificado al aprobar los tres niveles', async () => {
+      mockPrisma.examAttempt.findMany.mockResolvedValue([
+        intento('BASIC', 70),
+        intento('MEDIUM', 60),
+        intento('HARD', 50),
+      ]);
+
+      await service.issueExamCertificate('user1', 'attempt1', 50);
+
+      expect(mockPrisma.certificate.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'user1',
+          studyPlanId: 'plan1',
+          type: 'STUDY_EXAM',
+          // Media de la mejor de cada nivel: (70 + 60 + 50) / 3 = 60
+          examScore: 60,
+        }),
+      });
+    });
+
+    it('no lo emite con solo dos niveles aprobados', async () => {
+      mockPrisma.examAttempt.findMany.mockResolvedValue([
+        intento('BASIC', 90),
+        intento('MEDIUM', 80),
+        intento('HARD', 30), // suspendido
+      ]);
+
+      await service.issueExamCertificate('user1', 'attempt1', 30);
+
+      expect(mockPrisma.certificate.create).not.toHaveBeenCalled();
+    });
+
+    it('cuenta la MEJOR nota de cada nivel, no la última', async () => {
+      mockPrisma.examAttempt.findMany.mockResolvedValue([
+        intento('BASIC', 20), // primer intento suspendido
+        intento('BASIC', 80), // repetido y aprobado
+        intento('MEDIUM', 60),
+        intento('HARD', 55),
+      ]);
+
+      await service.issueExamCertificate('user1', 'attempt1', 55);
+
+      expect(mockPrisma.certificate.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ examScore: 65 }),
+      });
+    });
+
+    it('no duplica el certificado del mismo curso de estudio', async () => {
+      mockPrisma.certificate.findFirst.mockResolvedValue({ id: 'ya-existe' });
+
+      await service.issueExamCertificate('user1', 'attempt1', 90);
+
+      expect(mockPrisma.certificate.create).not.toHaveBeenCalled();
+    });
+
+    it('mira solo los exámenes de ESE curso de estudio', async () => {
+      mockPrisma.examAttempt.findMany.mockResolvedValue([]);
+
+      await service.issueExamCertificate('user1', 'attempt1', 90);
+
+      // Sin este filtro, aprobar niveles sueltos de cursos distintos sumaría
+      const where = mockPrisma.examAttempt.findMany.mock.calls[0][0].where as {
+        aiExamBank: { studyPlanId: string };
+      };
+      expect(where.aiExamBank.studyPlanId).toBe('plan1');
+    });
+  });
+
 });

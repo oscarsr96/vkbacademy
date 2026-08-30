@@ -8,8 +8,8 @@ const STUDENT_FEATURES = [
   'Vídeos técnicos y tácticos organizados por nivel',
   'Lecciones interactivas: emparejar, ordenar y rellenar huecos',
   'Tests y quizzes con corrección automática',
-  'Exámenes oficiales por módulo y curso completo',
-  'Certificados digitales descargables en PDF al superar cada examen',
+  'Exámenes de cada curso de estudio en tres niveles: básico, medio y difícil',
+  'Certificado digital en PDF al superar los tres niveles de un curso',
   'Retos y puntos canjeables por merchandising del club',
 ];
 

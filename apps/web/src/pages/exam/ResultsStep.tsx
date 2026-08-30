@@ -16,6 +16,7 @@ export function ResultsStep({
   scopeTitle,
   courseId,
   moduleId,
+  studyPlanId,
   onRepeat,
   onBack,
   historyItems,
@@ -24,6 +25,8 @@ export function ResultsStep({
   scopeTitle: string;
   courseId?: string;
   moduleId?: string;
+  /** Curso de estudio del que sale el examen IA; su certificado va contra él. */
+  studyPlanId?: string;
   onRepeat: () => void;
   onBack: () => void;
   historyItems: {
@@ -36,9 +39,13 @@ export function ResultsStep({
   usePageZone('dark');
 
   const { data: certs } = useMyCertificates();
-  const examCertType = courseId ? 'COURSE_EXAM' : 'MODULE_EXAM';
-  const examScopeId = courseId ?? moduleId;
-  const examCert = certs?.find((c) => c.scopeId === examScopeId && c.type === examCertType);
+  // En un examen de curso de estudio el certificado va contra el plan, no
+  // contra la asignatura; en los oficiales, contra el curso o el módulo.
+  const examCert = studyPlanId
+    ? certs?.find((c) => c.scopeId === studyPlanId && c.type === 'STUDY_EXAM')
+    : certs?.find(
+        (c) => c.scopeId === (courseId ?? moduleId) && c.type === (courseId ? 'COURSE_EXAM' : 'MODULE_EXAM'),
+      );
 
   const passed = result.score >= 50;
 
@@ -123,7 +130,10 @@ export function ResultsStep({
             {passed ? 'Aprobado' : 'Suspendido'}
           </div>
 
-          {passed && (
+          {/* Iba con `passed` a secas, así que decía "Certificado emitido"
+              siempre que aprobabas — también en exámenes que no emiten
+              ninguno. El alumno lo leía, iba a Certificados y no había nada. */}
+          {examCert && (
             <div
               style={{
                 display: 'inline-flex',
