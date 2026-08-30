@@ -297,7 +297,7 @@ export default function CoursePage() {
             </p>
             <button
               style={S.certBannerBtn}
-              onClick={() => downloadCertificatePdf(courseCert)}
+              onClick={() => void downloadCertificatePdf(courseCert)}
             >
               <Icon name="download" size={14} />
               Descargar PDF
