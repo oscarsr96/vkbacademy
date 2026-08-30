@@ -80,6 +80,8 @@ export const envValidationSchema = Joi.object({
   AI_PRICE_GEMINI_OUTPUT_USD: Joi.number().min(0).optional(),
   AI_PRICE_HAIKU_INPUT_USD: Joi.number().min(0).optional(),
   AI_PRICE_HAIKU_OUTPUT_USD: Joi.number().min(0).optional(),
+  // Cupo diario de preguntas al tutor por alumno (default en TutorService).
+  TUTOR_DAILY_LIMIT: Joi.number().integer().min(1).optional(),
 
   // ── Vercel (registro dinámico de dominios para multi-tenancy) ──────────────
   VERCEL_TOKEN: Joi.string().allow('').optional(),
