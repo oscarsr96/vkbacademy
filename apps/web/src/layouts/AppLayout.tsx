@@ -21,6 +21,7 @@ function buildNavLinks(role: Role | undefined): NavItem[] {
       { to: '/admin/courses', label: 'Cursos', icon: 'book' },
       { to: '/admin/challenges', label: 'Retos', icon: 'target' },
       { to: '/admin/redemptions', label: 'Canjes', icon: 'gift' },
+      { to: '/admin/certificates', label: 'Certificados', icon: 'award' },
       { to: '/profile', label: 'Mi perfil', icon: 'user', divider: true },
     ];
   }
@@ -33,6 +34,7 @@ function buildNavLinks(role: Role | undefined): NavItem[] {
       { to: '/admin/courses', label: 'Cursos', icon: 'book' },
       { to: '/admin/challenges', label: 'Retos', icon: 'target' },
       { to: '/admin/redemptions', label: 'Canjes', icon: 'gift' },
+      { to: '/admin/certificates', label: 'Certificados', icon: 'award' },
       { to: '/profile', label: 'Mi perfil', icon: 'user', divider: true },
     ];
   }
