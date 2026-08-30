@@ -380,6 +380,18 @@ export default function AdminChallengesPage() {
                   {/* Título */}
                   <td style={tdStyle}>
                     <span style={{ fontWeight: 500 }}>{c.title}</span>
+                    {/* La descripción se pedía al crear el reto pero no se veía
+                        en ningún sitio: el admin no sabía qué pide cada uno. */}
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--color-text-muted)',
+                        marginTop: 2,
+                        maxWidth: 320,
+                      }}
+                    >
+                      {c.description}
+                    </div>
                   </td>
 
                   {/* Tipo */}

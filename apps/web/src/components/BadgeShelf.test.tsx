@@ -1,3 +1,4 @@
+import userEvent from '@testing-library/user-event';
 import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import BadgeShelf, { collectibleBadges } from './BadgeShelf';
@@ -82,5 +83,95 @@ describe('BadgeShelf — cómo se enseña', () => {
     const { container } = render(<BadgeShelf challenges={[reto({ id: 'w', cadence: 'WEEKLY' })]} />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('BadgeShelf — explicación al pasar por encima', () => {
+  const conseguida = reto({
+    id: 'primer-plan',
+    title: 'Primer plan',
+    description: 'Crea tu primer plan de estudio.',
+    points: 15,
+    target: 1,
+    progress: 1,
+    completed: true,
+    completedAt: '2026-08-20T10:00:00.000Z',
+  });
+
+  const pendiente = reto({
+    id: 'cien-dianas',
+    title: 'Cien dianas',
+    description: 'Acierta 100 ejercicios.',
+    points: 200,
+    target: 100,
+    progress: 40,
+  });
+
+  it('muestra la descripción al pasar por encima, no solo el nombre', async () => {
+    render(<BadgeShelf challenges={[conseguida]} />);
+
+    // Antes de pasar por encima no hay explicación
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    await userEvent.hover(screen.getByRole('button', { name: /Primer plan/ }));
+
+    const tip = screen.getByRole('tooltip');
+    expect(within(tip).getByText('Crea tu primer plan de estudio.')).toBeInTheDocument();
+  });
+
+  it('en una pendiente dice cuánto falta, no solo en qué consiste', async () => {
+    render(<BadgeShelf challenges={[pendiente]} />);
+
+    await userEvent.hover(screen.getByRole('button', { name: /Cien dianas/ }));
+
+    const tip = screen.getByRole('tooltip');
+    expect(within(tip).getByText('Acierta 100 ejercicios.')).toBeInTheDocument();
+    expect(within(tip).getByText(/Te faltan 60 de 100/)).toBeInTheDocument();
+  });
+
+  it('también se abre al tocar: en el móvil no hay hover', async () => {
+    render(<BadgeShelf challenges={[conseguida]} />);
+    const boton = screen.getByRole('button', { name: /Primer plan/ });
+
+    // Toque real, no click de ratón: es el gesto que hace un alumno en el móvil
+    await userEvent.pointer({ keys: '[TouchA]', target: boton });
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    // Y se cierra al volver a tocar
+    await userEvent.pointer({ keys: '[TouchA]', target: boton });
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('lo abierto al tocar no se cierra solo al salir el puntero', async () => {
+    render(<BadgeShelf challenges={[conseguida]} />);
+    const boton = screen.getByRole('button', { name: /Primer plan/ });
+
+    await userEvent.pointer({ keys: '[TouchA]', target: boton });
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    // Al tocar, el navegador emula mouseenter y luego pierde el foco: si eso
+    // cerrara el tooltip, el alumno vería un parpadeo y nada más.
+    await userEvent.unhover(boton);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+  });
+
+  it('se cierra al salir', async () => {
+    render(<BadgeShelf challenges={[conseguida]} />);
+    const boton = screen.getByRole('button', { name: /Primer plan/ });
+
+    await userEvent.hover(boton);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    await userEvent.unhover(boton);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('solo hay una explicación abierta a la vez', async () => {
+    render(<BadgeShelf challenges={[conseguida, pendiente]} />);
+
+    await userEvent.hover(screen.getByRole('button', { name: /Primer plan/ }));
+    await userEvent.hover(screen.getByRole('button', { name: /Cien dianas/ }));
+
+    expect(screen.getAllByRole('tooltip')).toHaveLength(1);
   });
 });
