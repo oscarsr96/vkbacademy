@@ -315,7 +315,7 @@ export function ResultsStep({
           <Icon name="play" size={16} />
           Repetir examen
         </button>
-        <button className="btn btn-ghost" onClick={() => downloadExamPdf(result, scopeTitle)}>
+        <button className="btn btn-ghost" onClick={() => void downloadExamPdf(result, scopeTitle)}>
           <Icon name="download" size={16} />
           Descargar PDF examen
         </button>
