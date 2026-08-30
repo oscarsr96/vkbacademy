@@ -42,6 +42,9 @@ function buildNavLinks(role: Role | undefined): NavItem[] {
     ...base,
     { to: '/study', label: 'Estudiar', icon: 'brain' },
     { to: '/challenges', label: 'Retos', icon: 'trophy' },
+    // Los certificados solo se alcanzaban por el rail del dashboard o desde la
+    // ficha de un curso: el alumno que quería releerlos no tenía por dónde.
+    { to: '/certificates', label: 'Certificados', icon: 'award' },
     { to: '/shop', label: 'Tienda', icon: 'gift' },
     { to: '/profile', label: 'Mi perfil', icon: 'user' },
   ];
