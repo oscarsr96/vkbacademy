@@ -235,7 +235,9 @@ export default function StudyPlanPage() {
         {tab === 'exam' && (
           <ExamTab
             plan={data}
-            onStart={(bankId) => navigate(`/exam?aiBankId=${bankId}&returnTo=/study/plan/${id}`)}
+            onStart={(bankId) =>
+              navigate(`/exam?aiBankId=${bankId}&planId=${id}&returnTo=/study/plan/${id}`)
+            }
           />
         )}
       </div>

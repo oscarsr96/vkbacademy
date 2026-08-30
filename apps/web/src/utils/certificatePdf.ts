@@ -50,6 +50,7 @@ const TYPE_LABELS: Record<string, string> = {
   COURSE_COMPLETION: 'Certificado de Curso Completado',
   MODULE_EXAM: 'Certificado de Examen de Módulo',
   COURSE_EXAM: 'Certificado de Examen de Curso',
+  STUDY_EXAM: 'Certificado de Curso de Estudio',
 };
 
 export async function downloadCertificatePdf(cert: Certificate) {

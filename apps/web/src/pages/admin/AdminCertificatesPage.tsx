@@ -7,6 +7,7 @@ const TYPE_LABELS: Record<AdminCertificateType, string> = {
   COURSE_COMPLETION: 'Curso completado',
   MODULE_EXAM: 'Examen de módulo',
   COURSE_EXAM: 'Examen de curso',
+  STUDY_EXAM: 'Curso de estudio (IA)',
 };
 
 const TYPE_COLORS: Record<AdminCertificateType, string> = {
@@ -14,6 +15,7 @@ const TYPE_COLORS: Record<AdminCertificateType, string> = {
   COURSE_COMPLETION: '#22c55e',
   MODULE_EXAM: '#f5911e',
   COURSE_EXAM: '#cb2027',
+  STUDY_EXAM: '#f5911e',
 };
 
 const ALL_TYPES = Object.keys(TYPE_LABELS) as AdminCertificateType[];

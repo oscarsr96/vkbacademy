@@ -29,6 +29,7 @@ export default function ExamPage() {
   const courseId = searchParams.get('courseId') ?? undefined;
   const moduleId = searchParams.get('moduleId') ?? undefined;
   const aiBankId = searchParams.get('aiBankId') ?? undefined;
+  const planId = searchParams.get('planId') ?? undefined;
   const returnTo = searchParams.get('returnTo') ?? '/study';
   const isAiMode = !!aiBankId;
 
@@ -185,6 +186,7 @@ export default function ExamPage() {
             scopeTitle="Examen IA"
             courseId={undefined}
             moduleId={undefined}
+            studyPlanId={planId}
             onRepeat={handleRepeat}
             onBack={handleBack}
             historyItems={[]}

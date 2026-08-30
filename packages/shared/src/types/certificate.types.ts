@@ -2,7 +2,9 @@ export type CertificateType =
   | 'MODULE_COMPLETION'
   | 'COURSE_COMPLETION'
   | 'MODULE_EXAM'
-  | 'COURSE_EXAM';
+  | 'COURSE_EXAM'
+  // Curso de estudio del alumno con sus tres niveles de examen aprobados
+  | 'STUDY_EXAM';
 
 export interface Certificate {
   id: string;

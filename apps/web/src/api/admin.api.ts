@@ -224,7 +224,8 @@ export type AdminCertificateType =
   | 'MODULE_COMPLETION'
   | 'COURSE_COMPLETION'
   | 'MODULE_EXAM'
-  | 'COURSE_EXAM';
+  | 'COURSE_EXAM'
+  | 'STUDY_EXAM';
 
 export interface AdminCertificate {
   id: string;

@@ -36,6 +36,12 @@ const TYPE_LABELS: Record<
     badgeBg: 'rgba(16,185,129,0.12)',
     badgeColor: '#10b981',
   },
+  STUDY_EXAM: {
+    label: 'Curso de estudio superado',
+    icon: 'graduation',
+    badgeBg: 'rgba(245,145,30,0.12)',
+    badgeColor: '#f5911e',
+  },
 };
 
 // ─── Tarjeta de certificado (diploma sobre la sala oscura) ────────────────────
