@@ -147,6 +147,12 @@ model Course {
   // Asignatura / categoría temática del curso
   subject String?
 
+  /// Curso "cáscara" creado por un alumno al estudiar una asignatura que no
+  /// está en el catálogo. Nace despublicado y sin módulos: solo aporta título y
+  /// nivel como contexto de generación. Se marca para poder distinguirlo de un
+  /// borrador de admin y para no reutilizar uno ajeno por accidente.
+  studentCreated Boolean @default(false)
+
   modules       Module[]
   enrollments   Enrollment[]
   examQuestions ExamQuestion[] @relation("CourseExamQuestions")

@@ -10,6 +10,9 @@ import EmptyState from '../components/ui/EmptyState';
 
 const MAX_TOPICS = 6;
 
+/** Valor centinela del desplegable para "mi asignatura no está en la lista". */
+const OTHER_SUBJECT = '__other__';
+
 // Reparto de ejercicios por tema (pedido del producto: 2 fáciles, 2 medios, 1 difícil).
 const DEFAULT_PER_TOPIC: StudyExercisesPerTopic = { easy: 2, medium: 2, hard: 1 };
 
@@ -34,12 +37,16 @@ export default function StudyPage() {
   const navigate = useNavigate();
 
   const [courseId, setCourseId] = useState(searchParams.get('courseId') ?? '');
-  const { data: courseDetail } = useCourse(courseId);
+  // Con asignatura propia no hay curso que pedir: sin esta guarda la página
+  // dispara un GET /courses/__other__ que responde 404 en cada render.
+  const { data: courseDetail } = useCourse(courseId === OTHER_SUBJECT ? '' : courseId);
   // Todas las asignaturas disponibles del nivel del alumno: no hace falta estar matriculado.
   const { data: subjects } = useSubjects();
   const courses = subjects ?? [];
 
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
+  // '' = ninguna elegida; OTHER_SUBJECT = la escribe el alumno
+  const [ownSubject, setOwnSubject] = useState('');
   const [customTitle, setCustomTitle] = useState('');
   const [customSubject, setCustomSubject] = useState(''); // '' = asignatura base
   const [customError, setCustomError] = useState('');
@@ -58,6 +65,7 @@ export default function StudyPage() {
 
   function handleCourseChange(id: string) {
     setCourseId(id);
+    if (id !== OTHER_SUBJECT) setOwnSubject('');
     // El temario y los temas propios "de otra asignatura" dependen de la base: se limpian al cambiarla.
     setSelectedTopics([]);
     setCustomSubject('');
@@ -128,7 +136,9 @@ export default function StudyPage() {
   }
 
   const splitInvalid = perTopicTotal < 1 || perTopicTotal > 10;
-  const canSubmit = !!courseId && selectedTopics.length > 0 && !splitInvalid && !create.isPending;
+  const usaAsignaturaPropia = courseId === OTHER_SUBJECT;
+  const baseElegida = usaAsignaturaPropia ? ownSubject.trim().length >= 3 : !!courseId;
+  const canSubmit = baseElegida && selectedTopics.length > 0 && !splitInvalid && !create.isPending;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -141,7 +151,11 @@ export default function StudyPage() {
           : { title: t.title },
     );
     create.mutate(
-      { courseId, topics, exercisesPerTopic: perTopic },
+      {
+        ...(usaAsignaturaPropia ? { subject: ownSubject.trim() } : { courseId }),
+        topics,
+        exercisesPerTopic: perTopic,
+      },
       { onSuccess: (plan) => navigate(`/study/plan/${plan.id}`) },
     );
   }
@@ -178,15 +192,32 @@ export default function StudyPage() {
                     {c.title}
                   </option>
                 ))}
+                <option value={OTHER_SUBJECT}>Otra asignatura (la escribo yo)</option>
               </select>
             </div>
+
+            {courseId === OTHER_SUBJECT && (
+              <div className="field">
+                <label htmlFor="ownSubject">¿Qué asignatura?</label>
+                <input
+                  id="ownSubject"
+                  type="text"
+                  placeholder="Química, Historia, Latín…"
+                  value={ownSubject}
+                  onChange={(e) => setOwnSubject(e.target.value)}
+                />
+                <p style={s.muted}>
+                  No hay temario oficial de esta asignatura: añade abajo tus propios temas.
+                </p>
+              </div>
+            )}
             <p style={s.muted}>
               Con un solo tema ya puedes crear tu curso; combina varios si quieres prepararte un
               examen más completo.
             </p>
           </div>
 
-          {courseId && (
+          {courseId && courseId !== OTHER_SUBJECT && (
             <div className="vkb-card" style={s.section}>
               <h3 style={s.sectionTitle}>
                 <Icon name="book" size={16} color="var(--brand-deep)" />

@@ -44,7 +44,10 @@ export interface StudyExercisesPerTopic {
 }
 
 export interface CreateStudyPlanRequest {
-  courseId: string; // asignatura base
+  // Asignatura base: una del catálogo (courseId) o escrita por el alumno
+  // (subject) cuando la suya no está en el listado. Exactamente una de las dos.
+  courseId?: string;
+  subject?: string;
   topics: StudyPlanTopicInput[]; // 1..6
   exercisesPerTopic: StudyExercisesPerTopic; // suma 1..10 (por tema)
 }
