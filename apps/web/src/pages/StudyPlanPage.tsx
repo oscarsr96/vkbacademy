@@ -588,7 +588,7 @@ function ExamTab({ plan, onStart }: { plan: StudyPlanDetail; onStart: (bankId: s
   );
 }
 
-function ExamLevelCard({
+export function ExamLevelCard({
   level,
   exam,
   busy,
@@ -673,7 +673,14 @@ function ExamLevelCard({
               disabled={anyBusy}
               onClick={() => onGenerate(numQuestions)}
             >
-              {busy ? <span className="spinner" /> : 'Generar examen'}
+              {busy ? (
+                <>
+                  <span className="spinner" />
+                  Creando examen…
+                </>
+              ) : (
+                'Generar examen'
+              )}
             </button>
             <button
               type="button"
