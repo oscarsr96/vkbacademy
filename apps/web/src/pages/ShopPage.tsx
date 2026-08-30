@@ -69,12 +69,16 @@ interface MerchCardProps {
 
 function MerchCard({ item, userPoints, onRedeem }: MerchCardProps) {
   const canAfford = userPoints >= item.cost;
+  // La distancia, no la negativa: "Sin puntos" cinco veces seguidas convierte
+  // la tienda en cinco puertas cerradas; "te faltan 40 pts" la convierte en
+  // cinco metas. Es el mismo botón deshabilitado, contando otra cosa.
+  const falta = item.cost - userPoints;
 
   return (
     <div
       className="vkb-card"
       style={{
-        opacity: canAfford ? 1 : 0.55,
+        opacity: canAfford ? 1 : 0.78,
         display: 'flex',
         flexDirection: 'column' as const,
         gap: 14,
@@ -116,7 +120,13 @@ function MerchCard({ item, userPoints, onRedeem }: MerchCardProps) {
       </div>
 
       <div
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap' as const,
+          gap: 8,
+        }}
       >
         <span
           style={{
@@ -126,6 +136,7 @@ function MerchCard({ item, userPoints, onRedeem }: MerchCardProps) {
             fontWeight: 800,
             fontSize: '1.05rem',
             color: item.color,
+            whiteSpace: 'nowrap' as const,
           }}
         >
           <Icon name="star" size={16} />
@@ -135,10 +146,11 @@ function MerchCard({ item, userPoints, onRedeem }: MerchCardProps) {
           className={canAfford ? 'btn btn-primary' : 'btn'}
           style={
             canAfford
-              ? { padding: '7px 16px', fontSize: '0.8rem' }
+              ? { padding: '7px 16px', fontSize: '0.8rem', whiteSpace: 'nowrap' as const }
               : {
                   padding: '7px 16px',
                   fontSize: '0.8rem',
+                  whiteSpace: 'nowrap' as const,
                   background: 'rgba(255,255,255,0.06)',
                   color: 'var(--color-text-muted)',
                   border: '1px solid var(--color-border)',
@@ -149,7 +161,7 @@ function MerchCard({ item, userPoints, onRedeem }: MerchCardProps) {
           disabled={!canAfford}
           onClick={() => onRedeem(item)}
         >
-          {canAfford ? 'Canjear' : 'Sin puntos'}
+          {canAfford ? 'Canjear' : `Te faltan ${falta} pts`}
         </button>
       </div>
     </div>

@@ -12,6 +12,31 @@ import EmptyState from '../components/ui/EmptyState';
 
 type FilterTab = 'all' | 'in-progress' | 'completed';
 
+/**
+ * Reto más cercano a completarse de los que quedan.
+ *
+ * Criterio: mayor fracción de progreso y, a igualdad, el de objetivo más
+ * pequeño. El desempate es lo que hace útil el primer día: con todo a cero,
+ * el "más cercano" pasa a ser el de menos pasos ("Primer plan", 0/1) en vez
+ * de uno de 0/100 elegido por fecha de creación.
+ *
+ * La lista de abajo NO se reordena: cambiar el orden entre visitas desorienta.
+ * Esto solo saca uno arriba.
+ */
+export function pickClosest(
+  challenges: ChallengeWithProgress[],
+): ChallengeWithProgress | undefined {
+  const pendientes = challenges.filter((c) => !c.completed && c.target > 0);
+  if (pendientes.length === 0) return undefined;
+
+  return [...pendientes].sort((a, b) => {
+    const ratioA = Math.min(a.progress / a.target, 1);
+    const ratioB = Math.min(b.progress / b.target, 1);
+    if (ratioA !== ratioB) return ratioB - ratioA;
+    return a.target - b.target;
+  })[0];
+}
+
 // ─── Subcomponentes ───────────────────────────────────────────────────────────
 
 function ChallengeCard({ c, index }: { c: ChallengeWithProgress; index: number }) {
@@ -131,6 +156,69 @@ function ChallengeCard({ c, index }: { c: ChallengeWithProgress; index: number }
   );
 }
 
+/**
+ * Destacado del reto más cercano.
+ *
+ * El titular cambia con el progreso: "lo tienes casi" seria mentira el primer
+ * dia, cuando todo esta a cero, y una promesa falsa es peor que ninguna.
+ */
+function ClosestChallenge({ c }: { c: ChallengeWithProgress }) {
+  const empezado = c.progress > 0;
+  const faltan = Math.max(c.target - c.progress, 0);
+
+  return (
+    <section className="panel-glass animate-in" style={S_CLOSEST.card}>
+      <span style={{ ...S_CLOSEST.badge, background: `${c.badgeColor}22`, color: c.badgeColor }}>
+        {c.badgeIcon}
+      </span>
+
+      <div style={{ flex: 1, minWidth: 200 }}>
+        <p style={S_CLOSEST.kicker}>{empezado ? 'Lo tienes casi' : 'Empieza por aquí'}</p>
+        <p style={S_CLOSEST.title}>{c.title}</p>
+        <p style={S_CLOSEST.detail}>
+          {empezado
+            ? `Te faltan ${faltan} para completarlo y sumar ${c.points} pts.`
+            : `${c.description} Son ${c.points} pts.`}
+        </p>
+        <div style={{ marginTop: 10 }}>
+          <ProgressBar value={c.progress} max={c.target} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const S_CLOSEST: Record<string, React.CSSProperties> = {
+  card: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 16,
+    flexWrap: 'wrap' as const,
+    padding: '18px 22px',
+    marginBottom: 24,
+  },
+  badge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    fontSize: '1.4rem',
+    flexShrink: 0,
+  },
+  kicker: {
+    margin: 0,
+    fontSize: '0.7rem',
+    fontWeight: 800,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--color-text-muted)',
+  },
+  title: { margin: '4px 0 0', fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-text)' },
+  detail: { margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--color-text-muted)' },
+};
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function ChallengesPage() {
@@ -154,6 +242,10 @@ export default function ChallengesPage() {
 
   const weekly = filtered.filter((c) => c.cadence === 'WEEKLY');
   const permanent = filtered.filter((c) => c.cadence !== 'WEEKLY');
+
+  // Sobre la lista completa, no la filtrada: el destacado no debe depender de
+  // qué pestaña esté abierta
+  const closest = pickClosest(data?.challenges ?? []);
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
@@ -270,6 +362,8 @@ export default function ChallengesPage() {
           message="Cambia de filtro o sigue completando lecciones para desbloquear nuevos retos."
         />
       )}
+
+      {!isLoading && !isError && closest && <ClosestChallenge c={closest} />}
 
       {weekly.length > 0 && (
         <>
