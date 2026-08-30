@@ -9,6 +9,7 @@ import { AiUsageService } from '../ai/ai-usage.service';
 import { TutorChatDto } from './dto/tutor-chat.dto';
 
 const mockTutorMessage = {
+  count: jest.fn().mockResolvedValue(0),
   findMany: jest.fn(),
   create: jest.fn(),
   deleteMany: jest.fn(),
@@ -178,6 +179,7 @@ describe('TutorService', () => {
     };
 
     beforeEach(() => {
+      mockTutorMessage.count.mockResolvedValue(0);
       // Copia nueva en cada llamada: streamChat hace history.reverse(), que
       // muta el array in-place. Reusar la misma referencia entre tests hace
       // que el orden dependa de cuántas veces se ha invocado antes (bug de
@@ -268,6 +270,39 @@ describe('TutorService', () => {
           lessonId: dto.lessonId,
         },
       });
+    });
+
+    it('corta cuando el alumno agota su cupo del día, sin llamar a la IA', async () => {
+      mockTutorMessage.count.mockResolvedValue(30);
+
+      await expect(service.streamChat(userId, dto, mockRes)).rejects.toMatchObject({
+        status: 429,
+      });
+
+      // Ni se guarda el mensaje ni se toca Anthropic: el corte es antes de todo
+      expect(mockTutorMessage.create).not.toHaveBeenCalled();
+      expect(mockRes.setHeader).not.toHaveBeenCalled();
+    });
+
+    it('cuenta solo las preguntas del alumno de hoy, en día de Madrid', async () => {
+      await service.streamChat(userId, dto, mockRes);
+
+      const where = mockTutorMessage.count.mock.calls[0][0].where as {
+        userId: string;
+        role: string;
+        createdAt: { gte: Date };
+      };
+      expect(where.userId).toBe(userId);
+      expect(where.role).toBe('user');
+      expect(where.createdAt.gte).toBeInstanceOf(Date);
+    });
+
+    it('deja pasar mientras quede cupo', async () => {
+      mockTutorMessage.count.mockResolvedValue(29);
+
+      await service.streamChat(userId, dto, mockRes);
+
+      expect(mockTutorMessage.create).toHaveBeenCalled();
     });
 
     it('registra el consumo del tutor con los tokens del stream', async () => {

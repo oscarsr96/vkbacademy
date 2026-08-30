@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
 import { AiUsageCategory, ChallengeType } from '@prisma/client';
@@ -6,10 +6,25 @@ import { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesService } from '../challenges/challenges.service';
 import { AiUsageService } from '../ai/ai-usage.service';
+import { currentDayStart } from '../challenges/challenge-periods';
 import { TutorChatDto } from './dto/tutor-chat.dto';
 
 /** Modelo del tutor. Pinneado, igual que los del AiProviderService. */
 const TUTOR_MODEL = 'claude-haiku-4-5-20251001';
+
+/**
+ * Preguntas al tutor por alumno y día.
+ *
+ * El controlador ya limita a 10 por hora, pero ese contador vive en memoria
+ * (Redis no está desplegado) y Render Starter duerme el servicio: cada
+ * arranque en frío lo pone a cero, así que por sí solo no acota el gasto de
+ * un día. Este se cuenta en BD sobre los mensajes ya guardados, que es lo
+ * único que sobrevive a un reinicio.
+ *
+ * 30 son unas cuantas sesiones largas de estudio y deja el peor caso en
+ * torno a diez céntimos de dólar por alumno y día.
+ */
+const DEFAULT_DAILY_LIMIT = 30;
 
 @Injectable()
 export class TutorService {
@@ -27,9 +42,42 @@ export class TutorService {
     });
   }
 
+  /** Límite diario efectivo, configurable por entorno. */
+  private get dailyLimit(): number {
+    const raw = Number(this.config.get('TUTOR_DAILY_LIMIT'));
+    return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_DAILY_LIMIT;
+  }
+
+  /**
+   * Corta si el alumno ya ha agotado sus preguntas de hoy.
+   *
+   * El día se corta en Madrid, el mismo calendario con el que se mueven las
+   * rachas: si no, el cupo se renovaría a la una o a las dos de la madrugada
+   * según la época del año.
+   */
+  private async assertDailyQuota(userId: string): Promise<void> {
+    const limit = this.dailyLimit;
+    const startOfDay = currentDayStart(new Date());
+
+    const asked = await this.prisma.tutorMessage.count({
+      where: { userId, role: 'user', createdAt: { gte: startOfDay } },
+    });
+
+    if (asked >= limit) {
+      throw new HttpException(
+        `Has gastado tus ${limit} preguntas de hoy. El tutor vuelve mañana.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
   // ─── Streaming ───────────────────────────────────────────────────────────────
 
   async streamChat(userId: string, dto: TutorChatDto, res: Response): Promise<void> {
+    // 0. Cupo diario. Se comprueba ANTES de tocar las cabeceras SSE para que el
+    //    429 salga como JSON y el cliente pueda explicar el motivo real.
+    await this.assertDailyQuota(userId);
+
     // 1. Obtener últimos 10 mensajes de contexto (orden cronológico)
     const history = await this.prisma.tutorMessage.findMany({
       where: { userId },

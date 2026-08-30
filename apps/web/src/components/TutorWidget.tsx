@@ -100,7 +100,13 @@ export default function TutorWidget() {
       });
 
       if (!response.ok || !response.body) {
-        throw new Error('Error en la respuesta del servidor');
+        // Un 429 es cupo agotado, no un fallo de red: decirle "comprueba tu
+        // conexión" a quien ha gastado sus preguntas del día es mentirle.
+        const motivo = await response
+          .json()
+          .then((body: { message?: string }) => body.message)
+          .catch(() => undefined);
+        throw new Error(motivo ?? 'Error en la respuesta del servidor');
       }
 
       const reader = response.body.getReader();
@@ -163,12 +169,15 @@ export default function TutorWidget() {
       }
     } catch (err) {
       console.error('Tutor stream error:', err);
+      const motivo = err instanceof Error ? err.message : '';
       setMessages((prev) => [
         ...prev,
         {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: '❌ No pude conectar con el tutor. Comprueba tu conexión.',
+          content: motivo.includes('preguntas')
+            ? `⏳ ${motivo}`
+            : '❌ No pude conectar con el tutor. Comprueba tu conexión.',
         },
       ]);
       setStreamingText('');

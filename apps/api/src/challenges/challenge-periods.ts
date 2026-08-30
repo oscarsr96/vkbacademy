@@ -46,6 +46,19 @@ export function currentWeekStart(now: Date): Date {
 }
 
 /**
+ * Instante UTC en el que empieza el día de Madrid que contiene `now`.
+ *
+ * Mismo criterio que `currentWeekStart` pero para un día: derivar el offset en
+ * vez de hardcodearlo es lo que hace que funcione igual en enero y en agosto,
+ * y en un servidor que corre en UTC (Render) como en un portátil en Madrid.
+ */
+export function currentDayStart(now: Date): Date {
+  const [year, month, day] = madridDay(now).split('-').map(Number);
+  const midnight = new Date(Date.UTC(year, month - 1, day));
+  return new Date(midnight.getTime() - madridOffsetMs(midnight));
+}
+
+/**
  * Diferencia en ms entre la hora de Madrid y UTC para un instante dado.
  * Madrid es UTC+1 en invierno (CET) y UTC+2 en verano (CEST); nunca se
  * hardcodea el número, se deriva comparando el mismo instante formateado en
