@@ -12,6 +12,9 @@ build/
 out/
 .expo/
 
+# Caché incremental de TypeScript: artefacto de build, cambia con cada `tsc`
+*.tsbuildinfo
+
 # Turbo
 .turbo/
 
