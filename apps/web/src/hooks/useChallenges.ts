@@ -10,6 +10,8 @@ export function useRedeemItem() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['challenges', 'summary'] });
       void queryClient.invalidateQueries({ queryKey: ['challenges', 'my-progress'] });
+      // El canje recién hecho tiene que aparecer en el histórico sin recargar
+      void queryClient.invalidateQueries({ queryKey: ['challenges', 'redemptions'] });
     },
   });
 }
@@ -25,6 +27,13 @@ export function useLeaderboard() {
   return useQuery({
     queryKey: ['challenges', 'leaderboard'],
     queryFn: () => challengesApi.getLeaderboard(),
+  });
+}
+
+export function useMyRedemptions() {
+  return useQuery({
+    queryKey: ['challenges', 'redemptions'],
+    queryFn: () => challengesApi.getMyRedemptions(),
   });
 }
 

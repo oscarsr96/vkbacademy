@@ -590,6 +590,34 @@ export class ChallengesService {
     };
   }
 
+  /**
+   * Histórico de canjes del alumno, del más reciente al más antiguo.
+   *
+   * Hasta ahora el canje era un acto sin rastro: el alumno gastaba 500 pts y
+   * la única prueba de que existía vivía en el panel de admin. `delivered` va
+   * incluido porque son artículos físicos que entrega el club: lo que el
+   * alumno necesita saber es si ya lo tiene o si sigue esperándolo.
+   */
+  async getMyRedemptions(userId: string) {
+    const redemptions = await this.prisma.redemption.findMany({
+      where: { userId },
+      orderBy: { redeemedAt: 'desc' },
+      select: {
+        id: true,
+        itemName: true,
+        cost: true,
+        redeemedAt: true,
+        delivered: true,
+        deliveredAt: true,
+      },
+    });
+
+    return {
+      redemptions,
+      totalSpent: redemptions.reduce((sum, r) => sum + r.cost, 0),
+    };
+  }
+
   /** Resumen compacto del usuario */
   async getSummary(userId: string) {
     // Mismo criterio de periodo que getMyProgress: sin filtrar, las misiones

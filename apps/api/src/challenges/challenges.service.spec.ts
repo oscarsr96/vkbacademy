@@ -45,7 +45,7 @@ describe('ChallengesService', () => {
     theoryModule: { count: jest.Mock };
     theoryLesson: { count: jest.Mock };
     examAttempt: { count: jest.Mock; aggregate: jest.Mock; findMany: jest.Mock };
-    redemption: { create: jest.Mock };
+    redemption: { create: jest.Mock; findMany: jest.Mock };
     academyMember: { findFirst: jest.Mock };
     studyPlan: { count: jest.Mock };
     studyPlanTopic: { count: jest.Mock; findMany: jest.Mock };
@@ -81,7 +81,7 @@ describe('ChallengesService', () => {
       theoryModule: { count: jest.fn() },
       theoryLesson: { count: jest.fn() },
       examAttempt: { count: jest.fn(), aggregate: jest.fn(), findMany: jest.fn() },
-      redemption: { create: jest.fn() },
+      redemption: { create: jest.fn(), findMany: jest.fn() },
       academyMember: { findFirst: jest.fn() },
       studyPlan: { count: jest.fn() },
       studyPlanTopic: { count: jest.fn(), findMany: jest.fn() },
@@ -1156,6 +1156,61 @@ describe('ChallengesService', () => {
       // Sin academia que escribir, el update no toca el campo: una fila ya
       // atribuida no se borra por pasar por aquí sin contexto.
       expect(call.update).not.toHaveProperty('academyId');
+    });
+  });
+
+  // ─── getMyRedemptions ────────────────────────────────────────────────────────
+
+  describe('getMyRedemptions', () => {
+    it('pide solo los canjes del alumno, del más reciente al más antiguo', async () => {
+      mockPrisma.redemption.findMany.mockResolvedValue([]);
+
+      await service.getMyRedemptions('user1');
+
+      expect(mockPrisma.redemption.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user1' },
+          orderBy: { redeemedAt: 'desc' },
+        }),
+      );
+    });
+
+    it('devuelve el estado de entrega: son artículos físicos que el club entrega', async () => {
+      mockPrisma.redemption.findMany.mockResolvedValue([
+        {
+          id: 'r1',
+          itemName: 'Camiseta oficial del club',
+          cost: 500,
+          redeemedAt: new Date('2026-08-20'),
+          delivered: true,
+          deliveredAt: new Date('2026-08-22'),
+        },
+      ]);
+
+      const res = await service.getMyRedemptions('user1');
+
+      expect(res.redemptions[0].delivered).toBe(true);
+      expect(res.redemptions[0].deliveredAt).toEqual(new Date('2026-08-22'));
+    });
+
+    it('suma lo gastado en total', async () => {
+      mockPrisma.redemption.findMany.mockResolvedValue([
+        { id: 'r1', itemName: 'Gorra', cost: 350, redeemedAt: new Date(), delivered: false, deliveredAt: null },
+        { id: 'r2', itemName: 'Stickers', cost: 100, redeemedAt: new Date(), delivered: true, deliveredAt: new Date() },
+      ]);
+
+      const res = await service.getMyRedemptions('user1');
+
+      expect(res.totalSpent).toBe(450);
+    });
+
+    it('sin canjes devuelve lista vacía y 0 gastado', async () => {
+      mockPrisma.redemption.findMany.mockResolvedValue([]);
+
+      const res = await service.getMyRedemptions('user1');
+
+      expect(res.redemptions).toEqual([]);
+      expect(res.totalSpent).toBe(0);
     });
   });
 

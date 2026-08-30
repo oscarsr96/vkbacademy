@@ -14,6 +14,11 @@
   --brand-faint: rgba(245, 145, 30, 0.06);
   --brand-glow: rgba(245, 145, 30, 0.4);
 
+  /* Cabecera de tabla: estaba hardcodeada a #f8f9fa mientras su texto salía de
+     --color-text, así que en una página de zona oscura quedaba texto claro
+     sobre fondo claro. Con token, cada zona pone el suyo. */
+  --table-head-bg: #f8f9fa;
+
   /* ── Acentos del club (FIJOS, no multi-tenant: hardware del estadio) ── */
   --accent-cyan: #13aff0;
   --accent-cyan-light: #46d4fe;
@@ -95,6 +100,7 @@
   --panel-border: rgba(255, 255, 255, 0.09);
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.45);
   --color-error-light: rgba(220, 38, 38, 0.14);
+  --table-head-bg: rgba(255, 255, 255, 0.05);
   color: var(--color-text);
 }
 
@@ -748,7 +754,7 @@ body {
 }
 
 .table-wrap th {
-  background: #f8f9fa;
+  background: var(--table-head-bg);
   padding: 12px 16px;
   text-align: left;
   font-weight: 600;
