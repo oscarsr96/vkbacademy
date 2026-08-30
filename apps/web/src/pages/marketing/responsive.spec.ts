@@ -415,7 +415,6 @@ describe('Prevención de scroll horizontal', () => {
     const indexPath = path.resolve(__dirname, '../../../index.html');
     const indexSrc = fs.readFileSync(indexPath, 'utf-8');
     // Puede estar en un <style> inline o referenciado en CSS
-    const cssGlob = path.resolve(__dirname, '../../../src');
     let hasOverflow = indexSrc.includes('overflow-x') || indexSrc.includes('overflowX');
     // Buscar en archivos CSS/index.css
     const cssPath = path.resolve(__dirname, '../../../src/index.css');
