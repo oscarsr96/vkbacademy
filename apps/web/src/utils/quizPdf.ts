@@ -1,11 +1,15 @@
 import jsPDF from 'jspdf';
 
-// Paleta naranja del club
-const ORANGE = { r: 245, g: 145, b: 30 } as const;   // #f5911e
-const DARK = { r: 30, g: 27, b: 24 } as const;
-const MUTED = { r: 120, g: 113, b: 108 } as const;
-const GREEN = { r: 5, g: 150, b: 105 } as const;
-const RED = { r: 220, g: 38, b: 38 } as const;
+// Paleta desde los tokens de la app (global.css). El naranja ya era el de
+// marca, pero el texto salía de una rama de grises cálidos ajena al producto.
+const ORANGE = { r: 245, g: 145, b: 30 } as const; // --brand #f5911e
+const NAVY = { r: 10, g: 22, b: 40 } as const; // --navy-900 #0a1628
+const INK = { r: 22, g: 33, b: 58 } as const; // --color-text #16213a
+const MUTED = { r: 100, g: 116, b: 139 } as const; // --color-text-muted #64748b
+const SURFACE = { r: 244, g: 245, b: 247 } as const; // --color-bg #f4f5f7
+const GREEN = { r: 5, g: 150, b: 105 } as const; // acierto (semántico)
+const RED = { r: 220, g: 38, b: 38 } as const; // --color-error #dc2626
+const LOGO_URL = '/brand/vkb-logo.png';
 const PAGE_W = 210;
 const PAGE_H = 297;
 
@@ -33,7 +37,40 @@ function setColor(
   else doc.setFillColor(color.r, color.g, color.b);
 }
 
-export function generateQuizPdf({
+/**
+ * Logo del club como data URL. Null si no se puede cargar: el informe sin logo
+ * sigue sirviendo, perder la descarga no.
+ */
+async function loadLogoDataUrl(): Promise<string | null> {
+  try {
+    const res = await fetch(LOGO_URL);
+    if (!res.ok) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return `data:image/png;base64,${btoa(binary)}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Marca de acierto/fallo dibujada con líneas: '✓' y '✗' no existen en las
+ * fuentes estándar de jsPDF y salían impresos como una comilla suelta.
+ */
+function drawMark(doc: jsPDF, correct: boolean, cx: number, cy: number): void {
+  setColor(doc, 'draw', correct ? GREEN : RED);
+  doc.setLineWidth(0.9);
+  if (correct) {
+    doc.line(cx - 2, cy, cx - 0.6, cy + 1.6);
+    doc.line(cx - 0.6, cy + 1.6, cx + 2.2, cy - 1.8);
+  } else {
+    doc.line(cx - 1.8, cy - 1.8, cx + 1.8, cy + 1.8);
+    doc.line(cx + 1.8, cy - 1.8, cx - 1.8, cy + 1.8);
+  }
+}
+
+export async function generateQuizPdf({
   courseTitle,
   schoolYearLabel,
   lessonTitle,
@@ -44,16 +81,24 @@ export function generateQuizPdf({
   const doc = new jsPDF();
   const margin = 20;
   const contentW = PAGE_W - margin * 2;
+  const logo = await loadLogoDataUrl();
 
-  // ── Banda naranja superior ──────────────────────────────────────────────────
-  setColor(doc, 'fill', ORANGE);
+  // ── Banda superior ──────────────────────────────────────────────────────────
+  setColor(doc, 'fill', NAVY);
   doc.rect(0, 0, PAGE_W, 48, 'F');
+  setColor(doc, 'fill', ORANGE);
+  doc.rect(0, 48, PAGE_W, 2.5, 'F');
 
-  // Logo / etiqueta club
+  // Marca: el logo va sobre navy, que es donde se lee
+  let brandX = margin;
+  if (logo) {
+    doc.addImage(logo, 'PNG', margin, 5, 17, 17);
+    brandX = margin + 20;
+  }
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('VKB ACADEMY', margin, 11);
+  doc.text('VKB ACADEMY', brandX, 15);
 
   // Nivel educativo (chip redondeado simulado con rect + texto)
   if (schoolYearLabel) {
@@ -61,26 +106,26 @@ export function generateQuizPdf({
     const chipText = schoolYearLabel.toUpperCase();
     doc.setFontSize(8);
     const chipW = doc.getTextWidth(chipText) + 10;
-    setColor(doc, 'fill', { r: 255, g: 255, b: 255 });
-    doc.roundedRect(chipX - chipW, 5, chipW, 10, 2, 2, 'F');
-    setColor(doc, 'text', ORANGE);
+    setColor(doc, 'fill', ORANGE);
+    doc.roundedRect(chipX - chipW, 6, chipW, 10, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.text(chipText, chipX - chipW / 2, 11.5, { align: 'center' });
+    doc.text(chipText, chipX - chipW / 2, 12.5, { align: 'center' });
   }
 
   // Nombre del curso (línea 1)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(255, 237, 213); // naranja claro
+  doc.setTextColor(255, 210, 165);
   const courseLine = doc.splitTextToSize(courseTitle, contentW);
-  doc.text(courseLine[0], margin, 24);
+  doc.text(courseLine[0], margin, 30);
 
   // Título lección (línea 2, blanco, grande)
   doc.setFontSize(17);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
   const lessonLines = doc.splitTextToSize(lessonTitle, contentW);
-  doc.text(lessonLines[0], margin, 36);
+  doc.text(lessonLines[0], margin, 41);
 
   let y = 62;
 
@@ -156,24 +201,24 @@ export function generateQuizPdf({
     }
 
     // Fondo de la pregunta
-    const bgColor = c.isCorrect ? { r: 240, g: 253, b: 244 } : { r: 255, g: 247, b: 237 };
+    // El fallo iba en naranja claro: con la paleta nueva el naranja es el color
+    // de marca, así que un error parecía destacado en vez de erróneo. Rojo, como
+    // en el informe de examen.
+    const bgColor = c.isCorrect ? { r: 240, g: 253, b: 244 } : { r: 255, g: 241, b: 242 };
     setColor(doc, 'fill', bgColor);
     doc.roundedRect(margin, y - 4, contentW, blockH, 3, 3, 'F');
 
     // Indicador de color izquierdo
-    setColor(doc, 'fill', c.isCorrect ? GREEN : ORANGE);
+    setColor(doc, 'fill', c.isCorrect ? GREEN : RED);
     doc.rect(margin, y - 4, 3, blockH, 'F');
 
-    // Icono texto
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    setColor(doc, 'text', c.isCorrect ? GREEN : ORANGE);
-    doc.text(c.isCorrect ? '✓' : '✗', margin + 6, y + 2);
+    // Marca de acierto/fallo, dibujada (ver drawMark)
+    drawMark(doc, c.isCorrect, margin + 8, y);
 
     // Texto pregunta
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    setColor(doc, 'text', DARK);
+    setColor(doc, 'text', INK);
     doc.text(questionLines, margin + 14, y + 2);
     y += questionLines.length * 6 + 3;
 
@@ -199,7 +244,7 @@ export function generateQuizPdf({
   const totalPages = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    setColor(doc, 'fill', { r: 245, g: 245, b: 244 });
+    setColor(doc, 'fill', SURFACE);
     doc.rect(0, PAGE_H - 12, PAGE_W, 12, 'F');
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');

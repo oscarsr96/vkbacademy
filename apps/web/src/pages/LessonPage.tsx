@@ -298,7 +298,7 @@ export default function LessonPage() {
 
   function handleDownloadCurrentPdf() {
     if (!quizResult || !quizSnapshot || !lesson) return;
-    generateQuizPdf({
+    void generateQuizPdf({
       courseTitle: course?.title ?? '',
       schoolYearLabel: course?.schoolYear?.label,
       lessonTitle: lesson.title,
@@ -323,7 +323,7 @@ export default function LessonPage() {
     setDownloadingAttemptId(attemptId);
     try {
       const detail = await coursesApi.getAttemptDetail(lesson.quiz.id, attemptId);
-      generateQuizPdf({
+      void generateQuizPdf({
         courseTitle: course?.title ?? '',
         schoolYearLabel: course?.schoolYear?.label,
         lessonTitle: lesson.title,
