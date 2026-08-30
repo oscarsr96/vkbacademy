@@ -54,6 +54,8 @@ export interface ChallengeSummary {
   longestStreak: number;
   currentDailyStreak: number;
   longestDailyStreak: number;
+  /** Si la actividad de hoy ya cuenta para la racha diaria. */
+  activeToday: boolean;
   completedCount: number;
   recentBadges: {
     title: string;
@@ -61,6 +63,23 @@ export interface ChallengeSummary {
     badgeColor: string;
     completedAt: string | null;
   }[];
+}
+
+/**
+ * Franja local de la clasificación semanal: el alumno y sus vecinos.
+ * A propósito no trae puesto ni total de participantes.
+ */
+export interface LeaderboardEntry {
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+  points: number;
+  isMe: boolean;
+}
+
+export interface LeaderboardResponse {
+  weekStart: string;
+  entries: LeaderboardEntry[];
 }
 
 export interface RedeemResult {
@@ -73,6 +92,9 @@ export const challengesApi = {
   getMyProgress: () => api.get<ChallengesProgressResponse>('/challenges').then((r) => r.data),
 
   getSummary: () => api.get<ChallengeSummary>('/challenges/summary').then((r) => r.data),
+
+  getLeaderboard: () =>
+    api.get<LeaderboardResponse>('/challenges/leaderboard').then((r) => r.data),
 
   redeemItem: (itemName: string, cost: number) =>
     api.post<RedeemResult>('/challenges/redeem', { itemName, cost }).then((r) => r.data),

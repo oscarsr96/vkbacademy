@@ -21,6 +21,13 @@ export function useChallengeSummary() {
   });
 }
 
+export function useLeaderboard() {
+  return useQuery({
+    queryKey: ['challenges', 'leaderboard'],
+    queryFn: () => challengesApi.getLeaderboard(),
+  });
+}
+
 export function useMyChallenges() {
   return useQuery({
     queryKey: ['challenges', 'my-progress'],
