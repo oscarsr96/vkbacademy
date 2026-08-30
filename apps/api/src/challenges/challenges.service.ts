@@ -606,6 +606,7 @@ export class ChallengesService {
           longestStreak: true,
           currentDailyStreak: true,
           longestDailyStreak: true,
+          lastActiveDay: true,
         },
       }),
       this.prisma.userChallenge.findMany({
@@ -632,6 +633,11 @@ export class ChallengesService {
       longestStreak: user?.longestStreak ?? 0,
       currentDailyStreak: user?.currentDailyStreak ?? 0,
       longestDailyStreak: user?.longestDailyStreak ?? 0,
+      // Si hoy ya cuenta, el alumno no tiene nada pendiente: es la diferencia
+      // entre "llevas 12 días" y "hoy todavía no has hecho nada". Se compara
+      // contra el día de Madrid, el mismo calendario con el que updateStreak
+      // mueve la racha.
+      activeToday: user?.lastActiveDay === madridDay(new Date()),
       completedCount,
       recentBadges,
     };
