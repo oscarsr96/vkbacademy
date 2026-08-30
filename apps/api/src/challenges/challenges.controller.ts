@@ -29,6 +29,14 @@ export class ChallengesController {
     return this.challengesService.getMyProgress(req.user.id);
   }
 
+  @Get('leaderboard')
+  getLeaderboard(
+    @Request() req: { user: { id: string } },
+    @CurrentAcademy() academyId: string | null,
+  ) {
+    return this.challengesService.getLeaderboard(req.user.id, academyId);
+  }
+
   @Post('redeem')
   async redeemItem(
     @Request() req: { user: { id: string } },

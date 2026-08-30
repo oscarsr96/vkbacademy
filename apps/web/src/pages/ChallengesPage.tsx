@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMyChallenges } from '../hooks/useChallenges';
-import type { ChallengeWithProgress } from '../api/challenges.api';
+import { useLeaderboard, useMyChallenges } from '../hooks/useChallenges';
+import type { ChallengeWithProgress, LeaderboardEntry } from '../api/challenges.api';
 import { usePageZone } from '../hooks/usePageZone';
 import Icon from '../components/ui/Icon';
 import ScoreValue from '../components/ui/ScoreValue';
@@ -131,11 +131,76 @@ function ChallengeCard({ c, index }: { c: ChallengeWithProgress; index: number }
   );
 }
 
+/**
+ * Franja local de la clasificación semanal.
+ *
+ * Se ven el alumno y sus vecinos inmediatos, sin puestos ni número de
+ * participantes: el que va último no puede saber que va último, solo ve a los
+ * dos que tiene justo encima. Si no hay con quién compararse (alumno solo en
+ * su academia, o sin academia) el bloque no se pinta.
+ */
+function WeeklyBand({ entries }: { entries: LeaderboardEntry[] }) {
+  if (entries.length < 2) return null;
+
+  return (
+    <section style={{ marginBottom: 32 }}>
+      <div style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-text)', margin: 0 }}>
+          Tu grupo esta semana
+        </h3>
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+          se reinicia cada lunes
+        </span>
+      </div>
+
+      <ul
+        style={{
+          listStyle: 'none',
+          margin: 0,
+          padding: 0,
+          border: '1px solid var(--panel-border)',
+          borderRadius: 14,
+          overflow: 'hidden',
+        }}
+      >
+        {entries.map((entry) => (
+          <li
+            key={entry.userId}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 16px',
+              background: entry.isMe ? 'rgba(255, 210, 77, 0.10)' : 'transparent',
+              borderLeft: `3px solid ${entry.isMe ? 'var(--brand, #ffd24d)' : 'transparent'}`,
+            }}
+          >
+            <span
+              style={{
+                flex: 1,
+                fontWeight: entry.isMe ? 800 : 600,
+                color: 'var(--color-text)',
+                fontSize: '0.9rem',
+              }}
+            >
+              {entry.isMe ? 'Tú' : entry.name}
+            </span>
+            <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+              {entry.points} pts
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function ChallengesPage() {
   const [filter, setFilter] = useState<FilterTab>('all');
   const { data, isLoading, isError } = useMyChallenges();
+  const { data: leaderboard } = useLeaderboard();
   usePageZone('dark');
 
   const totalPoints = data?.meta.totalPoints ?? 0;
@@ -270,6 +335,8 @@ export default function ChallengesPage() {
           message="Cambia de filtro o sigue completando lecciones para desbloquear nuevos retos."
         />
       )}
+
+      {!isLoading && !isError && <WeeklyBand entries={leaderboard?.entries ?? []} />}
 
       {weekly.length > 0 && (
         <>
