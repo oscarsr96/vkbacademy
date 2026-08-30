@@ -39,6 +39,7 @@ describe('ChallengesService', () => {
     theoryLesson: { count: jest.Mock };
     examAttempt: { count: jest.Mock; aggregate: jest.Mock; findMany: jest.Mock };
     redemption: { create: jest.Mock };
+    academyMember: { findFirst: jest.Mock };
     studyPlan: { count: jest.Mock };
     studyPlanTopic: { count: jest.Mock; findMany: jest.Mock };
     exerciseAttempt: {
@@ -67,6 +68,7 @@ describe('ChallengesService', () => {
       theoryLesson: { count: jest.fn() },
       examAttempt: { count: jest.fn(), aggregate: jest.fn(), findMany: jest.fn() },
       redemption: { create: jest.fn() },
+      academyMember: { findFirst: jest.fn() },
       studyPlan: { count: jest.fn() },
       studyPlanTopic: { count: jest.fn(), findMany: jest.fn() },
       exerciseAttempt: {
@@ -920,6 +922,106 @@ describe('ChallengesService', () => {
         where: { id: 'user1' },
         data: { currentCorrectStreak: 0 },
       });
+    });
+  });
+
+  // ─── atribución por academia ─────────────────────────────────────────────────
+
+  describe('checkAndAward — academyId de UserChallenge', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(WEEK_08);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        currentStreak: 2,
+        longestStreak: 3,
+        lastActiveWeek: ISO_W08,
+        currentDailyStreak: 1,
+        longestDailyStreak: 1,
+        lastActiveDay: DAY_W08_MON,
+      });
+      mockPrisma.userChallenge.findMany.mockResolvedValue([]);
+      mockPrisma.userChallenge.upsert.mockResolvedValue({});
+      mockPrisma.userChallenge.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.user.update.mockResolvedValue({});
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const challenge = {
+      id: 'ch1',
+      type: ChallengeType.THEORY_COMPLETED,
+      target: 5,
+      points: 100,
+      cadence: ChallengeCadence.PERMANENT,
+    };
+
+    it('toma la academia de la membresía más antigua del alumno', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
+      mockPrisma.theoryModule.count.mockResolvedValue(1); // sin llegar al target
+      mockPrisma.academyMember.findFirst.mockResolvedValue({ academyId: 'academy1' });
+
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
+
+      expect(mockPrisma.academyMember.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'user1' },
+        orderBy: { createdAt: 'asc' },
+        select: { academyId: true },
+      });
+    });
+
+    it('escribe la academia en la fila de progreso que crea', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
+      mockPrisma.theoryModule.count.mockResolvedValue(1); // progreso sin completar
+      mockPrisma.academyMember.findFirst.mockResolvedValue({ academyId: 'academy1' });
+
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
+
+      expect(mockPrisma.userChallenge.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ academyId: 'academy1' }),
+          update: expect.objectContaining({ academyId: 'academy1' }),
+        }),
+      );
+    });
+
+    it('escribe la academia también en la fila que crea al completar y pagar', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
+      mockPrisma.theoryModule.count.mockResolvedValue(5); // llega al target
+      mockPrisma.academyMember.findFirst.mockResolvedValue({ academyId: 'academy1' });
+
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
+
+      expect(mockPrisma.userChallenge.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ academyId: 'academy1' }),
+        }),
+      );
+      // El updateMany que marca completado rellena la academia de las filas
+      // que se escribieron a null antes de este arreglo.
+      expect(mockPrisma.userChallenge.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ academyId: 'academy1', completed: true }),
+        }),
+      );
+    });
+
+    it('deja la academia a null si el alumno no tiene membresía, sin pisar la fila existente', async () => {
+      mockPrisma.challenge.findMany.mockResolvedValue([challenge]);
+      mockPrisma.theoryModule.count.mockResolvedValue(1);
+      mockPrisma.academyMember.findFirst.mockResolvedValue(null);
+
+      await service.checkAndAward('user1', ChallengeType.THEORY_COMPLETED);
+
+      const call = mockPrisma.userChallenge.upsert.mock.calls[0][0] as {
+        create: { academyId: string | null };
+        update: Record<string, unknown>;
+      };
+      expect(call.create.academyId).toBeNull();
+      // Sin academia que escribir, el update no toca el campo: una fila ya
+      // atribuida no se borra por pasar por aquí sin contexto.
+      expect(call.update).not.toHaveProperty('academyId');
     });
   });
 
