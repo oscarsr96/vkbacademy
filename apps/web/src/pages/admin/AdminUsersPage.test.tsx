@@ -41,6 +41,7 @@ const student = (over: Partial<Record<string, unknown>> & { id: string; name: st
   currentDailyStreak: 0,
   longestDailyStreak: 0,
   currentStreak: 0,
+  aiCost: { courseUsd: 0, examUsd: 0, chatbotUsd: 0, totalUsd: 0, totalTokens: 0 },
   ...over,
 });
 
@@ -60,6 +61,7 @@ const USERS = [
     currentDailyStreak: 0,
     longestDailyStreak: 0,
     currentStreak: 0,
+    aiCost: { courseUsd: 0, examUsd: 0, chatbotUsd: 0, totalUsd: 0, totalTokens: 0 },
   },
 ];
 
@@ -100,7 +102,8 @@ describe('AdminUsersPage — columna de actividad', () => {
 
     const fila = within((await screen.findByText('Admin Club')).closest('tr')!);
     expect(fila.queryByText(/🔥/)).not.toBeInTheDocument();
-    expect(fila.getByText('—')).toBeInTheDocument();
+    // Dos guiones: sin actividad y sin consumo de IA
+    expect(fila.getAllByText('—')).toHaveLength(2);
   });
 
   it('ordena por racha, no por puntos, cuando se elige Racha', async () => {
@@ -121,5 +124,91 @@ describe('AdminUsersPage — columna de actividad', () => {
     await userEvent.selectOptions(screen.getByLabelText('Ordenar por'), 'puntos');
 
     expect(rowNames()).toEqual(['Bruno', 'Ana', 'Admin Club']);
+  });
+});
+
+describe('AdminUsersPage — columna de coste de IA', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('muestra el importe y los tokens de quien ha consumido', async () => {
+    mockGetUsers.mockResolvedValue({
+      data: [
+        student({
+          id: 'u1',
+          name: 'Ana',
+          aiCost: { courseUsd: 1.5, examUsd: 0.5, chatbotUsd: 0, totalUsd: 2, totalTokens: 12345 },
+        }),
+      ],
+      total: 1,
+      page: 1,
+      limit: 1000,
+      totalPages: 1,
+    });
+
+    renderPage();
+
+    const fila = within((await screen.findByText('Ana')).closest('tr')!);
+    expect(fila.getByText('$2.00')).toBeInTheDocument();
+    // Los tokens acompañan al importe: con Gemini gratis casi todo sale a 0 $
+    expect(fila.getByText('12.345 tok')).toBeInTheDocument();
+  });
+
+  it('usa más decimales cuando el importe es minúsculo, en vez de mostrar $0.00', async () => {
+    mockGetUsers.mockResolvedValue({
+      data: [
+        student({
+          id: 'u1',
+          name: 'Ana',
+          aiCost: { courseUsd: 0.0004, examUsd: 0, chatbotUsd: 0, totalUsd: 0.0004, totalTokens: 900 },
+        }),
+      ],
+      total: 1,
+      page: 1,
+      limit: 1000,
+      totalPages: 1,
+    });
+
+    renderPage();
+
+    const fila = within((await screen.findByText('Ana')).closest('tr')!);
+    expect(fila.getByText('$0.0004')).toBeInTheDocument();
+  });
+
+  it('no revienta si la API todavía no envía aiCost (despliegue a medias)', async () => {
+    const sinCoste = student({ id: 'u1', name: 'Ana' });
+    delete (sinCoste as { aiCost?: unknown }).aiCost;
+    mockGetUsers.mockResolvedValue({
+      data: [sinCoste],
+      total: 1,
+      page: 1,
+      limit: 1000,
+      totalPages: 1,
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('Ana')).toBeInTheDocument();
+  });
+
+  it('ordena por coste cuando se elige Coste IA', async () => {
+    mockGetUsers.mockResolvedValue({
+      data: [
+        student({ id: 'u1', name: 'Barata', aiCost: { courseUsd: 0.1, examUsd: 0, chatbotUsd: 0, totalUsd: 0.1, totalTokens: 100 } }),
+        student({ id: 'u2', name: 'Cara', aiCost: { courseUsd: 5, examUsd: 0, chatbotUsd: 0, totalUsd: 5, totalTokens: 900 } }),
+      ],
+      total: 2,
+      page: 1,
+      limit: 1000,
+      totalPages: 1,
+    });
+
+    renderPage();
+    await screen.findByText('Barata');
+
+    await userEvent.selectOptions(screen.getByLabelText('Ordenar por'), 'coste');
+
+    expect(rowNames()).toEqual(['Cara', 'Barata']);
   });
 });

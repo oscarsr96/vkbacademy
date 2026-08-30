@@ -5,6 +5,7 @@ import { Response } from 'express';
 import { TutorService } from './tutor.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesService } from '../challenges/challenges.service';
+import { AiUsageService } from '../ai/ai-usage.service';
 import { TutorChatDto } from './dto/tutor-chat.dto';
 
 const mockTutorMessage = {
@@ -20,6 +21,8 @@ const mockPrisma = {
 const mockConfig = {
   get: jest.fn().mockReturnValue('fake-api-key'),
 };
+
+const mockAiUsage = { record: jest.fn() };
 
 const mockChallenges = {
   checkAndAward: jest.fn().mockResolvedValue(undefined),
@@ -44,6 +47,7 @@ describe('TutorService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ConfigService, useValue: mockConfig },
         { provide: ChallengesService, useValue: mockChallenges },
+        { provide: AiUsageService, useValue: mockAiUsage as unknown as AiUsageService },
       ],
     }).compile();
 
@@ -154,12 +158,15 @@ describe('TutorService', () => {
         { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hola' } },
         { type: 'content_block_delta', delta: { type: 'text_delta', text: ' mundo' } },
       ],
+      finalMessage: () => Promise<{ usage: { input_tokens: number; output_tokens: number } }> = () =>
+        Promise.resolve({ usage: { input_tokens: 320, output_tokens: 85 } }),
     ) => ({
       [Symbol.asyncIterator]: async function* () {
         for (const chunk of chunks) {
           yield chunk;
         }
       },
+      finalMessage,
     });
 
     const setMockAnthropic = (streamReturnValue: object) => {
@@ -261,6 +268,37 @@ describe('TutorService', () => {
           lessonId: dto.lessonId,
         },
       });
+    });
+
+    it('registra el consumo del tutor con los tokens del stream', async () => {
+      await service.streamChat(userId, dto, mockRes);
+
+      expect(mockAiUsage.record).toHaveBeenCalledWith(
+        { userId, category: 'CHATBOT' },
+        {
+          provider: 'haiku',
+          model: 'claude-haiku-4-5-20251001',
+          inputTokens: 320,
+          outputTokens: 85,
+        },
+      );
+    });
+
+    it('si no se puede leer el consumo, la respuesta del tutor se guarda igual', async () => {
+      // La contabilidad va DESPUÉS del guardado y en su propio try: el alumno no
+      // puede perder una respuesta que ya ha leído por un fallo de facturación.
+      setMockAnthropic(
+        buildMockStream(undefined, () => Promise.reject(new Error('sin usage'))),
+      );
+
+      await service.streamChat(userId, dto, mockRes);
+
+      const assistantCreate = mockTutorMessage.create.mock.calls.find(
+        (call) => call[0].data.role === 'assistant',
+      );
+      expect(assistantCreate).toBeDefined();
+      expect(assistantCreate[0].data.content).toBe('Hola mundo');
+      expect(mockRes.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ done: true })}\n\n`);
     });
 
     it('en caso de error de Anthropic, escribe evento SSE de error', async () => {

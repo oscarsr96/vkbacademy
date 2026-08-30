@@ -53,6 +53,7 @@ describe('ExercisesService', () => {
       ai.generate.mockResolvedValue(easyExerciseJson());
 
       const result = await service.generateForTopics({
+        userId: 'user1',
         courseId: 'course-1',
         topics: ['Tema A', 'Tema B'],
         perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -70,6 +71,7 @@ describe('ExercisesService', () => {
       ai.generate.mockResolvedValue(easyExerciseJson());
 
       await service.generateForTopics({
+        userId: 'user1',
         courseId: 'course-1',
         topics: ['Fracciones'],
         perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -86,6 +88,7 @@ describe('ExercisesService', () => {
       ai.generate.mockResolvedValue(easyExerciseJson());
 
       const result = await service.generateForTopics({
+        userId: 'user1',
         courseId: 'course-1',
         topics: ['Tema A'],
         perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -100,6 +103,7 @@ describe('ExercisesService', () => {
 
       await expect(
         service.generateForTopics({
+          userId: 'user1',
           courseId: 'missing',
           topics: ['Tema A'],
           perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -129,6 +133,7 @@ describe('ExercisesService', () => {
         .mockResolvedValueOnce(easyExerciseJson());
 
       const result = await service.generateForTopics({
+        userId: 'user1',
         courseId: 'course-1',
         topics: ['Fracciones'],
         perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -145,6 +150,7 @@ describe('ExercisesService', () => {
       ai.generate.mockResolvedValue(easyExerciseJson());
 
       const res = await service.generateForTopics({
+        userId: 'user1',
         courseId: 'course-1',
         topics: ['Tema A', 'Tema B'],
         perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -175,6 +181,7 @@ describe('ExercisesService', () => {
 
       await expect(
         service.generateForTopics({
+          userId: 'user1',
           courseId: 'course-1',
           topics: ['Fracciones'],
           perTopic: { easy: 1, medium: 0, hard: 0 },
@@ -196,7 +203,7 @@ describe('ExercisesService', () => {
         JSON.stringify({ verdict: 'correct', feedback: 'Perfecto, 2+2=4.' }),
       );
 
-      const result = await service.evaluate(dto);
+      const result = await service.evaluate('user1', dto);
 
       expect(result.verdict).toBe('correct');
       expect(result.feedback).toContain('Perfecto');
@@ -206,13 +213,13 @@ describe('ExercisesService', () => {
       ai.generate.mockResolvedValue(
         '```json\n{"verdict":"partial","feedback":"Falta una parte"}\n```',
       );
-      const result = await service.evaluate(dto);
+      const result = await service.evaluate('user1', dto);
       expect(result.verdict).toBe('partial');
     });
 
     it('incluye statement, studentAnswer y solution en el prompt', async () => {
       ai.generate.mockResolvedValue('{"verdict":"correct","feedback":"OK"}');
-      await service.evaluate({
+      await service.evaluate('user1', {
         statement: '¿Capital de Francia?',
         studentAnswer: 'Paris',
         solution: 'París',
@@ -226,7 +233,7 @@ describe('ExercisesService', () => {
 
     it('incluye la instrucción de LaTeX para el feedback en el prompt de evaluación', async () => {
       ai.generate.mockResolvedValue('{"verdict":"correct","feedback":"OK"}');
-      await service.evaluate(dto);
+      await service.evaluate('user1', dto);
 
       const prompt = ai.generate.mock.calls[0][0] as string;
       expect(prompt).toContain('LaTeX');
@@ -235,12 +242,12 @@ describe('ExercisesService', () => {
 
     it('rechaza veredictos fuera del enum esperado', async () => {
       ai.generate.mockResolvedValue('{"verdict":"maybe","feedback":"dunno"}');
-      await expect(service.evaluate(dto)).rejects.toThrow();
+      await expect(service.evaluate('user1', dto)).rejects.toThrow();
     });
 
     it('lanza error si la IA devuelve JSON inválido', async () => {
       ai.generate.mockResolvedValue('no es json');
-      await expect(service.evaluate(dto)).rejects.toThrow();
+      await expect(service.evaluate('user1', dto)).rejects.toThrow();
     });
   });
 });

@@ -40,6 +40,7 @@ model Academy {
   enrollments    Enrollment[]
   redemptions    Redemption[]
   userChallenges UserChallenge[]
+  aiUsages       AiUsage[]
 }
 
 model AcademyMember {
@@ -103,6 +104,7 @@ model User {
   enrollments      Enrollment[]
   userChallenges   UserChallenge[]
   redemptions      Redemption[]
+  aiUsages         AiUsage[]
   examAttempts     ExamAttempt[]
   certificates     Certificate[]
   tutorMessages    TutorMessage[]
@@ -714,4 +716,38 @@ model StudyPlanTopic {
   examBanks    AiExamBank[] // exámenes por tema (modo PER_TOPIC), vía AiExamBank.studyPlanTopicId
 
   @@index([planId, order])
+}
+
+/// Categoría de gasto de IA, tal y como se muestra en el panel de admin.
+enum AiUsageCategory {
+  COURSE /// generación de teoría y ejercicios de un curso de estudio
+  EXAM /// generación de baterías de examen
+  CHATBOT /// conversación con el tutor IA
+}
+
+/// Una llamada a un proveedor de IA, atribuida al usuario que la provocó.
+///
+/// El coste va en microdólares enteros (1 USD = 1.000.000) en vez de decimal:
+/// son estimaciones que se suman por millares y un entero no acumula error de
+/// coma flotante. Gemini se registra igual aunque hoy salga a 0: los tokens
+/// son la señal real de consumo mientras el plan sea gratuito.
+model AiUsage {
+  id            String          @id @default(cuid())
+  userId        String
+  academyId     String?
+  category      AiUsageCategory
+  provider      String /// "gemini" | "haiku"
+  model         String
+  inputTokens   Int             @default(0)
+  outputTokens  Int             @default(0)
+  costMicroUsd  Int             @default(0)
+  createdAt     DateTime        @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academy Academy? @relation(fields: [academyId], references: [id])
+
+  @@index([userId])
+  @@index([userId, category])
+  @@index([createdAt])
+  @@index([academyId])
 }

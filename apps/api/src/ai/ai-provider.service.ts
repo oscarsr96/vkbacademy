@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AiUsageService, type AiUsageContext } from './ai-usage.service';
 import { GoogleGenerativeAI, GoogleGenerativeAIAbortError } from '@google/generative-ai';
 import Anthropic, { APIConnectionTimeoutError } from '@anthropic-ai/sdk';
 
@@ -14,6 +15,9 @@ import Anthropic, { APIConnectionTimeoutError } from '@anthropic-ai/sdk';
 // Gemini 2.5, y cada llamada moría en 400 sin que nadie tocara el repo.
 // Overridable con GEMINI_MODEL para migrar de familia sin desplegar código.
 const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
+
+/** Modelo de fallback de pago. Pinneado igual que el de Gemini. */
+const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 
 /**
  * Proveedor de IA unificado con fallback automático.
@@ -40,7 +44,10 @@ export class AiProviderService {
   private readonly geminiModel: string;
   private readonly timeoutMs: number;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly usage: AiUsageService,
+  ) {
     const geminiKey = this.config.get<string>('GEMINI_API_KEY');
     const anthropicKey = this.config.get<string>('ANTHROPIC_API_KEY');
 
@@ -68,20 +75,20 @@ export class AiProviderService {
    * Genera texto a partir de un prompt. Devuelve el contenido crudo
    * (normalmente JSON) que el caller debe parsear.
    */
-  async generate(prompt: string, maxTokens: number): Promise<string> {
+  async generate(prompt: string, maxTokens: number, context?: AiUsageContext): Promise<string> {
     if (this.provider === 'haiku') {
-      return this.callHaiku(prompt, maxTokens);
+      return this.callHaiku(prompt, maxTokens, context);
     }
 
     if (this.provider === 'gemini') {
-      return this.callGemini(prompt, maxTokens);
+      return this.callGemini(prompt, maxTokens, context);
     }
 
     // auto: Gemini → Haiku fallback
     let geminiError: Error | null = null;
     if (this.gemini) {
       try {
-        return await this.callGemini(prompt, maxTokens);
+        return await this.callGemini(prompt, maxTokens, context);
       } catch (error) {
         geminiError = error instanceof Error ? error : new Error(String(error));
         this.logger.warn(`Gemini falló, intentando Haiku: ${geminiError.message}`);
@@ -99,7 +106,7 @@ export class AiProviderService {
     // Si también falla el fallback, el error debe nombrar AMBAS causas: con solo
     // la de Haiku, un fallo de Gemini se leía como un problema de facturación.
     try {
-      return await this.callHaiku(prompt, maxTokens);
+      return await this.callHaiku(prompt, maxTokens, context);
     } catch (haikuError) {
       if (!geminiError) throw haikuError;
       const haikuMessage = haikuError instanceof Error ? haikuError.message : String(haikuError);
@@ -109,7 +116,11 @@ export class AiProviderService {
     }
   }
 
-  private async callGemini(prompt: string, maxTokens: number): Promise<string> {
+  private async callGemini(
+    prompt: string,
+    maxTokens: number,
+    context?: AiUsageContext,
+  ): Promise<string> {
     if (!this.gemini) {
       throw new Error('GEMINI_API_KEY no configurada');
     }
@@ -146,6 +157,23 @@ export class AiProviderService {
 
     if (!text) {
       throw new Error('Gemini devolvió respuesta vacía');
+    }
+
+    // El consumo se registra sobre la llamada que sí respondió. Un fallo de
+    // Gemini que cae a Haiku no cuenta tokens aquí: los cuenta callHaiku.
+    if (context) {
+      // El SDK legacy no tipa thoughtsTokenCount, igual que pasa en
+      // assertNotTruncated: se lee con el mismo cast acotado.
+      const meta = result.response.usageMetadata as
+        | { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number }
+        | undefined;
+      void this.usage.record(context, {
+        provider: 'gemini',
+        model: this.geminiModel,
+        inputTokens: meta?.promptTokenCount ?? 0,
+        // Los tokens de thinking se facturan aunque no salgan en el texto
+        outputTokens: (meta?.candidatesTokenCount ?? 0) + (meta?.thoughtsTokenCount ?? 0),
+      });
     }
 
     return text;
@@ -191,7 +219,11 @@ export class AiProviderService {
     );
   }
 
-  private async callHaiku(prompt: string, maxTokens: number): Promise<string> {
+  private async callHaiku(
+    prompt: string,
+    maxTokens: number,
+    context?: AiUsageContext,
+  ): Promise<string> {
     if (!this.anthropic) {
       throw new Error('ANTHROPIC_API_KEY no configurada');
     }
@@ -203,7 +235,7 @@ export class AiProviderService {
     try {
       message = await this.anthropic.messages.create(
         {
-          model: 'claude-haiku-4-5-20251001',
+          model: HAIKU_MODEL,
           max_tokens: maxTokens,
           messages: [{ role: 'user', content: prompt }],
         },
@@ -220,6 +252,15 @@ export class AiProviderService {
     const textContent = message.content.find((c) => c.type === 'text');
     if (!textContent || textContent.type !== 'text') {
       throw new Error('Haiku no devolvió contenido de texto');
+    }
+
+    if (context) {
+      void this.usage.record(context, {
+        provider: 'haiku',
+        model: HAIKU_MODEL,
+        inputTokens: message.usage.input_tokens,
+        outputTokens: message.usage.output_tokens,
+      });
     }
 
     return textContent.text;

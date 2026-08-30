@@ -1,3 +1,4 @@
+import { AiUsageCategory } from '@prisma/client';
 import {
   Injectable,
   NotFoundException,
@@ -132,7 +133,7 @@ export class CourseGeneratorService {
     }
   }
 
-  async generateAndCreate(name: string, schoolYearId: string) {
+  async generateAndCreate(userId: string, name: string, schoolYearId: string) {
     const schoolYear = await this.prisma.schoolYear.findUnique({
       where: { id: schoolYearId },
     });
@@ -141,7 +142,7 @@ export class CourseGeneratorService {
       throw new NotFoundException(`Nivel educativo con id "${schoolYearId}" no encontrado`);
     }
 
-    const courseData = await this.callClaude(name, schoolYear.label);
+    const courseData = await this.callClaude(userId, name, schoolYear.label);
 
     for (const mod of courseData.modules) {
       await this.enrichVideoLessonsWithYoutube(mod.lessons, schoolYear.label);
@@ -184,7 +185,7 @@ export class CourseGeneratorService {
     return course;
   }
 
-  async generateAndCreateModule(courseId: string, name: string) {
+  async generateAndCreateModule(userId: string, courseId: string, name: string) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
       include: {
@@ -197,7 +198,7 @@ export class CourseGeneratorService {
       throw new NotFoundException(`Curso con id "${courseId}" no encontrado`);
     }
 
-    const moduleData = await this.callClaudeForModule(name, {
+    const moduleData = await this.callClaudeForModule(userId, name, {
       courseTitle: course.title,
       courseDescription: course.description ?? '',
       schoolYearLabel: course.schoolYear?.label ?? '',
@@ -232,7 +233,7 @@ export class CourseGeneratorService {
     });
   }
 
-  async generateAndCreateLesson(moduleId: string, topic: string) {
+  async generateAndCreateLesson(userId: string, moduleId: string, topic: string) {
     const module = await this.prisma.module.findUnique({
       where: { id: moduleId },
       include: {
@@ -245,7 +246,7 @@ export class CourseGeneratorService {
       throw new NotFoundException(`Módulo con id "${moduleId}" no encontrado`);
     }
 
-    const lessonData = await this.callClaudeForLesson(topic, {
+    const lessonData = await this.callClaudeForLesson(userId, topic, {
       courseTitle: module.course.title,
       courseDescription: module.course.description ?? '',
       schoolYearLabel: module.course.schoolYear?.label ?? '',
@@ -300,7 +301,7 @@ export class CourseGeneratorService {
     });
   }
 
-  async generateAndCreateQuestion(quizId: string, topic: string) {
+  async generateAndCreateQuestion(userId: string, quizId: string, topic: string) {
     const quiz = await this.prisma.quiz.findUnique({
       where: { id: quizId },
       include: {
@@ -325,7 +326,7 @@ export class CourseGeneratorService {
     const { module } = lesson;
     const { course } = module;
 
-    const questionData = await this.callClaudeForQuestion(topic, {
+    const questionData = await this.callClaudeForQuestion(userId, topic, {
       courseTitle: course.title,
       schoolYearLabel: course.schoolYear?.label ?? '',
       moduleTitle: module.title,
@@ -357,6 +358,7 @@ export class CourseGeneratorService {
   // ─── Generación de preguntas de examen ────────────────────────────────────
 
   async generateExamQuestions(
+    userId: string,
     topic: string,
     count: number,
     scope: { courseId?: string; moduleId?: string },
@@ -396,7 +398,7 @@ export class CourseGeneratorService {
       }
     }
 
-    const generated = await this.callClaudeForExamQuestions(topic, count, context);
+    const generated = await this.callClaudeForExamQuestions(userId, topic, count, context);
 
     // Crear preguntas en paralelo
     const prisma = this.prisma;
@@ -437,11 +439,17 @@ export class CourseGeneratorService {
    * JSON inválido (ver `ai-json.ts`). Centraliza el bloque repetido en los 5
    * métodos `callClaudeFor*` de este service.
    */
-  private async generateJson<T>(prompt: string, maxTokens: number, context: string): Promise<T> {
+  private async generateJson<T>(
+    userId: string,
+    prompt: string,
+    maxTokens: number,
+    context: string,
+  ): Promise<T> {
     try {
       return await generateAiJson<T>(this.ai, prompt, maxTokens, {
         attempts: 2,
         logger: this.logger,
+        usage: { userId, category: AiUsageCategory.COURSE },
       });
     } catch (err) {
       this.logger.error(`Error al parsear JSON de IA (${context}) tras reintentos:`, err);
@@ -452,6 +460,7 @@ export class CourseGeneratorService {
   }
 
   private async callClaudeForQuestion(
+    userId: string,
     topic: string,
     context: {
       courseTitle: string;
@@ -500,12 +509,13 @@ Reglas:
 
     this.logger.log(`Generando pregunta: "${topic}" en quiz de "${lessonTitle}"`);
 
-    const parsed = await this.generateJson<GeneratedQuestion>(prompt, 512, 'pregunta');
+    const parsed = await this.generateJson<GeneratedQuestion>(userId, prompt, 512, 'pregunta');
     this.logger.log(`Pregunta generada correctamente: "${parsed.text}"`);
     return parsed;
   }
 
   private async callClaudeForLesson(
+    userId: string,
     topic: string,
     context: {
       courseTitle: string;
@@ -616,12 +626,13 @@ Reglas:
 
     this.logger.log(`Generando lección: "${topic}" en módulo "${moduleTitle}"`);
 
-    const parsed = await this.generateJson<Omit<GeneratedLesson, 'order'>>(prompt, 1024, 'lección');
+    const parsed = await this.generateJson<Omit<GeneratedLesson, 'order'>>(userId, prompt, 1024, 'lección');
     this.logger.log(`Lección generada correctamente: "${parsed.title}" (${parsed.type})`);
     return parsed;
   }
 
   private async callClaudeForModule(
+    userId: string,
     name: string,
     context: {
       courseTitle: string;
@@ -710,12 +721,13 @@ Reglas:
 
     this.logger.log(`Generando módulo: "${name}" en curso "${courseTitle}"`);
 
-    const parsed = await this.generateJson<Omit<GeneratedModule, 'order'>>(prompt, 3000, 'módulo');
+    const parsed = await this.generateJson<Omit<GeneratedModule, 'order'>>(userId, prompt, 3000, 'módulo');
     this.logger.log(`Módulo generado correctamente: "${parsed.title}"`);
     return parsed;
   }
 
   private async callClaudeForExamQuestions(
+    userId: string,
     topic: string,
     count: number,
     context: { courseTitle: string; schoolYearLabel: string; moduleTitle?: string },
@@ -760,6 +772,7 @@ ${moduleTitle ? `- Las preguntas deben ser coherentes con el contenido del módu
     );
 
     const parsed = await this.generateJson<GeneratedQuestion[]>(
+      userId,
       prompt,
       2000,
       'preguntas de examen',
@@ -768,7 +781,11 @@ ${moduleTitle ? `- Las preguntas deben ser coherentes con el contenido del módu
     return parsed;
   }
 
-  private async callClaude(name: string, schoolYearLabel: string): Promise<GeneratedCourse> {
+  private async callClaude(
+    userId: string,
+    name: string,
+    schoolYearLabel: string,
+  ): Promise<GeneratedCourse> {
     const prompt = `Genera un JSON de curso escolar en español.
 Nombre del curso: "${name}"
 Nivel educativo: "${schoolYearLabel}" (sistema educativo español)
@@ -867,7 +884,7 @@ Reglas:
 
     this.logger.log(`Generando curso: "${name}" (${schoolYearLabel})`);
 
-    const parsed = await this.generateJson<GeneratedCourse>(prompt, 6000, 'curso');
+    const parsed = await this.generateJson<GeneratedCourse>(userId, prompt, 6000, 'curso');
     this.logger.log(`Curso generado correctamente: "${parsed.title}"`);
     return parsed;
   }

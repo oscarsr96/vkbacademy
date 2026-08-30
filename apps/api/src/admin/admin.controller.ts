@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -149,8 +150,8 @@ export class AdminController {
   }
 
   @Post('courses/generate')
-  generateCourse(@Body() dto: GenerateCourseDto) {
-    return this.courseGeneratorService.generateAndCreate(dto.name, dto.schoolYearId);
+  generateCourse(@Request() req: { user: { id: string } }, @Body() dto: GenerateCourseDto) {
+    return this.courseGeneratorService.generateAndCreate(req.user.id, dto.name, dto.schoolYearId);
   }
 
   @Post('courses/import')
@@ -167,8 +168,12 @@ export class AdminController {
 
   // Debe declararse ANTES que POST /admin/courses/:courseId/modules para evitar conflictos
   @Post('courses/:courseId/modules/generate')
-  generateModule(@Param('courseId') courseId: string, @Body() dto: GenerateModuleDto) {
-    return this.courseGeneratorService.generateAndCreateModule(courseId, dto.name);
+  generateModule(
+    @Request() req: { user: { id: string } },
+    @Param('courseId') courseId: string,
+    @Body() dto: GenerateModuleDto,
+  ) {
+    return this.courseGeneratorService.generateAndCreateModule(req.user.id, courseId, dto.name);
   }
 
   @Post('courses/:courseId/modules')
@@ -190,8 +195,12 @@ export class AdminController {
 
   // Debe declararse ANTES que POST /admin/modules/:moduleId/lessons
   @Post('modules/:moduleId/lessons/generate')
-  generateLesson(@Param('moduleId') moduleId: string, @Body() dto: GenerateLessonDto) {
-    return this.courseGeneratorService.generateAndCreateLesson(moduleId, dto.topic);
+  generateLesson(
+    @Request() req: { user: { id: string } },
+    @Param('moduleId') moduleId: string,
+    @Body() dto: GenerateLessonDto,
+  ) {
+    return this.courseGeneratorService.generateAndCreateLesson(req.user.id, moduleId, dto.topic);
   }
 
   @Post('modules/:moduleId/lessons')
@@ -226,8 +235,12 @@ export class AdminController {
 
   // Debe declararse ANTES que POST /admin/quizzes/:quizId/questions
   @Post('quizzes/:quizId/questions/generate')
-  generateQuestion(@Param('quizId') quizId: string, @Body() dto: GenerateQuestionDto) {
-    return this.courseGeneratorService.generateAndCreateQuestion(quizId, dto.topic);
+  generateQuestion(
+    @Request() req: { user: { id: string } },
+    @Param('quizId') quizId: string,
+    @Body() dto: GenerateQuestionDto,
+  ) {
+    return this.courseGeneratorService.generateAndCreateQuestion(req.user.id, quizId, dto.topic);
   }
 
   @Post('quizzes/:quizId/questions')
@@ -308,8 +321,11 @@ export class AdminController {
   }
 
   @Post('exam-questions/generate')
-  generateExamQuestions(@Body() dto: GenerateExamQuestionsDto) {
-    return this.courseGeneratorService.generateExamQuestions(dto.topic, dto.count ?? 3, {
+  generateExamQuestions(
+    @Request() req: { user: { id: string } },
+    @Body() dto: GenerateExamQuestionsDto,
+  ) {
+    return this.courseGeneratorService.generateExamQuestions(req.user.id, dto.topic, dto.count ?? 3, {
       courseId: dto.courseId,
       moduleId: dto.moduleId,
     });

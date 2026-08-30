@@ -1,3 +1,4 @@
+import { AiUsageCategory } from '@prisma/client';
 import {
   Injectable,
   InternalServerErrorException,
@@ -45,6 +46,8 @@ export interface ExerciseDifficultySplit {
 }
 
 export interface GenerateExercisesForTopicsParams {
+  /** Alumno al que se atribuye el coste de la generación. */
+  userId: string;
   courseId: string;
   topics: string[];
   perTopic: ExerciseDifficultySplit;
@@ -108,6 +111,7 @@ export class ExercisesService {
     const perTopicResults = await Promise.all(
       params.topics.map((topic) =>
         this.generateSplitForTopic(
+          params.userId,
           course.title,
           course.schoolYear?.label ?? '',
           topic,
@@ -124,6 +128,7 @@ export class ExercisesService {
 
   /** Genera los ejercicios de UN tema con reparto exacto de dificultad (reintento semántico 2x). */
   private async generateSplitForTopic(
+    userId: string,
     courseTitle: string,
     schoolYearLabel: string,
     topic: string,
@@ -139,6 +144,7 @@ export class ExercisesService {
         const parsed = await generateAiJson(this.ai, prompt, maxTokens, {
           attempts: 1,
           logger: this.logger,
+          usage: { userId, category: AiUsageCategory.COURSE },
         });
         return this.validateSplitExercises(parsed, split).map((ex) => ({
           ...ex,
@@ -157,7 +163,7 @@ export class ExercisesService {
     );
   }
 
-  async evaluate(dto: EvaluateExerciseDto): Promise<EvaluationResult> {
+  async evaluate(userId: string, dto: EvaluateExerciseDto): Promise<EvaluationResult> {
     const prompt = this.buildEvaluationPrompt(dto);
     this.logger.log(
       `Evaluando respuesta abierta para enunciado: "${dto.statement.slice(0, 60)}..."`,
@@ -165,7 +171,11 @@ export class ExercisesService {
 
     let parsed: unknown;
     try {
-      parsed = await generateAiJson(this.ai, prompt, 400, { attempts: 2, logger: this.logger });
+      parsed = await generateAiJson(this.ai, prompt, 400, {
+        attempts: 2,
+        logger: this.logger,
+        usage: { userId, category: AiUsageCategory.COURSE },
+      });
     } catch (err) {
       this.logger.error('Error al parsear JSON de IA (evaluación) tras reintentos:', err);
       throw new InternalServerErrorException(

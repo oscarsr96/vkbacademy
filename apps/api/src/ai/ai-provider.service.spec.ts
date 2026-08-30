@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import { AiUsageService } from './ai-usage.service';
 import { GoogleGenerativeAIAbortError } from '@google/generative-ai';
 import { APIConnectionTimeoutError } from '@anthropic-ai/sdk';
 import { AiProviderService } from './ai-provider.service';
@@ -38,7 +39,10 @@ function createProvider(overrides: Record<string, string | undefined> = {}) {
   const config = {
     get: jest.fn((key: string) => defaults[key]),
   } as unknown as ConfigService;
-  return new AiProviderService(config);
+  // El registro de consumo se stubea: los tests que lo comprueban leen `usage`
+  const usage = { record: jest.fn(), estimateMicroUsd: jest.fn(() => 0) };
+  const provider = new AiProviderService(config, usage as unknown as AiUsageService);
+  return Object.assign(provider, { __usage: usage });
 }
 
 describe('AiProviderService', () => {
@@ -365,3 +369,64 @@ describe('AiProviderService', () => {
     });
   });
 });
+
+  // ─── Registro de consumo ─────────────────────────────────────────────────────
+
+  describe('atribución del consumo', () => {
+    const context = { userId: 'user1', category: 'COURSE' as const };
+
+    it('Gemini: registra los tokens del usageMetadata, thinking incluido', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: {
+          text: () => '{"ok":true}',
+          usageMetadata: {
+            promptTokenCount: 1200,
+            candidatesTokenCount: 800,
+            thoughtsTokenCount: 300,
+          },
+        },
+      });
+
+      const provider = createProvider();
+      await provider.generate('prompt', 512, context);
+
+      // Los tokens de thinking se facturan aunque no salgan en el texto
+      expect(provider.__usage.record).toHaveBeenCalledWith(context, {
+        provider: 'gemini',
+        model: 'gemini-3.5-flash',
+        inputTokens: 1200,
+        outputTokens: 1100,
+      });
+    });
+
+    it('Haiku: registra los tokens que devuelve el SDK', async () => {
+      mockGeminiGenerateContent.mockRejectedValue(new Error('Gemini caído'));
+      mockAnthropicCreate.mockResolvedValue({
+        content: [{ type: 'text', text: '{"ok":true}' }],
+        usage: { input_tokens: 500, output_tokens: 250 },
+      });
+
+      const provider = createProvider();
+      await provider.generate('prompt', 512, context);
+
+      // El fallback cuenta contra Haiku, no contra Gemini: es lo que se paga
+      expect(provider.__usage.record).toHaveBeenCalledTimes(1);
+      expect(provider.__usage.record).toHaveBeenCalledWith(context, {
+        provider: 'haiku',
+        model: 'claude-haiku-4-5-20251001',
+        inputTokens: 500,
+        outputTokens: 250,
+      });
+    });
+
+    it('sin contexto de atribución no registra nada', async () => {
+      mockGeminiGenerateContent.mockResolvedValue({
+        response: { text: () => '{"ok":true}', usageMetadata: { promptTokenCount: 10 } },
+      });
+
+      const provider = createProvider();
+      await provider.generate('prompt', 512);
+
+      expect(provider.__usage.record).not.toHaveBeenCalled();
+    });
+  });

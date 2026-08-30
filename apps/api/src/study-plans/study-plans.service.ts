@@ -253,6 +253,7 @@ export class StudyPlansService {
       ),
       Promise.allSettled([
         this.exercises.generateForTopics({
+          userId,
           courseId: dto.courseId,
           topics: topicTitles,
           perTopic: dto.exercisesPerTopic,
@@ -488,6 +489,7 @@ export class StudyPlansService {
 
     // Generar primero: si la IA falla, los ejercicios anteriores quedan intactos.
     const res = await this.exercises.generateForTopics({
+      userId,
       courseId: plan.courseId,
       topics: plan.topics.map((t) => t.title),
       perTopic,
@@ -631,7 +633,7 @@ export class StudyPlansService {
     let feedback: string | undefined;
 
     if (exercise.type === 'OPEN') {
-      const evaluation = await this.exercises.evaluate({
+      const evaluation = await this.exercises.evaluate(userId, {
         statement: exercise.statement,
         studentAnswer: dto.answer,
         solution: exercise.solution,

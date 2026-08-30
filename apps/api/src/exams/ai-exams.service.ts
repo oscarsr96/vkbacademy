@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { QuestionType } from '@prisma/client';
+import { AiUsageCategory, QuestionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { generateAiJson } from '../ai/ai-json';
@@ -127,6 +127,7 @@ export class AiExamsService {
         const parsed = await generateAiJson(this.ai, prompt, maxTokens, {
           attempts: 1,
           logger: this.logger,
+          usage: { userId, category: AiUsageCategory.EXAM },
         });
         payload = this.validateTopicsPayload(parsed, params.numQuestions, params.topics);
       } catch (err) {

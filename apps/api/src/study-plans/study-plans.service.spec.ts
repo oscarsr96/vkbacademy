@@ -318,7 +318,9 @@ describe('StudyPlansService', () => {
         courseId: 'course-mates',
         topic: 'Fracciones',
       });
+      // El userId viaja hasta la IA: es lo que permite atribuir el coste
       expect(exercises.generateForTopics).toHaveBeenCalledWith({
+        userId: 'user-1',
         courseId: 'course-mates',
         topics: ['Fracciones'],
         perTopic: { easy: 2, medium: 2, hard: 1 },
@@ -529,6 +531,7 @@ describe('StudyPlansService', () => {
       await service.regenerateExercises('user-1', 'plan-1', {});
 
       expect(exercises.generateForTopics).toHaveBeenCalledWith({
+        userId: 'user-1',
         courseId: 'course-mates',
         topics: ['Fracciones'],
         perTopic: { easy: 3, medium: 1, hard: 0 },
@@ -858,7 +861,7 @@ describe('StudyPlansService', () => {
         answer: 'Se suman los numeradores',
       });
 
-      expect(exercises.evaluate).toHaveBeenCalledWith({
+      expect(exercises.evaluate).toHaveBeenCalledWith('user-1', {
         statement: 'Explica cómo se suman fracciones con igual denominador',
         studentAnswer: 'Se suman los numeradores',
         solution: 'Se suman los numeradores y se mantiene el denominador',
