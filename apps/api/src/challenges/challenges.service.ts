@@ -193,6 +193,26 @@ export class ChallengesService {
    * Evalúa y otorga retos para el userId dados uno o varios tipos de evento.
    * Llamar con void (sin await) para no bloquear la respuesta HTTP.
    */
+  /**
+   * Academia a la que se atribuyen las filas de gamificación del alumno.
+   *
+   * `checkAndAward` se invoca con `void` desde seis servicios que no reciben
+   * contexto de petición, así que la academia no puede venir del
+   * `AcademyGuard`. La fuente es la membresía del propio alumno — la misma
+   * regla que usa `JwtStrategy` para poner `academyId` en el token, aquí
+   * anclada a la más antigua para que sea determinista. Coherente además con
+   * el modelo: `UserChallenge` es único por (userId, challengeId, periodKey),
+   * o sea una fila por alumno y reto, no una por academia.
+   */
+  private async resolveAcademyId(userId: string): Promise<string | null> {
+    const membership = await this.prisma.academyMember.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+      select: { academyId: true },
+    });
+    return membership?.academyId ?? null;
+  }
+
   async checkAndAward(userId: string, ...eventTypes: ChallengeType[]): Promise<void> {
     try {
       // 1. Actualizar rachas primero (necesarias para STREAK_DAILY / STREAK_WEEKLY)
@@ -210,6 +230,7 @@ export class ChallengesService {
       const now = new Date();
       const weekKey = isoWeek(now);
       const weekStart = currentWeekStart(now);
+      const academyId = await this.resolveAcademyId(userId);
 
       // 3. Progreso por (tipo, cadencia): la ventana cambia el número, así que
       //    dos retos del mismo tipo con distinta cadencia no comparten cálculo
@@ -261,10 +282,13 @@ export class ChallengesService {
               where: {
                 userId_challengeId_periodKey: { userId, challengeId: challenge.id, periodKey },
               },
-              update: { progress },
+              // La fila que ya existía puede venir sin academia (se escribieron
+              // a null hasta este arreglo): se rellena al pasar por aquí.
+              update: { progress, ...(academyId ? { academyId } : {}) },
               create: {
                 userId,
                 challengeId: challenge.id,
+                academyId,
                 periodKey,
                 progress,
                 completed: false,
@@ -275,7 +299,7 @@ export class ChallengesService {
             return;
           }
 
-          await this.awardCompletion(userId, challenge, periodKey, progress);
+          await this.awardCompletion(userId, challenge, periodKey, progress, academyId);
         }),
       );
     } catch (err) {
@@ -300,6 +324,7 @@ export class ChallengesService {
     challenge: { id: string; points: number },
     periodKey: string,
     progress: number,
+    academyId: string | null,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // La fila puede no existir todavía (primera vez que se ve el reto).
@@ -311,6 +336,7 @@ export class ChallengesService {
         create: {
           userId,
           challengeId: challenge.id,
+          academyId,
           periodKey,
           progress,
           completed: false,
@@ -326,6 +352,7 @@ export class ChallengesService {
           completed: true,
           completedAt: new Date(),
           awardedPoints: challenge.points,
+          ...(academyId ? { academyId } : {}),
         },
       });
       // Otro proceso ya lo completó y ya pagó: no volver a pagar.
