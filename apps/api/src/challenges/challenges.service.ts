@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ChallengeCadence, ChallengeType, Prisma } from '@prisma/client';
+import { ChallengeCadence, ChallengeType, Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   isoWeek,
@@ -8,6 +8,25 @@ import {
   previousDay,
   currentWeekStart,
 } from './challenge-periods';
+
+/** Vecinos por arriba y por abajo que se muestran alrededor del alumno. */
+const LEADERBOARD_NEIGHBOURS = 2;
+
+/**
+ * Contrato de la franja semanal. Está declarado a propósito: fija que la
+ * respuesta no lleva puesto ni número de participantes, así que colar
+ * cualquiera de los dos es un error de compilación, no un descuido.
+ */
+export interface LeaderboardBand {
+  weekStart: Date;
+  entries: {
+    userId: string;
+    name: string;
+    avatarUrl: string | null;
+    points: number;
+    isMe: boolean;
+  }[];
+}
 
 @Injectable()
 export class ChallengesService {
@@ -467,6 +486,72 @@ export class ChallengesService {
       message: `¡${itemName} canjeado correctamente!`,
       pointsSpent: cost,
       remainingPoints: updated.totalPoints,
+    };
+  }
+
+  /**
+   * Clasificación semanal de la academia, en franja local.
+   *
+   * Devuelve al alumno y a sus dos vecinos por arriba y por abajo — nunca la
+   * tabla entera, ni su puesto, ni cuánta gente hay por debajo. Es deliberado:
+   * una clasificación completa señala al último, que con adolescentes es justo
+   * quien más riesgo tiene de abandonar. Compites con quien tienes al lado.
+   *
+   * "Puntos de esta semana" son los `awardedPoints` de todo reto completado
+   * desde el lunes: las misiones semanales y también los logros permanentes
+   * que hayan caído estos días. La semana se corta con `currentWeekStart`,
+   * el mismo lunes de Madrid que usa `checkAndAward`.
+   *
+   * El ámbito sale de `AcademyMember`, no de `UserChallenge.academyId`: la
+   * membresía es la fuente de verdad y está siempre poblada.
+   */
+  async getLeaderboard(userId: string, academyId: string | null): Promise<LeaderboardBand> {
+    const weekStart = currentWeekStart(new Date());
+
+    // Sin academia no hay grupo con el que compararse
+    if (!academyId) return { weekStart, entries: [] };
+
+    const students = await this.prisma.user.findMany({
+      where: { role: Role.STUDENT, academyMembers: { some: { academyId } } },
+      select: { id: true, name: true, avatarUrl: true },
+    });
+
+    // Un alumno solo no tiene clasificación: el front oculta el bloque
+    if (students.length < 2 || !students.some((st) => st.id === userId)) {
+      return { weekStart, entries: [] };
+    }
+
+    const earned = await this.prisma.userChallenge.groupBy({
+      by: ['userId'],
+      where: {
+        userId: { in: students.map((st) => st.id) },
+        completed: true,
+        completedAt: { gte: weekStart },
+      },
+      _sum: { awardedPoints: true },
+    });
+    const pointsByUser = new Map(earned.map((row) => [row.userId, row._sum.awardedPoints ?? 0]));
+
+    // Quien no ha puntuado esta semana entra con 0: si no, la franja de los
+    // de abajo se quedaría sin vecinos justo donde más falta hacen.
+    const ranked = students
+      .map((st) => ({ ...st, points: pointsByUser.get(st.id) ?? 0 }))
+      .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'es'));
+
+    const meIndex = ranked.findIndex((st) => st.id === userId);
+    const from = Math.max(0, meIndex - LEADERBOARD_NEIGHBOURS);
+    const to = Math.min(ranked.length, meIndex + LEADERBOARD_NEIGHBOURS + 1);
+
+    return {
+      weekStart,
+      // Sin `position` ni `total`: el cliente no puede reconstruir el puesto
+      entries: ranked.slice(from, to).map((st) => ({
+        userId: st.id,
+        name: st.name,
+        avatarUrl: st.avatarUrl,
+        points: st.points,
+        isMe: st.id === userId,
+      })),
     };
   }
 

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { ChallengeType, ChallengeCadence, Prisma } from '@prisma/client';
+import { ChallengeType, ChallengeCadence, Prisma, Role } from '@prisma/client';
 import { ChallengesService } from './challenges.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -25,9 +25,10 @@ function awardedPointsCalls(
 describe('ChallengesService', () => {
   let service: ChallengesService;
   let mockPrisma: {
-    user: { findUnique: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
+    user: { findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
     challenge: { findMany: jest.Mock };
     userChallenge: {
+      groupBy: jest.Mock;
       findUnique: jest.Mock;
       upsert: jest.Mock;
       updateMany: jest.Mock;
@@ -53,9 +54,10 @@ describe('ChallengesService', () => {
 
   beforeEach(async () => {
     mockPrisma = {
-      user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
+      user: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
       challenge: { findMany: jest.fn() },
       userChallenge: {
+        groupBy: jest.fn(),
         findUnique: jest.fn(),
         upsert: jest.fn(),
         updateMany: jest.fn(),
@@ -920,6 +922,107 @@ describe('ChallengesService', () => {
         where: { id: 'user1' },
         data: { currentCorrectStreak: 0 },
       });
+    });
+  });
+
+  // ─── getLeaderboard ──────────────────────────────────────────────────────────
+
+  describe('getLeaderboard', () => {
+    const ALUMNOS = [
+      { id: 'u-marta', name: 'Marta', avatarUrl: null },
+      { id: 'u-ana', name: 'Ana', avatarUrl: null },
+      { id: 'u-yo', name: 'Yo', avatarUrl: null },
+      { id: 'u-bruno', name: 'Bruno', avatarUrl: null },
+      { id: 'u-iker', name: 'Iker', avatarUrl: null },
+      { id: 'u-cola', name: 'Cola', avatarUrl: null },
+    ];
+    const PUNTOS = [
+      { userId: 'u-marta', _sum: { awardedPoints: 180 } },
+      { userId: 'u-ana', _sum: { awardedPoints: 150 } },
+      { userId: 'u-yo', _sum: { awardedPoints: 120 } },
+      { userId: 'u-bruno', _sum: { awardedPoints: 110 } },
+      { userId: 'u-iker', _sum: { awardedPoints: 90 } },
+    ];
+
+    beforeEach(() => {
+      mockPrisma.user.findMany.mockResolvedValue(ALUMNOS);
+      mockPrisma.userChallenge.groupBy.mockResolvedValue(PUNTOS);
+    });
+
+    it('devuelve la franja local: el alumno y dos vecinos por lado', async () => {
+      const res = await service.getLeaderboard('u-yo', 'academy1');
+
+      expect(res.entries.map((e) => e.name)).toEqual(['Marta', 'Ana', 'Yo', 'Bruno', 'Iker']);
+      expect(res.entries.find((e) => e.isMe)?.name).toBe('Yo');
+      // 'Cola' queda fuera: está a tres puestos, no es vecino
+      expect(res.entries.map((e) => e.name)).not.toContain('Cola');
+    });
+
+    it('no revela el puesto ni cuánta gente hay: la respuesta no los trae', async () => {
+      const res = (await service.getLeaderboard('u-yo', 'academy1')) as unknown as Record<
+        string,
+        unknown
+      > & { entries: Record<string, unknown>[] };
+
+      // Si el cliente pudiera reconstruir "eres el último", la mitigación no sirve
+      expect(res).not.toHaveProperty('total');
+      expect(res).not.toHaveProperty('position');
+      for (const entry of res.entries) {
+        expect(entry).not.toHaveProperty('position');
+        expect(entry).not.toHaveProperty('rank');
+      }
+    });
+
+    it('el último de la tabla ve vecinos por arriba y a nadie por debajo', async () => {
+      const res = await service.getLeaderboard('u-cola', 'academy1');
+
+      expect(res.entries.map((e) => e.name)).toEqual(['Bruno', 'Iker', 'Cola']);
+      expect(res.entries[res.entries.length - 1].isMe).toBe(true);
+    });
+
+    it('incluye con 0 puntos a quien no ha puntuado esta semana', async () => {
+      const res = await service.getLeaderboard('u-cola', 'academy1');
+
+      expect(res.entries.find((e) => e.name === 'Cola')?.points).toBe(0);
+    });
+
+    it('cuenta solo lo completado desde el lunes, de toda la academia', async () => {
+      await service.getLeaderboard('u-yo', 'academy1');
+
+      const args = mockPrisma.userChallenge.groupBy.mock.calls[0][0] as {
+        where: { completed: boolean; completedAt: { gte: Date }; userId: { in: string[] } };
+      };
+      expect(args.where.completed).toBe(true);
+      expect(args.where.completedAt.gte).toBeInstanceOf(Date);
+      expect(args.where.userId.in).toHaveLength(ALUMNOS.length);
+
+      // El ámbito sale de la membresía, no de UserChallenge.academyId
+      const userArgs = mockPrisma.user.findMany.mock.calls[0][0] as {
+        where: { role: string; academyMembers: { some: { academyId: string } } };
+      };
+      expect(userArgs.where.role).toBe(Role.STUDENT);
+      expect(userArgs.where.academyMembers.some.academyId).toBe('academy1');
+    });
+
+    it('devuelve vacío si el alumno no tiene academia', async () => {
+      const res = await service.getLeaderboard('u-yo', null);
+
+      expect(res.entries).toEqual([]);
+      expect(mockPrisma.user.findMany).not.toHaveBeenCalled();
+    });
+
+    it('devuelve vacío si el alumno está solo en su academia', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([{ id: 'u-yo', name: 'Yo', avatarUrl: null }]);
+
+      const res = await service.getLeaderboard('u-yo', 'academy1');
+
+      expect(res.entries).toEqual([]);
+    });
+
+    it('devuelve vacío para quien no es alumno de la academia (un admin)', async () => {
+      const res = await service.getLeaderboard('u-admin', 'academy1');
+
+      expect(res.entries).toEqual([]);
     });
   });
 
