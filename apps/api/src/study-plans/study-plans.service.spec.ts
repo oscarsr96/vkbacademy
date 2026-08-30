@@ -10,7 +10,8 @@ import { StudyPlansService, withExerciseIds } from './study-plans.service';
 
 describe('StudyPlansService', () => {
   let prisma: {
-    course: { findUnique: jest.Mock; findMany: jest.Mock };
+    course: { findUnique: jest.Mock; findMany: jest.Mock; findFirst: jest.Mock; create: jest.Mock };
+    user: { findUnique: jest.Mock };
     module: { findUnique: jest.Mock };
     studyPlan: {
       create: jest.Mock;
@@ -85,11 +86,14 @@ describe('StudyPlansService', () => {
   beforeEach(() => {
     prisma = {
       course: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'course-nuevo' }),
         findUnique: jest
           .fn()
           .mockResolvedValue({ id: 'course-mates', title: 'Matemáticas 3º ESO' }),
         findMany: jest.fn().mockResolvedValue([mathCourse]),
       },
+      user: { findUnique: jest.fn().mockResolvedValue({ schoolYearId: 'sy-3eso' }) },
       module: { findUnique: jest.fn() },
       studyPlan: {
         create: jest.fn().mockResolvedValue({
@@ -934,6 +938,102 @@ describe('StudyPlansService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
   });
+
+  describe('asignatura fuera del catálogo', () => {
+    beforeEach(() => {
+      // create() termina devolviendo getById(): sin esto el flujo muere ahí
+      prisma.studyPlan.findUnique.mockResolvedValue({
+        id: 'plan-1',
+        userId: 'user-1',
+        title: 'El enlace covalente',
+        summary: '',
+        difficulty: 'MEDIUM',
+        createdAt: new Date('2026-08-30T10:00:00Z'),
+        exercises: [],
+        topics: [],
+        course: { id: 'course-nuevo', title: 'Química' },
+        examBanks: [],
+      });
+    });
+
+      it('crea un curso cáscara despublicado con el nivel del alumno', async () => {
+        prisma.course.findFirst.mockResolvedValue(null);
+
+        await service.create('user-1', {
+          subject: 'Química',
+          topics: [{ title: 'El enlace covalente' }],
+          exercisesPerTopic: { easy: 2, medium: 2, hard: 1 },
+        });
+
+        expect(prisma.course.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              title: 'Química',
+              subject: 'Química',
+              published: false,
+              studentCreated: true,
+              schoolYearId: 'sy-3eso',
+            }),
+          }),
+        );
+      });
+
+      it('reutiliza la cáscara si ya existe para esa materia y nivel', async () => {
+        prisma.course.findFirst.mockResolvedValue({ id: 'course-quimica' });
+
+        await service.create('user-1', {
+          subject: 'Química',
+          topics: [{ title: 'El enlace covalente' }],
+          exercisesPerTopic: { easy: 2, medium: 2, hard: 1 },
+        });
+
+        // Sin esto, cada alumno que escriba "Química" llenaría el catálogo de gemelos
+        expect(prisma.course.create).not.toHaveBeenCalled();
+        expect(prisma.studyPlan.create).toHaveBeenCalledWith(
+          expect.objectContaining({ data: expect.objectContaining({ courseId: 'course-quimica' }) }),
+        );
+      });
+
+      it('busca la cáscara sin distinguir mayúsculas ni acentos de más', async () => {
+
+        await service.create('user-1', {
+          subject: 'quimica',
+          topics: [{ title: 'El enlace covalente' }],
+          exercisesPerTopic: { easy: 2, medium: 2, hard: 1 },
+        });
+
+        expect(prisma.course.findFirst).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              studentCreated: true,
+              subject: { equals: 'quimica', mode: 'insensitive' },
+            }),
+          }),
+        );
+      });
+
+      it('rechaza mandar curso y asignatura a la vez', async () => {
+
+        await expect(
+          service.create('user-1', {
+            courseId: 'course-mates',
+            subject: 'Química',
+            topics: [{ title: 'Algo' }],
+            exercisesPerTopic: { easy: 1, medium: 0, hard: 0 },
+          }),
+        ).rejects.toThrow(/no las dos/);
+      });
+
+      it('rechaza no mandar ninguna de las dos', async () => {
+
+        await expect(
+          service.create('user-1', {
+            topics: [{ title: 'Algo' }],
+            exercisesPerTopic: { easy: 1, medium: 0, hard: 0 },
+          }),
+        ).rejects.toThrow(/listado o escribe la tuya/);
+      });
+    });
 });
 
 // ─── withExerciseIds: ids legacy únicos por plan (I1) ───────────────────────
@@ -969,4 +1069,5 @@ describe('withExerciseIds', () => {
     const b = withExerciseIds([legacyExercise, legacyExercise], 'plan-b').map((e) => e.id);
     expect(a.filter((id) => b.includes(id))).toEqual([]);
   });
+
 });

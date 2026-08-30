@@ -59,8 +59,20 @@ export class ExercisesPerTopicDto {
 }
 
 export class CreateStudyPlanDto {
-  @IsString()
-  courseId: string;
+  /**
+   * Asignatura base del plan. O un curso del catálogo (courseId) o una
+   * asignatura escrita por el alumno (subject), nunca las dos ni ninguna: el
+   * `ValidateIf` cruzado exige exactamente una y el service lo confirma.
+   */
+  @ValidateIf((o: CreateStudyPlanDto) => !o.subject)
+  @IsString({ message: 'Elige una asignatura del listado o escribe la tuya' })
+  courseId?: string;
+
+  @ValidateIf((o: CreateStudyPlanDto) => !o.courseId)
+  @IsString({ message: 'Elige una asignatura del listado o escribe la tuya' })
+  @MinLength(3, { message: 'La asignatura debe tener al menos 3 caracteres' })
+  @MaxLength(100, { message: 'La asignatura es demasiado larga (máx. 100 caracteres)' })
+  subject?: string;
 
   @IsArray()
   @ArrayMinSize(1, { message: 'Elige al menos 1 tema' })

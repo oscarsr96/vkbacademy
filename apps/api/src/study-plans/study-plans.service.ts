@@ -77,6 +77,68 @@ export class StudyPlansService {
       .replace(/[\u0300-\u036f]/g, '');
   }
 
+  /**
+   * Curso que hace de contexto del plan.
+   *
+   * Si el alumno elige uno del catálogo, ese. Si escribe una asignatura que no
+   * existe, se le crea (o reutiliza) un curso "cáscara": despublicado, sin
+   * módulos y marcado con `studentCreated`. Solo aporta título y nivel a los
+   * prompts de teoría y ejercicios.
+   *
+   * Se hace así en vez de permitir planes sin curso porque `courseId` es FK
+   * obligatoria en StudyPlan, StudyPlanTopic.contextCourseId y TheoryModule:
+   * volverlas opcionales obligaba a tocar cuatro modelos y tres servicios de
+   * generación para un cambio que el alumno no nota.
+   *
+   * La cáscara se comparte entre alumnos del mismo nivel (misma materia
+   * normalizada + mismo curso escolar) para no llenar el catálogo de gemelos.
+   */
+  private async resolveBaseCourse(userId: string, dto: CreateStudyPlanDto): Promise<string> {
+    if (dto.courseId && dto.subject) {
+      throw new BadRequestException(
+        'Elige una asignatura del listado o escribe la tuya, pero no las dos',
+      );
+    }
+
+    if (dto.courseId) {
+      await this.assertCourseExists(dto.courseId);
+      return dto.courseId;
+    }
+
+    const subject = dto.subject?.trim();
+    if (!subject) {
+      throw new BadRequestException('Elige una asignatura del listado o escribe la tuya');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { schoolYearId: true },
+    });
+
+    const existing = await this.prisma.course.findFirst({
+      where: {
+        studentCreated: true,
+        schoolYearId: user?.schoolYearId ?? null,
+        subject: { equals: subject, mode: 'insensitive' },
+      },
+      select: { id: true },
+    });
+    if (existing) return existing.id;
+
+    const created = await this.prisma.course.create({
+      data: {
+        title: subject,
+        subject,
+        description: 'Asignatura creada por un alumno desde Estudiar.',
+        published: false,
+        studentCreated: true,
+        schoolYearId: user?.schoolYearId ?? null,
+      },
+      select: { id: true },
+    });
+    return created.id;
+  }
+
   private async assertCourseExists(courseId: string): Promise<void> {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
@@ -210,16 +272,16 @@ export class StudyPlansService {
   }
 
   async create(userId: string, dto: CreateStudyPlanDto) {
-    await this.assertCourseExists(dto.courseId);
+    const baseCourseId = await this.resolveBaseCourse(userId, dto);
     this.assertPerTopicTotal(dto.exercisesPerTopic);
 
-    const resolvedTopics = await this.resolveAndAssertTopics(dto.courseId, dto.topics);
+    const resolvedTopics = await this.resolveAndAssertTopics(baseCourseId, dto.topics);
 
     // Plan "cáscara" + temas en una transacción (nested create)
     const plan = await this.prisma.studyPlan.create({
       data: {
         userId,
-        courseId: dto.courseId,
+        courseId: baseCourseId,
         title: this.buildTitle(resolvedTopics),
         summary: '',
         exercisesConfig: {
@@ -254,7 +316,7 @@ export class StudyPlansService {
       Promise.allSettled([
         this.exercises.generateForTopics({
           userId,
-          courseId: dto.courseId,
+          courseId: baseCourseId,
           topics: topicTitles,
           perTopic: dto.exercisesPerTopic,
         }),
