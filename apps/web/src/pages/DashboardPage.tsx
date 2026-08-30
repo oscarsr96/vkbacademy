@@ -45,9 +45,27 @@ export default function DashboardPage() {
           },
         ]
       : [
-          { icon: 'book', label: 'Cursos', desc: 'Gestiona todos los cursos', to: '/courses' },
-          { icon: 'users', label: 'Usuarios', desc: 'Gestiona roles y accesos', to: '/admin' },
-          { icon: 'chart', label: 'Métricas', desc: 'Estadísticas de la plataforma', to: '/admin' },
+          // Los tres apuntaban mal: Usuarios y Métricas llevaban a /admin (el
+          // propio dashboard, así que el botón parecía no hacer nada) y Cursos
+          // al listado del alumno en vez de al de gestión.
+          {
+            icon: 'book',
+            label: 'Cursos',
+            desc: 'Gestiona todos los cursos',
+            to: '/admin/courses',
+          },
+          {
+            icon: 'users',
+            label: 'Usuarios',
+            desc: 'Gestiona roles y accesos',
+            to: '/admin/users',
+          },
+          {
+            icon: 'chart',
+            label: 'Métricas',
+            desc: 'Estadísticas de la plataforma',
+            to: '/admin',
+          },
         ];
 
   const mainContent = (
@@ -231,6 +249,9 @@ function StudentRail({ onNavigate }: { onNavigate: (to: string) => void }) {
                     {c.progress}/{c.target}
                   </span>
                 </div>
+                {/* Sin la descripción, el rail decía "Planificador 4/5" y el
+                    alumno no sabía qué le pedía ese reto. */}
+                <p style={S.railChallengeDesc}>{c.description}</p>
                 <ProgressBar
                   value={c.progress}
                   max={c.target}
@@ -622,6 +643,12 @@ const S: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
+  },
+  railChallengeDesc: {
+    margin: '2px 0 6px',
+    fontSize: '0.72rem',
+    lineHeight: 1.4,
+    color: 'var(--color-text-muted)',
   },
   railBadgeRow: { display: 'flex', alignItems: 'center', gap: 12 },
   railBadgeIcon: {

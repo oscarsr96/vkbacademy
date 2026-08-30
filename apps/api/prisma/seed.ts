@@ -275,7 +275,7 @@ async function main() {
     // ── Arranque y amplitud ──────────────────────────────────────────────────
     {
       title: 'Primer plan',
-      description: 'Crea tu primer plan de estudio.',
+      description: 'Crea tu primer curso de estudio.',
       type: ChallengeType.STUDY_PLAN_CREATED,
       target: 1,
       points: 15,
@@ -284,7 +284,7 @@ async function main() {
     },
     {
       title: 'Planificador',
-      description: 'Crea 5 planes de estudio.',
+      description: 'Crea 5 cursos de estudio.',
       type: ChallengeType.STUDY_PLAN_CREATED,
       target: 5,
       points: 50,
@@ -293,7 +293,7 @@ async function main() {
     },
     {
       title: 'Diez temas',
-      description: 'Estudia 10 temas distintos.',
+      description: 'Estudia 10 temas, sumando los de todos tus cursos.',
       type: ChallengeType.TOPICS_STUDIED,
       target: 10,
       points: 60,
@@ -302,7 +302,7 @@ async function main() {
     },
     {
       title: 'Treinta temas',
-      description: 'Estudia 30 temas distintos.',
+      description: 'Estudia 30 temas, sumando los de todos tus cursos.',
       type: ChallengeType.TOPICS_STUDIED,
       target: 30,
       points: 150,
@@ -311,7 +311,7 @@ async function main() {
     },
     {
       title: 'Todoterreno',
-      description: 'Estudia temas de 3 asignaturas distintas.',
+      description: 'Crea cursos de estudio de 3 asignaturas distintas.',
       type: ChallengeType.SUBJECT_VARIETY,
       target: 3,
       points: 70,
@@ -320,7 +320,7 @@ async function main() {
     },
     {
       title: 'Teoría al día',
-      description: 'Genera 15 mazos de teoría.',
+      description: 'Genera los apuntes de 15 temas.',
       type: ChallengeType.THEORY_COMPLETED,
       target: 15,
       points: 80,
@@ -331,7 +331,7 @@ async function main() {
     // ── Ejercicios ───────────────────────────────────────────────────────────
     {
       title: 'Primeros aciertos',
-      description: 'Acierta 10 ejercicios.',
+      description: 'Acierta 10 ejercicios en total.',
       type: ChallengeType.EXERCISES_SOLVED,
       target: 10,
       points: 30,
@@ -340,7 +340,7 @@ async function main() {
     },
     {
       title: 'Cien dianas',
-      description: 'Acierta 100 ejercicios.',
+      description: 'Acierta 100 ejercicios en total.',
       type: ChallengeType.EXERCISES_SOLVED,
       target: 100,
       points: 200,
@@ -349,7 +349,7 @@ async function main() {
     },
     {
       title: 'Sin fallar',
-      description: 'Encadena 10 aciertos seguidos.',
+      description: 'Acierta 10 ejercicios seguidos sin fallar ninguno.',
       type: ChallengeType.EXERCISES_CORRECT_STREAK,
       target: 10,
       points: 90,
@@ -358,7 +358,7 @@ async function main() {
     },
     {
       title: 'Imparable',
-      description: 'Encadena 25 aciertos seguidos.',
+      description: 'Acierta 25 ejercicios seguidos sin fallar ninguno.',
       type: ChallengeType.EXERCISES_CORRECT_STREAK,
       target: 25,
       points: 220,
@@ -367,7 +367,7 @@ async function main() {
     },
     {
       title: 'Sin miedo',
-      description: 'Acierta 20 ejercicios difíciles.',
+      description: 'Acierta 20 ejercicios de nivel difícil.',
       type: ChallengeType.HARD_EXERCISES_SOLVED,
       target: 20,
       points: 160,
@@ -378,7 +378,7 @@ async function main() {
     // ── Exámenes ─────────────────────────────────────────────────────────────
     {
       title: 'Primer examen',
-      description: 'Entrega tu primer examen.',
+      description: 'Entrega tu primer examen, de cualquier nivel.',
       type: ChallengeType.EXAM_COMPLETED,
       target: 1,
       points: 20,
@@ -387,7 +387,7 @@ async function main() {
     },
     {
       title: 'Veterano',
-      description: 'Entrega 20 exámenes.',
+      description: 'Entrega 20 exámenes en total.',
       type: ChallengeType.EXAM_COMPLETED,
       target: 20,
       points: 140,
@@ -396,7 +396,7 @@ async function main() {
     },
     {
       title: 'Notable',
-      description: 'Consigue un 80% o más en un examen.',
+      description: 'Saca un 80% o más en un examen.',
       type: ChallengeType.EXAM_SCORE,
       target: 80,
       points: 70,
@@ -405,7 +405,7 @@ async function main() {
     },
     {
       title: 'Pleno',
-      description: 'Consigue 3 exámenes con el 100%.',
+      description: 'Saca un 100% en 3 exámenes.',
       type: ChallengeType.EXAM_PERFECT,
       target: 3,
       points: 180,
@@ -414,7 +414,7 @@ async function main() {
     },
     {
       title: 'Nivel experto',
-      description: 'Consigue un 70% o más en un examen de nivel difícil.',
+      description: 'Saca un 70% o más en un examen de nivel difícil.',
       type: ChallengeType.EXAM_HARD_SCORE,
       target: 70,
       points: 200,
@@ -425,7 +425,7 @@ async function main() {
     // ── Hábito (permanentes) ─────────────────────────────────────────────────
     {
       title: 'Pregunta sin miedo',
-      description: 'Hazle 25 preguntas al tutor.',
+      description: 'Hazle 25 preguntas al tutor IA.',
       type: ChallengeType.TUTOR_QUESTIONS,
       target: 25,
       points: 60,
@@ -434,7 +434,7 @@ async function main() {
     },
     {
       title: 'Semana perfecta',
-      description: 'Estudia 7 días seguidos.',
+      description: 'Estudia algo 7 días seguidos.',
       type: ChallengeType.STREAK_DAILY,
       target: 7,
       points: 120,
@@ -443,7 +443,7 @@ async function main() {
     },
     {
       title: 'Mes constante',
-      description: 'Estudia 30 días seguidos.',
+      description: 'Estudia algo 30 días seguidos.',
       type: ChallengeType.STREAK_DAILY,
       target: 30,
       points: 400,
@@ -452,7 +452,7 @@ async function main() {
     },
     {
       title: 'Un mes en racha',
-      description: 'Mantén 4 semanas seguidas de actividad.',
+      description: 'Estudia algo 4 semanas seguidas.',
       type: ChallengeType.STREAK_WEEKLY,
       target: 4,
       points: 150,
@@ -473,7 +473,7 @@ async function main() {
     },
     {
       title: 'Misión: 5 difíciles',
-      description: 'Acierta 5 ejercicios difíciles esta semana.',
+      description: 'Acierta 5 ejercicios de nivel difícil esta semana.',
       type: ChallengeType.HARD_EXERCISES_SOLVED,
       cadence: ChallengeCadence.WEEKLY,
       target: 5,
@@ -483,7 +483,7 @@ async function main() {
     },
     {
       title: 'Misión: 3 temas',
-      description: 'Estudia 3 temas nuevos esta semana.',
+      description: 'Estudia 3 temas esta semana.',
       type: ChallengeType.TOPICS_STUDIED,
       cadence: ChallengeCadence.WEEKLY,
       target: 3,
@@ -503,7 +503,7 @@ async function main() {
     },
     {
       title: 'Misión: pregunta al tutor',
-      description: 'Hazle 5 preguntas al tutor esta semana.',
+      description: 'Hazle 5 preguntas al tutor IA esta semana.',
       type: ChallengeType.TUTOR_QUESTIONS,
       cadence: ChallengeCadence.WEEKLY,
       target: 5,

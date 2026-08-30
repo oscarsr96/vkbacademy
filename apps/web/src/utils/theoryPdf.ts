@@ -25,9 +25,9 @@ const PAGE_H = 720;
 const FOOTER_MARGIN = 64;
 const FOOTER_BASELINE = PAGE_H - 26; // línea de texto del pie
 const HEADER_H = 96; // banda superior con logo + VKB ACADEMY + título del curso
-const ORANGE = { r: 245, g: 145, b: 30 } as const; // #f5911e
-const FOOTER_MUTED = { r: 71, g: 85, b: 105 } as const; // slate-600, legible sobre fondo blanco
-const INK = { r: 17, g: 24, b: 39 } as const; // gray-900
+const ORANGE = { r: 245, g: 145, b: 30 } as const; // --brand #f5911e
+const FOOTER_MUTED = { r: 100, g: 116, b: 139 } as const; // --color-text-muted #64748b
+const INK = { r: 22, g: 33, b: 58 } as const; // --color-text #16213a (navy, no gris cálido)
 
 const LOGO_URL = '/brand/vkb-logo.png';
 
@@ -96,7 +96,7 @@ const PAGE_BASE_STYLE: React.CSSProperties = {
   justifyContent: 'center',
   boxSizing: 'border-box',
   overflow: 'hidden',
-  color: '#111827',
+  color: '#16213a',
   background: '#ffffff',
 };
 
@@ -123,60 +123,60 @@ const PDF_OVERRIDE_CSS = `
     opacity: 1 !important;
     transform: none !important;
   }
-  .tslides-pdf-page { color: #111827; }
+  .tslides-pdf-page { color: #16213a; }
   .tslides-pdf-page .tsl-cover-title {
     background: none !important;
-    -webkit-text-fill-color: #111827 !important;
-    color: #111827 !important;
+    -webkit-text-fill-color: #16213a !important;
+    color: #16213a !important;
   }
-  .tslides-pdf-page .tsl-cover-eyebrow { color: #475569; }
+  .tslides-pdf-page .tsl-cover-eyebrow { color: #e07b06; }
   .tslides-pdf-page .tsl-cover-sub,
-  .tslides-pdf-page .tsl-closing-sub { color: #475569; }
-  .tslides-pdf-page .tsl-closing-title { color: #111827; }
+  .tslides-pdf-page .tsl-closing-sub { color: #64748b; }
+  .tslides-pdf-page .tsl-closing-title { color: #16213a; }
   .tslides-pdf-page .tsl-logo { filter: none; }
-  .tslides-pdf-page .tsl-heading { color: #111827; }
-  .tslides-pdf-page .tsl-body { color: #111827; }
+  .tslides-pdf-page .tsl-heading { color: #16213a; }
+  .tslides-pdf-page .tsl-body { color: #16213a; }
   .tslides-pdf-page .tsl-body strong { color: #000; }
-  .tslides-pdf-page .tsl-body code { background: #f1f5f9; color: #111827; }
-  .tslides-pdf-page .tsl-muted { color: #475569; }
+  .tslides-pdf-page .tsl-body code { background: #fef4ea; color: #16213a; }
+  .tslides-pdf-page .tsl-muted { color: #64748b; }
   .tslides-pdf-page .theory-callout {
-    color: #111827;
-    background: #f8fafc !important;
-    border-left-color: #94a3b8 !important;
+    color: #16213a;
+    background: #fef4ea !important;
+    border-left-color: #f5911e !important;
   }
   .tslides-pdf-page .tsl-content--objectives .tsl-body li,
   .tslides-pdf-page .tsl-content--takeaways .tsl-body li {
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    background: #fdfaf6;
+    border-color: #f3cfa4;
     box-shadow: none;
   }
   .tslides-pdf-page .tsl-content--objectives .tsl-body li::before,
   .tslides-pdf-page .tsl-content--takeaways .tsl-body li::before {
-    background: #e2e8f0;
-    color: #111827;
+    background: #f5911e;
+    color: #ffffff;
     box-shadow: none;
   }
   .tslides-pdf-page .tsl-flashcard {
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    background: #fdfaf6;
+    border-color: #f3cfa4;
     box-shadow: none;
   }
-  .tslides-pdf-page .tsl-flashcard::before { background: #94a3b8; }
-  .tslides-pdf-page .tsl-flashcard-term { color: #111827; }
-  .tslides-pdf-page .tsl-flashcard-body { color: #111827; }
+  .tslides-pdf-page .tsl-flashcard::before { background: #f5911e; }
+  .tslides-pdf-page .tsl-flashcard-term { color: #e07b06; }
+  .tslides-pdf-page .tsl-flashcard-body { color: #16213a; }
   .tslides-pdf-page .tsl-content--summary .theory-callout {
-    background: #f1f5f9 !important;
-    border-left-color: #64748b !important;
+    background: #fef4ea !important;
+    border-left-color: #e07b06 !important;
   }
-  .tslides-pdf-page .tsl-ex-label { color: #334155; }
-  .tslides-pdf-page .tsl-ex-statement { background: #f8fafc; border-color: #cbd5e1; }
-  .tslides-pdf-page .tsl-ex-step { background: #f8fafc; border-color: #cbd5e1; }
-  .tslides-pdf-page .tsl-ex-num { background: #e2e8f0; border-color: #94a3b8; color: #111827; }
-  .tslides-pdf-page .tsl-ex-result { background: #f1f5f9; border: 1px solid #64748b; }
+  .tslides-pdf-page .tsl-ex-label { color: #e07b06; }
+  .tslides-pdf-page .tsl-ex-statement { background: #fdfaf6; border-color: #f3cfa4; }
+  .tslides-pdf-page .tsl-ex-step { background: #fdfaf6; border-color: #f3cfa4; }
+  .tslides-pdf-page .tsl-ex-num { background: #f5911e; border-color: #e07b06; color: #ffffff; }
+  .tslides-pdf-page .tsl-ex-result { background: #fef4ea; border: 1px solid #f5911e; }
   .tslides-pdf-page .tsl-ex-why { background: #f8fafc; border-left-color: #64748b; }
   .tslides-pdf-page .tsl-ex-why .tsl-ex-label { color: #334155; }
-  .tslides-pdf-page .tsl-video-card { background: #f8fafc; border-color: #cbd5e1; }
-  .tslides-pdf-page .tsl-video-card-play { background: #e2e8f0; color: #111827; box-shadow: none; }
+  .tslides-pdf-page .tsl-video-card { background: #fdfaf6; border-color: #f3cfa4; }
+  .tslides-pdf-page .tsl-video-card-play { background: #f5911e; color: #ffffff; box-shadow: none; }
 `;
 
 // Una sola página montada a la vez: html2canvas clona el documento entero en
