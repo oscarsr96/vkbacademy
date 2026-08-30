@@ -437,37 +437,45 @@ export class ChallengesService {
 
   /** Canjea puntos del usuario por un artículo de merchandising */
   async redeemItem(userId: string, itemName: string, cost: number, academyId?: string | null) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { totalPoints: true },
-    });
-    // Excepciones de Nest, no Error pelado: el cliente debe recibir
-    // { message, statusCode } y no depender de que el controlador adivine el
-    // código. (La carrera de doble gasto del canje queda fuera de alcance.)
-    if (!user) throw new NotFoundException('Usuario no encontrado');
-
-    if (user.totalPoints < cost) {
-      throw new BadRequestException(
-        `Puntos insuficientes. Tienes ${user.totalPoints} pts y necesitas ${cost} pts.`,
-      );
-    }
-
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: userId },
+    return this.prisma.$transaction(async (tx) => {
+      // La condición del saldo viaja en el WHERE de la escritura: decide la base de
+      // datos, no el proceso. Leer y luego decrementar dejaba que dos canjes
+      // simultáneos del mismo alumno pasaran ambos la comprobación con el mismo
+      // saldo y se llevaran dos artículos físicos dejando totalPoints en negativo.
+      const { count } = await tx.user.updateMany({
+        where: { id: userId, totalPoints: { gte: cost } },
         data: { totalPoints: { decrement: cost } },
-        select: { totalPoints: true },
-      }),
-      this.prisma.redemption.create({
-        data: { userId, itemName, cost, academyId: academyId ?? undefined },
-      }),
-    ]);
+      });
 
-    return {
-      message: `¡${itemName} canjeado correctamente!`,
-      pointsSpent: cost,
-      remainingPoints: updated.totalPoints,
-    };
+      // Sin descuento no hay canje: el Redemption solo se crea si count === 1.
+      if (count === 0) {
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+          select: { totalPoints: true },
+        });
+        // Excepciones de Nest, no Error pelado: el cliente debe recibir
+        // { message, statusCode } y no depender de que el controlador adivine el código.
+        if (!user) throw new NotFoundException('Usuario no encontrado');
+        throw new BadRequestException(
+          `Puntos insuficientes. Tienes ${user.totalPoints} pts y necesitas ${cost} pts.`,
+        );
+      }
+
+      await tx.redemption.create({
+        data: { userId, itemName, cost, academyId: academyId ?? undefined },
+      });
+
+      const updated = await tx.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { totalPoints: true },
+      });
+
+      return {
+        message: `¡${itemName} canjeado correctamente!`,
+        pointsSpent: cost,
+        remainingPoints: updated.totalPoints,
+      };
+    });
   }
 
   /** Resumen compacto del usuario */
