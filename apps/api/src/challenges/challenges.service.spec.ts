@@ -25,7 +25,12 @@ function awardedPointsCalls(
 describe('ChallengesService', () => {
   let service: ChallengesService;
   let mockPrisma: {
-    user: { findUnique: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
+    user: {
+      findUnique: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
+      update: jest.Mock;
+      updateMany: jest.Mock;
+    };
     challenge: { findMany: jest.Mock };
     userChallenge: {
       findUnique: jest.Mock;
@@ -53,7 +58,12 @@ describe('ChallengesService', () => {
 
   beforeEach(async () => {
     mockPrisma = {
-      user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
+      user: {
+        findUnique: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+      },
       challenge: { findMany: jest.fn() },
       userChallenge: {
         findUnique: jest.fn(),
@@ -315,18 +325,25 @@ describe('ChallengesService', () => {
   // ─── redeemItem ──────────────────────────────────────────────────────────────
 
   describe('redeemItem', () => {
+    beforeEach(() => {
+      mockPrisma.redemption.create.mockResolvedValue({});
+    });
+
     // Las excepciones son de Nest, no Error pelado: el cliente recibe
     // { message, statusCode } sin depender de que el controlador lo adivine.
     it('lanza 404 si el usuario no existe', async () => {
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 0 });
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
       await expect(service.redeemItem('user1', 'Camiseta', 500)).rejects.toThrow(NotFoundException);
       await expect(service.redeemItem('user1', 'Camiseta', 500)).rejects.toThrow(
         'Usuario no encontrado',
       );
+      expect(mockPrisma.redemption.create).not.toHaveBeenCalled();
     });
 
     it('lanza 400 si el usuario no tiene puntos suficientes, no un 500', async () => {
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 0 });
       mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 50 });
 
       const error = await service.redeemItem('user1', 'Camiseta', 500).catch((e: unknown) => e);
@@ -337,11 +354,8 @@ describe('ChallengesService', () => {
     });
 
     it('ejecuta la transacción atómica y devuelve el resultado del canje', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 1000 });
-      mockPrisma.$transaction.mockResolvedValue([
-        { totalPoints: 800 }, // resultado de user.update
-        {}, // resultado de redemption.create
-      ]);
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.user.findUniqueOrThrow.mockResolvedValue({ totalPoints: 800 });
 
       const result = await service.redeemItem('user1', 'Balón firmado', 200);
 
@@ -351,20 +365,35 @@ describe('ChallengesService', () => {
       expect(result.message).toContain('Balón firmado');
     });
 
-    it('la transacción incluye user.update (decrement) y redemption.create', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 500 });
-      mockPrisma.$transaction.mockImplementation((operations: unknown[]) =>
-        Promise.resolve(operations.map(() => ({}))),
+    it('descuenta con la condición de saldo en el WHERE y crea el Redemption', async () => {
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.user.findUniqueOrThrow.mockResolvedValue({ totalPoints: 150 });
+
+      await service.redeemItem('user1', 'Gorra', 350, 'academy1');
+
+      expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+        where: { id: 'user1', totalPoints: { gte: 350 } },
+        data: { totalPoints: { decrement: 350 } },
+      });
+      expect(mockPrisma.redemption.create).toHaveBeenCalledWith({
+        data: { userId: 'user1', itemName: 'Gorra', cost: 350, academyId: 'academy1' },
+      });
+    });
+
+    it('no entrega el artículo si el descuento no afectó a ninguna fila (canje concurrente)', async () => {
+      // Otro canje simultáneo vació el saldo entre la comprobación y la escritura:
+      // el gte del WHERE no se cumple, este canje actualiza 0 filas y aborta.
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 0 });
+      mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 0 });
+
+      await expect(service.redeemItem('user1', 'Balón firmado', 1000)).rejects.toThrow(
+        BadRequestException,
       );
-
-      await service.redeemItem('user1', 'Gorra', 350);
-
-      // La transacción recibe un array de operaciones Prisma
-      const transactionArg = mockPrisma.$transaction.mock.calls[0][0] as unknown[];
-      expect(transactionArg).toHaveLength(2);
+      expect(mockPrisma.redemption.create).not.toHaveBeenCalled();
     });
 
     it('el error de puntos incluye el mensaje con los puntos actuales y necesarios', async () => {
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 0 });
       mockPrisma.user.findUnique.mockResolvedValue({ totalPoints: 100 });
 
       await expect(service.redeemItem('user1', 'Botella', 200)).rejects.toThrow(/100/);
