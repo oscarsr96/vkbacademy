@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useChallengeSummary, useRedeemItem } from '../hooks/useChallenges';
+import { useChallengeSummary, useMyRedemptions, useRedeemItem } from '../hooks/useChallenges';
 import { usePageZone } from '../hooks/usePageZone';
+import type { RedemptionEntry } from '../api/challenges.api';
 import { launchConfetti } from '../utils/confetti';
 import Icon from '../components/ui/Icon';
 import ScoreValue from '../components/ui/ScoreValue';
@@ -167,6 +168,95 @@ function MerchCard({ item, userPoints, onRedeem }: MerchCardProps) {
     </div>
   );
 }
+
+/**
+ * Histórico de canjes del alumno.
+ *
+ * Hasta ahora canjear no dejaba rastro visible: el alumno gastaba 500 pts y
+ * la única prueba vivía en el panel de admin. La columna de estado importa
+ * tanto como la fecha — son artículos que entrega el club en mano, así que lo
+ * que necesita saber es si ya lo tiene o si sigue esperándolo.
+ */
+function RedemptionHistory({
+  redemptions,
+  totalSpent,
+}: {
+  redemptions: RedemptionEntry[];
+  totalSpent: number;
+}) {
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  return (
+    <section style={{ marginTop: 40 }}>
+      <div style={S_HIST.header}>
+        <h2 style={S_HIST.title}>Mis canjes</h2>
+        {redemptions.length > 0 && (
+          <span style={S_HIST.total}>
+            {totalSpent} pts canjeados en {redemptions.length}{' '}
+            {redemptions.length === 1 ? 'artículo' : 'artículos'}
+          </span>
+        )}
+      </div>
+
+      {redemptions.length === 0 ? (
+        <p style={S_HIST.empty}>
+          Aún no has canjeado nada. Lo que canjees aparecerá aquí con su fecha.
+        </p>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Artículo</th>
+                <th>Puntos</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {redemptions.map((r) => (
+                <tr key={r.id}>
+                  <td style={S_HIST.item}>{r.itemName}</td>
+                  <td style={S_HIST.cost}>{r.cost} pts</td>
+                  <td style={S_HIST.date}>{formatDate(r.redeemedAt)}</td>
+                  <td>
+                    {r.delivered ? (
+                      <span style={S_HIST.delivered}>
+                        Entregado{r.deliveredAt ? ` · ${formatDate(r.deliveredAt)}` : ''}
+                      </span>
+                    ) : (
+                      <span style={S_HIST.pending}>Pendiente de entrega</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+const S_HIST: Record<string, React.CSSProperties> = {
+  header: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
+    marginBottom: 14,
+  },
+  title: { margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-text)' },
+  total: { fontSize: '0.8rem', color: 'var(--color-text-muted)' },
+  empty: { fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 },
+  item: { fontWeight: 600, color: 'var(--color-text)', fontSize: '0.875rem' },
+  cost: { color: 'var(--color-text-muted)', fontSize: '0.85rem', whiteSpace: 'nowrap' },
+  date: { color: 'var(--color-text-muted)', fontSize: '0.85rem', whiteSpace: 'nowrap' },
+  delivered: { color: '#22c55e', fontSize: '0.8rem', fontWeight: 600 },
+  pending: { color: 'var(--color-text-muted)', fontSize: '0.8rem' },
+};
 
 // ─── Modal de confirmación ────────────────────────────────────────────────────
 
@@ -348,6 +438,7 @@ export default function ShopPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   // El resumen basta: solo necesitamos los puntos, no la lista completa de retos
   const { data, isLoading, isError } = useChallengeSummary();
+  const { data: history } = useMyRedemptions();
   const redeemMutation = useRedeemItem();
   usePageZone('dark');
 
@@ -437,6 +528,13 @@ export default function ShopPage() {
         Los puntos se ganan completando retos. Un responsable del club te entregará en mano lo que
         canjees.
       </p>
+
+      {history && (
+        <RedemptionHistory
+          redemptions={history.redemptions}
+          totalSpent={history.totalSpent}
+        />
+      )}
 
       {/* Modal de confirmación */}
       {confirmItem && (

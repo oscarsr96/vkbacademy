@@ -82,6 +82,20 @@ export interface LeaderboardResponse {
   entries: LeaderboardEntry[];
 }
 
+export interface RedemptionEntry {
+  id: string;
+  itemName: string;
+  cost: number;
+  redeemedAt: string;
+  delivered: boolean;
+  deliveredAt: string | null;
+}
+
+export interface MyRedemptions {
+  redemptions: RedemptionEntry[];
+  totalSpent: number;
+}
+
 export interface RedeemResult {
   message: string;
   pointsSpent: number;
@@ -95,6 +109,9 @@ export const challengesApi = {
 
   getLeaderboard: () =>
     api.get<LeaderboardResponse>('/challenges/leaderboard').then((r) => r.data),
+
+  getMyRedemptions: () =>
+    api.get<MyRedemptions>('/challenges/redemptions').then((r) => r.data),
 
   redeemItem: (itemName: string, cost: number) =>
     api.post<RedeemResult>('/challenges/redeem', { itemName, cost }).then((r) => r.data),

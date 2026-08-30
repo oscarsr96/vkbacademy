@@ -37,6 +37,11 @@ export class ChallengesController {
     return this.challengesService.getLeaderboard(req.user.id, academyId);
   }
 
+  @Get('redemptions')
+  getMyRedemptions(@Request() req: { user: { id: string } }) {
+    return this.challengesService.getMyRedemptions(req.user.id);
+  }
+
   @Post('redeem')
   async redeemItem(
     @Request() req: { user: { id: string } },
