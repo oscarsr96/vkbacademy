@@ -369,7 +369,12 @@ export default function StudyPage() {
             style={s.submitBtn}
           >
             {create.isPending ? (
-              <span className="spinner" />
+              <>
+                {/* La generación con IA tarda: el spinner solo decía que algo
+                    pasaba, no qué. Con el texto se sabe que sigue trabajando. */}
+                <span className="spinner" />
+                Creando curso…
+              </>
             ) : (
               <>
                 <Icon name="zap" size={16} />
