@@ -19,6 +19,7 @@ import SubjectsPage from './pages/SubjectsPage';
 import AcademyLandingPage from './pages/marketing/AcademyLandingPage';
 import AppLayout from './layouts/AppLayout';
 import PublicLayout from './layouts/PublicLayout';
+import VerifyCertificatePage from './pages/marketing/VerifyCertificatePage';
 import AboutPage from './pages/marketing/AboutPage';
 import PricingPage from './pages/marketing/PricingPage';
 import RootIndex from './components/RootIndex';
@@ -98,6 +99,9 @@ export default function App() {
           <Route path="/nosotros" element={<AboutPage />} />
           {/* /precios → página de precios */}
           <Route path="/precios" element={<PricingPage />} />
+          {/* Verificación pública: el PDF del certificado apunta aquí */}
+          <Route path="/verify" element={<VerifyCertificatePage />} />
+          <Route path="/verify/:code" element={<VerifyCertificatePage />} />
         </Route>
 
         {/* ── Landing por academia (sin layout compartido — tiene su propio navbar) ── */}
