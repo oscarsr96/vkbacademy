@@ -54,6 +54,8 @@ export interface ChallengeSummary {
   longestStreak: number;
   currentDailyStreak: number;
   longestDailyStreak: number;
+  /** Si la actividad de hoy ya cuenta para la racha diaria. */
+  activeToday: boolean;
   completedCount: number;
   recentBadges: {
     title: string;

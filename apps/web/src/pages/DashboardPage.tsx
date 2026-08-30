@@ -78,6 +78,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Racha diaria — lo que el alumno se juega hoy, en la página donde aterriza */}
+      {isStudent && summary && (
+        <DailyStreakCard
+          days={summary.currentDailyStreak}
+          best={summary.longestDailyStreak}
+          activeToday={summary.activeToday}
+          onStart={() => navigate('/study')}
+        />
+      )}
+
       {/* Marcador de gamificación — solo para STUDENT */}
       {isStudent && (
         <div style={S.statsGrid}>
@@ -283,6 +293,59 @@ function StudentRail({ onNavigate }: { onNavigate: (to: string) => void }) {
   );
 }
 
+/**
+ * Racha diaria en la página de aterrizaje.
+ *
+ * La racha vivía solo dentro de /challenges, como una stat entre cinco: la veía
+ * quien ya había entrado a mirar sus retos. Aquí dice, donde el alumno aterriza,
+ * en qué estado está y qué falta hoy.
+ *
+ * El tono es deliberado: se celebra lo conseguido y el día pendiente se plantea
+ * como invitación, no como amenaza. Con menores, "vas a perder tus 12 días"
+ * fabrica ansiedad; "haz algo hoy y sigue sumando" empuja igual sin eso.
+ */
+function DailyStreakCard({
+  days,
+  best,
+  activeToday,
+  onStart,
+}: {
+  days: number;
+  best: number;
+  activeToday: boolean;
+  onStart: () => void;
+}) {
+  const sinRacha = days === 0;
+  const titulo = sinRacha
+    ? 'Empieza hoy tu racha'
+    : `${days} día${days !== 1 ? 's' : ''} seguido${days !== 1 ? 's' : ''}`;
+  const detalle = sinRacha
+    ? 'Estudia un rato hoy y empieza a contar.'
+    : activeToday
+      ? 'Hoy ya cuenta. Nos vemos mañana.'
+      : 'Hoy todavía no cuenta: estudia un rato y sigue sumando.';
+
+  return (
+    <section className="panel-glass animate-in" style={S.streakCard}>
+      <span style={{ ...S.streakFlame, opacity: activeToday || sinRacha ? 1 : 0.55 }}>
+        <Icon name="flame" size={28} />
+      </span>
+
+      <div style={{ flex: 1, minWidth: 180 }}>
+        <p style={S.streakTitle}>{titulo}</p>
+        <p style={S.streakDetail}>{detalle}</p>
+        {best > 0 && <p style={S.streakBest}>Tu mejor racha: {best} días</p>}
+      </div>
+
+      {!activeToday && (
+        <button className="btn btn-primary" style={{ flexShrink: 0 }} onClick={onStart}>
+          {sinRacha ? 'Empezar' : 'Seguir hoy'}
+        </button>
+      )}
+    </section>
+  );
+}
+
 function RailCard({
   icon,
   label,
@@ -426,6 +489,42 @@ const S: Record<string, React.CSSProperties> = {
     letterSpacing: '0.1em',
     textTransform: 'uppercase' as const,
     color: 'var(--color-text-muted)',
+  },
+  streakCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    flexWrap: 'wrap' as const,
+    padding: '18px 22px',
+    marginBottom: 18,
+  },
+  streakFlame: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 52,
+    height: 52,
+    borderRadius: '50%',
+    background: 'rgba(255, 145, 30, 0.12)',
+    color: 'var(--brand, #ff911e)',
+    flexShrink: 0,
+  },
+  streakTitle: {
+    margin: 0,
+    fontSize: '1.15rem',
+    fontWeight: 800,
+    color: 'var(--color-text)',
+  },
+  streakDetail: {
+    margin: '4px 0 0',
+    fontSize: '0.875rem',
+    color: 'var(--color-text-muted)',
+  },
+  streakBest: {
+    margin: '6px 0 0',
+    fontSize: '0.75rem',
+    color: 'var(--color-text-muted)',
+    opacity: 0.75,
   },
   railLabelIcon: {
     display: 'inline-flex',

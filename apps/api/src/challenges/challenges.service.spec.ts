@@ -1023,6 +1023,66 @@ describe('ChallengesService', () => {
     });
   });
 
+  // ─── getSummary: activeToday ─────────────────────────────────────────────────
+
+  describe('getSummary — si el día de hoy ya cuenta', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(WEEK_08);
+      mockPrisma.userChallenge.findMany.mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('activeToday es true si la última actividad es de hoy', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        totalPoints: 10,
+        currentStreak: 1,
+        longestStreak: 2,
+        currentDailyStreak: 12,
+        longestDailyStreak: 18,
+        lastActiveDay: DAY_W08_MON,
+      });
+
+      const res = await service.getSummary('user1');
+
+      expect(res.activeToday).toBe(true);
+      expect(res.currentDailyStreak).toBe(12);
+    });
+
+    it('activeToday es false si la última actividad es de ayer: hoy está en juego', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        totalPoints: 10,
+        currentStreak: 1,
+        longestStreak: 2,
+        currentDailyStreak: 12,
+        longestDailyStreak: 18,
+        lastActiveDay: '2026-02-15',
+      });
+
+      const res = await service.getSummary('user1');
+
+      expect(res.activeToday).toBe(false);
+    });
+
+    it('activeToday es false si el alumno no ha entrado nunca', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        totalPoints: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
+        lastActiveDay: null,
+      });
+
+      const res = await service.getSummary('user1');
+
+      expect(res.activeToday).toBe(false);
+    });
+  });
+
   // ─── getMyProgress ───────────────────────────────────────────────────────────
 
   describe('getMyProgress', () => {
