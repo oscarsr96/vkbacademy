@@ -1,3 +1,4 @@
+import type { AiUsageContext } from './ai-usage.service';
 // Parseo resiliente de JSON devuelto por modelos de IA.
 //
 // Los LLM a veces devuelven JSON imperfecto: envuelto en ```fences```, con
@@ -13,7 +14,7 @@
 //    automática (lo que un humano haría reintentando a mano).
 
 interface AiGenerator {
-  generate(prompt: string, maxTokens: number): Promise<string>;
+  generate(prompt: string, maxTokens: number, usage?: AiUsageContext): Promise<string>;
 }
 
 interface MiniLogger {
@@ -78,13 +79,13 @@ export async function generateAiJson<T = unknown>(
   ai: AiGenerator,
   prompt: string,
   maxTokens: number,
-  opts: { attempts?: number; logger?: MiniLogger } = {},
+  opts: { attempts?: number; logger?: MiniLogger; usage?: AiUsageContext } = {},
 ): Promise<T> {
   const attempts = Math.max(1, opts.attempts ?? 2);
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
-    const text = await ai.generate(prompt, maxTokens);
+    const text = await ai.generate(prompt, maxTokens, opts.usage);
     try {
       return parseAiJson<T>(text);
     } catch (err) {

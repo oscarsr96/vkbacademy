@@ -1,11 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
-import { ChallengeType } from '@prisma/client';
+import { AiUsageCategory, ChallengeType } from '@prisma/client';
 import { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesService } from '../challenges/challenges.service';
+import { AiUsageService } from '../ai/ai-usage.service';
 import { TutorChatDto } from './dto/tutor-chat.dto';
+
+/** Modelo del tutor. Pinneado, igual que los del AiProviderService. */
+const TUTOR_MODEL = 'claude-haiku-4-5-20251001';
 
 @Injectable()
 export class TutorService {
@@ -16,6 +20,7 @@ export class TutorService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly challenges: ChallengesService,
+    private readonly aiUsage: AiUsageService,
   ) {
     this.anthropic = new Anthropic({
       apiKey: this.config.get<string>('ANTHROPIC_API_KEY'),
@@ -71,7 +76,7 @@ export class TutorService {
 
     try {
       const stream = this.anthropic.messages.stream({
-        model: 'claude-haiku-4-5-20251001',
+        model: TUTOR_MODEL,
         max_tokens: 1024,
         system: systemPrompt,
         messages: anthropicMessages,
@@ -95,6 +100,26 @@ export class TutorService {
           lessonId: dto.lessonId ?? null,
         },
       });
+
+      // 8.b Registrar el consumo, DESPUÉS de guardar y en su propio try: el
+      //      tutor llama a Anthropic directamente, así que se contabiliza aquí.
+      //      Va detrás del guardado a propósito — si finalMessage() falla, el
+      //      alumno no puede perder la respuesta que ya ha leído por una
+      //      cuestión de contabilidad.
+      try {
+        const finalMessage = await stream.finalMessage();
+        void this.aiUsage.record(
+          { userId, category: AiUsageCategory.CHATBOT },
+          {
+            provider: 'haiku',
+            model: TUTOR_MODEL,
+            inputTokens: finalMessage.usage.input_tokens,
+            outputTokens: finalMessage.usage.output_tokens,
+          },
+        );
+      } catch (err) {
+        this.logger.warn(`No se pudo leer el consumo del tutor para userId=${userId}: ${String(err)}`);
+      }
 
       // 8. Señal de fin
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);

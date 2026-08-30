@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ExercisesService } from './exercises.service';
@@ -15,7 +15,7 @@ export class ExercisesController {
    */
   @Post('evaluate')
   @Throttle({ default: { ttl: 3600000, limit: 30 } })
-  evaluate(@Body() dto: EvaluateExerciseDto) {
-    return this.exercises.evaluate(dto);
+  evaluate(@Request() req: { user: { id: string } }, @Body() dto: EvaluateExerciseDto) {
+    return this.exercises.evaluate(req.user.id, dto);
   }
 }

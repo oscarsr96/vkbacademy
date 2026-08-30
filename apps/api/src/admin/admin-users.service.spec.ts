@@ -19,6 +19,7 @@ describe('AdminUsersService', () => {
       delete: jest.Mock;
       count: jest.Mock;
     };
+    aiUsage: { groupBy: jest.Mock };
     enrollment: {
       findMany: jest.Mock;
       upsert: jest.Mock;
@@ -52,6 +53,7 @@ describe('AdminUsersService', () => {
         delete: jest.fn(),
         count: jest.fn(),
       },
+      aiUsage: { groupBy: jest.fn() },
       enrollment: {
         findMany: jest.fn(),
         upsert: jest.fn(),
@@ -74,6 +76,50 @@ describe('AdminUsersService', () => {
     beforeEach(() => {
       mockPrisma.user.findMany.mockResolvedValue([]);
       mockPrisma.user.count.mockResolvedValue(0);
+      mockPrisma.aiUsage.groupBy.mockResolvedValue([]);
+    });
+
+    it('desglosa el coste de IA por categoría y lo pasa a dólares', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([{ id: 'u1', name: 'Ana' }]);
+      mockPrisma.user.count.mockResolvedValue(1);
+      mockPrisma.aiUsage.groupBy.mockResolvedValue([
+        { userId: 'u1', category: 'COURSE', _sum: { costMicroUsd: 1_500_000, inputTokens: 100, outputTokens: 200 } },
+        { userId: 'u1', category: 'CHATBOT', _sum: { costMicroUsd: 500_000, inputTokens: 10, outputTokens: 20 } },
+      ]);
+
+      const res = await service.getUsers();
+      const cost = res.data[0].aiCost;
+
+      expect(cost.courseUsd).toBe(1.5);
+      expect(cost.chatbotUsd).toBe(0.5);
+      expect(cost.examUsd).toBe(0);
+      expect(cost.totalUsd).toBe(2);
+      expect(cost.totalTokens).toBe(330);
+    });
+
+    it('el usuario sin consumo sale a cero, no sin el campo', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([{ id: 'u1', name: 'Ana' }]);
+      mockPrisma.user.count.mockResolvedValue(1);
+      mockPrisma.aiUsage.groupBy.mockResolvedValue([]);
+
+      const res = await service.getUsers();
+      const cost = res.data[0].aiCost;
+
+      expect(cost.totalUsd).toBe(0);
+      expect(cost.totalTokens).toBe(0);
+    });
+
+    it('agrega en una sola consulta para toda la página, no una por usuario', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([{ id: 'u1' }, { id: 'u2' }, { id: 'u3' }]);
+      mockPrisma.user.count.mockResolvedValue(3);
+      mockPrisma.aiUsage.groupBy.mockResolvedValue([]);
+
+      await service.getUsers();
+
+      expect(mockPrisma.aiUsage.groupBy).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.aiUsage.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: { in: ['u1', 'u2', 'u3'] } } }),
+      );
     });
 
     it('devuelve la actividad del alumno: puntos y rachas', async () => {

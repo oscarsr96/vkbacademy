@@ -74,6 +74,12 @@ export const envValidationSchema = Joi.object({
   GEMINI_MODEL: Joi.string().allow('').optional(),
   // Timeout por llamada a Gemini/Haiku (ms). Evita que una IA colgada bloquee la request HTTP.
   AI_TIMEOUT_MS: Joi.number().integer().min(1000).default(60000),
+  // Tarifas para estimar el coste de IA por alumno. Dólares por millón de
+  // tokens; los defaults viven en AiUsageService (Haiku 1/5, Gemini 0).
+  AI_PRICE_GEMINI_INPUT_USD: Joi.number().min(0).optional(),
+  AI_PRICE_GEMINI_OUTPUT_USD: Joi.number().min(0).optional(),
+  AI_PRICE_HAIKU_INPUT_USD: Joi.number().min(0).optional(),
+  AI_PRICE_HAIKU_OUTPUT_USD: Joi.number().min(0).optional(),
 
   // ── Vercel (registro dinámico de dominios para multi-tenancy) ──────────────
   VERCEL_TOKEN: Joi.string().allow('').optional(),

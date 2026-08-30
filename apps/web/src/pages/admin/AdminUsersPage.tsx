@@ -30,12 +30,13 @@ const ALL_ROLES = Object.values(Role);
 // ---------------------------------------------------------------------------
 
 /** Criterios de ordenación de la tabla. `registro` es el orden que da la API. */
-type SortBy = 'registro' | 'racha' | 'puntos';
+type SortBy = 'registro' | 'racha' | 'puntos' | 'coste';
 
 const SORT_LABELS: Record<SortBy, string> = {
   registro: 'Registro',
   racha: 'Racha',
   puntos: 'Puntos',
+  coste: 'Coste IA',
 };
 
 export default function AdminUsersPage() {
@@ -181,11 +182,20 @@ export default function AdminUsersPage() {
   const sorted =
     sortBy === 'registro'
       ? filtered
-      : [...filtered].sort((a, b) =>
-          sortBy === 'racha'
-            ? b.currentDailyStreak - a.currentDailyStreak || b.totalPoints - a.totalPoints
-            : b.totalPoints - a.totalPoints || b.currentDailyStreak - a.currentDailyStreak,
-        );
+      : [...filtered].sort((a, b) => {
+          if (sortBy === 'racha') {
+            return b.currentDailyStreak - a.currentDailyStreak || b.totalPoints - a.totalPoints;
+          }
+          if (sortBy === 'coste') {
+            // A igualdad de importe (con Gemini gratis, casi siempre 0) manda
+            // el consumo real: los tokens
+            return (
+              (b.aiCost?.totalUsd ?? 0) - (a.aiCost?.totalUsd ?? 0) ||
+              (b.aiCost?.totalTokens ?? 0) - (a.aiCost?.totalTokens ?? 0)
+            );
+          }
+          return b.totalPoints - a.totalPoints || b.currentDailyStreak - a.currentDailyStreak;
+        });
 
   return (
     <div style={s.page}>
@@ -267,6 +277,7 @@ export default function AdminUsersPage() {
                 <th>Email</th>
                 <th>Rol</th>
                 <th>Actividad</th>
+                <th>Coste IA</th>
                 <th>Registro</th>
                 <th></th>
               </tr>
@@ -360,6 +371,46 @@ function ActivityCell({ user }: { user: AdminUser }) {
       <span style={{ ...s.streak, opacity: streak > 0 ? 1 : 0.45 }}>🔥 {streak}d</span>
       <span style={s.activitySep}>·</span>
       <span style={s.points}>{user.totalPoints} pts</span>
+    </div>
+  );
+}
+
+/**
+ * Coste estimado de IA del usuario.
+ *
+ * El importe manda, pero se acompaña de los tokens porque hoy el proveedor
+ * primario (Gemini) es gratuito: casi todo el consumo sale a 0,00 $ y sin los
+ * tokens la columna parecería rota en vez de barata. El desglose por origen
+ * —cursos, exámenes, tutor— va en el tooltip para no ensanchar la tabla.
+ */
+function AiCostCell({ user }: { user: AdminUser }) {
+  // Vercel despliega la web por su cuenta y Render la API por otra: durante esa
+  // ventana el listado puede venir de una API sin aiCost. Sin este valor por
+  // defecto, la tabla entera de usuarios se caía.
+  const { courseUsd, examUsd, chatbotUsd, totalUsd, totalTokens } = user.aiCost ?? {
+    courseUsd: 0,
+    examUsd: 0,
+    chatbotUsd: 0,
+    totalUsd: 0,
+    totalTokens: 0,
+  };
+
+  if (totalTokens === 0) {
+    return <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>—</span>;
+  }
+
+  const usd = (n: number) => `$${n.toFixed(n < 0.01 && n > 0 ? 4 : 2)}`;
+  const title = [
+    `Cursos: ${usd(courseUsd)}`,
+    `Exámenes: ${usd(examUsd)}`,
+    `Tutor: ${usd(chatbotUsd)}`,
+    `${totalTokens.toLocaleString('es-ES')} tokens en total`,
+  ].join('\n');
+
+  return (
+    <div style={s.aiCost} title={title}>
+      <span style={s.aiCostTotal}>{usd(totalUsd)}</span>
+      <span style={s.aiCostTokens}>{totalTokens.toLocaleString('es-ES')} tok</span>
     </div>
   );
 }
@@ -458,6 +509,9 @@ function UserRow({
       </td>
       <td>
         <ActivityCell user={user} />
+      </td>
+      <td>
+        <AiCostCell user={user} />
       </td>
       <td style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>{createdAt}</td>
       <td>
@@ -789,6 +843,9 @@ const s: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
   },
   streak: { fontWeight: 600, color: 'var(--color-text)' },
+  aiCost: { display: 'flex', flexDirection: 'column', gap: 2, whiteSpace: 'nowrap' },
+  aiCostTotal: { fontWeight: 600, color: 'var(--color-text)', fontSize: '0.8rem' },
+  aiCostTokens: { color: 'var(--color-text-muted)', fontSize: '0.72rem' },
   activitySep: { color: 'var(--color-text-muted)', opacity: 0.6 },
   points: { color: 'var(--color-text-muted)' },
   input: {

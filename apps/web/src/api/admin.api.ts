@@ -31,6 +31,17 @@ export interface AdminUser {
   currentDailyStreak: number;
   longestDailyStreak: number;
   currentStreak: number;
+  /**
+   * Coste estimado de IA, en dólares, desglosado por lo que lo generó.
+   * Opcional: durante un despliegue la web puede ir por delante de la API.
+   */
+  aiCost?: {
+    courseUsd: number;
+    examUsd: number;
+    chatbotUsd: number;
+    totalUsd: number;
+    totalTokens: number;
+  };
 }
 
 export interface RedemptionStats {

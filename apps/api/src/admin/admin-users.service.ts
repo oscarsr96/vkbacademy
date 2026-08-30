@@ -1,9 +1,28 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { Prisma, Role } from '@prisma/client';
+import { AiUsageCategory, Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 import { UpdateAdminUserDto } from './dto/update-admin-user.dto';
 import * as bcrypt from 'bcrypt';
+
+/** Coste de IA de un usuario, en dólares, tal y como lo consume el panel. */
+export interface AiCostBreakdown {
+  courseUsd: number;
+  examUsd: number;
+  chatbotUsd: number;
+  totalUsd: number;
+  totalTokens: number;
+}
+
+const MICRO_USD = 1_000_000;
+
+const EMPTY_AI_COST: AiCostBreakdown = {
+  courseUsd: 0,
+  examUsd: 0,
+  chatbotUsd: 0,
+  totalUsd: 0,
+  totalTokens: 0,
+};
 
 @Injectable()
 export class AdminUsersService {
@@ -64,7 +83,49 @@ export class AdminUsersService {
       this.prisma.user.count({ where }),
     ]);
 
-    return { data: items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
+    const aiCostByUser = await this.aiCostFor(items.map((u) => u.id));
+
+    return {
+      data: items.map((u) => ({ ...u, aiCost: aiCostByUser.get(u.id) ?? EMPTY_AI_COST })),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  /**
+   * Coste de IA por usuario, desglosado por categoría.
+   *
+   * Un solo groupBy para toda la página en vez de una consulta por fila: el
+   * listado carga hasta 1.000 usuarios de golpe (la página filtra en cliente).
+   * Los importes van en microdólares enteros hasta el borde de la API, donde se
+   * convierten a dólares — sumar decimales por millares acumula error.
+   */
+  private async aiCostFor(userIds: string[]): Promise<Map<string, AiCostBreakdown>> {
+    if (userIds.length === 0) return new Map();
+
+    const rows = await this.prisma.aiUsage.groupBy({
+      by: ['userId', 'category'],
+      where: { userId: { in: userIds } },
+      _sum: { costMicroUsd: true, inputTokens: true, outputTokens: true },
+    });
+
+    const byUser = new Map<string, AiCostBreakdown>();
+    for (const row of rows) {
+      const entry = byUser.get(row.userId) ?? { ...EMPTY_AI_COST };
+      const micro = row._sum.costMicroUsd ?? 0;
+      const tokens = (row._sum.inputTokens ?? 0) + (row._sum.outputTokens ?? 0);
+
+      if (row.category === AiUsageCategory.COURSE) entry.courseUsd = micro / MICRO_USD;
+      if (row.category === AiUsageCategory.EXAM) entry.examUsd = micro / MICRO_USD;
+      if (row.category === AiUsageCategory.CHATBOT) entry.chatbotUsd = micro / MICRO_USD;
+      entry.totalUsd += micro / MICRO_USD;
+      entry.totalTokens += tokens;
+
+      byUser.set(row.userId, entry);
+    }
+    return byUser;
   }
 
   async updateRole(userId: string, role: Role) {

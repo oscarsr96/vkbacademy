@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AiUsageCategory,
   ChallengeType,
   Prisma,
   TheoryLessonKind,
@@ -77,7 +78,11 @@ export class TheoryService {
     // casi siempre lo arregla). Ver `ai-json.ts`.
     let parsed: unknown;
     try {
-      parsed = await generateAiJson(this.ai, prompt, 6000, { attempts: 2, logger: this.logger });
+      parsed = await generateAiJson(this.ai, prompt, 6000, {
+        attempts: 2,
+        logger: this.logger,
+        usage: { userId, category: AiUsageCategory.COURSE },
+      });
     } catch (err) {
       this.logger.error('Error al parsear JSON de IA (teoría) tras reintentos:', err);
       throw new InternalServerErrorException(
