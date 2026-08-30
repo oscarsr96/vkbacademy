@@ -2,11 +2,16 @@ import jsPDF from 'jspdf';
 import type { ExamAttemptResult } from '@vkbacademy/shared';
 
 // Paleta del club
-const PURPLE = { r: 99, g: 102, b: 241 } as const; // #6366f1 — color primario
-const DARK = { r: 30, g: 27, b: 24 } as const;
-const MUTED = { r: 120, g: 113, b: 108 } as const;
-const GREEN = { r: 5, g: 150, b: 105 } as const;
-const RED = { r: 220, g: 38, b: 38 } as const;
+// Paleta desde los tokens de la app (global.css). El morado #6366f1 que había
+// aquí no salía de ningún sitio del producto: la marca es naranja sobre navy.
+const ORANGE = { r: 245, g: 145, b: 30 } as const; // --brand #f5911e
+const NAVY = { r: 10, g: 22, b: 40 } as const; // --navy-900 #0a1628
+const INK = { r: 22, g: 33, b: 58 } as const; // --color-text #16213a
+const MUTED = { r: 100, g: 116, b: 139 } as const; // --color-text-muted #64748b
+const SURFACE = { r: 244, g: 245, b: 247 } as const; // --color-bg #f4f5f7
+const GREEN = { r: 5, g: 150, b: 105 } as const; // acierto (semántico, no de marca)
+const RED = { r: 220, g: 38, b: 38 } as const; // --color-error #dc2626
+const LOGO_URL = '/brand/vkb-logo.png';
 const PAGE_W = 210;
 const PAGE_H = 297;
 
@@ -51,45 +56,89 @@ function simplifyTex(tex: string): string {
     .trim();
 }
 
-export function downloadExamPdf(result: ExamAttemptResult, scopeTitle: string) {
+/**
+ * Logo del club como data URL. Devuelve null si no se puede cargar: el informe
+ * sin logo sigue sirviendo, y perder la descarga por un PNG sería peor.
+ */
+async function loadLogoDataUrl(): Promise<string | null> {
+  try {
+    const res = await fetch(LOGO_URL);
+    if (!res.ok) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return `data:image/png;base64,${btoa(binary)}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Marca de acierto/fallo dibujada con líneas.
+ *
+ * Antes era el texto '✓' / '✗', que jsPDF imprimía como una comilla suelta:
+ * solo trae las fuentes estándar y esos glifos no están. Dibujarlos no depende
+ * de la fuente y se ve nítido a cualquier tamaño.
+ */
+function drawMark(doc: jsPDF, correct: boolean, cx: number, cy: number): void {
+  setColor(doc, 'draw', correct ? GREEN : RED);
+  doc.setLineWidth(0.9);
+  if (correct) {
+    doc.line(cx - 2, cy, cx - 0.6, cy + 1.6);
+    doc.line(cx - 0.6, cy + 1.6, cx + 2.2, cy - 1.8);
+  } else {
+    doc.line(cx - 1.8, cy - 1.8, cx + 1.8, cy + 1.8);
+    doc.line(cx + 1.8, cy - 1.8, cx - 1.8, cy + 1.8);
+  }
+}
+
+export async function downloadExamPdf(result: ExamAttemptResult, scopeTitle: string) {
   const doc = new jsPDF();
+  const logo = await loadLogoDataUrl();
   const margin = 20;
   const contentW = PAGE_W - margin * 2;
   const completedAt = new Date(result.submittedAt);
 
-  // ── Banda morada superior ─────────────────────────────────────────────────
-  setColor(doc, 'fill', PURPLE);
+  // ── Banda superior ─────────────────────────────────────────────────────────
+  setColor(doc, 'fill', NAVY);
   doc.rect(0, 0, PAGE_W, 48, 'F');
+  setColor(doc, 'fill', ORANGE);
+  doc.rect(0, 48, PAGE_W, 2.5, 'F');
 
-  // Etiqueta superior
+  // Marca: el logo se lee sobre navy, no sobre el color de acento
+  let brandX = margin;
+  if (logo) {
+    doc.addImage(logo, 'PNG', margin, 5, 17, 17);
+    brandX = margin + 20;
+  }
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('VKB ACADEMY', margin, 11);
+  doc.text('VKB ACADEMY', brandX, 15);
 
   // Chip "EXAMEN" (esquina derecha)
   const chipText = 'EXAMEN';
   doc.setFontSize(8);
   const chipW = doc.getTextWidth(chipText) + 10;
   const chipX = PAGE_W - margin;
-  setColor(doc, 'fill', { r: 255, g: 255, b: 255 });
-  doc.roundedRect(chipX - chipW, 5, chipW, 10, 2, 2, 'F');
-  setColor(doc, 'text', PURPLE);
+  setColor(doc, 'fill', ORANGE);
+  doc.roundedRect(chipX - chipW, 6, chipW, 10, 2, 2, 'F');
+  doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.text(chipText, chipX - chipW / 2, 11.5, { align: 'center' });
+  doc.text(chipText, chipX - chipW / 2, 12.5, { align: 'center' });
 
   // Subtítulo (scope)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(199, 210, 254); // índigo claro
+  doc.setTextColor(255, 210, 165);
   const scopeLines = doc.splitTextToSize(scopeTitle, contentW);
-  doc.text(scopeLines[0], margin, 24);
+  doc.text(scopeLines[0], margin, 30);
 
   // Título
   doc.setFontSize(17);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('Resultado del Examen', margin, 36);
+  doc.text('Resultado del Examen', margin, 41);
 
   let y = 62;
 
@@ -140,7 +189,7 @@ export function downloadExamPdf(result: ExamAttemptResult, scopeTitle: string) {
   y += 38;
 
   // ── Separador fino ─────────────────────────────────────────────────────────
-  setColor(doc, 'draw', PURPLE);
+  setColor(doc, 'draw', ORANGE);
   doc.setLineWidth(1);
   doc.line(margin, y, PAGE_W - margin, y);
   y += 8;
@@ -148,7 +197,7 @@ export function downloadExamPdf(result: ExamAttemptResult, scopeTitle: string) {
   // ── Cabecera sección correcciones ──────────────────────────────────────────
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  setColor(doc, 'text', PURPLE);
+  setColor(doc, 'text', ORANGE);
   doc.text('Revisión pregunta a pregunta', margin, y);
   y += 10;
 
@@ -174,16 +223,13 @@ export function downloadExamPdf(result: ExamAttemptResult, scopeTitle: string) {
     setColor(doc, 'fill', c.isCorrect ? GREEN : RED);
     doc.rect(margin, y - 4, 3, blockH, 'F');
 
-    // Icono
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    setColor(doc, 'text', c.isCorrect ? GREEN : RED);
-    doc.text(c.isCorrect ? '✓' : '✗', margin + 6, y + 2);
+    // Marca de acierto/fallo, dibujada (ver drawMark)
+    drawMark(doc, c.isCorrect, margin + 8, y);
 
     // Texto pregunta
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    setColor(doc, 'text', DARK);
+    setColor(doc, 'text', INK);
     doc.text(questionLines, margin + 14, y + 2);
     y += questionLines.length * 6 + 3;
 
@@ -243,7 +289,7 @@ export function downloadExamPdf(result: ExamAttemptResult, scopeTitle: string) {
   ).internal.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    setColor(doc, 'fill', { r: 245, g: 245, b: 244 });
+    setColor(doc, 'fill', SURFACE);
     doc.rect(0, PAGE_H - 12, PAGE_W, 12, 'F');
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
