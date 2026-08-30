@@ -1,0 +1,125 @@
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Role } from '@vkbacademy/shared';
+
+// ── Mocks ──
+
+const mockGetUsers = vi.fn();
+vi.mock('../../api/admin.api', () => ({
+  adminApi: {
+    getUsers: (...args: unknown[]) => mockGetUsers(...args),
+    listSchoolYears: () => Promise.resolve([]),
+    updateRole: vi.fn(),
+    createUser: vi.fn(),
+    updateUser: vi.fn(),
+    deleteUser: vi.fn(),
+    resetUserPassword: vi.fn(),
+  },
+}));
+
+vi.mock('../../store/academy-filter.store', () => ({
+  useAcademyFilterStore: (selector: (s: { selectedAcademyId: string | null }) => unknown) =>
+    selector({ selectedAcademyId: null }),
+}));
+
+vi.mock('../../components/AcademyFilter', () => ({ default: () => null }));
+
+import AdminUsersPage from './AdminUsersPage';
+
+// ── Fixtures ──
+
+const student = (over: Partial<Record<string, unknown>> & { id: string; name: string }) => ({
+  email: null,
+  username: over.id,
+  guardianEmail: null,
+  role: Role.STUDENT,
+  avatarUrl: null,
+  createdAt: '2026-08-01T10:00:00.000Z',
+  totalPoints: 0,
+  currentDailyStreak: 0,
+  longestDailyStreak: 0,
+  currentStreak: 0,
+  ...over,
+});
+
+const USERS = [
+  student({ id: 'u1', name: 'Ana', currentDailyStreak: 12, totalPoints: 340, longestDailyStreak: 18 }),
+  student({ id: 'u2', name: 'Bruno', currentDailyStreak: 3, totalPoints: 900 }),
+  {
+    id: 'u3',
+    name: 'Admin Club',
+    email: 'admin@vkb.es',
+    username: null,
+    guardianEmail: null,
+    role: Role.ADMIN,
+    avatarUrl: null,
+    createdAt: '2026-07-01T10:00:00.000Z',
+    totalPoints: 0,
+    currentDailyStreak: 0,
+    longestDailyStreak: 0,
+    currentStreak: 0,
+  },
+];
+
+function renderPage() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <AdminUsersPage />
+    </QueryClientProvider>,
+  );
+}
+
+/** Nombres de las filas de la tabla, en el orden en que se pintan. */
+function rowNames(): string[] {
+  const rows = screen.getAllByRole('row').slice(1); // la primera es la cabecera
+  // La celda de usuario lleva el avatar (con iniciales) y el nombre en un span
+  return rows.map((r) => within(r).getAllByRole('cell')[0].querySelector('span')?.textContent ?? '');
+}
+
+// ── Tests ──
+
+describe('AdminUsersPage — columna de actividad', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetUsers.mockResolvedValue({ data: USERS, total: USERS.length, page: 1, limit: 1000, totalPages: 1 });
+  });
+
+  it('muestra racha diaria y puntos del alumno en formato compacto', async () => {
+    renderPage();
+
+    const fila = within(await screen.findByText('Ana').then((el) => el.closest('tr')!));
+    expect(fila.getByText('🔥 12d')).toBeInTheDocument();
+    expect(fila.getByText('340 pts')).toBeInTheDocument();
+  });
+
+  it('no pinta actividad para quien no es alumno', async () => {
+    renderPage();
+
+    const fila = within((await screen.findByText('Admin Club')).closest('tr')!);
+    expect(fila.queryByText(/🔥/)).not.toBeInTheDocument();
+    expect(fila.getByText('—')).toBeInTheDocument();
+  });
+
+  it('ordena por racha, no por puntos, cuando se elige Racha', async () => {
+    renderPage();
+    await screen.findByText('Ana');
+
+    // Bruno tiene más puntos (900) pero menos racha (3d) que Ana (340 / 12d):
+    // ordenar por racha tiene que ponerlo por detrás.
+    await userEvent.selectOptions(screen.getByLabelText('Ordenar por'), 'racha');
+
+    expect(rowNames()).toEqual(['Ana', 'Bruno', 'Admin Club']);
+  });
+
+  it('ordena por puntos cuando se elige Puntos', async () => {
+    renderPage();
+    await screen.findByText('Ana');
+
+    await userEvent.selectOptions(screen.getByLabelText('Ordenar por'), 'puntos');
+
+    expect(rowNames()).toEqual(['Bruno', 'Ana', 'Admin Club']);
+  });
+});
