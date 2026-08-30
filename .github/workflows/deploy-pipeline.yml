@@ -73,6 +73,9 @@ jobs:
       - name: Tests unitarios (API)
         run: pnpm --filter @vkbacademy/api test -- --passWithNoTests
 
+      - name: Tests unitarios (web)
+        run: pnpm --filter @vkbacademy/web test
+
       - name: Type check (web)
         run: pnpm --filter @vkbacademy/web lint
 
