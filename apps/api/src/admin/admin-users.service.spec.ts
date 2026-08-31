@@ -135,6 +135,18 @@ describe('AdminUsersService', () => {
       expect(select.currentStreak).toBe(true);
     });
 
+    it('devuelve el nivel educativo del alumno', async () => {
+      await service.getUsers();
+
+      // El modal de edición del panel siembra su desplegable de nivel desde
+      // este listado. Si el campo no viaja, el desplegable arranca vacío y al
+      // guardar manda null: editar el nombre de un alumno le borra el nivel, y
+      // con él el acceso a sus cursos.
+      const select = (mockPrisma.user.findMany.mock.calls[0][0] as { select: Record<string, unknown> })
+        .select;
+      expect(select.schoolYearId).toBe(true);
+    });
+
     it('no expone el hash de la contraseña', async () => {
       await service.getUsers();
 
@@ -175,6 +187,25 @@ describe('AdminUsersService', () => {
       const createData = mockPrisma.user.create.mock.calls[0][0].data;
       expect(createData).not.toHaveProperty('password');
       expect(createData.passwordHash).toBe('$2b$10$hashedpassword');
+    });
+
+    it('devuelve el nivel educativo en la respuesta', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue(fakeUser);
+
+      await service.createUser({
+        email: 'nuevo@vkbacademy.es',
+        name: 'Nuevo',
+        password: 'password123',
+        role: 'STUDENT',
+        schoolYearId: 'sy1',
+      } as never);
+
+      // La respuesta de la mutación repuebla el listado del panel: si vuelve
+      // sin el nivel, el modal se queda con el mismo hueco que en getUsers.
+      const select = (mockPrisma.user.create.mock.calls[0][0] as { select: Record<string, unknown> })
+        .select;
+      expect(select.schoolYearId).toBe(true);
     });
 
     it('lanza BadRequestException si el email ya está registrado', async () => {
@@ -225,6 +256,17 @@ describe('AdminUsersService', () => {
       expect(updateData).toHaveProperty('name', 'Nombre Nuevo');
       // No debe tocar el email ni otros campos no enviados
       expect(updateData).not.toHaveProperty('email');
+    });
+
+    it('devuelve el nivel educativo en la respuesta', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(fakeUser);
+      mockPrisma.user.update.mockResolvedValue(fakeUser);
+
+      await service.updateUser('user-1', { name: 'Nombre Nuevo' });
+
+      const select = (mockPrisma.user.update.mock.calls[0][0] as { select: Record<string, unknown> })
+        .select;
+      expect(select.schoolYearId).toBe(true);
     });
 
     it('lanza NotFoundException si el usuario no existe', async () => {

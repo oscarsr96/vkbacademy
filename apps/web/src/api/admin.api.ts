@@ -25,6 +25,9 @@ export interface AdminUser {
   role: Role;
   avatarUrl?: string | null;
   createdAt: string;
+  /** Nivel educativo del alumno. Lo consume el modal de edición: sin él el
+   *  desplegable arranca vacío y al guardar le borra el nivel. */
+  schoolYearId: string | null;
   /** Actividad del alumno (columna Actividad del panel). Los mantiene
    *  checkAndAward en cada ejercicio, tema o examen. */
   totalPoints: number;

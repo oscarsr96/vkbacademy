@@ -592,9 +592,8 @@ function UserModal({
   const [email, setEmail] = useState(initial?.email ?? '');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>(initial?.role ?? Role.STUDENT);
-  const [schoolYearId, setSchoolYearId] = useState(
-    (initial as (AdminUser & { schoolYearId?: string }) | undefined)?.schoolYearId ?? '',
-  );
+  const initialSchoolYearId = initial?.schoolYearId ?? '';
+  const [schoolYearId, setSchoolYearId] = useState(initialSchoolYearId);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -607,7 +606,11 @@ function UserModal({
       if (name !== initial?.name) payload.name = name;
       if (email !== initial?.email) payload.email = email;
       if (password) payload.password = password;
-      if (role === Role.STUDENT) payload.schoolYearId = schoolYearId || null;
+      // Solo si ha cambiado: mandarlo siempre borraba el nivel del alumno cada
+      // vez que el desplegable arrancaba vacío por no venir en el listado.
+      if (role === Role.STUDENT && schoolYearId !== initialSchoolYearId) {
+        payload.schoolYearId = schoolYearId || null;
+      }
       onSubmit(payload);
     }
   }
@@ -623,16 +626,31 @@ function UserModal({
         <h2 style={s.modalTitle}>{title}</h2>
         <form onSubmit={handleSubmit}>
           <div className="field" style={{ marginBottom: '0.875rem' }}>
-            <label>Nombre</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />
-          </div>
-          <div className="field" style={{ marginBottom: '0.875rem' }}>
-            <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </div>
-          <div className="field" style={{ marginBottom: '0.875rem' }}>
-            <label>{mode === 'create' ? 'Contraseña' : 'Nueva contraseña (opcional)'}</label>
+            <label htmlFor="user-name">Nombre</label>
             <input
+              id="user-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              minLength={2}
+            />
+          </div>
+          <div className="field" style={{ marginBottom: '0.875rem' }}>
+            <label htmlFor="user-email">Email</label>
+            <input
+              id="user-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field" style={{ marginBottom: '0.875rem' }}>
+            <label htmlFor="user-password">
+              {mode === 'create' ? 'Contraseña' : 'Nueva contraseña (opcional)'}
+            </label>
+            <input
+              id="user-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -643,8 +661,8 @@ function UserModal({
           </div>
           {mode === 'create' && (
             <div className="field" style={{ marginBottom: '0.875rem' }}>
-              <label>Rol</label>
-              <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
+              <label htmlFor="user-role">Rol</label>
+              <select id="user-role" value={role} onChange={(e) => setRole(e.target.value as Role)}>
                 {ALL_ROLES.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABELS[r]}
@@ -655,8 +673,12 @@ function UserModal({
           )}
           {role === Role.STUDENT && (
             <div className="field" style={{ marginBottom: '0.875rem' }}>
-              <label>Nivel educativo</label>
-              <select value={schoolYearId} onChange={(e) => setSchoolYearId(e.target.value)}>
+              <label htmlFor="user-school-year">Nivel educativo</label>
+              <select
+                id="user-school-year"
+                value={schoolYearId}
+                onChange={(e) => setSchoolYearId(e.target.value)}
+              >
                 <option value="">Sin asignar</option>
                 {schoolYears.map((sy) => (
                   <option key={sy.id} value={sy.id}>
