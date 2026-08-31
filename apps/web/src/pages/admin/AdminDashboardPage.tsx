@@ -105,6 +105,12 @@ export default function AdminDashboardPage() {
     staleTime: 60_000,
   });
 
+  const { data: retention } = useQuery({
+    queryKey: ['admin', 'retention', selectedAcademyId],
+    queryFn: adminApi.getRetention,
+    staleTime: 60_000,
+  });
+
   const PRESETS: { key: Preset; label: string }[] = [
     { key: '7d', label: '7 días' },
     { key: '30d', label: '30 días' },
@@ -357,6 +363,47 @@ export default function AdminDashboardPage() {
         </>
       )}
 
+      {/* ── Retención por cohortes ── */}
+      {retention && (
+        <section style={s.section}>
+          <h2 style={s.sectionTitle}>Retención por semana de alta</h2>
+          <div className="vkb-card" style={{ padding: '20px 24px', overflowX: 'auto' }}>
+            {retention.cohorts.length === 0 ? (
+              // Decirlo en pantalla y no esconder la sección: así se ve que la
+              // métrica existe y está acumulando, en vez de parecer que no hay.
+              <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
+                Todavía no hay altas de alumnos que medir.
+              </p>
+            ) : (
+            <table style={s.retTable}>
+              <thead>
+                <tr>
+                  <th style={s.retTh}>Semana</th>
+                  <th style={s.retTh}>Altas</th>
+                  <th style={s.retTh}>Vuelve al día siguiente</th>
+                  <th style={s.retTh}>Sigue la primera semana</th>
+                </tr>
+              </thead>
+              <tbody>
+                {retention.cohorts.map((c) => (
+                  <tr key={c.week}>
+                    <td style={s.retTd}>{c.week}</td>
+                    <td style={s.retTd}>{c.signups}</td>
+                    <td style={s.retTd}>
+                      <RetentionCell opened={c.d1Opened} worked={c.d1Worked} />
+                    </td>
+                    <td style={s.retTd}>
+                      <RetentionCell opened={c.d7Opened} worked={c.d7Worked} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* ── Certificados emitidos ── */}
       <section style={s.section}>
         <h2 style={s.sectionTitle}>Certificados emitidos</h2>
@@ -542,6 +589,20 @@ function LowCompletionRow({ lesson }: { lesson: LowCompletionLesson }) {
 }
 
 // ─── At-risk Student Row ──────────────────────────────────────────────────────
+
+/**
+ * Abrió / trabajó. El guion es "todavía no se puede saber", no "cero": pintar
+ * un porcentaje que solo puede subir se lee como un mal dato.
+ */
+function RetentionCell({ opened, worked }: { opened: number | null; worked: number | null }) {
+  if (opened === null) return <span style={{ opacity: 0.5 }}>—</span>;
+  return (
+    <span>
+      {opened}%{' '}
+      <span style={{ opacity: 0.6, fontSize: '0.8em' }}>({worked}% trabajó)</span>
+    </span>
+  );
+}
 
 function AtRiskRow({ student }: { student: AtRiskStudent }) {
   const days = student.daysSinceLastActivity;
@@ -786,6 +847,9 @@ const s: Record<string, React.CSSProperties> = {
 
   // ── Sections
   section: { marginBottom: '1.5rem' },
+  retTable: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '0.85rem' },
+  retTh: { textAlign: 'left' as const, padding: '0.4rem 0.75rem 0.6rem 0', fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' as const },
+  retTd: { padding: '0.55rem 0.75rem 0.55rem 0', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' as const },
   sectionTitle: { fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: '0.6rem' },
   twoCol: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' },
 

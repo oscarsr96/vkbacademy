@@ -209,6 +209,19 @@ export interface LowCompletionLesson {
   completedCount: number;
 }
 
+/** Una semana de altas y qué parte de ellas volvió. */
+export interface AdminRetentionCohort {
+  week: string;
+  signups: number;
+  /** Porcentaje 0-100, o null mientras el plazo de la cohorte no haya cerrado. */
+  d1Opened: number | null;
+  d1Worked: number | null;
+  d7Opened: number | null;
+  d7Worked: number | null;
+  d1Complete: boolean;
+  d7Complete: boolean;
+}
+
 export interface AdminAnalytics {
   kpis: AnalyticsKPIs;
   timeSeries: TimeSeriesPoint[];
@@ -472,6 +485,11 @@ export const adminApi = {
 
   getAnalytics: (params?: AnalyticsQueryParams) =>
     api.get<AdminAnalytics>('/admin/analytics', { params }).then((r) => r.data),
+
+  getRetention: () =>
+    api
+      .get<{ cohorts: AdminRetentionCohort[] }>('/admin/analytics/retention')
+      .then((r) => r.data),
 
   // ─── Canjes ────────────────────────────────────────────────────────────────
 

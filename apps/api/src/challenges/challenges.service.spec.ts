@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ChallengeType, ChallengeCadence, Prisma, Role } from '@prisma/client';
 import { ChallengesService } from './challenges.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ActivityService } from '../activity/activity.service';
 
 // Fechas fijas con ISO weeks conocidas:
 //   2026-02-16 (lunes) → semana ISO "2026-W08"
@@ -24,6 +25,7 @@ function awardedPointsCalls(
 
 describe('ChallengesService', () => {
   let service: ChallengesService;
+  let mockActivity: { recordVisit: jest.Mock; recordWork: jest.Mock };
   let mockPrisma: {
     user: {
       findMany: jest.Mock;
@@ -102,8 +104,14 @@ describe('ChallengesService', () => {
         : Promise.all(arg as unknown[]),
     );
 
+    mockActivity = { recordVisit: jest.fn(), recordWork: jest.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ChallengesService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        ChallengesService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ActivityService, useValue: mockActivity },
+      ],
     }).compile();
 
     service = module.get<ChallengesService>(ChallengesService);
@@ -1832,6 +1840,51 @@ describe('ChallengesService', () => {
           },
         });
       });
+    });
+  });
+  // ─── Histórico de días activos (retención) ───────────────────────────────────
+
+  describe('updateStreak — histórico de días activos', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(WEEK_08);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('registra el día como trabajado la primera vez que el alumno hace algo', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        currentStreak: 0,
+        longestStreak: 0,
+        lastActiveWeek: null,
+        currentDailyStreak: 0,
+        longestDailyStreak: 0,
+        lastActiveDay: null,
+      });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.updateStreak('user1');
+
+      expect(mockActivity.recordWork).toHaveBeenCalledWith('user1');
+    });
+
+    it('no vuelve a escribir si ya se contabilizó ese día', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        currentStreak: 1,
+        longestStreak: 1,
+        lastActiveWeek: ISO_W08,
+        currentDailyStreak: 1,
+        longestDailyStreak: 1,
+        lastActiveDay: DAY_W08_MON,
+      });
+
+      await service.updateStreak('user1');
+
+      // La rama dayChanged es lo que hace que esto cueste una escritura al día
+      // y no una por cada ejercicio resuelto.
+      expect(mockActivity.recordWork).not.toHaveBeenCalled();
     });
   });
 });

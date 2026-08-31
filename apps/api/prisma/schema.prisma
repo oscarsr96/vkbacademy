@@ -113,6 +113,7 @@ model User {
   aiExamBanks      AiExamBank[]
   studyPlans       StudyPlan[]
   exerciseAttempts ExerciseAttempt[]
+  activityDays     UserActivityDay[]
 
   @@index([schoolYearId])
 }
@@ -764,4 +765,24 @@ model AiUsage {
   @@index([userId, category])
   @@index([createdAt])
   @@index([academyId])
+}
+
+/// Un registro por alumno y día con actividad. Es el histórico que
+/// `User.lastActiveDay` no puede dar: aquel es un escalar y solo dice cuándo
+/// fue la última vez, no si el alumno volvió al día siguiente.
+model UserActivityDay {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// "2026-08-31" en Europe/Madrid — mismo formato y mismo helper que User.lastActiveDay
+  day String
+
+  /// false = solo abrió la app; true = además hizo algo (ejercicio, tema, examen, tutor)
+  worked    Boolean  @default(false)
+  academyId String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, day])
+  @@index([day])
 }

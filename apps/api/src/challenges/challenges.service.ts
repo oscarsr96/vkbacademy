@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ChallengeCadence, ChallengeType, Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ActivityService } from '../activity/activity.service';
 import {
   isoWeek,
   previousIsoWeek,
@@ -32,7 +33,10 @@ export interface LeaderboardBand {
 export class ChallengesService {
   private readonly logger = new Logger(ChallengesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activity: ActivityService,
+  ) {}
 
   /** Actualiza las rachas semanal y diaria del usuario en una sola escritura */
   async updateStreak(userId: string): Promise<void> {
@@ -74,6 +78,9 @@ export class ChallengesService {
       data.lastActiveDay = currentDay;
       data.currentDailyStreak = nextDaily;
       data.longestDailyStreak = Math.max(user.longestDailyStreak, nextDaily);
+      // Primera vez que este alumno hace algo hoy: el histórico de retención se
+      // engancha aquí porque esta rama ya entra una vez al día y no más.
+      void this.activity.recordWork(userId);
     }
 
     await this.prisma.user.update({ where: { id: userId }, data });

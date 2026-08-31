@@ -17,6 +17,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { AdminUsersService } from './admin-users.service';
 import { AdminContentService } from './admin-content.service';
 import { AdminAnalyticsService } from './admin-analytics.service';
+import { AdminRetentionService } from './admin-retention.service';
 import { AdminGamificationService } from './admin-gamification.service';
 import { AdminExamsService } from './admin-exams.service';
 import { CourseGeneratorService } from './course-generator.service';
@@ -54,6 +55,7 @@ export class AdminController {
     private readonly adminUsersService: AdminUsersService,
     private readonly adminContentService: AdminContentService,
     private readonly adminAnalyticsService: AdminAnalyticsService,
+    private readonly adminRetentionService: AdminRetentionService,
     private readonly adminGamificationService: AdminGamificationService,
     private readonly adminExamsService: AdminExamsService,
     private readonly courseGeneratorService: CourseGeneratorService,
@@ -126,6 +128,11 @@ export class AdminController {
   @Get('analytics')
   getAnalytics(@Query() query: AnalyticsQueryDto) {
     return this.adminAnalyticsService.getAnalytics(query);
+  }
+
+  @Get('analytics/retention')
+  getRetention() {
+    return this.adminRetentionService.getRetention();
   }
 
   @Get('courses')
