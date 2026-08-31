@@ -1,4 +1,4 @@
-import { isoWeek, madridDay } from '../challenges/challenge-periods';
+import { addDays, isoWeek, madridDay } from '../challenges/challenge-periods';
 
 export interface RetentionStudent {
   id: string;
@@ -21,12 +21,6 @@ export interface RetentionCohort {
   d7Worked: number | null;
   d1Complete: boolean;
   d7Complete: boolean;
-}
-
-/** Suma n días a un día "2026-08-31" y devuelve el mismo formato. */
-function addDays(day: string, n: number): string {
-  const [year, month, date] = day.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, date + n)).toISOString().slice(0, 10);
 }
 
 const pct = (part: number, total: number) => (total === 0 ? 0 : Math.round((part / total) * 100));

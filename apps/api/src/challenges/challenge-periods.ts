@@ -79,6 +79,12 @@ export function madridDay(date: Date): string {
   return date.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
 }
 
+/** Suma n días a un día "2026-08-14" y devuelve el mismo formato. */
+export function addDays(day: string, n: number): string {
+  const [year, month, date] = day.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, date + n)).toISOString().slice(0, 10);
+}
+
 /** Día anterior a "2026-08-14". Se ancla a mediodía UTC para no depender del DST. */
 export function previousDay(day: string): string {
   const d = new Date(`${day}T12:00:00Z`);
