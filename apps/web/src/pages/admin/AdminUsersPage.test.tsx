@@ -7,13 +7,18 @@ import { Role } from '@vkbacademy/shared';
 // ── Mocks ──
 
 const mockGetUsers = vi.fn();
+const mockUpdateUser = vi.fn();
+const SCHOOL_YEARS = [
+  { id: 'sy-1eso', name: '1eso', label: '1º ESO' },
+  { id: 'sy-2eso', name: '2eso', label: '2º ESO' },
+];
 vi.mock('../../api/admin.api', () => ({
   adminApi: {
     getUsers: (...args: unknown[]) => mockGetUsers(...args),
-    listSchoolYears: () => Promise.resolve([]),
+    listSchoolYears: () => Promise.resolve(SCHOOL_YEARS),
     updateRole: vi.fn(),
     createUser: vi.fn(),
-    updateUser: vi.fn(),
+    updateUser: (...args: unknown[]) => mockUpdateUser(...args),
     deleteUser: vi.fn(),
     resetUserPassword: vi.fn(),
   },
@@ -210,5 +215,62 @@ describe('AdminUsersPage — columna de coste de IA', () => {
     await userEvent.selectOptions(screen.getByLabelText('Ordenar por'), 'coste');
 
     expect(rowNames()).toEqual(['Cara', 'Barata']);
+  });
+});
+
+describe('AdminUsersPage — edición de un alumno', () => {
+  const ANA = student({
+    id: 'u1',
+    name: 'Ana',
+    email: 'ana@vkbacademy.es',
+    schoolYearId: 'sy-2eso',
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetUsers.mockResolvedValue({ data: [ANA], total: 1, page: 1, limit: 1000, totalPages: 1 });
+    mockUpdateUser.mockResolvedValue({ ...ANA, name: 'Ana Ruiz' });
+  });
+
+  async function abrirEdicionDeAna() {
+    const fila = (await screen.findByText('Ana')).closest('tr')!;
+    await userEvent.click(within(fila).getByTitle('Editar'));
+    return await screen.findByLabelText('Nivel educativo');
+  }
+
+  it('parte del nivel que ya tiene el alumno, no de "Sin asignar"', async () => {
+    renderPage();
+
+    const nivel = await abrirEdicionDeAna();
+
+    expect(nivel).toHaveValue('sy-2eso');
+  });
+
+  it('cambiar solo el nombre no toca el nivel educativo', async () => {
+    renderPage();
+    await abrirEdicionDeAna();
+
+    const nombre = screen.getByLabelText('Nombre');
+    await userEvent.clear(nombre);
+    await userEvent.type(nombre, 'Ana Ruiz');
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    // Enviar schoolYearId aquí es lo que le borraba el nivel al alumno —y con
+    // él el acceso a sus cursos— al corregirle una errata en el nombre.
+    expect(mockUpdateUser).toHaveBeenCalledTimes(1);
+    const [userId, payload] = mockUpdateUser.mock.calls[0] as [string, Record<string, unknown>];
+    expect(userId).toBe('u1');
+    expect(payload).toEqual({ name: 'Ana Ruiz' });
+  });
+
+  it('sí envía el nivel cuando es lo que se ha cambiado', async () => {
+    renderPage();
+    const nivel = await abrirEdicionDeAna();
+
+    await userEvent.selectOptions(nivel, 'sy-1eso');
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    const [, payload] = mockUpdateUser.mock.calls[0] as [string, Record<string, unknown>];
+    expect(payload).toEqual({ schoolYearId: 'sy-1eso' });
   });
 });

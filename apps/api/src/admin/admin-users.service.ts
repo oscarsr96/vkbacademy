@@ -66,6 +66,9 @@ export class AdminUsersService {
           role: true,
           avatarUrl: true,
           createdAt: true,
+          // El modal de edición siembra su desplegable de nivel desde aquí:
+          // sin este campo arranca vacío y al guardar borra el nivel del alumno.
+          schoolYearId: true,
           // Actividad del alumno para el panel de admin: la mantiene al día
           // checkAndAward en cada ejercicio, tema o examen. Es un dato de
           // seguimiento, no una clasificación — no se ordena ni se muestra
@@ -157,6 +160,7 @@ export class AdminUsersService {
         role: true,
         avatarUrl: true,
         createdAt: true,
+        schoolYearId: true,
         academyMembers: {
           select: { academy: { select: { id: true, slug: true, name: true } } },
         },
@@ -191,6 +195,7 @@ export class AdminUsersService {
         role: true,
         avatarUrl: true,
         createdAt: true,
+        schoolYearId: true,
       },
     });
   }
