@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
   ConflictException,
   NotFoundException,
@@ -8,6 +9,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -40,6 +42,8 @@ export type AuthResponse = AuthTokens & {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -117,6 +121,30 @@ export class AuthService {
         }
         throw error;
       });
+
+    // 6. Suscripción al resumen semanal, solo si la familia marcó la casilla.
+    //    Fuera de la transacción y con su propio catch: que falle esto no puede
+    //    dejar a los hijos sin cuenta.
+    if (dto.guardianDigestConsent) {
+      try {
+        await this.prisma.guardianSubscription.upsert({
+          where: { email: dto.guardianEmail },
+          create: {
+            email: dto.guardianEmail,
+            consentAt: new Date(),
+            token: randomBytes(32).toString('hex'),
+          },
+          // Volver a marcar la casilla reactiva una baja anterior. El token no se
+          // toca: los enlaces ya enviados tienen que seguir dando de baja.
+          update: { consentAt: new Date(), unsubscribedAt: null },
+        });
+      } catch (error) {
+        this.logger.error(
+          `No se pudo guardar la suscripción de ${dto.guardianEmail}`,
+          error as Error,
+        );
+      }
+    }
 
     return {
       students: created.map((u) => ({

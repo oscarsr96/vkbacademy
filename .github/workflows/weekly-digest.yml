@@ -1,0 +1,82 @@
+# Envía a cada familia suscrita un resumen de lo que han hecho sus hijos en la
+# semana que acaba de terminar. Un correo por familia (guardianEmail agrupa a
+# los hermanos) y solo a quien marcó la casilla al registrar; cada correo lleva
+# enlace de baja.
+#
+# No hay scheduler dentro de la API —Render duerme—, así que el disparo lo pone
+# GitHub Actions y el script se conecta directo a la BD, igual que los seeds.
+#
+# Uso manual: Actions → "Resumen semanal" → Run workflow. Por defecto dryRun=true.
+
+name: Resumen semanal
+
+on:
+  schedule:
+    # Lunes a las 07:00 UTC. El cron de Actions no entiende de horario de
+    # verano: en invierno llega una hora antes en hora de Madrid.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Entorno al que se envía'
+        required: true
+        type: choice
+        options:
+          - pre
+          - prod
+      dryRun:
+        description: 'Dry-run: no envía nada, solo cuenta a cuántas familias escribiría'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  digest:
+    name: Resumen semanal (${{ inputs.environment || 'prod' }})
+    runs-on: ubuntu-latest
+    environment:
+      # El disparo programado no trae inputs: por defecto va a PROD, que es el
+      # único entorno con familias reales.
+      #
+      # OJO: `prod-canary` lleva el gate de aprobación de PROD, así que el envío
+      # de cada lunes se queda ESPERANDO a que alguien lo apruebe. Es deliberado
+      # mientras esto sea nuevo —escribir a familias reales merece un humano en
+      # medio—, pero si se quiere de verdad automático hay que apuntar a un
+      # environment sin protección con sus propios secretos.
+      name: ${{ (inputs.environment == 'pre') && 'pre' || 'prod-canary' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter @vkbacademy/api exec prisma generate
+
+      - name: Enviar resumen semanal
+        working-directory: apps/api
+        env:
+          # Obliga al schema de entorno a exigir FRONTEND_URL: sin esto cae a
+          # localhost y los correos saldrían con el enlace de baja roto, sin que
+          # nada fallara. Además es la verdad: se está tocando la BD real.
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+          # El disparo programado no trae inputs y `inputs.dryRun` vendría vacío:
+          # sin este default explícito, el cron enviaría en dry-run para siempre.
+          DRY_RUN: ${{ inputs.dryRun || 'false' }}
+        run: |
+          ARGS=()
+          if [ "$DRY_RUN" = "true" ]; then ARGS+=("--dry-run"); fi
+          npx ts-node scripts/send-weekly-digest.ts "${ARGS[@]}"

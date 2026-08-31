@@ -21,6 +21,8 @@ export interface NewStudentPayload {
 export interface RegisterStudentsPayload {
   guardianEmail: string;
   academySlug: string;
+  /** Consentimiento explícito para el resumen semanal a la familia. */
+  guardianDigestConsent: boolean;
   students: NewStudentPayload[];
 }
 
