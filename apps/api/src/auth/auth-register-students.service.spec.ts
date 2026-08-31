@@ -52,6 +52,7 @@ describe('AuthService.registerStudents', () => {
       updateMany: jest.Mock;
     };
     academy: { findUnique: jest.Mock };
+    guardianSubscription: { upsert: jest.Mock };
     academyMember: { create: jest.Mock };
     schoolYear: { findMany: jest.Mock };
     $transaction: jest.Mock;
@@ -101,6 +102,7 @@ describe('AuthService.registerStudents', () => {
         updateMany: jest.fn(),
       },
       academy: { findUnique: jest.fn().mockResolvedValue(fakeAcademy) },
+      guardianSubscription: { upsert: jest.fn().mockResolvedValue({}) },
       academyMember: { create: jest.fn() },
       // Por defecto todos los cursos pedidos existen
       schoolYear: {
@@ -370,5 +372,68 @@ describe('AuthService.registerStudents', () => {
     ).rejects.toThrow(BadRequestException);
 
     expect(mockTx.user.create).not.toHaveBeenCalled();
+  });
+  // ─── Consentimiento del resumen semanal ────────────────────────────────────
+
+  describe('consentimiento del resumen semanal', () => {
+    const dtoBase = {
+      guardianEmail: 'padre@example.com',
+      academySlug: 'vallekas-basket',
+      students: [{ name: 'Ana Pérez', schoolYearId: 'sy1', password: 'clave12345' }],
+    };
+
+    beforeEach(() => {
+      mockUsernames.allocate.mockResolvedValue(['ana-perez']);
+    });
+
+    it('no crea suscripción si no se marca la casilla', async () => {
+      await service.registerStudents(dtoBase);
+
+      // El email sigue siendo solo un dato de contacto, como hasta ahora.
+      expect(mockPrisma.guardianSubscription.upsert).not.toHaveBeenCalled();
+    });
+
+    it('crea la suscripción cuando se marca la casilla', async () => {
+      await service.registerStudents({ ...dtoBase, guardianDigestConsent: true });
+
+      const args = mockPrisma.guardianSubscription.upsert.mock.calls[0][0];
+      expect(args.where.email).toBe('padre@example.com');
+      expect(args.create.consentAt).toBeInstanceOf(Date);
+      expect(typeof args.create.token).toBe('string');
+      expect(args.create.token.length).toBeGreaterThan(30);
+    });
+
+    it('reactiva una baja anterior si la familia vuelve a marcar la casilla', async () => {
+      await service.registerStudents({ ...dtoBase, guardianDigestConsent: true });
+
+      const args = mockPrisma.guardianSubscription.upsert.mock.calls[0][0];
+      expect(args.update.unsubscribedAt).toBeNull();
+    });
+
+    it('no toca el token al reactivar: los enlaces ya enviados siguen valiendo', async () => {
+      await service.registerStudents({ ...dtoBase, guardianDigestConsent: true });
+
+      const args = mockPrisma.guardianSubscription.upsert.mock.calls[0][0];
+      expect(args.update).not.toHaveProperty('token');
+    });
+
+    it('el token es distinto en cada suscripción', async () => {
+      await service.registerStudents({ ...dtoBase, guardianDigestConsent: true });
+      mockUsernames.allocate.mockResolvedValue(['ana-perez']);
+      await service.registerStudents({ ...dtoBase, guardianDigestConsent: true });
+
+      const t1 = mockPrisma.guardianSubscription.upsert.mock.calls[0][0].create.token;
+      const t2 = mockPrisma.guardianSubscription.upsert.mock.calls[1][0].create.token;
+      expect(t1).not.toBe(t2);
+    });
+
+    it('el alta de los alumnos no depende de la suscripción', async () => {
+      mockPrisma.guardianSubscription.upsert.mockRejectedValue(new Error('BD caída'));
+
+      // Que falle la suscripción no puede dejar sin cuenta a los hijos.
+      const result = await service.registerStudents({ ...dtoBase, guardianDigestConsent: true });
+
+      expect(result.students).toHaveLength(1);
+    });
   });
 });
