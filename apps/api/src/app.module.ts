@@ -25,6 +25,7 @@ import { ExercisesModule } from './exercises/exercises.module';
 import { TheoryModule } from './theory/theory.module';
 import { UsernameModule } from './username/username.module';
 import { ActivityModule } from './activity/activity.module';
+import { GuardiansModule } from './guardians/guardians.module';
 import { StudyPlansModule } from './study-plans/study-plans.module';
 
 @Module({
@@ -72,6 +73,7 @@ import { StudyPlansModule } from './study-plans/study-plans.module';
     StudyPlansModule,
     UsernameModule,
     ActivityModule,
+    GuardiansModule,
   ],
   providers: [
     // Rate limiting global (100 req/min por defecto)
