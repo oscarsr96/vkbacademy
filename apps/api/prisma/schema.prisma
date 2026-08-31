@@ -786,3 +786,25 @@ model UserActivityDay {
   @@unique([userId, day])
   @@index([day])
 }
+
+/// Suscripción de una familia al resumen semanal. La clave es el email porque
+/// `guardianEmail` está copiado en cada hermano y no hay ninguna entidad que
+/// represente a la familia; atarla a un User obligaría a elegir un hermano
+/// como titular.
+model GuardianSubscription {
+  id String @id @default(cuid())
+
+  /// Normalizado (trim + lowercase) igual que en RegisterStudentsDto.
+  email          String    @unique
+  consentAt      DateTime
+  unsubscribedAt DateTime?
+
+  /// Permite darse de baja sin cuenta ni login: el tutor no tiene ninguna.
+  token String @unique
+
+  /// "2026-W36" de la última semana enviada. Si Actions dispara dos veces, la
+  /// segunda no envía.
+  lastSentWeek String?
+
+  createdAt DateTime @default(now())
+}
