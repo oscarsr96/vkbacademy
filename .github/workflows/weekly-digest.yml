@@ -59,6 +59,11 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      # El script arranca AppModule entero, que importa @vkbacademy/shared por
+      # su `dist/`: sin compilarlo, ts-node muere con TS2307 antes de tocar la BD.
+      - name: Build paquete shared
+        run: pnpm --filter @vkbacademy/shared build
+
       - name: Generar cliente Prisma
         run: pnpm --filter @vkbacademy/api exec prisma generate
 
