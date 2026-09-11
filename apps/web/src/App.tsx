@@ -20,6 +20,7 @@ import AcademyLandingPage from './pages/marketing/AcademyLandingPage';
 import AppLayout from './layouts/AppLayout';
 import PublicLayout from './layouts/PublicLayout';
 import VerifyCertificatePage from './pages/marketing/VerifyCertificatePage';
+import UnsubscribePage from './pages/marketing/UnsubscribePage';
 import AboutPage from './pages/marketing/AboutPage';
 import PricingPage from './pages/marketing/PricingPage';
 import RootIndex from './components/RootIndex';
@@ -103,6 +104,7 @@ export default function App() {
           {/* Verificación pública: el PDF del certificado apunta aquí */}
           <Route path="/verify" element={<VerifyCertificatePage />} />
           <Route path="/verify/:code" element={<VerifyCertificatePage />} />
+          <Route path="/baja/:token" element={<UnsubscribePage />} />
         </Route>
 
         {/* ── Landing por academia (sin layout compartido — tiene su propio navbar) ── */}

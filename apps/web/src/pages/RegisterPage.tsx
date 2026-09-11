@@ -40,6 +40,7 @@ export default function RegisterPage() {
 
   const [guardianEmail, setGuardianEmail] = useState('');
   const [guardianEmailError, setGuardianEmailError] = useState('');
+  const [digestConsent, setDigestConsent] = useState(false);
   const [students, setStudents] = useState<StudentForm[]>([emptyStudent()]);
   const [studentErrors, setStudentErrors] = useState<Record<number, string>>({});
 
@@ -102,6 +103,7 @@ export default function RegisterPage() {
     mutate({
       guardianEmail,
       academySlug,
+      guardianDigestConsent: digestConsent,
       students: students.map((st) => ({
         name: st.name.trim(),
         schoolYearId: st.schoolYearId,
@@ -159,8 +161,21 @@ export default function RegisterPage() {
             />
             {guardianEmailError && <span style={s.fieldError}>{guardianEmailError}</span>}
             <span style={s.fieldHint}>
-              Solo es un dato de contacto: no crea una cuenta ni sirve para iniciar sesión.
+              No crea una cuenta ni sirve para iniciar sesión. Lo usamos para poder mandarte,
+              si quieres, un resumen semanal de lo que estudian tus hijos.
             </span>
+            <label htmlFor="digestConsent" style={s.consentRow}>
+              <input
+                id="digestConsent"
+                type="checkbox"
+                checked={digestConsent}
+                onChange={(e) => setDigestConsent(e.target.checked)}
+              />
+              <span>
+                Quiero recibir el <strong>resumen semanal</strong>. Puedes darte de baja desde
+                cualquiera de esos correos.
+              </span>
+            </label>
           </div>
 
           {students.map((student, i) => (
@@ -432,6 +447,16 @@ const s: Record<string, React.CSSProperties> = {
     color: 'rgba(255,255,255,0.40)',
     marginTop: '4px',
     display: 'block',
+  },
+  consentRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '0.5rem',
+    marginTop: '0.6rem',
+    fontSize: '0.82rem',
+    color: 'rgba(255,255,255,0.72)',
+    cursor: 'pointer',
+    lineHeight: 1.4,
   },
   studentCard: {
     border: '1px solid rgba(255,255,255,0.08)',
