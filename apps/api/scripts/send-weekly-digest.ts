@@ -3,19 +3,20 @@
  *
  * Lo lanza `.github/workflows/weekly-digest.yml`. La lógica vive en
  * `GuardianDigestService`, dentro de la API, para poder testearla con Jest;
- * aquí solo se arranca un contexto de Nest y se llama.
+ * aquí solo se arranca un contexto de Nest (`DigestScriptModule`, no
+ * `AppModule`: ver por qué allí) y se llama.
  *
  * Uso local:
  *   npx ts-node scripts/send-weekly-digest.ts --dry-run
  */
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
+import { DigestScriptModule } from '../src/guardians/digest-script.module';
 import { GuardianDigestService } from '../src/guardians/guardian-digest.service';
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run');
 
-  const app = await NestFactory.createApplicationContext(AppModule, {
+  const app = await NestFactory.createApplicationContext(DigestScriptModule, {
     logger: ['warn', 'error'],
   });
 

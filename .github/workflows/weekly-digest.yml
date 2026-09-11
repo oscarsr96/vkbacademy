@@ -70,10 +70,9 @@ jobs:
       - name: Enviar resumen semanal
         working-directory: apps/api
         env:
-          # Obliga al schema de entorno a exigir FRONTEND_URL: sin esto cae a
-          # localhost y los correos saldrían con el enlace de baja roto, sin que
-          # nada fallara. Además es la verdad: se está tocando la BD real.
-          NODE_ENV: production
+          # El script valida su propio entorno (DigestScriptModule): las cuatro
+          # de abajo son obligatorias y sin cualquiera de ellas muere en
+          # arranque, en vez de acabar en verde sin haber escrito a nadie.
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
