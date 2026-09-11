@@ -38,12 +38,12 @@ jobs:
       # El disparo programado no trae inputs: por defecto va a PROD, que es el
       # único entorno con familias reales.
       #
-      # OJO: `prod-canary` lleva el gate de aprobación de PROD, así que el envío
-      # de cada lunes se queda ESPERANDO a que alguien lo apruebe. Es deliberado
-      # mientras esto sea nuevo —escribir a familias reales merece un humano en
-      # medio—, pero si se quiere de verdad automático hay que apuntar a un
-      # environment sin protección con sus propios secretos.
-      name: ${{ (inputs.environment == 'pre') && 'pre' || 'prod-canary' }}
+      # `prod-digest` es un environment SIN reviewers (si fuera `prod-canary`,
+      # el envío de cada lunes se quedaría esperando aprobación) pero limitado
+      # a la rama `main`, porque lleva la BD de PROD. Tiene sus propios
+      # secretos: DATABASE_URL y RESEND_API_KEY hay que ponerlos ahí a mano,
+      # GitHub no los comparte entre environments.
+      name: ${{ (inputs.environment == 'pre') && 'pre' || 'prod-digest' }}
     steps:
       - uses: actions/checkout@v4
 
