@@ -1,6 +1,8 @@
 import {
   IsArray,
+  IsBoolean,
   IsEmail,
+  IsOptional,
   IsString,
   MaxLength,
   MinLength,
@@ -38,6 +40,15 @@ export class RegisterStudentsDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail({}, { message: 'Email inválido' })
   guardianEmail: string;
+
+  /**
+   * Consentimiento explícito para el resumen semanal a la familia. Por defecto
+   * false: el email es un dato de contacto y registrar a un hijo no es
+   * suscribirse a nada.
+   */
+  @IsOptional()
+  @IsBoolean()
+  guardianDigestConsent?: boolean;
 
   /** Obligatorio: sin academia el alumno no sería visible para ningún admin. */
   @IsString({ message: 'Debes indicar la academia' })
