@@ -333,7 +333,8 @@ pnpm build
 **Variables por plataforma:**
 
 - Vercel: `VITE_API_URL=https://<api>.onrender.com/api`
-- Render: `FRONTEND_URL`, `DATABASE_URL` (Neon pooler), `NODE_ENV=production`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `YOUTUBE_API_KEY`, `GEMINI_API_KEY` (obligatoria para la IA), `ANTHROPIC_API_KEY` (fallback, opcional)
+- Render: `FRONTEND_URL`, `DATABASE_URL` (Neon pooler), `NODE_ENV=production`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `YOUTUBE_API_KEY`, `GEMINI_API_KEY` (obligatoria para la IA), `ANTHROPIC_API_KEY` (fallback, opcional), `RESEND_API_KEY` + `EMAIL_FROM` (sin ellas `forgot-password` responde 200 sin enviar nada)
+- GitHub Actions (environments `pre`, `prod-canary`, `prod-digest`): `DATABASE_URL`, `RESEND_API_KEY` como secrets; `EMAIL_FROM`, `FRONTEND_URL` como vars. Los workflows van directo a la BD y no ven las variables de Render; GitHub no comparte secretos entre environments.
 
 **Notas Render**: Dockerfile Path = `apps/api/Dockerfile`, Build Context = `.`. Migraciones **NO** corren en el contenedor — se aplican desde el job `migrate-pre`/`migrate-prod` del pipeline. Cold start ~30-60s en Starter.
 
