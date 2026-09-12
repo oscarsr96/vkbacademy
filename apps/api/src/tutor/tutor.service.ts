@@ -12,6 +12,8 @@ import {
   buildStudyProfileLines,
   MAX_PROFILE_PLANS,
   rankWeakTopics,
+  suggestPracticeTopic,
+  type PracticeCandidate,
   type StudyProfile,
 } from './study-profile';
 
@@ -157,7 +159,7 @@ export class TutorService {
 
     // 3. Construir el system prompt con contexto: el de la petición (curso/
     //    lección desde donde pregunta) y el perfil de estudio leído de BD.
-    const profile = await this.loadStudyProfile(userId);
+    const { profile, practiceCandidates } = await this.loadStudyProfile(userId);
     const systemPrompt = this.buildSystemPrompt(dto, Boolean(image), profile);
 
     // 4. Configurar headers SSE
@@ -223,8 +225,10 @@ export class TutorService {
         },
       });
 
-      // 8. Señal de fin
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      // 8. Señal de fin. Si la conversación toca un tema de sus planes, va la
+      //    propuesta de practicarlo (#141).
+      const practice = suggestPracticeTopic(`${message}\n${fullResponse}`, practiceCandidates);
+      res.write(`data: ${JSON.stringify(practice ? { done: true, practice } : { done: true })}\n\n`);
     } catch (error) {
       this.logger.error('Error en streaming del tutor', error);
       res.write(`data: ${JSON.stringify({ error: 'Error al procesar tu pregunta' })}\n\n`);
@@ -264,7 +268,9 @@ export class TutorService {
    * ciegas desde la página Dudas. Tres consultas ligeras por pregunta; el
    * cupo diario acota el coste.
    */
-  private async loadStudyProfile(userId: string): Promise<StudyProfile> {
+  private async loadStudyProfile(
+    userId: string,
+  ): Promise<{ profile: StudyProfile; practiceCandidates: PracticeCandidate[] }> {
     const since = new Date(Date.now() - WEAK_TOPICS_WINDOW_DAYS * 86_400_000);
     const [user, plans, attempts] = await Promise.all([
       this.prisma.user.findUnique({
@@ -275,7 +281,12 @@ export class TutorService {
         where: { userId },
         orderBy: { createdAt: 'desc' },
         take: MAX_PROFILE_PLANS,
-        select: { title: true, course: { select: { title: true } } },
+        select: {
+          title: true,
+          courseId: true,
+          course: { select: { title: true } },
+          topics: { select: { title: true, moduleId: true } },
+        },
       }),
       this.prisma.exerciseAttempt.findMany({
         where: { userId, answeredAt: { gte: since } },
@@ -283,10 +294,27 @@ export class TutorService {
       }),
     ]);
 
+    const weakTopics = rankWeakTopics(attempts);
+    const weakLabels = new Set(weakTopics.map((t) => t.topicLabel));
+
+    // Temas de sus planes, candidatos a "practicar esto" (#141)
+    const practiceCandidates: PracticeCandidate[] = plans.flatMap((p) =>
+      p.topics.map((t) => ({
+        title: t.title,
+        courseId: p.courseId,
+        courseTitle: p.course.title,
+        moduleId: t.moduleId ?? null,
+        weak: weakLabels.has(t.title),
+      })),
+    );
+
     return {
-      schoolYear: user?.schoolYear?.label ?? null,
-      plans: plans.map((p) => ({ title: p.title, course: p.course.title })),
-      weakTopics: rankWeakTopics(attempts),
+      profile: {
+        schoolYear: user?.schoolYear?.label ?? null,
+        plans: plans.map((p) => ({ title: p.title, course: p.course.title })),
+        weakTopics,
+      },
+      practiceCandidates,
     };
   }
 

@@ -321,11 +321,61 @@ describe('TutorService', () => {
       expect(system).toMatch(/\$…\$/);
     });
 
+    describe('practicar este tema (#141)', () => {
+      const planConTemas = [
+        {
+          title: 'Fracciones · Ecuaciones',
+          courseId: 'c-mat',
+          course: { title: 'Matemáticas' },
+          topics: [
+            { title: 'Ecuaciones', moduleId: 'm-1' },
+            { title: 'Fracciones', moduleId: null },
+          ],
+        },
+      ];
+
+      it('si la conversación toca un tema del alumno, el evento done lleva practice', async () => {
+        mockStudyPlan.findMany.mockResolvedValue(planConTemas);
+        mockAi.streamChat.mockImplementation(streamOf('Las fracciones se suman así…'));
+
+        await service.streamChat(userId, { ...dto, message: 'no entiendo las fracciones' }, mockRes);
+
+        expect(mockRes.write).toHaveBeenCalledWith(
+          `data: ${JSON.stringify({
+            done: true,
+            practice: { title: 'Fracciones', courseId: 'c-mat', courseTitle: 'Matemáticas', moduleId: null },
+          })}\n\n`,
+        );
+      });
+
+      it('los temas flojos ganan cuando aparecen varios', async () => {
+        mockStudyPlan.findMany.mockResolvedValue(planConTemas);
+        mockExerciseAttempt.findMany.mockResolvedValue([{ topicLabel: 'Ecuaciones', verdict: 'incorrect' }]);
+        mockAi.streamChat.mockImplementation(streamOf('ok'));
+
+        await service.streamChat(userId, { ...dto, message: 'ecuaciones con fracciones' }, mockRes);
+
+        const doneEvent = (mockRes.write as jest.Mock).mock.calls
+          .map((c) => String(c[0]))
+          .find((l) => l.includes('"done":true'));
+        expect(doneEvent).toContain('"title":"Ecuaciones"');
+        expect(doneEvent).toContain('"moduleId":"m-1"');
+      });
+
+      it('sin coincidencia, el evento done va sin practice', async () => {
+        mockStudyPlan.findMany.mockResolvedValue(planConTemas);
+
+        await service.streamChat(userId, { ...dto, message: 'quién ganó la liga' }, mockRes);
+
+        expect(mockRes.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ done: true })}\n\n`);
+      });
+    });
+
     describe('perfil de estudio (#137)', () => {
       it('con datos, el prompt lleva curso, planes y temas flojos leídos de BD', async () => {
         mockUser.findUnique.mockResolvedValue({ schoolYear: { label: '3º ESO' } });
         mockStudyPlan.findMany.mockResolvedValue([
-          { title: 'Fracciones · Ecuaciones', course: { title: 'Matemáticas' } },
+          { title: 'Fracciones · Ecuaciones', courseId: 'c-mat', course: { title: 'Matemáticas' }, topics: [] },
         ]);
         mockExerciseAttempt.findMany.mockResolvedValue([
           { topicLabel: 'Ecuaciones', verdict: 'incorrect' },
