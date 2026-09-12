@@ -5,7 +5,7 @@ import { Response } from 'express';
 import { TutorService } from './tutor.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesService } from '../challenges/challenges.service';
-import { AiUsageService } from '../ai/ai-usage.service';
+import { AiProviderService } from '../ai/ai-provider.service';
 import { TutorChatDto } from './dto/tutor-chat.dto';
 
 const mockTutorMessage = {
@@ -23,7 +23,16 @@ const mockConfig = {
   get: jest.fn().mockReturnValue('fake-api-key'),
 };
 
-const mockAiUsage = { record: jest.fn() };
+/**
+ * El proveedor de IA se mockea entero: el tutor solo consume `streamChat`, un
+ * generador async de trozos de texto. Quién responde (Gemini o Haiku) y la
+ * contabilidad de tokens son asunto del proveedor y se prueban en su spec.
+ */
+const streamOf = (...chunks: string[]) =>
+  async function* () {
+    for (const c of chunks) yield c;
+  };
+const mockAi = { streamChat: jest.fn() };
 
 const mockChallenges = {
   checkAndAward: jest.fn().mockResolvedValue(undefined),
@@ -48,7 +57,7 @@ describe('TutorService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ConfigService, useValue: mockConfig },
         { provide: ChallengesService, useValue: mockChallenges },
-        { provide: AiUsageService, useValue: mockAiUsage as unknown as AiUsageService },
+        { provide: AiProviderService, useValue: mockAi as unknown as AiProviderService },
       ],
     }).compile();
 
@@ -155,31 +164,6 @@ describe('TutorService', () => {
       },
     ];
 
-    const buildMockStream = (
-      chunks: Array<object> = [
-        { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hola' } },
-        { type: 'content_block_delta', delta: { type: 'text_delta', text: ' mundo' } },
-      ],
-      finalMessage: () => Promise<{
-        usage: { input_tokens: number; output_tokens: number };
-      }> = () => Promise.resolve({ usage: { input_tokens: 320, output_tokens: 85 } }),
-    ) => ({
-      [Symbol.asyncIterator]: async function* () {
-        for (const chunk of chunks) {
-          yield chunk;
-        }
-      },
-      finalMessage,
-    });
-
-    const setMockAnthropic = (streamReturnValue: object) => {
-      Object.defineProperty(service, 'anthropic', {
-        value: { messages: { stream: jest.fn().mockReturnValue(streamReturnValue) } },
-        writable: true,
-        configurable: true,
-      });
-    };
-
     beforeEach(() => {
       mockTutorMessage.count.mockResolvedValue(0);
       // Copia nueva en cada llamada: streamChat hace history.reverse(), que
@@ -188,10 +172,10 @@ describe('TutorService', () => {
       // aislamiento del mock, no del servicio).
       mockTutorMessage.findMany.mockImplementation(() => Promise.resolve([...historialPrevio]));
       mockTutorMessage.create.mockResolvedValue({});
-      setMockAnthropic(buildMockStream());
+      mockAi.streamChat.mockImplementation(streamOf('Hola', ' mundo'));
     });
 
-    it('guarda el mensaje del usuario en BD antes de llamar a Anthropic', async () => {
+    it('guarda el mensaje del usuario en BD antes de llamar al proveedor', async () => {
       await service.streamChat(userId, dto, mockRes);
 
       expect(mockTutorMessage.create).toHaveBeenCalledWith({
@@ -205,7 +189,7 @@ describe('TutorService', () => {
         },
       });
 
-      const streamMock = service['anthropic'].messages.stream as jest.Mock;
+      const streamMock = mockAi.streamChat;
       const createCalls = mockTutorMessage.create.mock.calls;
       const userCreateCallIndex = createCalls.findIndex((call) => call[0].data.role === 'user');
       const streamCallOrder = streamMock.mock.invocationCallOrder[0];
@@ -225,7 +209,7 @@ describe('TutorService', () => {
 
       // Debe dispararse tras persistir el mensaje del alumno y antes de iniciar
       // el streaming (no debe retrasar la respuesta SSE).
-      const streamMock = service['anthropic'].messages.stream as jest.Mock;
+      const streamMock = mockAi.streamChat;
       const createCalls = mockTutorMessage.create.mock.calls;
       const userCreateCallIndex = createCalls.findIndex((call) => call[0].data.role === 'user');
       const userCreateCallOrder =
@@ -237,17 +221,19 @@ describe('TutorService', () => {
       expect(checkAndAwardCallOrder).toBeLessThan(streamCallOrder);
     });
 
-    it('incluye historial previo en los mensajes enviados a Anthropic', async () => {
+    it('incluye historial previo en los mensajes enviados al proveedor, con el system prompt y el cupo de tokens', async () => {
       await service.streamChat(userId, dto, mockRes);
 
-      const streamMock = service['anthropic'].messages.stream as jest.Mock;
-      const llamadaArgs = streamMock.mock.calls[0][0];
+      const input = mockAi.streamChat.mock.calls[0][0];
 
-      expect(llamadaArgs.messages).toEqual([
-        { role: 'user', content: 'Pregunta anterior' },
-        { role: 'assistant', content: 'Respuesta anterior' },
-        { role: 'user', content: dto.message },
+      expect(input.messages).toEqual([
+        { role: 'user', text: 'Pregunta anterior' },
+        { role: 'assistant', text: 'Respuesta anterior' },
+        { role: 'user', text: dto.message },
       ]);
+      expect(input.system).toContain('tutor virtual de VKB Academy');
+      expect(input.system).toContain('Biología');
+      expect(input.maxTokens).toBe(1024);
     });
 
     it('escribe chunks SSE al response durante el streaming', async () => {
@@ -282,7 +268,7 @@ describe('TutorService', () => {
         status: 429,
       });
 
-      // Ni se guarda el mensaje ni se toca Anthropic: el corte es antes de todo
+      // Ni se guarda el mensaje ni se toca la IA: el corte es antes de todo
       expect(mockTutorMessage.create).not.toHaveBeenCalled();
       expect(mockRes.setHeader).not.toHaveBeenCalled();
     });
@@ -308,43 +294,19 @@ describe('TutorService', () => {
       expect(mockTutorMessage.create).toHaveBeenCalled();
     });
 
-    it('registra el consumo del tutor con los tokens del stream', async () => {
+    it('atribuye el consumo al alumno con la categoría CHATBOT', async () => {
       await service.streamChat(userId, dto, mockRes);
 
-      expect(mockAiUsage.record).toHaveBeenCalledWith(
-        { userId, category: 'CHATBOT' },
-        {
-          provider: 'haiku',
-          model: 'claude-haiku-4-5-20251001',
-          inputTokens: 320,
-          outputTokens: 85,
-        },
-      );
+      expect(mockAi.streamChat.mock.calls[0][0].context).toEqual({
+        userId,
+        category: 'CHATBOT',
+      });
     });
 
-    it('si no se puede leer el consumo, la respuesta del tutor se guarda igual', async () => {
-      // La contabilidad va DESPUÉS del guardado y en su propio try: el alumno no
-      // puede perder una respuesta que ya ha leído por un fallo de facturación.
-      setMockAnthropic(buildMockStream(undefined, () => Promise.reject(new Error('sin usage'))));
-
-      await service.streamChat(userId, dto, mockRes);
-
-      const assistantCreate = mockTutorMessage.create.mock.calls.find(
-        (call) => call[0].data.role === 'assistant',
-      );
-      expect(assistantCreate).toBeDefined();
-      expect(assistantCreate[0].data.content).toBe('Hola mundo');
-      expect(mockRes.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ done: true })}\n\n`);
-    });
-
-    it('en caso de error de Anthropic, escribe evento SSE de error', async () => {
-      const mockStreamError = {
-        [Symbol.asyncIterator]: async function* () {
-          throw new Error('Fallo de red Anthropic');
-        },
-      };
-
-      setMockAnthropic(mockStreamError);
+    it('si el proveedor falla, escribe evento SSE de error', async () => {
+      mockAi.streamChat.mockImplementation(async function* () {
+        throw new Error('Los dos proveedores fallaron');
+      });
 
       await service.streamChat(userId, dto, mockRes);
 
@@ -358,14 +320,10 @@ describe('TutorService', () => {
       expect(mockRes.end).toHaveBeenCalledTimes(1);
     });
 
-    it('siempre llama a res.end() incluso cuando Anthropic lanza un error', async () => {
-      const mockStreamError = {
-        [Symbol.asyncIterator]: async function* () {
-          throw new Error('Fallo inesperado');
-        },
-      };
-
-      setMockAnthropic(mockStreamError);
+    it('siempre llama a res.end() incluso cuando el proveedor lanza un error', async () => {
+      mockAi.streamChat.mockImplementation(async function* () {
+        throw new Error('Fallo inesperado');
+      });
 
       await service.streamChat(userId, dto, mockRes);
 
@@ -378,34 +336,25 @@ describe('TutorService', () => {
         mimeType: 'image/jpeg' as const,
       };
 
-      it('manda a Anthropic un bloque image base64 seguido del texto', async () => {
+      it('manda al proveedor la foto en base64 junto al texto del último turno', async () => {
         await service.streamChat(userId, dto, mockRes, image);
 
-        const streamMock = service['anthropic'].messages.stream as jest.Mock;
-        const { messages } = streamMock.mock.calls[0][0];
+        const { messages } = mockAi.streamChat.mock.calls[0][0];
         const last = messages[messages.length - 1];
 
-        expect(last.role).toBe('user');
-        expect(last.content).toEqual([
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: 'image/jpeg',
-              data: image.buffer.toString('base64'),
-            },
-          },
-          { type: 'text', text: dto.message },
-        ]);
+        expect(last).toEqual({
+          role: 'user',
+          text: dto.message,
+          image: { mimeType: 'image/jpeg', base64: image.buffer.toString('base64') },
+        });
       });
 
       it('sin texto, pregunta por defecto y la guarda como contenido del mensaje', async () => {
         await service.streamChat(userId, { ...dto, message: undefined }, mockRes, image);
 
-        const streamMock = service['anthropic'].messages.stream as jest.Mock;
-        const { messages } = streamMock.mock.calls[0][0];
+        const { messages } = mockAi.streamChat.mock.calls[0][0];
         const last = messages[messages.length - 1];
-        expect(last.content[1]).toEqual({ type: 'text', text: '¿Me ayudas con este ejercicio?' });
+        expect(last.text).toBe('¿Me ayudas con este ejercicio?');
 
         const userCreate = mockTutorMessage.create.mock.calls.find(
           (c) => c[0].data.role === 'user',
@@ -424,28 +373,25 @@ describe('TutorService', () => {
 
       it('añade al system prompt las instrucciones de foto solo cuando hay foto', async () => {
         await service.streamChat(userId, dto, mockRes, image);
-        const streamMock = service['anthropic'].messages.stream as jest.Mock;
-        expect(streamMock.mock.calls[0][0].system).toContain('ha adjuntado la foto');
+        expect(mockAi.streamChat.mock.calls[0][0].system).toContain('ha adjuntado la foto');
 
         jest.clearAllMocks();
         mockTutorMessage.findMany.mockImplementation(() => Promise.resolve([...historialPrevio]));
         mockTutorMessage.create.mockResolvedValue({});
-        setMockAnthropic(buildMockStream());
+        mockAi.streamChat.mockImplementation(streamOf('Hola', ' mundo'));
 
         await service.streamChat(userId, dto, mockRes);
-        const streamMock2 = service['anthropic'].messages.stream as jest.Mock;
-        expect(streamMock2.mock.calls[0][0].system).not.toContain('ha adjuntado la foto');
+        expect(mockAi.streamChat.mock.calls[0][0].system).not.toContain('ha adjuntado la foto');
       });
     });
 
-    it('sin texto ni foto responde 400 y no toca BD ni Anthropic', async () => {
+    it('sin texto ni foto responde 400 y no toca BD ni la IA', async () => {
       await expect(
         service.streamChat(userId, { ...dto, message: '   ' }, mockRes),
       ).rejects.toMatchObject({ status: 400, message: 'Escribe una pregunta o adjunta una foto' });
 
       expect(mockTutorMessage.create).not.toHaveBeenCalled();
-      const streamMock = service['anthropic'].messages.stream as jest.Mock;
-      expect(streamMock).not.toHaveBeenCalled();
+      expect(mockAi.streamChat).not.toHaveBeenCalled();
     });
   });
 });

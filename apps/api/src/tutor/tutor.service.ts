@@ -1,17 +1,16 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Anthropic from '@anthropic-ai/sdk';
 import { AiUsageCategory, ChallengeType } from '@prisma/client';
 import { Response } from 'express';
 import { TUTOR_DEFAULT_IMAGE_PROMPT } from '@vkbacademy/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesService } from '../challenges/challenges.service';
-import { AiUsageService } from '../ai/ai-usage.service';
+import { AiChatMessage, AiProviderService } from '../ai/ai-provider.service';
 import { currentDayStart } from '../challenges/challenge-periods';
 import { TutorChatDto } from './dto/tutor-chat.dto';
 
-/** Modelo del tutor. Pinneado, igual que los del AiProviderService. */
-const TUTOR_MODEL = 'claude-haiku-4-5-20251001';
+/** Tope de la respuesta. 3-4 párrafos caben de sobra; el prompt ya pide concisión. */
+const TUTOR_MAX_TOKENS = 1024;
 
 /**
  * Preguntas al tutor por alumno y día.
@@ -43,18 +42,15 @@ export const DEFAULT_IMAGE_PROMPT = TUTOR_DEFAULT_IMAGE_PROMPT;
 @Injectable()
 export class TutorService {
   private readonly logger = new Logger(TutorService.name);
-  private readonly anthropic: Anthropic;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly challenges: ChallengesService,
-    private readonly aiUsage: AiUsageService,
-  ) {
-    this.anthropic = new Anthropic({
-      apiKey: this.config.get<string>('ANTHROPIC_API_KEY'),
-    });
-  }
+    // Gemini primero, Haiku si falla — la misma política que el resto de la IA.
+    // El proveedor registra el consumo por quien responda.
+    private readonly ai: AiProviderService,
+  ) {}
 
   /** Límite diario efectivo, configurable por entorno. */
   private get dailyLimit(): number {
@@ -137,48 +133,38 @@ export class TutorService {
     res.setHeader('X-Accel-Buffering', 'no'); // evitar buffering en nginx
     res.flushHeaders();
 
-    // 5. Construir mensajes para Anthropic (historial + mensaje actual). El
-    //    historial es siempre texto: la foto no se guarda, así que en las
-    //    preguntas de seguimiento el modelo se apoya en su propia respuesta.
-    const currentContent: Anthropic.MessageParam['content'] = image
-      ? [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: image.mimeType,
-              data: image.buffer.toString('base64'),
-            },
-          },
-          { type: 'text', text: message },
-        ]
-      : message;
-
-    const anthropicMessages: Anthropic.MessageParam[] = [
+    // 5. Turnos para el proveedor (historial + mensaje actual). El historial
+    //    es siempre texto: la foto no se guarda, así que en las preguntas de
+    //    seguimiento el modelo se apoya en su propia respuesta.
+    const messages: AiChatMessage[] = [
       ...contextMessages.map((m) => ({
         role: m.role as 'user' | 'assistant',
-        content: m.content,
+        text: m.content,
       })),
-      { role: 'user' as const, content: currentContent },
+      {
+        role: 'user',
+        text: message,
+        ...(image
+          ? { image: { mimeType: image.mimeType, base64: image.buffer.toString('base64') } }
+          : {}),
+      },
     ];
 
-    // 6. Hacer streaming desde Anthropic
+    // 6. Streaming. Si Gemini falla antes del primer trozo el proveedor cae a
+    //    Haiku solo; si falla a mitad, el error llega aquí y se pinta.
     let fullResponse = '';
 
     try {
-      const stream = this.anthropic.messages.stream({
-        model: TUTOR_MODEL,
-        max_tokens: 1024,
+      const stream = this.ai.streamChat({
         system: systemPrompt,
-        messages: anthropicMessages,
+        messages,
+        maxTokens: TUTOR_MAX_TOKENS,
+        context: { userId, category: AiUsageCategory.CHATBOT },
       });
 
-      for await (const event of stream) {
-        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-          const text = event.delta.text;
-          fullResponse += text;
-          res.write(`data: ${JSON.stringify({ text })}\n\n`);
-        }
+      for await (const text of stream) {
+        fullResponse += text;
+        res.write(`data: ${JSON.stringify({ text })}\n\n`);
       }
 
       // 7. Guardar la respuesta completa del asistente en BD
@@ -191,28 +177,6 @@ export class TutorService {
           lessonId: dto.lessonId ?? null,
         },
       });
-
-      // 8.b Registrar el consumo, DESPUÉS de guardar y en su propio try: el
-      //      tutor llama a Anthropic directamente, así que se contabiliza aquí.
-      //      Va detrás del guardado a propósito — si finalMessage() falla, el
-      //      alumno no puede perder la respuesta que ya ha leído por una
-      //      cuestión de contabilidad.
-      try {
-        const finalMessage = await stream.finalMessage();
-        void this.aiUsage.record(
-          { userId, category: AiUsageCategory.CHATBOT },
-          {
-            provider: 'haiku',
-            model: TUTOR_MODEL,
-            inputTokens: finalMessage.usage.input_tokens,
-            outputTokens: finalMessage.usage.output_tokens,
-          },
-        );
-      } catch (err) {
-        this.logger.warn(
-          `No se pudo leer el consumo del tutor para userId=${userId}: ${String(err)}`,
-        );
-      }
 
       // 8. Señal de fin
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);

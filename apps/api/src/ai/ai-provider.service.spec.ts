@@ -8,8 +8,10 @@ import { AiProviderService } from './ai-provider.service';
 // GoogleGenerativeAIAbortError) vía requireActual — solo se mockea el
 // constructor principal.
 const mockGeminiGenerateContent = jest.fn();
+const mockGeminiGenerateContentStream = jest.fn();
 const mockGeminiGetGenerativeModel = jest.fn(() => ({
   generateContent: mockGeminiGenerateContent,
+  generateContentStream: mockGeminiGenerateContentStream,
 }));
 jest.mock('@google/generative-ai', () => ({
   ...jest.requireActual('@google/generative-ai'),
@@ -21,11 +23,12 @@ jest.mock('@google/generative-ai', () => ({
 // Mock de @anthropic-ai/sdk (default export). Conserva las clases de error
 // reales (p. ej. APIConnectionTimeoutError) vía requireActual.
 const mockAnthropicCreate = jest.fn();
+const mockAnthropicStream = jest.fn();
 jest.mock('@anthropic-ai/sdk', () => ({
   ...jest.requireActual('@anthropic-ai/sdk'),
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({
-    messages: { create: mockAnthropicCreate },
+    messages: { create: mockAnthropicCreate, stream: mockAnthropicStream },
   })),
 }));
 
@@ -429,4 +432,222 @@ describe('AiProviderService', () => {
 
       expect(provider.__usage.record).not.toHaveBeenCalled();
     });
+    describe('streamChat (chat en streaming, Gemini → Haiku)', () => {
+    // Este describe cuelga de «atribución del consumo», que está fuera del
+    // beforeEach global: sin esto las llamadas se acumulan entre tests.
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    const context = { userId: 'u1', category: 'CHATBOT' as const };
+
+    /** Stream de Gemini como lo devuelve el SDK: chunks con .text() y la respuesta final aparte. */
+    const geminiStream = (
+      texts: string[],
+      usage: Record<string, number> = { promptTokenCount: 10, candidatesTokenCount: 5, thoughtsTokenCount: 2 },
+    ) => ({
+      stream: (async function* () {
+        for (const t of texts) yield { text: () => t };
+      })(),
+      response: Promise.resolve({ usageMetadata: usage }),
+    });
+
+    /** Stream de Anthropic: eventos content_block_delta y finalMessage() con el consumo. */
+    const haikuStream = (texts: string[]) => ({
+      [Symbol.asyncIterator]: async function* () {
+        for (const t of texts) {
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: t } };
+        }
+      },
+      finalMessage: () => Promise.resolve({ usage: { input_tokens: 320, output_tokens: 85 } }),
+    });
+
+    const collect = async (it: AsyncIterable<string>) => {
+      const out: string[] = [];
+      for await (const c of it) out.push(c);
+      return out;
+    };
+
+    const input = {
+      system: 'Eres el tutor',
+      messages: [
+        { role: 'user' as const, text: 'Pregunta anterior' },
+        { role: 'assistant' as const, text: 'Respuesta anterior' },
+        {
+          role: 'user' as const,
+          text: '¿Qué ves?',
+          image: { mimeType: 'image/jpeg', base64: 'QUJD' },
+        },
+      ],
+      maxTokens: 1024,
+      context,
+    };
+
+    it('en auto, emite los trozos de Gemini en orden y registra su consumo', async () => {
+      mockGeminiGenerateContentStream.mockResolvedValue(geminiStream(['Hola', ' mundo']));
+      const provider = createProvider();
+
+      const chunks = await collect(provider.streamChat(input));
+
+      expect(chunks).toEqual(['Hola', ' mundo']);
+      expect(mockAnthropicStream).not.toHaveBeenCalled();
+      expect(provider.__usage.record).toHaveBeenCalledWith(context, {
+        provider: 'gemini',
+        model: 'gemini-3.5-flash',
+        inputTokens: 10,
+        outputTokens: 7,
+      });
+    });
+
+    it('a Gemini le pasa el system prompt, el historial con rol model y la foto como inlineData antes del texto', async () => {
+      mockGeminiGenerateContentStream.mockResolvedValue(geminiStream(['ok']));
+      const provider = createProvider();
+
+      await collect(provider.streamChat(input));
+
+      const [modelArgs] = mockGeminiGetGenerativeModel.mock.calls[0] as unknown as [
+        { systemInstruction?: string; generationConfig: Record<string, unknown> },
+      ];
+      expect(modelArgs.systemInstruction).toBe('Eres el tutor');
+      // Es prosa, no JSON: sin responseMimeType
+      expect(modelArgs.generationConfig.responseMimeType).toBeUndefined();
+      expect(modelArgs.generationConfig.maxOutputTokens).toBe(1024);
+
+      const [request] = mockGeminiGenerateContentStream.mock.calls[0] as unknown as [
+        { contents: { role: string; parts: unknown[] }[] },
+      ];
+      expect(request.contents).toEqual([
+        { role: 'user', parts: [{ text: 'Pregunta anterior' }] },
+        { role: 'model', parts: [{ text: 'Respuesta anterior' }] },
+        {
+          role: 'user',
+          parts: [{ inlineData: { mimeType: 'image/jpeg', data: 'QUJD' } }, { text: '¿Qué ves?' }],
+        },
+      ]);
+    });
+
+    it('si Gemini falla antes del primer trozo, cae a Haiku sin que el caller lo note', async () => {
+      mockGeminiGenerateContentStream.mockRejectedValue(new Error('429 quota'));
+      mockAnthropicStream.mockReturnValue(haikuStream(['Hola', ' desde Haiku']));
+      const provider = createProvider();
+
+      const chunks = await collect(provider.streamChat(input));
+
+      expect(chunks).toEqual(['Hola', ' desde Haiku']);
+      expect(provider.__usage.record).toHaveBeenCalledWith(context, {
+        provider: 'haiku',
+        model: 'claude-haiku-4-5-20251001',
+        inputTokens: 320,
+        outputTokens: 85,
+      });
+    });
+
+    it('si Gemini no emite ningún texto, también cae a Haiku', async () => {
+      mockGeminiGenerateContentStream.mockResolvedValue(geminiStream([]));
+      mockAnthropicStream.mockReturnValue(haikuStream(['Haiku']));
+      const provider = createProvider();
+
+      const chunks = await collect(provider.streamChat(input));
+
+      expect(chunks).toEqual(['Haiku']);
+    });
+
+    it('si Gemini falla después del primer trozo, el error sube y NO se llama a Haiku', async () => {
+      // Lo ya emitido está en pantalla del alumno: repetir la respuesta con otro
+      // proveedor la duplicaría. El caller pinta su error y listo.
+      mockGeminiGenerateContentStream.mockResolvedValue({
+        stream: (async function* () {
+          yield { text: () => 'Hola' };
+          throw new Error('conexión cortada');
+        })(),
+        response: Promise.resolve({ usageMetadata: {} }),
+      });
+      const provider = createProvider();
+
+      const received: string[] = [];
+      await expect(
+        (async () => {
+          for await (const c of provider.streamChat(input)) received.push(c);
+        })(),
+      ).rejects.toThrow('conexión cortada');
+
+      expect(received).toEqual(['Hola']);
+      expect(mockAnthropicStream).not.toHaveBeenCalled();
+    });
+
+    it('a Haiku le pasa el system prompt y la foto como bloque image antes del texto', async () => {
+      mockAnthropicStream.mockReturnValue(haikuStream(['ok']));
+      const provider = createProvider({ AI_PROVIDER: 'haiku' });
+
+      await collect(provider.streamChat(input));
+
+      expect(mockGeminiGenerateContentStream).not.toHaveBeenCalled();
+      const [params] = mockAnthropicStream.mock.calls[0] as unknown as [
+        { system: string; max_tokens: number; messages: { role: string; content: unknown }[] },
+      ];
+      expect(params.system).toBe('Eres el tutor');
+      expect(params.max_tokens).toBe(1024);
+      expect(params.messages).toEqual([
+        { role: 'user', content: 'Pregunta anterior' },
+        { role: 'assistant', content: 'Respuesta anterior' },
+        {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'QUJD' } },
+            { type: 'text', text: '¿Qué ves?' },
+          ],
+        },
+      ]);
+    });
+
+    it('en modo gemini, un fallo de Gemini sube sin tocar Haiku', async () => {
+      mockGeminiGenerateContentStream.mockRejectedValue(new Error('Gemini down'));
+      const provider = createProvider({ AI_PROVIDER: 'gemini' });
+
+      await expect(collect(provider.streamChat(input))).rejects.toThrow('Gemini down');
+      expect(mockAnthropicStream).not.toHaveBeenCalled();
+    });
+
+    it('si fallan los dos, el error nombra a ambos', async () => {
+      mockGeminiGenerateContentStream.mockRejectedValue(new Error('Gemini 503'));
+      mockAnthropicStream.mockImplementation(() => {
+        throw new Error('credit balance is too low');
+      });
+      const provider = createProvider();
+
+      await expect(collect(provider.streamChat(input))).rejects.toThrow(
+        /Gemini: Gemini 503.*Haiku: credit balance is too low/,
+      );
+    });
+
+    it('normaliza el historial: quita turnos de asistente al principio y funde turnos seguidos del mismo rol', async () => {
+      // La ventana de 10 mensajes puede empezar por una respuesta, y un envío
+      // que falló deja dos preguntas seguidas. Ambas APIs exigen empezar por
+      // user y alternar.
+      mockGeminiGenerateContentStream.mockResolvedValue(geminiStream(['ok']));
+      const provider = createProvider();
+
+      await collect(
+        provider.streamChat({
+          ...input,
+          messages: [
+            { role: 'assistant', text: 'huérfana' },
+            { role: 'user', text: 'uno' },
+            { role: 'user', text: 'dos' },
+            { role: 'assistant', text: 'resp' },
+            { role: 'user', text: 'tres' },
+          ],
+        }),
+      );
+
+      const [request] = mockGeminiGenerateContentStream.mock.calls[0] as unknown as [
+        { contents: { role: string; parts: { text?: string }[] }[] },
+      ];
+      expect(request.contents).toEqual([
+        { role: 'user', parts: [{ text: 'uno\n\ndos' }] },
+        { role: 'model', parts: [{ text: 'resp' }] },
+        { role: 'user', parts: [{ text: 'tres' }] },
+      ]);
+    });
   });
+});
