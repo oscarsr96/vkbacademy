@@ -84,9 +84,18 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
 
   // ─── Foto ───────────────────────────────────────────────────────────────────
 
+  // Espejo en ref del adjunto actual: si el componente se desmonta con una
+  // foto pendiente de enviar, el cleanup de abajo necesita el valor vigente
+  // sin depender del cierre de un useEffect que ya no se re-ejecutará.
+  const attachmentRef = useRef<Attachment | null>(null);
+
   function releaseAttachment(att: Attachment | null) {
     if (att) URL.revokeObjectURL(att.previewUrl);
   }
+
+  useEffect(() => {
+    return () => releaseAttachment(attachmentRef.current);
+  }, []);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -99,7 +108,9 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
     try {
       const blob = await downscaleImage(file);
       releaseAttachment(attachment);
-      setAttachment({ blob, previewUrl: URL.createObjectURL(blob) });
+      const next = { blob, previewUrl: URL.createObjectURL(blob) };
+      attachmentRef.current = next;
+      setAttachment(next);
     } catch {
       setAttachError('No se pudo leer la foto. Prueba con otra.');
     } finally {
@@ -109,6 +120,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
 
   function handleRemoveAttachment() {
     releaseAttachment(attachment);
+    attachmentRef.current = null;
     setAttachment(null);
   }
 
@@ -132,6 +144,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
     setMessages((prev) => [...prev, userMsg]);
     setInputValue('');
     releaseAttachment(attachment);
+    attachmentRef.current = null;
     setAttachment(null);
     setIsStreaming(true);
     setStreamingText('');

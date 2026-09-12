@@ -71,6 +71,17 @@ describe('TutorChat', () => {
     expect(screen.getByRole('button', { name: /enviar/i })).toBeDisabled();
   });
 
+  it('desmontar con una foto pendiente libera su object URL', async () => {
+    const { unmount } = renderChat();
+
+    await userEvent.upload(screen.getByLabelText(/adjuntar foto/i), photo);
+    await screen.findByAltText(/foto adjunta/i);
+
+    unmount();
+
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:preview');
+  });
+
   it('enviar con foto manda la imagen reducida y pinta el chip en el hilo', async () => {
     renderChat();
 

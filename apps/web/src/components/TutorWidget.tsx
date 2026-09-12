@@ -43,39 +43,44 @@ export default function TutorWidget() {
         </button>
       )}
 
-      {isOpen && (
-        <div style={styles.panel}>
-          <div style={styles.header}>
-            <div style={styles.headerLeft}>
-              <span style={styles.headerIcon}>🤖</span>
-              <div>
-                <div style={styles.headerTitle}>Tutor VKB</div>
-                {(courseName || schoolYear) && (
-                  <div style={styles.contextBadge}>
-                    {courseName ?? ''}
-                    {schoolYear ? ` · ${schoolYear}` : ''}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div style={styles.headerActions}>
-              <button
-                onClick={() => setIsOpen(false)}
-                style={styles.headerBtn}
-                title="Cerrar"
-                aria-label="Cerrar"
-              >
-                ✕
-              </button>
+      {/*
+        TutorChat se mantiene montado durante toda la vida del widget: si se
+        desmontara al cerrar la burbuja, perdería el hilo en memoria y
+        cualquier streaming en curso. En su lugar se oculta el panel con
+        `display: none` — el atributo `hidden` no serviría porque el `display:
+        flex` inline de abajo lo pisaría.
+      */}
+      <div style={{ ...styles.panel, display: isOpen ? 'flex' : 'none' }}>
+        <div style={styles.header}>
+          <div style={styles.headerLeft}>
+            <span style={styles.headerIcon}>🤖</span>
+            <div>
+              <div style={styles.headerTitle}>Tutor VKB</div>
+              {(courseName || schoolYear) && (
+                <div style={styles.contextBadge}>
+                  {courseName ?? ''}
+                  {schoolYear ? ` · ${schoolYear}` : ''}
+                </div>
+              )}
             </div>
           </div>
-
-          {/* El panel fija la altura; TutorChat la rellena */}
-          <div style={styles.body}>
-            <TutorChat context={context} autoFocus />
+          <div style={styles.headerActions}>
+            <button
+              onClick={() => setIsOpen(false)}
+              style={styles.headerBtn}
+              title="Cerrar"
+              aria-label="Cerrar"
+            >
+              ✕
+            </button>
           </div>
         </div>
-      )}
+
+        {/* El panel fija la altura; TutorChat la rellena */}
+        <div style={styles.body}>
+          <TutorChat context={context} autoFocus={isOpen} />
+        </div>
+      </div>
     </>
   );
 }
