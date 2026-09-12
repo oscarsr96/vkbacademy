@@ -9,7 +9,7 @@ import Icon from '../components/ui/Icon';
 
 type NavItem = { to: string; label: string; icon: string; end?: boolean; divider?: boolean };
 
-function buildNavLinks(role: Role | undefined): NavItem[] {
+export function buildNavLinks(role: Role | undefined): NavItem[] {
   const base: NavItem[] = [{ to: '/dashboard', label: 'Inicio', icon: 'home', end: true }];
 
   if (role === Role.SUPER_ADMIN) {
@@ -43,6 +43,8 @@ function buildNavLinks(role: Role | undefined): NavItem[] {
   return [
     ...base,
     { to: '/study', label: 'Estudiar', icon: 'brain' },
+    // Dudas: el tutor IA a pantalla completa, con foto del ejercicio
+    { to: '/tutor', label: 'Dudas', icon: 'message' },
     { to: '/challenges', label: 'Retos', icon: 'trophy' },
     // Los certificados solo se alcanzaban por el rail del dashboard o desde la
     // ficha de un curso: el alumno que quería releerlos no tenía por dónde.
