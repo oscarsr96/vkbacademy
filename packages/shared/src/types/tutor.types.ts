@@ -10,10 +10,13 @@ export interface TutorMessageDto {
 }
 
 export interface TutorChatPayload {
-  message: string;
+  message?: string;
   courseId?: string;
   lessonId?: string;
   courseName?: string;
   lessonName?: string;
   schoolYear?: string;
 }
+
+/** Texto que "dice" el alumno cuando manda solo la foto, sin escribir nada. */
+export const TUTOR_DEFAULT_IMAGE_PROMPT = '¿Me ayudas con este ejercicio?';

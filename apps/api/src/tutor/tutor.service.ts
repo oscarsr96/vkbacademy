@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
 import { AiUsageCategory, ChallengeType } from '@prisma/client';
 import { Response } from 'express';
+import { TUTOR_DEFAULT_IMAGE_PROMPT } from '@vkbacademy/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesService } from '../challenges/challenges.service';
 import { AiUsageService } from '../ai/ai-usage.service';
@@ -37,7 +38,7 @@ export interface TutorImage {
 }
 
 /** Lo que "dice" el alumno cuando manda la foto sin escribir nada. */
-export const DEFAULT_IMAGE_PROMPT = '¿Me ayudas con este ejercicio?';
+export const DEFAULT_IMAGE_PROMPT = TUTOR_DEFAULT_IMAGE_PROMPT;
 
 @Injectable()
 export class TutorService {

@@ -116,6 +116,29 @@ describe('TutorChat', () => {
     );
   });
 
+  it('dos instancias bajo la misma caché comparten el hilo (burbuja + página Dudas)', async () => {
+    // La caché de React Query es la fuente de verdad: enviar en una instancia
+    // debe reflejarse en la otra sin recargar, tanto el mensaje del alumno
+    // como la respuesta del tutor.
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <TutorChat />
+        <TutorChat />
+      </QueryClientProvider>,
+    );
+
+    const textareas = await screen.findAllByPlaceholderText(/escribe tu pregunta/i);
+    expect(textareas).toHaveLength(2);
+
+    await userEvent.type(textareas[0], 'Hola');
+    const sendButtons = screen.getAllByRole('button', { name: /enviar/i });
+    await userEvent.click(sendButtons[0]);
+
+    expect(await screen.findAllByText('Hola')).toHaveLength(2);
+    expect(await screen.findAllByText('Veo una ecuación')).toHaveLength(2);
+  });
+
   it('un mensaje del historial con hasImage muestra el chip', async () => {
     mockGetHistory.mockResolvedValue([
       {

@@ -28,8 +28,8 @@ mismo cupo y el mismo endpoint, más la entrada por imagen.
 - Ruta `tutor` en `App.tsx` dentro del layout autenticado, lazy como el resto → `pages/TutorPage.tsx`.
 - `TutorPage`: cabecera con título "Dudas" y una línea de ayuda ("Pregunta lo que no
   entiendas o sube la foto de un ejercicio"), y debajo `TutorChat` ocupando la altura
-  disponible. El botón de limpiar historial (con su confirmación) va dentro de
-  `TutorChat`, así lo tienen la página y la burbuja sin duplicarlo.
+  disponible. El botón de limpiar historial va dentro de `TutorChat`, así lo tienen la
+  página y la burbuja sin duplicarlo.
 - Iconos nuevos en `components/ui/icons.ts`: `message` (bocadillo) y `camera`. Mismo
   estilo de línea que el resto del registro.
 

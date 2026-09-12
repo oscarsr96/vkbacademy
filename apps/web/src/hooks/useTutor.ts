@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { clearTutorHistory, getTutorHistory } from '../api/tutor.api';
 
-const HISTORY_KEY = ['tutor', 'history'] as const;
+export const HISTORY_KEY = ['tutor', 'history'] as const;
 
 export function useTutorHistory() {
   return useQuery({

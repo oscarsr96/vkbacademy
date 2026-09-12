@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { TutorMessageDto } from '@vkbacademy/shared';
+import { useQueryClient } from '@tanstack/react-query';
+import { TUTOR_DEFAULT_IMAGE_PROMPT, TutorMessageDto } from '@vkbacademy/shared';
 import { chatStream } from '../../api/tutor.api';
-import { useClearHistory, useTutorHistory } from '../../hooks/useTutor';
+import { HISTORY_KEY, useClearHistory, useTutorHistory } from '../../hooks/useTutor';
 import { downscaleImage } from '../../utils/downscaleImage';
 import Icon from '../ui/Icon';
 
@@ -42,11 +43,9 @@ function toLocalMessage(m: TutorMessageDto): LocalMessage {
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function TutorChat({ context, autoFocus = false }: TutorChatProps) {
-  const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
-  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [isPreparingImage, setIsPreparingImage] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
@@ -54,18 +53,17 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   // ─── Historial ──────────────────────────────────────────────────────────────
 
-  const { data: history, isSuccess: historyReady } = useTutorHistory();
+  // La caché de React Query es la única fuente de verdad: la burbuja y la
+  // página Dudas montan cada una su propio TutorChat, y sin esto cada
+  // instancia llevaba su copia de `messages` que se desincronizaba de la otra
+  // hasta recargar. Enviar y limpiar escriben aquí, nunca en estado local.
+  const { data: history } = useTutorHistory();
   const { mutate: clearHistory, isPending: isClearing } = useClearHistory();
-
-  useEffect(() => {
-    if (historyReady && !historyLoaded && history) {
-      setMessages(history.map(toLocalMessage));
-      setHistoryLoaded(true);
-    }
-  }, [historyReady, historyLoaded, history]);
+  const messages: LocalMessage[] = (history ?? []).map(toLocalMessage);
 
   // ─── Auto-scroll al último mensaje ─────────────────────────────────────────
 
@@ -107,7 +105,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
     setIsPreparingImage(true);
     try {
       const blob = await downscaleImage(file);
-      releaseAttachment(attachment);
+      releaseAttachment(attachmentRef.current);
       const next = { blob, previewUrl: URL.createObjectURL(blob) };
       attachmentRef.current = next;
       setAttachment(next);
@@ -119,7 +117,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
   }
 
   function handleRemoveAttachment() {
-    releaseAttachment(attachment);
+    releaseAttachment(attachmentRef.current);
     attachmentRef.current = null;
     setAttachment(null);
   }
@@ -129,21 +127,39 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
   const canSend =
     !isStreaming && !isPreparingImage && (inputValue.trim() !== '' || attachment !== null);
 
+  /**
+   * Añade un mensaje a la caché de React Query, la única fuente de verdad del
+   * hilo: así lo ve al instante cualquier otra instancia de TutorChat montada
+   * (burbuja + página Dudas comparten el mismo QueryClient).
+   */
+  function appendToHistory(msg: LocalMessage) {
+    const dto: TutorMessageDto = {
+      id: msg.id,
+      role: msg.role,
+      content: msg.content,
+      hasImage: msg.hasImage,
+      courseId: null,
+      lessonId: null,
+      createdAt: new Date().toISOString(),
+    };
+    queryClient.setQueryData<TutorMessageDto[]>(HISTORY_KEY, (prev) => [...(prev ?? []), dto]);
+  }
+
   async function handleSend() {
     if (!canSend) return;
     const text = inputValue.trim();
-    const image = attachment?.blob;
+    const image = attachmentRef.current?.blob;
 
     const userMsg: LocalMessage = {
       id: `local-${Date.now()}`,
       role: 'user',
       // Mismo texto por defecto que pone el servidor cuando solo va la foto
-      content: text || '¿Me ayudas con este ejercicio?',
+      content: text || TUTOR_DEFAULT_IMAGE_PROMPT,
       hasImage: Boolean(image),
     };
-    setMessages((prev) => [...prev, userMsg]);
+    appendToHistory(userMsg);
     setInputValue('');
-    releaseAttachment(attachment);
+    releaseAttachment(attachmentRef.current);
     attachmentRef.current = null;
     setAttachment(null);
     setIsStreaming(true);
@@ -152,7 +168,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
     try {
       const response = await chatStream(
         {
-          message: text,
+          message: text || undefined,
           courseId: context?.courseId,
           lessonId: context?.lessonId,
           courseName: context?.courseName,
@@ -199,29 +215,23 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
             }
 
             if (data.done) {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `assistant-${Date.now()}`,
-                  role: 'assistant',
-                  content: accumulated,
-                  hasImage: false,
-                },
-              ]);
+              appendToHistory({
+                id: `assistant-${Date.now()}`,
+                role: 'assistant',
+                content: accumulated,
+                hasImage: false,
+              });
               setStreamingText('');
               setIsStreaming(false);
             }
 
             if (data.error) {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `error-${Date.now()}`,
-                  role: 'assistant',
-                  content: '❌ Lo siento, ha ocurrido un error. Inténtalo de nuevo.',
-                  hasImage: false,
-                },
-              ]);
+              appendToHistory({
+                id: `error-${Date.now()}`,
+                role: 'assistant',
+                content: '❌ Lo siento, ha ocurrido un error. Inténtalo de nuevo.',
+                hasImage: false,
+              });
               setStreamingText('');
               setIsStreaming(false);
             }
@@ -233,18 +243,15 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
     } catch (err) {
       console.error('Tutor stream error:', err);
       const motivo = err instanceof Error ? err.message : '';
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          role: 'assistant',
-          content:
-            motivo.includes('preguntas') || motivo.includes('foto')
-              ? `⏳ ${motivo}`
-              : '❌ No pude conectar con el tutor. Comprueba tu conexión.',
-          hasImage: false,
-        },
-      ]);
+      appendToHistory({
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content:
+          motivo.includes('preguntas') || motivo.includes('foto')
+            ? `⏳ ${motivo}`
+            : '❌ No pude conectar con el tutor. Comprueba tu conexión.',
+        hasImage: false,
+      });
       setStreamingText('');
       setIsStreaming(false);
     }
@@ -258,7 +265,9 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
   }
 
   function handleClearHistory() {
-    clearHistory(undefined, { onSuccess: () => setMessages([]) });
+    // useClearHistory ya deja la caché en [] al terminar; no hay estado local
+    // propio que limpiar.
+    clearHistory();
   }
 
   // ─── Render ─────────────────────────────────────────────────────────────────
