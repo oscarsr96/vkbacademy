@@ -21,8 +21,11 @@ const mockUser = { findUnique: jest.fn() };
 const mockStudyPlan = { findMany: jest.fn() };
 const mockExerciseAttempt = { findMany: jest.fn() };
 
+const mockTutorImage = { create: jest.fn(), deleteMany: jest.fn() };
+
 const mockPrisma = {
   tutorMessage: mockTutorMessage,
+  tutorImage: mockTutorImage,
   user: mockUser,
   studyPlan: mockStudyPlan,
   exerciseAttempt: mockExerciseAttempt,
@@ -164,12 +167,14 @@ describe('TutorService', () => {
         role: 'assistant',
         content: 'Respuesta anterior',
         createdAt: new Date('2026-01-02'),
+        image: null,
       },
       {
         id: 'msg-1',
         role: 'user',
         content: 'Pregunta anterior',
         createdAt: new Date('2026-01-01'),
+        image: null,
       },
     ];
 
@@ -180,7 +185,9 @@ describe('TutorService', () => {
       // que el orden dependa de cuántas veces se ha invocado antes (bug de
       // aislamiento del mock, no del servicio).
       mockTutorMessage.findMany.mockImplementation(() => Promise.resolve([...historialPrevio]));
-      mockTutorMessage.create.mockResolvedValue({});
+      mockTutorMessage.create.mockResolvedValue({ id: 'msg-new' });
+      mockTutorImage.create.mockResolvedValue({});
+      mockTutorImage.deleteMany.mockResolvedValue({ count: 0 });
       mockAi.streamChat.mockImplementation(streamOf('Hola', ' mundo'));
       mockUser.findUnique.mockResolvedValue({ schoolYear: null });
       mockStudyPlan.findMany.mockResolvedValue([]);
@@ -443,6 +450,63 @@ describe('TutorService', () => {
           (c) => c[0].data.role === 'user',
         );
         expect(userCreate?.[0].data.content).toBe('¿Me ayudas con este ejercicio?');
+      });
+
+      it('guarda la foto ligada al mensaje del alumno para los seguimientos (#140)', async () => {
+        await service.streamChat(userId, dto, mockRes, image);
+
+        expect(mockTutorImage.create).toHaveBeenCalledWith({
+          data: { messageId: 'msg-new', mimeType: 'image/jpeg', data: image.buffer },
+        });
+      });
+
+      it('sin foto no guarda nada en TutorImage', async () => {
+        await service.streamChat(userId, dto, mockRes);
+        expect(mockTutorImage.create).not.toHaveBeenCalled();
+      });
+
+      it('las fotos de mensajes anteriores vuelven al modelo en los seguimientos, como mucho las 3 más recientes', async () => {
+        const withPhoto = (id: string, day: number) => ({
+          id,
+          role: 'user',
+          content: `Pregunta ${id}`,
+          createdAt: new Date(`2026-01-0${day}`),
+          image: { mimeType: 'image/png', data: Buffer.from(`bytes-${id}`) },
+        });
+        // Orden desc como lo devuelve Prisma: la más reciente primero
+        mockTutorMessage.findMany.mockResolvedValue([
+          withPhoto('p4', 4),
+          withPhoto('p3', 3),
+          withPhoto('p2', 2),
+          withPhoto('p1', 1),
+        ]);
+
+        await service.streamChat(userId, { ...dto, message: '¿y el apartado b?' }, mockRes);
+
+        const { messages } = mockAi.streamChat.mock.calls[0][0];
+        const withImage = messages.filter((m: { image?: unknown }) => m.image);
+        expect(withImage.map((m: { text: string }) => m.text)).toEqual([
+          'Pregunta p2',
+          'Pregunta p3',
+          'Pregunta p4',
+        ]);
+        expect(withImage[0].image).toEqual({
+          mimeType: 'image/png',
+          base64: Buffer.from('bytes-p2').toString('base64'),
+        });
+        // La más antigua sigue en el hilo, pero solo como texto
+        expect(messages.find((m: { text: string }) => m.text === 'Pregunta p1')?.image).toBeUndefined();
+      });
+
+      it('poda las fotos de mensajes que han salido de la ventana de contexto', async () => {
+        await service.streamChat(userId, dto, mockRes, image);
+
+        expect(mockTutorImage.deleteMany).toHaveBeenCalledWith({
+          where: {
+            message: { userId },
+            messageId: { notIn: ['msg-1', 'msg-2', 'msg-new'] },
+          },
+        });
       });
 
       it('marca hasImage: true en el mensaje del alumno', async () => {

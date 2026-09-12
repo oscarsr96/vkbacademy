@@ -21,6 +21,15 @@ const TUTOR_MAX_TOKENS = 1024;
 /** Ventana de ejercicios que cuenta para "lo que le cuesta" (#137). */
 const WEAK_TOPICS_WINDOW_DAYS = 30;
 
+/** Mensajes anteriores que ve el modelo en cada pregunta. */
+const CONTEXT_WINDOW = 10;
+
+/**
+ * Fotos de mensajes anteriores que vuelven al modelo (#140). Cada una cuesta
+ * ~1.000 tokens: con tres hay seguimiento de sobra sin disparar el gasto.
+ */
+const MAX_CONTEXT_IMAGES = 3;
+
 /**
  * Preguntas al tutor por alumno y día.
  *
@@ -109,16 +118,18 @@ export class TutorService {
     //    429 salga como JSON y el cliente pueda explicar el motivo real.
     await this.assertDailyQuota(userId);
 
-    // 1. Obtener últimos 10 mensajes de contexto (orden cronológico)
+    // 1. Obtener los últimos mensajes de contexto (orden cronológico), con la
+    //    foto de los que la tuvieran para que el modelo la vuelva a ver.
     const history = await this.prisma.tutorMessage.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: 10,
+      take: CONTEXT_WINDOW,
+      include: { image: { select: { mimeType: true, data: true } } },
     });
     const contextMessages = history.reverse();
 
-    // 2. Guardar el mensaje del usuario en BD
-    await this.prisma.tutorMessage.create({
+    // 2. Guardar el mensaje del usuario en BD, y su foto si la lleva
+    const saved = await this.prisma.tutorMessage.create({
       data: {
         userId,
         role: 'user',
@@ -126,6 +137,18 @@ export class TutorService {
         courseId: dto.courseId ?? null,
         lessonId: dto.lessonId ?? null,
         hasImage: Boolean(image),
+      },
+    });
+    if (image) {
+      await this.prisma.tutorImage.create({
+        data: { messageId: saved.id, mimeType: image.mimeType, data: image.buffer },
+      });
+    }
+    // Las fotos viven lo que dura la conversación: fuera de la ventana, fuera.
+    await this.prisma.tutorImage.deleteMany({
+      where: {
+        message: { userId },
+        messageId: { notIn: [...contextMessages.map((m) => m.id), saved.id] },
       },
     });
 
@@ -147,10 +170,21 @@ export class TutorService {
     // 5. Turnos para el proveedor (historial + mensaje actual). El historial
     //    es siempre texto: la foto no se guarda, así que en las preguntas de
     //    seguimiento el modelo se apoya en su propia respuesta.
+    // Solo las últimas MAX_CONTEXT_IMAGES fotos viajan; el resto de mensajes
+    // con foto van como texto.
+    const imageBudget = new Set(
+      contextMessages
+        .filter((m) => m.image)
+        .slice(-MAX_CONTEXT_IMAGES)
+        .map((m) => m.id),
+    );
     const messages: AiChatMessage[] = [
       ...contextMessages.map((m) => ({
         role: m.role as 'user' | 'assistant',
         text: m.content,
+        ...(m.image && imageBudget.has(m.id)
+          ? { image: { mimeType: m.image.mimeType, base64: Buffer.from(m.image.data).toString('base64') } }
+          : {}),
       })),
       {
         role: 'user',
