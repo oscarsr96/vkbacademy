@@ -15,16 +15,24 @@ export async function clearTutorHistory(): Promise<void> {
 
 // ─── Streaming (fetch nativo — axios no soporta ReadableStream) ───────────────
 
-export function chatStream(payload: TutorChatPayload): Promise<Response> {
+/**
+ * Siempre multipart, haya foto o no: un solo camino en el cliente. Los campos
+ * vacíos no se mandan para que class-validator vea `undefined`, no `''`.
+ */
+export function chatStream(payload: TutorChatPayload, image?: Blob): Promise<Response> {
   const token = useAuthStore.getState().accessToken;
   const baseUrl = import.meta.env.VITE_API_URL ?? '/api';
 
+  const form = new FormData();
+  for (const [key, value] of Object.entries(payload)) {
+    if (typeof value === 'string' && value.trim() !== '') form.append(key, value);
+  }
+  if (image) form.append('image', image, 'foto.jpg');
+
   return fetch(`${baseUrl}/tutor/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token ?? ''}`,
-    },
-    body: JSON.stringify(payload),
+    // Sin Content-Type: el navegador pone multipart/form-data con su boundary.
+    headers: { Authorization: `Bearer ${token ?? ''}` },
+    body: form,
   });
 }

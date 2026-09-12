@@ -40,6 +40,7 @@ const AdminRedemptionsPage = lazy(() => import('./pages/admin/AdminRedemptionsPa
 const AdminCertificatesPage = lazy(() => import('./pages/admin/AdminCertificatesPage'));
 const AdminExamBankPage = lazy(() => import('./pages/admin/AdminExamBankPage'));
 const AdminAcademiesPage = lazy(() => import('./pages/admin/AdminAcademiesPage'));
+const TutorPage = lazy(() => import('./pages/TutorPage'));
 
 // Fallback de carga mientras se descarga el chunk de una ruta diferida
 function RouteLoadingFallback() {
@@ -159,6 +160,9 @@ export default function App() {
           {/* Estudiar — curso generado por IA (teoría + ejercicios + examen) */}
           <Route path="study" element={<StudyPage />} />
           <Route path="study/plan/:id" element={<StudyPlanPage />} />
+
+          {/* Dudas — tutor IA a pantalla completa, con foto */}
+          <Route path="tutor" element={<TutorPage />} />
 
           {/* Fase 9 — Certificados */}
           <Route path="certificates" element={<CertificatesPage />} />

@@ -16,3 +16,10 @@ if (!window.matchMedia) {
       dispatchEvent: () => false,
     }) as MediaQueryList;
 }
+
+// jsdom tampoco implementa scrollIntoView (TutorChat lo llama en cada
+// mensaje para auto-scroll). Mismo motivo que el stub de matchMedia: sin
+// esto el efecto revienta al montar, no el assert del test.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => undefined;
+}
