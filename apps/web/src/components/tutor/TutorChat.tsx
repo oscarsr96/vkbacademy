@@ -5,6 +5,7 @@ import { chatStream } from '../../api/tutor.api';
 import { HISTORY_KEY, useClearHistory, useTutorHistory } from '../../hooks/useTutor';
 import { downscaleImage } from '../../utils/downscaleImage';
 import Icon from '../ui/Icon';
+import TutorMarkdown from './TutorMarkdown';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -295,16 +296,18 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
             }}
           >
             {msg.hasImage && <span style={styles.imageChip}>📷 Foto adjunta</span>}
-            <span style={styles.bubbleText}>{msg.content}</span>
+            {msg.role === 'assistant' ? (
+              <TutorMarkdown>{msg.content}</TutorMarkdown>
+            ) : (
+              <span style={styles.bubbleText}>{msg.content}</span>
+            )}
           </div>
         ))}
 
         {isStreaming && streamingText && (
           <div style={{ ...styles.bubble, ...styles.bubbleAssistant }}>
-            <span style={styles.bubbleText}>
-              {streamingText}
-              <span style={styles.cursor}>▌</span>
-            </span>
+            <TutorMarkdown>{streamingText}</TutorMarkdown>
+            <span style={styles.cursor}>▌</span>
           </div>
         )}
 

@@ -8,9 +8,18 @@ import { ChallengesService } from '../challenges/challenges.service';
 import { AiChatMessage, AiProviderService } from '../ai/ai-provider.service';
 import { currentDayStart } from '../challenges/challenge-periods';
 import { TutorChatDto } from './dto/tutor-chat.dto';
+import {
+  buildStudyProfileLines,
+  MAX_PROFILE_PLANS,
+  rankWeakTopics,
+  type StudyProfile,
+} from './study-profile';
 
 /** Tope de la respuesta. 3-4 párrafos caben de sobra; el prompt ya pide concisión. */
 const TUTOR_MAX_TOKENS = 1024;
+
+/** Ventana de ejercicios que cuenta para "lo que le cuesta" (#137). */
+const WEAK_TOPICS_WINDOW_DAYS = 30;
 
 /**
  * Preguntas al tutor por alumno y día.
@@ -123,8 +132,10 @@ export class TutorService {
     // Preguntar al tutor cuenta como actividad y alimenta TUTOR_QUESTIONS
     void this.challenges.checkAndAward(userId, ChallengeType.TUTOR_QUESTIONS);
 
-    // 3. Construir el system prompt con contexto
-    const systemPrompt = this.buildSystemPrompt(dto, Boolean(image));
+    // 3. Construir el system prompt con contexto: el de la petición (curso/
+    //    lección desde donde pregunta) y el perfil de estudio leído de BD.
+    const profile = await this.loadStudyProfile(userId);
+    const systemPrompt = this.buildSystemPrompt(dto, Boolean(image), profile);
 
     // 4. Configurar headers SSE
     res.setHeader('Content-Type', 'text/event-stream');
@@ -212,17 +223,58 @@ export class TutorService {
     return { cleared: true };
   }
 
+  // ─── Perfil de estudio (#137) ────────────────────────────────────────────────
+
+  /**
+   * Qué estudia el alumno y qué le cuesta, para que el tutor no responda a
+   * ciegas desde la página Dudas. Tres consultas ligeras por pregunta; el
+   * cupo diario acota el coste.
+   */
+  private async loadStudyProfile(userId: string): Promise<StudyProfile> {
+    const since = new Date(Date.now() - WEAK_TOPICS_WINDOW_DAYS * 86_400_000);
+    const [user, plans, attempts] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { schoolYear: { select: { label: true } } },
+      }),
+      this.prisma.studyPlan.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: MAX_PROFILE_PLANS,
+        select: { title: true, course: { select: { title: true } } },
+      }),
+      this.prisma.exerciseAttempt.findMany({
+        where: { userId, answeredAt: { gte: since } },
+        select: { topicLabel: true, verdict: true },
+      }),
+    ]);
+
+    return {
+      schoolYear: user?.schoolYear?.label ?? null,
+      plans: plans.map((p) => ({ title: p.title, course: p.course.title })),
+      weakTopics: rankWeakTopics(attempts),
+    };
+  }
+
   // ─── System prompt ───────────────────────────────────────────────────────────
 
-  private buildSystemPrompt(dto: TutorChatDto, withImage = false): string {
+  private buildSystemPrompt(
+    dto: TutorChatDto,
+    withImage = false,
+    profile: StudyProfile = { schoolYear: null, plans: [], weakTopics: [] },
+  ): string {
     const lines = [
       'Eres el tutor virtual de VKB Academy, plataforma educativa de Vallekas Basket Club.',
       'Ayudas a alumnos jóvenes de ESO y Bachillerato con sus estudios de forma cercana y motivadora.',
     ];
 
-    if (dto.schoolYear) {
-      lines.push(`El alumno está en ${dto.schoolYear}.`);
-    }
+    // El curso de BD manda; el del cliente solo cubre a quien no tiene curso asignado.
+    lines.push(
+      ...buildStudyProfileLines({
+        ...profile,
+        schoolYear: profile.schoolYear ?? dto.schoolYear ?? null,
+      }),
+    );
     if (dto.courseName) {
       lines.push(`Está estudiando el curso: "${dto.courseName}".`);
     }
@@ -239,6 +291,7 @@ export class TutorService {
       '- Anima al alumno; si está atascado, desglosa el problema en pasos',
       '- Nunca des respuestas directas a ejercicios: guía para que llegue solo',
       '- Si la pregunta está fuera del ámbito educativo, redirige amablemente',
+      '- Formato: Markdown ligero (negritas, listas cortas) y las fórmulas siempre en LaTeX entre $…$ (o $$…$$ en su propia línea)',
     );
 
     if (withImage) {

@@ -15,8 +15,17 @@ const mockTutorMessage = {
   deleteMany: jest.fn(),
 };
 
+// Perfil de estudio (#137): curso del alumno, planes y ejercicios recientes.
+// Por defecto vacío: el prompt no debe llevar bloque de perfil.
+const mockUser = { findUnique: jest.fn() };
+const mockStudyPlan = { findMany: jest.fn() };
+const mockExerciseAttempt = { findMany: jest.fn() };
+
 const mockPrisma = {
   tutorMessage: mockTutorMessage,
+  user: mockUser,
+  studyPlan: mockStudyPlan,
+  exerciseAttempt: mockExerciseAttempt,
 };
 
 const mockConfig = {
@@ -173,6 +182,9 @@ describe('TutorService', () => {
       mockTutorMessage.findMany.mockImplementation(() => Promise.resolve([...historialPrevio]));
       mockTutorMessage.create.mockResolvedValue({});
       mockAi.streamChat.mockImplementation(streamOf('Hola', ' mundo'));
+      mockUser.findUnique.mockResolvedValue({ schoolYear: null });
+      mockStudyPlan.findMany.mockResolvedValue([]);
+      mockExerciseAttempt.findMany.mockResolvedValue([]);
     });
 
     it('guarda el mensaje del usuario en BD antes de llamar al proveedor', async () => {
@@ -292,6 +304,77 @@ describe('TutorService', () => {
       await service.streamChat(userId, dto, mockRes);
 
       expect(mockTutorMessage.create).toHaveBeenCalled();
+    });
+
+    it('pide al modelo Markdown ligero y fórmulas LaTeX entre $…$, que es lo que renderiza el hilo', async () => {
+      await service.streamChat(userId, dto, mockRes);
+
+      const { system } = mockAi.streamChat.mock.calls[0][0];
+      expect(system).toMatch(/Markdown/);
+      expect(system).toMatch(/\$…\$/);
+    });
+
+    describe('perfil de estudio (#137)', () => {
+      it('con datos, el prompt lleva curso, planes y temas flojos leídos de BD', async () => {
+        mockUser.findUnique.mockResolvedValue({ schoolYear: { label: '3º ESO' } });
+        mockStudyPlan.findMany.mockResolvedValue([
+          { title: 'Fracciones · Ecuaciones', course: { title: 'Matemáticas' } },
+        ]);
+        mockExerciseAttempt.findMany.mockResolvedValue([
+          { topicLabel: 'Ecuaciones', verdict: 'incorrect' },
+          { topicLabel: 'Ecuaciones', verdict: 'correct' },
+        ]);
+
+        await service.streamChat(userId, { ...dto, schoolYear: undefined }, mockRes);
+
+        const { system } = mockAi.streamChat.mock.calls[0][0];
+        expect(system).toContain('El alumno está en 3º ESO.');
+        expect(system).toContain('Fracciones · Ecuaciones (Matemáticas)');
+        expect(system).toContain('Ecuaciones (1 fallos de 2)');
+      });
+
+      it('el curso de BD gana al que manda el cliente', async () => {
+        mockUser.findUnique.mockResolvedValue({ schoolYear: { label: '3º ESO' } });
+
+        await service.streamChat(userId, { ...dto, schoolYear: '1º ESO' }, mockRes);
+
+        const { system } = mockAi.streamChat.mock.calls[0][0];
+        expect(system).toContain('3º ESO');
+        expect(system).not.toContain('1º ESO');
+      });
+
+      it('sin curso en BD, sigue valiendo el del cliente', async () => {
+        await service.streamChat(userId, { ...dto, schoolYear: '1º ESO' }, mockRes);
+
+        expect(mockAi.streamChat.mock.calls[0][0].system).toContain('El alumno está en 1º ESO.');
+      });
+
+      it('sin datos, el prompt no lleva bloque de perfil', async () => {
+        await service.streamChat(userId, { ...dto, schoolYear: undefined }, mockRes);
+
+        const { system } = mockAi.streamChat.mock.calls[0][0];
+        expect(system).not.toContain('El alumno está en');
+        expect(system).not.toContain('Está estudiando con estos planes');
+        expect(system).not.toContain('Temas que le cuestan');
+      });
+
+      it('solo mira los ejercicios de los últimos 30 días y los últimos 3 planes', async () => {
+        await service.streamChat(userId, dto, mockRes);
+
+        const attemptsArgs = mockExerciseAttempt.findMany.mock.calls[0][0];
+        const since = attemptsArgs.where.answeredAt.gte as Date;
+        const days = (Date.now() - since.getTime()) / 86_400_000;
+        expect(attemptsArgs.where.userId).toBe(userId);
+        expect(days).toBeGreaterThan(29.9);
+        expect(days).toBeLessThan(30.1);
+
+        const plansArgs = mockStudyPlan.findMany.mock.calls[0][0];
+        expect(plansArgs).toMatchObject({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+        });
+      });
     });
 
     it('atribuye el consumo al alumno con la categoría CHATBOT', async () => {
