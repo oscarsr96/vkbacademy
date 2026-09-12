@@ -1,10 +1,12 @@
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class TutorChatDto {
+  // Opcional porque el alumno puede mandar solo la foto. La regla "texto o
+  // foto, al menos uno" vive en el servicio, que es quien ve las dos cosas.
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(2000)
-  message: string;
+  message?: string;
 
   @IsOptional()
   @IsString()

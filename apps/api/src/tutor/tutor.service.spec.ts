@@ -371,5 +371,81 @@ describe('TutorService', () => {
 
       expect(mockRes.end).toHaveBeenCalledTimes(1);
     });
+
+    describe('con foto', () => {
+      const image = {
+        buffer: Buffer.from('fake-jpeg-bytes'),
+        mimeType: 'image/jpeg' as const,
+      };
+
+      it('manda a Anthropic un bloque image base64 seguido del texto', async () => {
+        await service.streamChat(userId, dto, mockRes, image);
+
+        const streamMock = service['anthropic'].messages.stream as jest.Mock;
+        const { messages } = streamMock.mock.calls[0][0];
+        const last = messages[messages.length - 1];
+
+        expect(last.role).toBe('user');
+        expect(last.content).toEqual([
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: 'image/jpeg',
+              data: image.buffer.toString('base64'),
+            },
+          },
+          { type: 'text', text: dto.message },
+        ]);
+      });
+
+      it('sin texto, pregunta por defecto y la guarda como contenido del mensaje', async () => {
+        await service.streamChat(userId, { ...dto, message: undefined }, mockRes, image);
+
+        const streamMock = service['anthropic'].messages.stream as jest.Mock;
+        const { messages } = streamMock.mock.calls[0][0];
+        const last = messages[messages.length - 1];
+        expect(last.content[1]).toEqual({ type: 'text', text: '¿Me ayudas con este ejercicio?' });
+
+        const userCreate = mockTutorMessage.create.mock.calls.find(
+          (c) => c[0].data.role === 'user',
+        );
+        expect(userCreate?.[0].data.content).toBe('¿Me ayudas con este ejercicio?');
+      });
+
+      it('marca hasImage: true en el mensaje del alumno', async () => {
+        await service.streamChat(userId, dto, mockRes, image);
+
+        const userCreate = mockTutorMessage.create.mock.calls.find(
+          (c) => c[0].data.role === 'user',
+        );
+        expect(userCreate?.[0].data.hasImage).toBe(true);
+      });
+
+      it('añade al system prompt las instrucciones de foto solo cuando hay foto', async () => {
+        await service.streamChat(userId, dto, mockRes, image);
+        const streamMock = service['anthropic'].messages.stream as jest.Mock;
+        expect(streamMock.mock.calls[0][0].system).toContain('ha adjuntado la foto');
+
+        jest.clearAllMocks();
+        mockTutorMessage.findMany.mockImplementation(() => Promise.resolve([...historialPrevio]));
+        mockTutorMessage.create.mockResolvedValue({});
+        setMockAnthropic(buildMockStream());
+
+        await service.streamChat(userId, dto, mockRes);
+        const streamMock2 = service['anthropic'].messages.stream as jest.Mock;
+        expect(streamMock2.mock.calls[0][0].system).not.toContain('ha adjuntado la foto');
+      });
+    });
+
+    it('sin texto ni foto responde 400 y no toca BD ni Anthropic', async () => {
+      await expect(
+        service.streamChat(userId, { ...dto, message: '   ' }, mockRes),
+      ).rejects.toMatchObject({ status: 400, message: 'Escribe una pregunta o adjunta una foto' });
+
+      expect(mockTutorMessage.create).not.toHaveBeenCalled();
+      const streamMock = service['anthropic'].messages.stream as jest.Mock;
+      expect(streamMock).not.toHaveBeenCalled();
+    });
   });
 });

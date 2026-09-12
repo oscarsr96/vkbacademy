@@ -26,6 +26,19 @@ const TUTOR_MODEL = 'claude-haiku-4-5-20251001';
  */
 const DEFAULT_DAILY_LIMIT = 30;
 
+/** Formatos de foto que acepta el tutor. Los mismos que entiende Claude. */
+export const TUTOR_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+export type TutorImageMimeType = (typeof TUTOR_IMAGE_MIME_TYPES)[number];
+
+/** Foto adjunta a una pregunta. Vive solo lo que dura la request. */
+export interface TutorImage {
+  buffer: Buffer;
+  mimeType: TutorImageMimeType;
+}
+
+/** Lo que "dice" el alumno cuando manda la foto sin escribir nada. */
+export const DEFAULT_IMAGE_PROMPT = '¿Me ayudas con este ejercicio?';
+
 @Injectable()
 export class TutorService {
   private readonly logger = new Logger(TutorService.name);
@@ -73,7 +86,19 @@ export class TutorService {
 
   // ─── Streaming ───────────────────────────────────────────────────────────────
 
-  async streamChat(userId: string, dto: TutorChatDto, res: Response): Promise<void> {
+  async streamChat(
+    userId: string,
+    dto: TutorChatDto,
+    res: Response,
+    image?: TutorImage,
+  ): Promise<void> {
+    // Texto o foto, al menos uno. Se comprueba antes que el cupo: una request
+    // vacía no debe gastar una pregunta.
+    const message = dto.message?.trim() || (image ? DEFAULT_IMAGE_PROMPT : '');
+    if (!message) {
+      throw new HttpException('Escribe una pregunta o adjunta una foto', HttpStatus.BAD_REQUEST);
+    }
+
     // 0. Cupo diario. Se comprueba ANTES de tocar las cabeceras SSE para que el
     //    429 salga como JSON y el cliente pueda explicar el motivo real.
     await this.assertDailyQuota(userId);
@@ -91,10 +116,10 @@ export class TutorService {
       data: {
         userId,
         role: 'user',
-        content: dto.message,
+        content: message,
         courseId: dto.courseId ?? null,
         lessonId: dto.lessonId ?? null,
-        hasImage: false,
+        hasImage: Boolean(image),
       },
     });
 
@@ -102,7 +127,7 @@ export class TutorService {
     void this.challenges.checkAndAward(userId, ChallengeType.TUTOR_QUESTIONS);
 
     // 3. Construir el system prompt con contexto
-    const systemPrompt = this.buildSystemPrompt(dto);
+    const systemPrompt = this.buildSystemPrompt(dto, Boolean(image));
 
     // 4. Configurar headers SSE
     res.setHeader('Content-Type', 'text/event-stream');
@@ -111,13 +136,29 @@ export class TutorService {
     res.setHeader('X-Accel-Buffering', 'no'); // evitar buffering en nginx
     res.flushHeaders();
 
-    // 5. Construir mensajes para Anthropic (historial + mensaje actual)
+    // 5. Construir mensajes para Anthropic (historial + mensaje actual). El
+    //    historial es siempre texto: la foto no se guarda, así que en las
+    //    preguntas de seguimiento el modelo se apoya en su propia respuesta.
+    const currentContent: Anthropic.MessageParam['content'] = image
+      ? [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: image.mimeType,
+              data: image.buffer.toString('base64'),
+            },
+          },
+          { type: 'text', text: message },
+        ]
+      : message;
+
     const anthropicMessages: Anthropic.MessageParam[] = [
       ...contextMessages.map((m) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
       })),
-      { role: 'user' as const, content: dto.message },
+      { role: 'user' as const, content: currentContent },
     ];
 
     // 6. Hacer streaming desde Anthropic
@@ -208,7 +249,7 @@ export class TutorService {
 
   // ─── System prompt ───────────────────────────────────────────────────────────
 
-  private buildSystemPrompt(dto: TutorChatDto): string {
+  private buildSystemPrompt(dto: TutorChatDto, withImage = false): string {
     const lines = [
       'Eres el tutor virtual de VKB Academy, plataforma educativa de Vallekas Basket Club.',
       'Ayudas a alumnos jóvenes de ESO y Bachillerato con sus estudios de forma cercana y motivadora.',
@@ -234,6 +275,17 @@ export class TutorService {
       '- Nunca des respuestas directas a ejercicios: guía para que llegue solo',
       '- Si la pregunta está fuera del ámbito educativo, redirige amablemente',
     );
+
+    if (withImage) {
+      lines.push(
+        '',
+        'El alumno ha adjuntado la foto de un ejercicio o de sus apuntes.',
+        '- Empieza diciendo en una frase qué ejercicio ves, para que confirme que lo has leído bien',
+        '- Si la foto no se lee o no es un ejercicio, dilo y pide otra',
+        '- Después pregunta qué ha intentado o dale solo el primer paso',
+        '- Nunca escribas la solución final ni el resultado numérico',
+      );
+    }
 
     return lines.join('\n');
   }
