@@ -294,6 +294,14 @@ describe('TutorService', () => {
       expect(mockTutorMessage.create).toHaveBeenCalled();
     });
 
+    it('pide al modelo Markdown ligero y fórmulas LaTeX entre $…$, que es lo que renderiza el hilo', async () => {
+      await service.streamChat(userId, dto, mockRes);
+
+      const { system } = mockAi.streamChat.mock.calls[0][0];
+      expect(system).toMatch(/Markdown/);
+      expect(system).toMatch(/\$…\$/);
+    });
+
     it('atribuye el consumo al alumno con la categoría CHATBOT', async () => {
       await service.streamChat(userId, dto, mockRes);
 

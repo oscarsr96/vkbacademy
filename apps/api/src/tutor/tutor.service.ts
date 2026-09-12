@@ -239,6 +239,7 @@ export class TutorService {
       '- Anima al alumno; si está atascado, desglosa el problema en pasos',
       '- Nunca des respuestas directas a ejercicios: guía para que llegue solo',
       '- Si la pregunta está fuera del ámbito educativo, redirige amablemente',
+      '- Formato: Markdown ligero (negritas, listas cortas) y las fórmulas siempre en LaTeX entre $…$ (o $$…$$ en su propia línea)',
     );
 
     if (withImage) {

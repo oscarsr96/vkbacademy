@@ -139,6 +139,29 @@ describe('TutorChat', () => {
     expect(await screen.findAllByText('Veo una ecuación')).toHaveLength(2);
   });
 
+  it('las respuestas del tutor se renderizan con Markdown y fórmulas; las del alumno, en texto plano', async () => {
+    mockGetHistory.mockResolvedValue([
+      { id: 'm1', role: 'user', content: 'dame **algo** con $x$', hasImage: false, createdAt: '2026-09-12T10:00:00Z' },
+      {
+        id: 'm2',
+        role: 'assistant',
+        content: 'Primero la **fórmula**: $x^2 - 5x + 6 = 0$',
+        hasImage: false,
+        createdAt: '2026-09-12T10:00:05Z',
+      },
+    ]);
+    const { container } = renderChat();
+
+    // Asistente: negrita real y KaTeX
+    const strong = await screen.findByText('fórmula', { selector: 'strong' });
+    expect(strong).toBeInTheDocument();
+    expect(container.querySelector('.katex')).not.toBeNull();
+    expect(screen.queryByText(/\*\*fórmula\*\*/)).not.toBeInTheDocument();
+
+    // Alumno: lo que escribió, tal cual
+    expect(screen.getByText('dame **algo** con $x$')).toBeInTheDocument();
+  });
+
   it('un mensaje del historial con hasImage muestra el chip', async () => {
     mockGetHistory.mockResolvedValue([
       {
