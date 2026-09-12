@@ -110,9 +110,10 @@ El resto de reglas (español, 3-4 párrafos, analogías, nunca respuestas direct
 
 ## 7. Errores y límites conocidos
 
-- El tutor llama a Anthropic directamente, sin `AiProviderService`: sin
-  `ANTHROPIC_API_KEY` o con saldo agotado, falla hoy y seguirá fallando. Deuda conocida,
-  fuera de alcance.
+- El tutor pasa por `AiProviderService.streamChat` (añadido en esta fase): Gemini
+  primero, Haiku si Gemini falla **antes del primer trozo**. Un fallo a mitad de stream
+  no se recupera (lo ya emitido está en pantalla) y se pinta como error. Sin
+  `GEMINI_API_KEY`, Haiku es el único proveedor y con saldo agotado el tutor no responde.
 - El cupo horario vive en memoria y se pierde en cada arranque en frío de Render; el
   diario está en BD. Igual que hoy.
 - El seguimiento sobre una foto ya enviada no la vuelve a ver (decisión de no guardar).

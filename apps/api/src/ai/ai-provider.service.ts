@@ -19,6 +19,20 @@ const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
 /** Modelo de fallback de pago. Pinneado igual que el de Gemini. */
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 
+/** Un turno de chat. La foto, si va, la mandan los dos proveedores antes del texto. */
+export interface AiChatMessage {
+  role: 'user' | 'assistant';
+  text: string;
+  image?: { mimeType: string; base64: string };
+}
+
+export interface AiChatInput {
+  system: string;
+  messages: AiChatMessage[];
+  maxTokens: number;
+  context?: AiUsageContext;
+}
+
 /**
  * Proveedor de IA unificado con fallback automático.
  *
@@ -113,6 +127,184 @@ export class AiProviderService {
       throw new Error(
         `Los dos proveedores fallaron — Gemini: ${geminiError.message} | Haiku: ${haikuMessage}`,
       );
+    }
+  }
+
+  /**
+   * Chat en streaming (tutor). Misma política de proveedores que `generate`,
+   * con un matiz: en `auto` el fallback a Haiku solo ocurre si Gemini falla
+   * ANTES de emitir el primer trozo. Lo ya emitido está en pantalla del
+   * alumno; repetir la respuesta con otro proveedor la duplicaría. Un fallo a
+   * mitad de stream sube al caller, que pinta su error.
+   */
+  async *streamChat(input: AiChatInput): AsyncGenerator<string> {
+    const messages = normalizeTurns(input.messages);
+
+    if (this.provider === 'haiku') {
+      yield* this.streamHaiku(input, messages);
+      return;
+    }
+    if (this.provider === 'gemini') {
+      yield* this.streamGemini(input, messages);
+      return;
+    }
+
+    let geminiError: Error | null = null;
+    if (this.gemini) {
+      const gemini = this.streamGemini(input, messages);
+      let first: IteratorResult<string>;
+      try {
+        // Aquí se hace la petición y llega (o no) el primer trozo
+        first = await gemini.next();
+      } catch (error) {
+        geminiError = error instanceof Error ? error : new Error(String(error));
+        this.logger.warn(`Gemini falló en el chat, intentando Haiku: ${geminiError.message}`);
+        first = { done: true, value: undefined };
+      }
+      if (!geminiError) {
+        if (!first.done) yield first.value;
+        // A partir del primer trozo ya no hay fallback: los errores suben
+        for await (const chunk of gemini) yield chunk;
+        return;
+      }
+    }
+
+    if (!this.anthropic) {
+      throw new Error(
+        geminiError
+          ? `Gemini falló (${geminiError.message}) y Haiku no está configurada (falta ANTHROPIC_API_KEY)`
+          : 'Ningún proveedor de IA configurado: falta GEMINI_API_KEY y ANTHROPIC_API_KEY',
+      );
+    }
+
+    try {
+      yield* this.streamHaiku(input, messages);
+    } catch (haikuError) {
+      if (!geminiError) throw haikuError;
+      const haikuMessage = haikuError instanceof Error ? haikuError.message : String(haikuError);
+      throw new Error(
+        `Los dos proveedores fallaron — Gemini: ${geminiError.message} | Haiku: ${haikuMessage}`,
+      );
+    }
+  }
+
+  private async *streamGemini(
+    input: AiChatInput,
+    messages: AiChatMessage[],
+  ): AsyncGenerator<string> {
+    if (!this.gemini) {
+      throw new Error('GEMINI_API_KEY no configurada');
+    }
+
+    // Sin responseMimeType: esto es prosa para un alumno, no JSON
+    const model = this.gemini.getGenerativeModel({
+      model: this.geminiModel,
+      systemInstruction: input.system,
+      generationConfig: {
+        maxOutputTokens: input.maxTokens,
+        thinkingConfig: this.thinkingConfigFor(this.geminiModel),
+      } as Record<string, unknown>,
+    });
+
+    const contents = messages.map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [
+        ...(m.image ? [{ inlineData: { mimeType: m.image.mimeType, data: m.image.base64 } }] : []),
+        { text: m.text },
+      ],
+    }));
+
+    this.logger.debug(`Chat con Gemini ${this.geminiModel} (maxTokens=${input.maxTokens})`);
+    let result;
+    try {
+      result = await model.generateContentStream({ contents }, { timeout: this.timeoutMs });
+    } catch (error) {
+      if (error instanceof GoogleGenerativeAIAbortError) {
+        throw new Error(`Gemini no respondió en ${this.timeoutMs}ms (timeout)`);
+      }
+      throw error;
+    }
+
+    let emitted = false;
+    for await (const chunk of result.stream) {
+      const text = chunk.text();
+      if (!text) continue;
+      emitted = true;
+      yield text;
+    }
+    if (!emitted) {
+      throw new Error('Gemini devolvió respuesta vacía');
+    }
+
+    if (input.context) {
+      const meta = (await result.response).usageMetadata as
+        | { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number }
+        | undefined;
+      void this.usage.record(input.context, {
+        provider: 'gemini',
+        model: this.geminiModel,
+        inputTokens: meta?.promptTokenCount ?? 0,
+        outputTokens: (meta?.candidatesTokenCount ?? 0) + (meta?.thoughtsTokenCount ?? 0),
+      });
+    }
+  }
+
+  private async *streamHaiku(
+    input: AiChatInput,
+    messages: AiChatMessage[],
+  ): AsyncGenerator<string> {
+    if (!this.anthropic) {
+      throw new Error('ANTHROPIC_API_KEY no configurada');
+    }
+
+    const anthropicMessages: Anthropic.MessageParam[] = messages.map((m) => ({
+      role: m.role,
+      content: m.image
+        ? [
+            {
+              type: 'image' as const,
+              source: {
+                type: 'base64' as const,
+                media_type: m.image.mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
+                data: m.image.base64,
+              },
+            },
+            { type: 'text' as const, text: m.text },
+          ]
+        : m.text,
+    }));
+
+    this.logger.debug(`Chat con Claude Haiku (maxTokens=${input.maxTokens})`);
+    const stream = this.anthropic.messages.stream(
+      {
+        model: HAIKU_MODEL,
+        max_tokens: input.maxTokens,
+        system: input.system,
+        messages: anthropicMessages,
+      },
+      { timeout: this.timeoutMs },
+    );
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        yield event.delta.text;
+      }
+    }
+
+    if (input.context) {
+      // En su propio try: un fallo al leer el consumo no puede tumbar una
+      // respuesta que el alumno ya ha leído entera.
+      try {
+        const final = await stream.finalMessage();
+        void this.usage.record(input.context, {
+          provider: 'haiku',
+          model: HAIKU_MODEL,
+          inputTokens: final.usage.input_tokens,
+          outputTokens: final.usage.output_tokens,
+        });
+      } catch (err) {
+        this.logger.warn(`No se pudo leer el consumo de Haiku: ${String(err)}`);
+      }
     }
   }
 
@@ -265,4 +457,29 @@ export class AiProviderService {
 
     return textContent.text;
   }
+}
+
+/**
+ * Las dos APIs exigen que el primer turno sea del usuario y que los roles
+ * alternen. La ventana de historial puede empezar por una respuesta, y un
+ * envío que falló deja dos preguntas seguidas: se descartan los turnos de
+ * asistente iniciales y se funden los turnos consecutivos del mismo rol
+ * (texto unido por línea en blanco; la foto se conserva si alguno la lleva).
+ */
+function normalizeTurns(messages: AiChatMessage[]): AiChatMessage[] {
+  const out: AiChatMessage[] = [];
+  for (const m of messages) {
+    const last = out[out.length - 1];
+    if (!last && m.role === 'assistant') continue;
+    if (last && last.role === m.role) {
+      out[out.length - 1] = {
+        role: m.role,
+        text: `${last.text}\n\n${m.text}`,
+        image: last.image ?? m.image,
+      };
+      continue;
+    }
+    out.push({ ...m });
+  }
+  return out;
 }
