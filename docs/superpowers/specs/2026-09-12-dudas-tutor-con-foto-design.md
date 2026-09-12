@@ -49,8 +49,9 @@ Un solo código para los dos sitios.
 
 ## 3. Adjuntar foto (web)
 
-- Botón 📷 junto al textarea, `<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment">`
-  (en móvil abre la cámara directamente; en escritorio, el selector).
+- Botón 📷 junto al textarea, `<input type="file" accept="image/jpeg,image/png,image/webp">`
+  sin `capture`: en móvil el sistema ofrece cámara o galería (sirve una captura de
+  pantalla o una foto ya hecha); en escritorio, el selector.
 - Al elegir, **se reescala en el navegador** (`canvas`) a ≤ 1568 px de lado mayor y se
   exporta a JPEG al 85 %. Una foto de móvil de 4 MB queda en ~300 KB. 1568 px es el
   máximo útil para Claude; por encima solo se pagan tokens. Helper puro

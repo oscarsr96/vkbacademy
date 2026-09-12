@@ -341,7 +341,8 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          capture="environment"
+          // Sin `capture`: en móvil el sistema ofrece cámara o galería, así
+          // sirve también una captura de pantalla o una foto ya hecha.
           onChange={(e) => void handleFileChange(e)}
           style={{ display: 'none' }}
           aria-label="Adjuntar foto"
