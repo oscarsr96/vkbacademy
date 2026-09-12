@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockChatStream = vi.fn();
@@ -30,8 +31,21 @@ function renderChat() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <TutorChat />
+      <MemoryRouter initialEntries={['/tutor']}>
+        <Routes>
+          <Route path="/tutor" element={<TutorChat />} />
+          <Route path="/study" element={<div data-testid="study-page" />} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>,
+  );
+}
+
+/** Respuesta SSE cuyo `done` trae una propuesta de práctica (#141). */
+function sseResponseWithPractice(text: string, practice: object): Response {
+  return new Response(
+    `data: ${JSON.stringify({ text })}\n\ndata: ${JSON.stringify({ done: true, practice })}\n\n`,
+    { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
   );
 }
 
@@ -123,8 +137,10 @@ describe('TutorChat', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <TutorChat />
-        <TutorChat />
+        <MemoryRouter>
+          <TutorChat />
+          <TutorChat />
+        </MemoryRouter>
       </QueryClientProvider>,
     );
 
@@ -160,6 +176,36 @@ describe('TutorChat', () => {
 
     // Alumno: lo que escribió, tal cual
     expect(screen.getByText('dame **algo** con $x$')).toBeInTheDocument();
+  });
+
+  it('si la respuesta trae practice, muestra «Practicar» y lleva a Estudiar con el tema (#141)', async () => {
+    mockChatStream.mockResolvedValue(
+      sseResponseWithPractice('Las fracciones…', {
+        title: 'Fracciones',
+        courseId: 'c-mat',
+        courseTitle: 'Matemáticas',
+        moduleId: null,
+      }),
+    );
+    renderChat();
+
+    await userEvent.type(screen.getByPlaceholderText(/escribe tu pregunta/i), 'no entiendo las fracciones');
+    await userEvent.click(screen.getByRole('button', { name: /enviar/i }));
+
+    const chip = await screen.findByRole('button', { name: /practicar.*fracciones/i });
+    await userEvent.click(chip);
+
+    expect(await screen.findByTestId('study-page')).toBeInTheDocument();
+  });
+
+  it('sin practice en la respuesta, no hay chip', async () => {
+    renderChat();
+
+    await userEvent.type(screen.getByPlaceholderText(/escribe tu pregunta/i), 'Hola');
+    await userEvent.click(screen.getByRole('button', { name: /enviar/i }));
+
+    await screen.findByText('Veo una ecuación');
+    expect(screen.queryByRole('button', { name: /practicar/i })).not.toBeInTheDocument();
   });
 
   it('un mensaje del historial con hasImage muestra el chip', async () => {

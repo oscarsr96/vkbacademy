@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { TUTOR_DEFAULT_IMAGE_PROMPT, TutorMessageDto } from '@vkbacademy/shared';
+import { TUTOR_DEFAULT_IMAGE_PROMPT, TutorMessageDto, TutorPracticeSuggestion } from '@vkbacademy/shared';
 import { chatStream } from '../../api/tutor.api';
 import { HISTORY_KEY, useClearHistory, useTutorHistory } from '../../hooks/useTutor';
 import { downscaleImage } from '../../utils/downscaleImage';
@@ -27,6 +28,8 @@ interface LocalMessage {
   role: 'user' | 'assistant';
   content: string;
   hasImage: boolean;
+  /** Propuesta de practicar el tema en Estudiar (#141); solo en respuestas vivas. */
+  practice?: TutorPracticeSuggestion;
 }
 
 /** Foto lista para enviar: el blob reducido y su preview. */
@@ -38,7 +41,14 @@ interface Attachment {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function toLocalMessage(m: TutorMessageDto): LocalMessage {
-  return { id: m.id, role: m.role, content: m.content, hasImage: m.hasImage };
+  return { id: m.id, role: m.role, content: m.content, hasImage: m.hasImage, practice: m.practice };
+}
+
+/** Enlace a Estudiar con el tema ya elegido. */
+function practiceUrl(p: TutorPracticeSuggestion): string {
+  const params = new URLSearchParams({ courseId: p.courseId, topic: p.title });
+  if (p.moduleId) params.set('moduleId', p.moduleId);
+  return `/study?${params.toString()}`;
 }
 
 // ─── Componente ───────────────────────────────────────────────────────────────
@@ -55,6 +65,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // ─── Historial ──────────────────────────────────────────────────────────────
 
@@ -142,6 +153,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
       courseId: null,
       lessonId: null,
       createdAt: new Date().toISOString(),
+      ...(msg.practice ? { practice: msg.practice } : {}),
     };
     queryClient.setQueryData<TutorMessageDto[]>(HISTORY_KEY, (prev) => [...(prev ?? []), dto]);
   }
@@ -207,6 +219,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
             const data = JSON.parse(line.slice(6)) as {
               text?: string;
               done?: boolean;
+              practice?: TutorPracticeSuggestion;
               error?: string;
             };
 
@@ -221,6 +234,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
                 role: 'assistant',
                 content: accumulated,
                 hasImage: false,
+                practice: data.practice,
               });
               setStreamingText('');
               setIsStreaming(false);
@@ -300,6 +314,16 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
               <TutorMarkdown>{msg.content}</TutorMarkdown>
             ) : (
               <span style={styles.bubbleText}>{msg.content}</span>
+            )}
+            {msg.practice && (
+              <button
+                type="button"
+                onClick={() => navigate(practiceUrl(msg.practice as TutorPracticeSuggestion))}
+                style={styles.practiceChip}
+                title={`Generar ejercicios de ${msg.practice.title} en Estudiar`}
+              >
+                📝 Practicar: {msg.practice.title}
+              </button>
             )}
           </div>
         ))}
@@ -459,6 +483,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.75rem',
     opacity: 0.85,
     fontWeight: 600,
+  },
+  practiceChip: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    background: 'var(--gradient-orange)',
+    color: 'var(--brand-contrast)',
+    border: 'none',
+    borderRadius: 999,
+    padding: '6px 12px',
+    fontSize: '0.8125rem',
+    fontWeight: 600,
+    cursor: 'pointer',
   },
   cursor: {
     display: 'inline-block',

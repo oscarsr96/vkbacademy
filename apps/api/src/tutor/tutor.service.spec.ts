@@ -21,8 +21,11 @@ const mockUser = { findUnique: jest.fn() };
 const mockStudyPlan = { findMany: jest.fn() };
 const mockExerciseAttempt = { findMany: jest.fn() };
 
+const mockTutorImage = { create: jest.fn(), deleteMany: jest.fn() };
+
 const mockPrisma = {
   tutorMessage: mockTutorMessage,
+  tutorImage: mockTutorImage,
   user: mockUser,
   studyPlan: mockStudyPlan,
   exerciseAttempt: mockExerciseAttempt,
@@ -164,12 +167,14 @@ describe('TutorService', () => {
         role: 'assistant',
         content: 'Respuesta anterior',
         createdAt: new Date('2026-01-02'),
+        image: null,
       },
       {
         id: 'msg-1',
         role: 'user',
         content: 'Pregunta anterior',
         createdAt: new Date('2026-01-01'),
+        image: null,
       },
     ];
 
@@ -180,7 +185,9 @@ describe('TutorService', () => {
       // que el orden dependa de cuántas veces se ha invocado antes (bug de
       // aislamiento del mock, no del servicio).
       mockTutorMessage.findMany.mockImplementation(() => Promise.resolve([...historialPrevio]));
-      mockTutorMessage.create.mockResolvedValue({});
+      mockTutorMessage.create.mockResolvedValue({ id: 'msg-new' });
+      mockTutorImage.create.mockResolvedValue({});
+      mockTutorImage.deleteMany.mockResolvedValue({ count: 0 });
       mockAi.streamChat.mockImplementation(streamOf('Hola', ' mundo'));
       mockUser.findUnique.mockResolvedValue({ schoolYear: null });
       mockStudyPlan.findMany.mockResolvedValue([]);
@@ -314,11 +321,61 @@ describe('TutorService', () => {
       expect(system).toMatch(/\$…\$/);
     });
 
+    describe('practicar este tema (#141)', () => {
+      const planConTemas = [
+        {
+          title: 'Fracciones · Ecuaciones',
+          courseId: 'c-mat',
+          course: { title: 'Matemáticas' },
+          topics: [
+            { title: 'Ecuaciones', moduleId: 'm-1' },
+            { title: 'Fracciones', moduleId: null },
+          ],
+        },
+      ];
+
+      it('si la conversación toca un tema del alumno, el evento done lleva practice', async () => {
+        mockStudyPlan.findMany.mockResolvedValue(planConTemas);
+        mockAi.streamChat.mockImplementation(streamOf('Las fracciones se suman así…'));
+
+        await service.streamChat(userId, { ...dto, message: 'no entiendo las fracciones' }, mockRes);
+
+        expect(mockRes.write).toHaveBeenCalledWith(
+          `data: ${JSON.stringify({
+            done: true,
+            practice: { title: 'Fracciones', courseId: 'c-mat', courseTitle: 'Matemáticas', moduleId: null },
+          })}\n\n`,
+        );
+      });
+
+      it('los temas flojos ganan cuando aparecen varios', async () => {
+        mockStudyPlan.findMany.mockResolvedValue(planConTemas);
+        mockExerciseAttempt.findMany.mockResolvedValue([{ topicLabel: 'Ecuaciones', verdict: 'incorrect' }]);
+        mockAi.streamChat.mockImplementation(streamOf('ok'));
+
+        await service.streamChat(userId, { ...dto, message: 'ecuaciones con fracciones' }, mockRes);
+
+        const doneEvent = (mockRes.write as jest.Mock).mock.calls
+          .map((c) => String(c[0]))
+          .find((l) => l.includes('"done":true'));
+        expect(doneEvent).toContain('"title":"Ecuaciones"');
+        expect(doneEvent).toContain('"moduleId":"m-1"');
+      });
+
+      it('sin coincidencia, el evento done va sin practice', async () => {
+        mockStudyPlan.findMany.mockResolvedValue(planConTemas);
+
+        await service.streamChat(userId, { ...dto, message: 'quién ganó la liga' }, mockRes);
+
+        expect(mockRes.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ done: true })}\n\n`);
+      });
+    });
+
     describe('perfil de estudio (#137)', () => {
       it('con datos, el prompt lleva curso, planes y temas flojos leídos de BD', async () => {
         mockUser.findUnique.mockResolvedValue({ schoolYear: { label: '3º ESO' } });
         mockStudyPlan.findMany.mockResolvedValue([
-          { title: 'Fracciones · Ecuaciones', course: { title: 'Matemáticas' } },
+          { title: 'Fracciones · Ecuaciones', courseId: 'c-mat', course: { title: 'Matemáticas' }, topics: [] },
         ]);
         mockExerciseAttempt.findMany.mockResolvedValue([
           { topicLabel: 'Ecuaciones', verdict: 'incorrect' },
@@ -443,6 +500,63 @@ describe('TutorService', () => {
           (c) => c[0].data.role === 'user',
         );
         expect(userCreate?.[0].data.content).toBe('¿Me ayudas con este ejercicio?');
+      });
+
+      it('guarda la foto ligada al mensaje del alumno para los seguimientos (#140)', async () => {
+        await service.streamChat(userId, dto, mockRes, image);
+
+        expect(mockTutorImage.create).toHaveBeenCalledWith({
+          data: { messageId: 'msg-new', mimeType: 'image/jpeg', data: image.buffer },
+        });
+      });
+
+      it('sin foto no guarda nada en TutorImage', async () => {
+        await service.streamChat(userId, dto, mockRes);
+        expect(mockTutorImage.create).not.toHaveBeenCalled();
+      });
+
+      it('las fotos de mensajes anteriores vuelven al modelo en los seguimientos, como mucho las 3 más recientes', async () => {
+        const withPhoto = (id: string, day: number) => ({
+          id,
+          role: 'user',
+          content: `Pregunta ${id}`,
+          createdAt: new Date(`2026-01-0${day}`),
+          image: { mimeType: 'image/png', data: Buffer.from(`bytes-${id}`) },
+        });
+        // Orden desc como lo devuelve Prisma: la más reciente primero
+        mockTutorMessage.findMany.mockResolvedValue([
+          withPhoto('p4', 4),
+          withPhoto('p3', 3),
+          withPhoto('p2', 2),
+          withPhoto('p1', 1),
+        ]);
+
+        await service.streamChat(userId, { ...dto, message: '¿y el apartado b?' }, mockRes);
+
+        const { messages } = mockAi.streamChat.mock.calls[0][0];
+        const withImage = messages.filter((m: { image?: unknown }) => m.image);
+        expect(withImage.map((m: { text: string }) => m.text)).toEqual([
+          'Pregunta p2',
+          'Pregunta p3',
+          'Pregunta p4',
+        ]);
+        expect(withImage[0].image).toEqual({
+          mimeType: 'image/png',
+          base64: Buffer.from('bytes-p2').toString('base64'),
+        });
+        // La más antigua sigue en el hilo, pero solo como texto
+        expect(messages.find((m: { text: string }) => m.text === 'Pregunta p1')?.image).toBeUndefined();
+      });
+
+      it('poda las fotos de mensajes que han salido de la ventana de contexto', async () => {
+        await service.streamChat(userId, dto, mockRes, image);
+
+        expect(mockTutorImage.deleteMany).toHaveBeenCalledWith({
+          where: {
+            message: { userId },
+            messageId: { notIn: ['msg-1', 'msg-2', 'msg-new'] },
+          },
+        });
       });
 
       it('marca hasImage: true en el mensaje del alumno', async () => {

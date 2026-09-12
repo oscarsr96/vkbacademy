@@ -71,3 +71,54 @@ export function buildStudyProfileLines(profile: StudyProfile): string[] {
 
   return lines;
 }
+
+// ─── Practicar este tema (#141) ─────────────────────────────────────────────
+
+/** Tema de un plan del alumno, candidato a "practicar esto". */
+export interface PracticeCandidate {
+  title: string;
+  courseId: string;
+  courseTitle: string;
+  moduleId: string | null;
+  /** Aparece entre los temas que le cuestan. */
+  weak: boolean;
+}
+
+/** Lo que viaja al cliente en el evento `done` para montar el enlace a Estudiar. */
+export interface PracticeSuggestion {
+  title: string;
+  courseId: string;
+  courseTitle: string;
+  moduleId: string | null;
+}
+
+/** Títulos muy cortos casan con cualquier cosa ("la", "el"). */
+const MIN_TOPIC_LENGTH = 3;
+
+function normalize(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
+/**
+ * Qué tema del alumno toca la conversación, sin preguntar a la IA: se busca
+ * el título de cada tema (sin acentos ni mayúsculas) en pregunta + respuesta.
+ * Gana el tema flojo; a igualdad, el título más largo (más específico).
+ */
+export function suggestPracticeTopic(
+  text: string,
+  candidates: PracticeCandidate[],
+): PracticeSuggestion | null {
+  const haystack = normalize(text);
+  const hits = candidates.filter((c) => {
+    const needle = normalize(c.title).trim();
+    return needle.length >= MIN_TOPIC_LENGTH && haystack.includes(needle);
+  });
+  if (hits.length === 0) return null;
+
+  hits.sort((a, b) => Number(b.weak) - Number(a.weak) || b.title.length - a.title.length);
+  const { title, courseId, courseTitle, moduleId } = hits[0];
+  return { title, courseId, courseTitle, moduleId };
+}

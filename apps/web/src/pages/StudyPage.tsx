@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { StudyExercisesPerTopic, StudyPlanTopicInput } from '@vkbacademy/shared';
 import { useCourse, useSubjects } from '../hooks/useCourses';
@@ -7,6 +7,7 @@ import { getApiErrorMessage } from '../utils/errorMessage';
 import PageHeader from '../components/ui/PageHeader';
 import Icon from '../components/ui/Icon';
 import EmptyState from '../components/ui/EmptyState';
+import { topicFromSearchParams, type SelectedTopic } from './study/preselectTopic';
 
 const MAX_TOPICS = 6;
 
@@ -23,14 +24,6 @@ const SPLIT_FIELDS: { key: keyof StudyExercisesPerTopic; label: string }[] = [
 ];
 
 // Tema ya elegido para el curso (oficial u propio), con etiqueta lista para mostrar en el chip.
-interface SelectedTopic {
-  key: string;
-  kind: 'OFFICIAL' | 'CUSTOM';
-  moduleId?: string;
-  title: string;
-  subject?: string;
-  label: string;
-}
 
 export default function StudyPage() {
   const [searchParams] = useSearchParams();
@@ -45,6 +38,18 @@ export default function StudyPage() {
   const courses = subjects ?? [];
 
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
+
+  // Tema que llega desde Dudas (#141): se aplica una vez, cuando ya se sabe
+  // si es oficial (necesita el temario) o propio.
+  const preselectApplied = useRef(false);
+  useEffect(() => {
+    if (preselectApplied.current || !searchParams.get('topic')) return;
+    const needsModules = Boolean(searchParams.get('moduleId')) && courseId && courseId !== OTHER_SUBJECT;
+    if (needsModules && !courseDetail) return;
+    const topic = topicFromSearchParams(searchParams, courseDetail?.modules ?? []);
+    if (topic) setSelectedTopics([topic]);
+    preselectApplied.current = true;
+  }, [searchParams, courseId, courseDetail]);
   // '' = ninguna elegida; OTHER_SUBJECT = la escribe el alumno
   const [ownSubject, setOwnSubject] = useState('');
   const [customTitle, setCustomTitle] = useState('');

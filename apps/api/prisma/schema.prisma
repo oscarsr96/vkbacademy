@@ -550,8 +550,23 @@ model TutorMessage {
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   course Course? @relation("TutorMessageCourse", fields: [courseId], references: [id], onDelete: SetNull)
   lesson Lesson? @relation("TutorMessageLesson", fields: [lessonId], references: [id], onDelete: SetNull)
+  image  TutorImage?
 
   @@index([userId, createdAt])
+}
+
+/// Foto que acompañó a un mensaje del alumno, para que el tutor la vuelva a
+/// ver en las preguntas de seguimiento. Vive lo que dura la conversación: se
+/// poda cuando el mensaje sale de la ventana de contexto y cae con el mensaje
+/// al limpiar el historial. Bytes ya reducidos por el cliente (~300 KB).
+model TutorImage {
+  id        String   @id @default(cuid())
+  messageId String   @unique
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  message TutorMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }
 
 // ─────────────────────────────────────────────────────────

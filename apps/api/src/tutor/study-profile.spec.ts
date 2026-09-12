@@ -1,4 +1,9 @@
-import { buildStudyProfileLines, rankWeakTopics, type StudyProfile } from './study-profile';
+import {
+  buildStudyProfileLines,
+  rankWeakTopics,
+  suggestPracticeTopic,
+  type StudyProfile,
+} from './study-profile';
 
 describe('rankWeakTopics', () => {
   it('ordena por fallos y devuelve como mucho tres temas, con "N fallos de M"', () => {
@@ -54,5 +59,40 @@ describe('buildStudyProfileLines', () => {
     expect(buildStudyProfileLines({ schoolYear: '1º Bachillerato', plans: [], weakTopics: [] })).toEqual([
       'El alumno está en 1º Bachillerato.',
     ]);
+  });
+});
+
+describe('suggestPracticeTopic (#141)', () => {
+  const candidates = [
+    { title: 'Ecuaciones de segundo grado', courseId: 'c-mat', courseTitle: 'Matemáticas', moduleId: 'm-1', weak: true },
+    { title: 'Fracciones', courseId: 'c-mat', courseTitle: 'Matemáticas', moduleId: null, weak: false },
+    { title: 'La célula', courseId: 'c-bio', courseTitle: 'Biología', moduleId: 'm-9', weak: false },
+  ];
+
+  it('devuelve el tema del alumno que aparece en la conversación', () => {
+    const hit = suggestPracticeTopic('no entiendo las FRACCIONES con distinto denominador', candidates);
+    expect(hit).toEqual({ title: 'Fracciones', courseId: 'c-mat', courseTitle: 'Matemáticas', moduleId: null });
+  });
+
+  it('ignora acentos y mayúsculas', () => {
+    expect(suggestPracticeTopic('que es la celula?', candidates)?.title).toBe('La célula');
+  });
+
+  it('si aparecen varios, gana el flojo; a igualdad, el más largo', () => {
+    const text = 'las ecuaciones de segundo grado con fracciones';
+    expect(suggestPracticeTopic(text, candidates)?.title).toBe('Ecuaciones de segundo grado');
+
+    const noWeak = candidates.map((c) => ({ ...c, weak: false }));
+    expect(suggestPracticeTopic(text, noWeak)?.title).toBe('Ecuaciones de segundo grado');
+  });
+
+  it('sin coincidencia, nada', () => {
+    expect(suggestPracticeTopic('¿quién ganó la liga?', candidates)).toBeNull();
+  });
+
+  it('un tema de dos letras no casa por accidente', () => {
+    expect(
+      suggestPracticeTopic('hola', [{ title: 'la', courseId: 'c', courseTitle: 'C', moduleId: null, weak: false }]),
+    ).toBeNull();
   });
 });
