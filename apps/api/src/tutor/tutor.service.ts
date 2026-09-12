@@ -94,6 +94,7 @@ export class TutorService {
         content: dto.message,
         courseId: dto.courseId ?? null,
         lessonId: dto.lessonId ?? null,
+        hasImage: false,
       },
     });
 
@@ -166,7 +167,9 @@ export class TutorService {
           },
         );
       } catch (err) {
-        this.logger.warn(`No se pudo leer el consumo del tutor para userId=${userId}: ${String(err)}`);
+        this.logger.warn(
+          `No se pudo leer el consumo del tutor para userId=${userId}: ${String(err)}`,
+        );
       }
 
       // 8. Señal de fin
@@ -192,6 +195,7 @@ export class TutorService {
         content: true,
         courseId: true,
         lessonId: true,
+        hasImage: true,
         createdAt: true,
       },
     });

@@ -4,6 +4,8 @@ export interface TutorMessageDto {
   content: string;
   courseId?: string | null;
   lessonId?: string | null;
+  /** El mensaje llevaba foto. La foto no se conserva. */
+  hasImage: boolean;
   createdAt: string;
 }
 

@@ -89,6 +89,7 @@ describe('TutorService', () => {
           content: true,
           courseId: true,
           lessonId: true,
+          hasImage: true,
           createdAt: true,
         },
       });
@@ -159,8 +160,9 @@ describe('TutorService', () => {
         { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hola' } },
         { type: 'content_block_delta', delta: { type: 'text_delta', text: ' mundo' } },
       ],
-      finalMessage: () => Promise<{ usage: { input_tokens: number; output_tokens: number } }> = () =>
-        Promise.resolve({ usage: { input_tokens: 320, output_tokens: 85 } }),
+      finalMessage: () => Promise<{
+        usage: { input_tokens: number; output_tokens: number };
+      }> = () => Promise.resolve({ usage: { input_tokens: 320, output_tokens: 85 } }),
     ) => ({
       [Symbol.asyncIterator]: async function* () {
         for (const chunk of chunks) {
@@ -199,6 +201,7 @@ describe('TutorService', () => {
           content: dto.message,
           courseId: dto.courseId,
           lessonId: dto.lessonId,
+          hasImage: false,
         },
       });
 
@@ -322,9 +325,7 @@ describe('TutorService', () => {
     it('si no se puede leer el consumo, la respuesta del tutor se guarda igual', async () => {
       // La contabilidad va DESPUÉS del guardado y en su propio try: el alumno no
       // puede perder una respuesta que ya ha leído por un fallo de facturación.
-      setMockAnthropic(
-        buildMockStream(undefined, () => Promise.reject(new Error('sin usage'))),
-      );
+      setMockAnthropic(buildMockStream(undefined, () => Promise.reject(new Error('sin usage'))));
 
       await service.streamChat(userId, dto, mockRes);
 

@@ -543,6 +543,8 @@ model TutorMessage {
   content   String   @db.Text
   courseId  String?
   lessonId  String?
+  /// El alumno adjuntó una foto en este mensaje. La foto no se guarda: solo queda la marca.
+  hasImage  Boolean  @default(false)
   createdAt DateTime @default(now())
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
