@@ -227,7 +227,10 @@ export class TutorService {
 
       // 8. Señal de fin. Si la conversación toca un tema de sus planes, va la
       //    propuesta de practicarlo (#141).
-      const practice = suggestPracticeTopic(`${message}\n${fullResponse}`, practiceCandidates);
+      const practice = suggestPracticeTopic(
+        { question: message, answer: fullResponse, hadImage: Boolean(image) },
+        practiceCandidates,
+      );
       res.write(`data: ${JSON.stringify(practice ? { done: true, practice } : { done: true })}\n\n`);
     } catch (error) {
       this.logger.error('Error en streaming del tutor', error);
