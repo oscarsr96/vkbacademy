@@ -221,9 +221,21 @@ export class AuthService {
    * Solicita restablecimiento de contraseña.
    * Responde siempre con mensaje genérico para evitar enumeración de emails.
    */
-  async forgotPassword(email: string): Promise<{ message: string }> {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) return { message: 'Si el email existe, recibirás un enlace en breve' };
+  /**
+   * Enlace de restablecimiento. Acepta email o nombre de usuario, como el
+   * login. Los alumnos autorregistrados no tienen email: el enlace va al
+   * email de contacto de su familia (`guardianEmail`), redactado para el
+   * padre/madre. La respuesta es siempre la misma, exista o no la cuenta.
+   */
+  async forgotPassword(identifier: string): Promise<{ message: string }> {
+    const response = { message: 'Si existe, recibirás un enlace en breve' };
+    const value = identifier.trim();
+    if (!value) return response;
+
+    const user = value.includes('@')
+      ? await this.prisma.user.findUnique({ where: { email: value } })
+      : await this.prisma.user.findUnique({ where: { username: value.toLowerCase() } });
+    if (!user) return response;
 
     // El secret incluye el passwordHash actual → el token queda invalidado al cambiar la contraseña
     const resetSecret = this.config.get<string>('JWT_SECRET')! + user.passwordHash;
@@ -237,9 +249,19 @@ export class AuthService {
       .split(',')[0];
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
-    void this.notifications.sendPasswordReset({ email: user.email!, name: user.name, resetUrl });
+    if (user.email) {
+      void this.notifications.sendPasswordReset({ email: user.email, name: user.name, resetUrl });
+    } else if (user.guardianEmail && user.username) {
+      void this.notifications.sendGuardianPasswordReset({
+        guardianEmail: user.guardianEmail,
+        studentName: user.name,
+        username: user.username,
+        resetUrl,
+      });
+    }
+    // Sin email ni familia no hay a quién escribir: solo queda el admin.
 
-    return { message: 'Si el email existe, recibirás un enlace en breve' };
+    return response;
   }
 
   /** Valida el token y actualiza la contraseña */

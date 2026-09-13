@@ -134,12 +134,13 @@ POST /auth/register-students   → registra hasta 10 alumnos (padre/madre no cre
 POST /auth/login       identifier (email o username) + password → { accessToken, refreshToken }
 POST /auth/refresh
 POST /auth/logout
-POST /auth/forgot-password     → email (solo usuarios con email: ADMIN/SUPER_ADMIN o STUDENT dado de alta manualmente)
+POST /auth/forgot-password     → identifier (email o username); si el alumno no tiene email, el enlace va a su guardianEmail
 POST /auth/reset-password
 ```
 
-**Recuperación de contraseña de alumnos**: los alumnos autorregistrados no tienen email, así que
-`forgot-password` no les sirve. La única vía es que un ADMIN/SUPER_ADMIN use
+**Recuperación de contraseña de alumnos**: los alumnos autorregistrados no tienen email.
+`forgot-password` acepta su `username` y manda el enlace al `guardianEmail` de la familia,
+redactado para el padre/madre. Sin `guardianEmail`, la vía es que un ADMIN/SUPER_ADMIN use
 `PATCH /admin/users/:id/password` (ver sección Admin).
 
 ### Cursos y lecciones
@@ -197,7 +198,7 @@ DELETE /academies/:id/members/:userId    [ADMIN, SUPER_ADMIN]
 
 Namespaces: `users`, `courses`, `courses/:id/modules`, `modules/:id/lessons`, `lessons/:id/quiz`, `quizzes/:id/questions`, `exam-questions`, `exam-attempts`, `challenges`, `redemptions`, `certificates`, `metrics`, `analytics`. Todos `[ADMIN, SUPER_ADMIN]` salvo `super-admin-only`.
 
-`PATCH /admin/users/:id/password` restablece la contraseña de cualquier usuario (típicamente un alumno sin email). Es la única vía de recuperación para alumnos autorregistrados.
+`PATCH /admin/users/:id/password` restablece la contraseña de cualquier usuario. Es la vía de recuperación para alumnos sin email ni `guardianEmail`.
 
 Ver swagger o los controllers de `apps/api/src/admin/` para firmas exactas.
 

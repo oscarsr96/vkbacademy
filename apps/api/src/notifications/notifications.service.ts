@@ -39,6 +39,32 @@ export class NotificationsService {
     }
   }
 
+  /**
+   * Enlace de restablecimiento de un alumno sin email, dirigido a su familia.
+   * El padre/madre no tiene cuenta: se le dice quién lo pide y qué hacer si
+   * no ha sido nadie de casa.
+   */
+  async sendGuardianPasswordReset(params: {
+    guardianEmail: string;
+    studentName: string;
+    username: string;
+    resetUrl: string;
+  }) {
+    await this.sendEmail(
+      params.guardianEmail,
+      `Restablecer la contraseña de ${params.studentName} — VKB Academy`,
+      `<h2>Restablecer contraseña</h2>
+       <p>Hola, <strong>${params.studentName}</strong> (usuario <code>${params.username}</code>) ha pedido restablecer su contraseña de VKB Academy.</p>
+       <p>Los alumnos no tienen email propio, así que el enlace llega a este correo, el de contacto de la familia.</p>
+       <p style="margin:1.5rem 0">
+         <a href="${params.resetUrl}" style="background:#f5911e;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
+           Restablecer contraseña
+         </a>
+       </p>
+       <p style="color:#666;font-size:0.9rem">El enlace caduca en 1 hora. Si nadie de casa lo ha pedido, ignora este correo: la contraseña no cambia.</p>`,
+    );
+  }
+
   /** Envía el enlace de restablecimiento de contraseña al usuario */
   async sendPasswordReset(params: { email: string; name: string; resetUrl: string }) {
     await this.sendEmail(
