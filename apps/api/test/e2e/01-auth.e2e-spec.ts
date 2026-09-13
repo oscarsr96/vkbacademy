@@ -136,7 +136,7 @@ describe('Auth — /auth', () => {
   describe('POST /auth/forgot-password', () => {
     it('devuelve mensaje genérico para email existente', async () => {
       const res = await publicPost('/auth/forgot-password', {
-        email: 'student@vkbacademy.com',
+        identifier: 'student@vkbacademy.com',
       });
 
       expect(res.status).toBe(200);
@@ -145,7 +145,7 @@ describe('Auth — /auth', () => {
 
     it('devuelve el mismo mensaje genérico para email inexistente (protección de enumeración)', async () => {
       const res = await publicPost('/auth/forgot-password', {
-        email: 'noexiste@vkbacademy.com',
+        identifier: 'noexiste@vkbacademy.com',
       });
 
       expect(res.status).toBe(200);

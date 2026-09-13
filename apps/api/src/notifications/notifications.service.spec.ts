@@ -84,6 +84,22 @@ describe('NotificationsService', () => {
       expect(html).toContain(resetUrl);
     });
 
+    it('sendGuardianPasswordReset escribe a la familia con el nombre y el usuario del alumno (#147)', async () => {
+      await service.sendGuardianPasswordReset({
+        guardianEmail: 'madre@familia.es',
+        studentName: 'Álvaro García',
+        username: 'alvaro-garcia',
+        resetUrl: 'https://app.test/reset-password?token=abc',
+      });
+
+      const [{ to, subject, html }] = mockSend.mock.calls[0] as [{ to: string; subject: string; html: string }];
+      expect(to).toBe('madre@familia.es');
+      expect(subject).toContain('Álvaro García');
+      expect(html).toContain('alvaro-garcia');
+      expect(html).toContain('https://app.test/reset-password?token=abc');
+      expect(html).toMatch(/ignora este correo/i);
+    });
+
     it('sendEmail captura el error de resend sin propagarlo al llamante', async () => {
       mockSend.mockRejectedValue(new Error('API timeout'));
 

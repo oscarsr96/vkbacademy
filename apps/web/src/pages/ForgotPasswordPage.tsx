@@ -5,11 +5,11 @@ import { authApi } from '../api/auth.api';
 import Icon from '../components/ui/Icon';
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [sent, setSent] = useState(false);
 
   const { mutate, isPending, error } = useMutation({
-    mutationFn: () => authApi.forgotPassword(email),
+    mutationFn: () => authApi.forgotPassword(identifier.trim()),
     onSuccess: () => setSent(true),
   });
 
@@ -34,7 +34,8 @@ export default function ForgotPasswordPage() {
           </div>
           <h1 style={s.title}>Recuperar contraseña</h1>
           <p style={s.subtitle}>
-            Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.
+            Escribe tu email o tu nombre de usuario y te enviaremos un enlace para restablecer
+            tu contraseña.
           </p>
         </div>
 
@@ -46,8 +47,8 @@ export default function ForgotPasswordPage() {
             </div>
             <p style={s.successTitle}>Correo enviado</p>
             <p style={s.successText}>
-              Si el email está registrado, recibirás un enlace en breve. Revisa también la carpeta
-              de spam.
+              Si la cuenta existe, el enlace llega en breve al email asociado (el tuyo o el de tu
+              familia). Revisa también la carpeta de spam.
             </p>
             <Link to="/login" style={s.successLink}>
               Volver al inicio de sesión
@@ -65,22 +66,26 @@ export default function ForgotPasswordPage() {
 
             <form onSubmit={handleSubmit} style={s.form} noValidate>
               <div className="field field-dark">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="identifier">Email o nombre de usuario</label>
                 <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@email.com"
+                  id="identifier"
+                  type="text"
+                  autoComplete="username"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="tu@email.com o tu nombre"
                   required
                 />
+                <p style={s.help}>
+                  Si eres alumno y no tienes email, escribe tu nombre de usuario: el enlace llegará
+                  al email de tu padre o madre.
+                </p>
               </div>
 
               <button
                 type="submit"
                 className="btn btn-primary btn-full"
-                disabled={isPending || !email}
+                disabled={isPending || !identifier.trim()}
                 style={{ marginTop: 4, padding: '13px 22px', fontSize: '1rem' }}
               >
                 {isPending ? <span className="spinner" /> : 'Enviar enlace'}
@@ -199,6 +204,12 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
+  },
+  help: {
+    margin: '6px 0 0',
+    fontSize: '0.8125rem',
+    lineHeight: 1.45,
+    color: 'rgba(255,255,255,0.55)',
   },
   footerText: {
     textAlign: 'center',

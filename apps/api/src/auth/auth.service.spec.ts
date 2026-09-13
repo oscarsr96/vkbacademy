@@ -311,6 +311,102 @@ describe('AuthService', () => {
 
   // ─── resetPassword: fija la nueva contraseña del usuario ────────────────────
 
+  describe('forgotPassword (#147)', () => {
+    const notifications = () =>
+      service['notifications'] as unknown as {
+        sendPasswordReset: jest.Mock;
+        sendGuardianPasswordReset: jest.Mock;
+      };
+    const respuesta = { message: 'Si existe, recibirás un enlace en breve' };
+
+    beforeEach(() => {
+      notifications().sendGuardianPasswordReset = jest.fn().mockResolvedValue(undefined);
+      mockConfig.get.mockImplementation((key: string, fallback?: string) => {
+        if (key === 'JWT_SECRET') return 'secret';
+        if (key === 'FRONTEND_URL') return 'https://app.test';
+        return fallback;
+      });
+    });
+
+    it('con un email registrado, manda el enlace a ese email', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ ...fakeUser, username: null, guardianEmail: null });
+
+      const res = await service.forgotPassword('alumno@vkbacademy.es');
+
+      expect(res).toEqual(respuesta);
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { email: 'alumno@vkbacademy.es' } }),
+      );
+      expect(notifications().sendPasswordReset).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'alumno@vkbacademy.es', name: 'Alumno Test' }),
+      );
+      expect(notifications().sendGuardianPasswordReset).not.toHaveBeenCalled();
+    });
+
+    it('con un username de alumno con email, se lo manda a él', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        ...fakeUser,
+        username: 'alumno-test',
+        guardianEmail: 'madre@familia.es',
+      });
+
+      await service.forgotPassword('Alumno-Test');
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { username: 'alumno-test' } }),
+      );
+      expect(notifications().sendPasswordReset).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'alumno@vkbacademy.es' }),
+      );
+      expect(notifications().sendGuardianPasswordReset).not.toHaveBeenCalled();
+    });
+
+    it('con un username de alumno sin email, el enlace va al email de su familia con su nombre y usuario', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        ...fakeUser,
+        email: null,
+        username: 'alvaro-garcia',
+        name: 'Álvaro García',
+        guardianEmail: 'madre@familia.es',
+      });
+
+      const res = await service.forgotPassword('alvaro-garcia');
+
+      expect(res).toEqual(respuesta);
+      expect(notifications().sendPasswordReset).not.toHaveBeenCalled();
+      expect(notifications().sendGuardianPasswordReset).toHaveBeenCalledWith({
+        guardianEmail: 'madre@familia.es',
+        studentName: 'Álvaro García',
+        username: 'alvaro-garcia',
+        resetUrl: expect.stringMatching(/^https:\/\/app\.test\/reset-password\?token=/),
+      });
+    });
+
+    it('alumno sin email ni email de familia: misma respuesta y ningún envío', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        ...fakeUser,
+        email: null,
+        username: 'huerfano',
+        guardianEmail: null,
+      });
+
+      const res = await service.forgotPassword('huerfano');
+
+      expect(res).toEqual(respuesta);
+      expect(notifications().sendPasswordReset).not.toHaveBeenCalled();
+      expect(notifications().sendGuardianPasswordReset).not.toHaveBeenCalled();
+    });
+
+    it('identificador desconocido: misma respuesta y ningún envío (no revela cuentas)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      expect(await service.forgotPassword('nadie')).toEqual(respuesta);
+      expect(await service.forgotPassword('nadie@x.es')).toEqual(respuesta);
+      expect(notifications().sendPasswordReset).not.toHaveBeenCalled();
+      expect(notifications().sendGuardianPasswordReset).not.toHaveBeenCalled();
+    });
+  });
+
   describe('resetPassword', () => {
     beforeEach(() => {
       mockedBcrypt.hash.mockResolvedValue('newhash' as never);
