@@ -92,6 +92,31 @@ describe('NotificationsService', () => {
       ).resolves.toBeUndefined();
     });
 
+    it('un rechazo de la API de Resend (que no lanza, devuelve { error }) queda en el log', async () => {
+      // Resend responde 200 con { data: null, error } cuando rechaza el envío
+      // (dominio sin verificar, remitente inválido, key sin permisos). Sin
+      // mirar `error`, el correo se pierde sin dejar rastro.
+      mockSend.mockResolvedValue({
+        data: null,
+        error: { name: 'validation_error', message: 'The vallekasbasket.com domain is not verified' },
+      });
+      const errorSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => undefined);
+
+      await service.sendEmail('dest@test.com', 'Asunto', '<p>HTML</p>');
+
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('domain is not verified'));
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dest@test.com'));
+    });
+
+    it('un envío aceptado deja el id de Resend en el log', async () => {
+      mockSend.mockResolvedValue({ data: { id: 'msg-1' }, error: null });
+      const logSpy = jest.spyOn(service['logger'], 'log').mockImplementation(() => undefined);
+
+      await service.sendEmail('dest@test.com', 'Asunto', '<p>HTML</p>');
+
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('msg-1'));
+    });
+
     it('sendEmail utiliza el from configurado en EMAIL_FROM', async () => {
       await service.sendEmail('dest@test.com', 'Asunto', '<p>HTML</p>');
 

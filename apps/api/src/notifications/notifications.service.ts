@@ -25,7 +25,15 @@ export class NotificationsService {
       return;
     }
     try {
-      await this.resend.emails.send({ from: this.from, to, subject, html });
+      // El SDK de Resend no lanza cuando la API rechaza el envío (dominio sin
+      // verificar, remitente inválido, key sin permisos): responde con
+      // { data: null, error }. Sin mirarlo, el correo se pierde sin rastro.
+      const { data, error } = await this.resend.emails.send({ from: this.from, to, subject, html });
+      if (error) {
+        this.logger.error(`Resend rechazó el email a ${to} (${subject}): ${error.message}`);
+        return;
+      }
+      this.logger.log(`Email enviado a ${to} (${subject}) — id Resend ${data?.id ?? '?'}`);
     } catch (error) {
       this.logger.error(`Error enviando email a ${to}: ${(error as Error).message}`);
     }
