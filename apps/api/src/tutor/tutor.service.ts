@@ -14,8 +14,10 @@ import {
   rankWeakTopics,
   suggestPracticeTopic,
   type PracticeCandidate,
+  type PracticeSuggestion,
   type StudyProfile,
 } from './study-profile';
+import { buildCurriculumLines, TopicTagFilter, type CurriculumTopic } from './topic-tag';
 
 /** Tope de la respuesta. 3-4 párrafos caben de sobra; el prompt ya pide concisión. */
 const TUTOR_MAX_TOKENS = 1024;
@@ -25,6 +27,12 @@ const WEAK_TOPICS_WINDOW_DAYS = 30;
 
 /** Mensajes anteriores que ve el modelo en cada pregunta. */
 const CONTEXT_WINDOW = 10;
+
+/**
+ * Temas del temario que se listan al modelo para que elija el de la duda
+ * (#144). Un nivel completo ronda el centenar; más es señal de datos raros.
+ */
+const MAX_CURRICULUM_TOPICS = 150;
 
 /**
  * Fotos de mensajes anteriores que vuelven al modelo (#140). Cada una cuesta
@@ -159,8 +167,8 @@ export class TutorService {
 
     // 3. Construir el system prompt con contexto: el de la petición (curso/
     //    lección desde donde pregunta) y el perfil de estudio leído de BD.
-    const { profile, practiceCandidates } = await this.loadStudyProfile(userId);
-    const systemPrompt = this.buildSystemPrompt(dto, Boolean(image), profile);
+    const { profile, practiceCandidates, curriculum } = await this.loadStudyProfile(userId);
+    const systemPrompt = this.buildSystemPrompt(dto, Boolean(image), profile, curriculum);
 
     // 4. Configurar headers SSE
     res.setHeader('Content-Type', 'text/event-stream');
@@ -209,10 +217,16 @@ export class TutorService {
         context: { userId, category: AiUsageCategory.CHATBOT },
       });
 
-      for await (const text of stream) {
+      // La primera línea puede ser la etiqueta `TEMA: n` (#144): se retiene
+      // hasta saber si lo es y nunca llega al alumno ni al historial.
+      const tagFilter = new TopicTagFilter();
+      const forward = (text: string) => {
+        if (!text) return;
         fullResponse += text;
         res.write(`data: ${JSON.stringify({ text })}\n\n`);
-      }
+      };
+      for await (const chunk of stream) forward(tagFilter.push(chunk));
+      forward(tagFilter.flush());
 
       // 7. Guardar la respuesta completa del asistente en BD
       await this.prisma.tutorMessage.create({
@@ -225,11 +239,14 @@ export class TutorService {
         },
       });
 
-      // 8. Señal de fin. Si la conversación toca un tema de sus planes, va la
-      //    propuesta de practicarlo (#141).
-      const practice = suggestPracticeTopic(
-        { question: message, answer: fullResponse, hadImage: Boolean(image) },
-        practiceCandidates,
+      // 8. Señal de fin, con la propuesta de practicar si la hay: el tema del
+      //    temario que eligió el modelo (#144); si no puso etiqueta, el cruce
+      //    por pregunta sobre sus planes (#141). `TEMA: 0` es "ninguno".
+      const practice = this.resolvePractice(tagFilter.topicIndex, curriculum, () =>
+        suggestPracticeTopic(
+          { question: message, answer: fullResponse, hadImage: Boolean(image) },
+          practiceCandidates,
+        ),
       );
       res.write(`data: ${JSON.stringify(practice ? { done: true, practice } : { done: true })}\n\n`);
     } catch (error) {
@@ -273,12 +290,16 @@ export class TutorService {
    */
   private async loadStudyProfile(
     userId: string,
-  ): Promise<{ profile: StudyProfile; practiceCandidates: PracticeCandidate[] }> {
+  ): Promise<{
+    profile: StudyProfile;
+    practiceCandidates: PracticeCandidate[];
+    curriculum: CurriculumTopic[];
+  }> {
     const since = new Date(Date.now() - WEAK_TOPICS_WINDOW_DAYS * 86_400_000);
     const [user, plans, attempts] = await Promise.all([
       this.prisma.user.findUnique({
         where: { id: userId },
-        select: { schoolYear: { select: { label: true } } },
+        select: { schoolYearId: true, schoolYear: { select: { label: true } } },
       }),
       this.prisma.studyPlan.findMany({
         where: { userId },
@@ -311,6 +332,23 @@ export class TutorService {
       })),
     );
 
+    // Temario del nivel del alumno, para que el modelo elija el tema (#144)
+    const modules = user?.schoolYearId
+      ? await this.prisma.module.findMany({
+          where: { course: { schoolYearId: user.schoolYearId, published: true } },
+          orderBy: [{ course: { title: 'asc' } }, { order: 'asc' }],
+          take: MAX_CURRICULUM_TOPICS,
+          select: { id: true, title: true, courseId: true, course: { select: { title: true } } },
+        })
+      : [];
+    const curriculum: CurriculumTopic[] = modules.map((m, i) => ({
+      index: i + 1,
+      title: m.title,
+      courseId: m.courseId,
+      courseTitle: m.course.title,
+      moduleId: m.id,
+    }));
+
     return {
       profile: {
         schoolYear: user?.schoolYear?.label ?? null,
@@ -318,7 +356,28 @@ export class TutorService {
         weakTopics,
       },
       practiceCandidates,
+      curriculum,
     };
+  }
+
+  /**
+   * Índice elegido por el modelo → tema del temario. 0 es "ninguno" y se
+   * respeta; sin etiqueta o índice inválido, se usa el fallback.
+   */
+  private resolvePractice(
+    topicIndex: number | null,
+    curriculum: CurriculumTopic[],
+    fallback: () => PracticeSuggestion | null,
+  ): PracticeSuggestion | null {
+    if (topicIndex === 0) return null;
+    if (topicIndex !== null) {
+      const topic = curriculum.find((t) => t.index === topicIndex);
+      if (topic) {
+        const { title, courseId, courseTitle, moduleId } = topic;
+        return { title, courseId, courseTitle, moduleId };
+      }
+    }
+    return fallback();
   }
 
   // ─── System prompt ───────────────────────────────────────────────────────────
@@ -327,6 +386,7 @@ export class TutorService {
     dto: TutorChatDto,
     withImage = false,
     profile: StudyProfile = { schoolYear: null, plans: [], weakTopics: [] },
+    curriculum: CurriculumTopic[] = [],
   ): string {
     const lines = [
       'Eres el tutor virtual de VKB Academy, plataforma educativa de Vallekas Basket Club.',
@@ -369,6 +429,8 @@ export class TutorService {
         '- Nunca escribas la solución final ni el resultado numérico',
       );
     }
+
+    lines.push(...buildCurriculumLines(curriculum));
 
     return lines.join('\n');
   }
