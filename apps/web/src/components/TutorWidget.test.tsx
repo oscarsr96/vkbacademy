@@ -16,10 +16,10 @@ vi.mock('../api/tutor.api', () => ({
 
 import TutorWidget from './TutorWidget';
 
-function renderWidget() {
+function renderWidget(initialPath = '/dashboard') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialPath]}>
       <QueryClientProvider client={client}>
         <TutorWidget />
       </QueryClientProvider>
@@ -28,6 +28,15 @@ function renderWidget() {
 }
 
 describe('TutorWidget', () => {
+  it('en la página Dudas no aparece: el mismo hilo ya ocupa la pantalla', async () => {
+    mockGetHistory.mockResolvedValue([]);
+    renderWidget('/tutor');
+
+    expect(screen.queryByRole('button', { name: /abrir tutor virtual/i })).not.toBeInTheDocument();
+    // Sigue montada (no se pierde lo escrito), solo oculta
+    expect(await screen.findByPlaceholderText(/escribe tu pregunta/i)).not.toBeVisible();
+  });
+
   it('conserva el hilo escrito al cerrar y reabrir la burbuja', async () => {
     mockGetHistory.mockResolvedValue([]);
     renderWidget();

@@ -393,6 +393,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
           placeholder="Escribe tu pregunta..."
           disabled={isStreaming}
           rows={2}
+          className="tutor-textarea"
           style={{ ...styles.textarea, ...(isStreaming ? styles.textareaDisabled : {}) }}
         />
         <button
@@ -449,7 +450,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   emptyIcon: { fontSize: '2.5rem' },
   emptyText: {
-    color: 'rgba(255,255,255,0.45)',
+    color: 'var(--color-text-muted)',
     textAlign: 'center',
     fontSize: '0.875rem',
     lineHeight: 1.5,
@@ -474,8 +475,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   bubbleAssistant: {
     alignSelf: 'flex-start',
-    background: 'rgba(255,255,255,0.07)',
-    color: 'rgba(255,255,255,0.88)',
+    background: 'var(--color-bg)',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-text)',
     borderBottomLeftRadius: 4,
   },
   bubbleText: { whiteSpace: 'pre-wrap' },
@@ -500,10 +502,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'inline-block',
     animation: 'tutorBlink 0.8s step-end infinite',
     marginLeft: 1,
-    color: 'var(--brand-light)',
+    color: 'var(--brand)',
   },
   typingDots: {
-    color: 'rgba(255,255,255,0.45)',
+    color: 'var(--color-text-muted)',
     fontSize: '1.25rem',
     letterSpacing: 4,
     animation: 'tutorBlink 1s step-end infinite',
@@ -513,7 +515,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 10,
     padding: '6px 14px',
-    borderTop: '1px solid rgba(255,255,255,0.09)',
+    borderTop: '1px solid var(--color-border)',
     flexShrink: 0,
   },
   thumb: {
@@ -521,15 +523,15 @@ const styles: Record<string, React.CSSProperties> = {
     height: 56,
     objectFit: 'cover',
     borderRadius: 8,
-    border: '1px solid rgba(255,255,255,0.15)',
+    border: '1px solid var(--color-border)',
   },
   removeBtn: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 4,
     background: 'transparent',
-    border: '1px solid rgba(255,255,255,0.2)',
-    color: 'rgba(255,255,255,0.7)',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-text-muted)',
     borderRadius: 8,
     padding: '4px 8px',
     fontSize: '0.75rem',
@@ -544,7 +546,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     gap: 8,
     padding: '8px 14px',
-    borderTop: '1px solid rgba(255,255,255,0.09)',
+    borderTop: '1px solid var(--color-border)',
     flexShrink: 0,
   },
   cameraBtn: {
@@ -552,9 +554,9 @@ const styles: Record<string, React.CSSProperties> = {
     height: 40,
     alignSelf: 'flex-end',
     borderRadius: 10,
-    background: 'rgba(255,255,255,0.07)',
-    border: '1px solid var(--brand-soft)',
-    color: 'rgba(255,255,255,0.8)',
+    background: 'var(--color-surface)',
+    border: '1.5px solid var(--color-border)',
+    color: 'var(--color-text-muted)',
     cursor: 'pointer',
     flexShrink: 0,
     display: 'flex',
@@ -563,10 +565,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   textarea: {
     flex: 1,
-    background: 'rgba(255,255,255,0.07)',
-    border: '1px solid var(--brand-soft)',
+    background: 'var(--color-surface)',
+    border: '1.5px solid var(--color-border)',
     borderRadius: 10,
-    color: '#fff',
+    color: 'var(--color-text)',
     fontSize: '0.875rem',
     padding: '8px 10px',
     resize: 'none',
@@ -594,7 +596,8 @@ const styles: Record<string, React.CSSProperties> = {
   clearBtn: {
     background: 'transparent',
     border: 'none',
-    color: 'rgba(255,255,255,0.3)',
+    color: 'var(--color-text-muted)',
+    opacity: 0.8,
     cursor: 'pointer',
     fontSize: '0.75rem',
     padding: '2px 4px',

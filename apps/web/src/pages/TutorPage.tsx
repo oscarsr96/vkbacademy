@@ -14,7 +14,7 @@ export default function TutorPage() {
         subtitle="Pregunta lo que no entiendas de cualquier asignatura o sube la foto de un ejercicio y te guío paso a paso."
       />
 
-      <div className="vkb-card" style={styles.chatCard}>
+      <div style={styles.chatCard}>
         <TutorChat autoFocus />
       </div>
     </div>
@@ -31,12 +31,15 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 24,
   },
   chatCard: {
-    // Altura fija en viewport: el hilo hace scroll dentro, no la página
+    // Altura fija en viewport: el hilo hace scroll dentro, no la página.
+    // Misma superficie que el resto de tarjetas, sin el hover que las eleva.
     height: 'min(70vh, 720px)',
     minHeight: 420,
-    padding: 0,
     overflow: 'hidden',
-    background: 'var(--navy-800)',
+    background: 'var(--color-surface)',
+    border: '1.5px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    boxShadow: 'var(--shadow-card)',
     display: 'flex',
     flexDirection: 'column',
   },
