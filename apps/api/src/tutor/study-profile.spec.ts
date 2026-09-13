@@ -67,32 +67,66 @@ describe('suggestPracticeTopic (#141)', () => {
     { title: 'Ecuaciones de segundo grado', courseId: 'c-mat', courseTitle: 'Matemáticas', moduleId: 'm-1', weak: true },
     { title: 'Fracciones', courseId: 'c-mat', courseTitle: 'Matemáticas', moduleId: null, weak: false },
     { title: 'La célula', courseId: 'c-bio', courseTitle: 'Biología', moduleId: 'm-9', weak: false },
+    { title: 'Figuras geométricas', courseId: 'c-mat', courseTitle: 'Matemáticas', moduleId: 'm-4', weak: false },
   ];
+  const ask = (question: string, answer = '', hadImage = false) =>
+    suggestPracticeTopic({ question, answer, hadImage }, candidates);
 
-  it('devuelve el tema del alumno que aparece en la conversación', () => {
-    const hit = suggestPracticeTopic('no entiendo las FRACCIONES con distinto denominador', candidates);
-    expect(hit).toEqual({ title: 'Fracciones', courseId: 'c-mat', courseTitle: 'Matemáticas', moduleId: null });
+  it('devuelve el tema del alumno que aparece en su pregunta', () => {
+    expect(ask('no entiendo las FRACCIONES con distinto denominador')).toEqual({
+      title: 'Fracciones',
+      courseId: 'c-mat',
+      courseTitle: 'Matemáticas',
+      moduleId: null,
+    });
   });
 
   it('ignora acentos y mayúsculas', () => {
-    expect(suggestPracticeTopic('que es la celula?', candidates)?.title).toBe('La célula');
+    expect(ask('que es la celula?')?.title).toBe('La célula');
   });
 
   it('si aparecen varios, gana el flojo; a igualdad, el más largo', () => {
     const text = 'las ecuaciones de segundo grado con fracciones';
-    expect(suggestPracticeTopic(text, candidates)?.title).toBe('Ecuaciones de segundo grado');
+    expect(ask(text)?.title).toBe('Ecuaciones de segundo grado');
 
     const noWeak = candidates.map((c) => ({ ...c, weak: false }));
-    expect(suggestPracticeTopic(text, noWeak)?.title).toBe('Ecuaciones de segundo grado');
+    expect(suggestPracticeTopic({ question: text, answer: '', hadImage: false }, noWeak)?.title).toBe(
+      'Ecuaciones de segundo grado',
+    );
+  });
+
+  it('NO propone un tema que solo aparece en la respuesta del modelo', () => {
+    // Visto en PROD: "no entiendo las fracciones" (sin plan de fracciones) →
+    // el modelo mencionó figuras geométricas de pasada y se propuso eso.
+    const question = 'no entiendo las potencias';
+    const answer = 'Las potencias… también las verás en figuras geométricas más adelante.';
+    expect(ask(question, answer)).toBeNull();
+  });
+
+  it('con foto y sin pregunta propia, usa el arranque de la respuesta (donde el modelo describe el ejercicio)', () => {
+    const answer = 'Veo un ejercicio de figuras geométricas: hay que calcular el área. ¿Qué has intentado?';
+    expect(ask('¿Me ayudas con este ejercicio?', answer, true)?.title).toBe('Figuras geométricas');
+  });
+
+  it('con foto, no mira más allá del arranque de la respuesta', () => {
+    const answer = 'Veo un ejercicio de áreas. '.padEnd(260, 'x') + ' figuras geométricas';
+    expect(ask('¿Me ayudas con este ejercicio?', answer, true)).toBeNull();
+  });
+
+  it('con foto y pregunta propia, manda la pregunta', () => {
+    const answer = 'Veo un ejercicio de figuras geométricas…';
+    expect(ask('esto son fracciones, ¿no?', answer, true)?.title).toBe('Fracciones');
   });
 
   it('sin coincidencia, nada', () => {
-    expect(suggestPracticeTopic('¿quién ganó la liga?', candidates)).toBeNull();
+    expect(ask('¿quién ganó la liga?')).toBeNull();
   });
 
   it('un tema de dos letras no casa por accidente', () => {
     expect(
-      suggestPracticeTopic('hola', [{ title: 'la', courseId: 'c', courseTitle: 'C', moduleId: null, weak: false }]),
+      suggestPracticeTopic({ question: 'hola', answer: '', hadImage: false }, [
+        { title: 'la', courseId: 'c', courseTitle: 'C', moduleId: null, weak: false },
+      ]),
     ).toBeNull();
   });
 });

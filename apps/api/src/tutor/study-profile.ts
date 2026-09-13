@@ -1,3 +1,5 @@
+import { TUTOR_DEFAULT_IMAGE_PROMPT } from '@vkbacademy/shared';
+
 /**
  * Perfil de estudio del alumno para el tutor: lo que está estudiando y lo
  * que le cuesta, en pocas líneas de system prompt. Funciones puras; los datos
@@ -95,23 +97,50 @@ export interface PracticeSuggestion {
 /** Títulos muy cortos casan con cualquier cosa ("la", "el"). */
 const MIN_TOPIC_LENGTH = 3;
 
+/**
+ * Con foto y sin pregunta propia, solo cuenta el arranque de la respuesta:
+ * el prompt pide al modelo que empiece describiendo el ejercicio que ve.
+ * Más allá, la explicación menciona otros temas de pasada.
+ */
+const ANSWER_HEAD_CHARS = 200;
+
+/** Lo que dijo el alumno y lo que respondió el tutor en este turno. */
+export interface PracticeExchange {
+  question: string;
+  answer: string;
+  hadImage: boolean;
+}
+
 function normalize(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function isDefaultPhotoQuestion(question: string): boolean {
+  return normalize(question).trim() === normalize(TUTOR_DEFAULT_IMAGE_PROMPT).trim();
 }
 
 /**
- * Qué tema del alumno toca la conversación, sin preguntar a la IA: se busca
- * el título de cada tema (sin acentos ni mayúsculas) en pregunta + respuesta.
+ * Qué tema del alumno toca la duda, sin preguntar a la IA. Se busca el
+ * título de cada tema de sus planes (sin acentos ni mayúsculas) en lo que
+ * ha preguntado el alumno; la respuesta del modelo NO cuenta — menciona
+ * temas de pasada y en PROD llegó a proponer figuras geométricas a quien
+ * preguntaba por fracciones. Única excepción: foto sin pregunta propia,
+ * donde se mira el arranque de la respuesta (la descripción del ejercicio).
  * Gana el tema flojo; a igualdad, el título más largo (más específico).
  */
 export function suggestPracticeTopic(
-  text: string,
+  exchange: PracticeExchange,
   candidates: PracticeCandidate[],
 ): PracticeSuggestion | null {
-  const haystack = normalize(text);
+  const source =
+    exchange.hadImage && isDefaultPhotoQuestion(exchange.question)
+      ? exchange.answer.slice(0, ANSWER_HEAD_CHARS)
+      : exchange.question;
+  const haystack = normalize(source);
+
   const hits = candidates.filter((c) => {
     const needle = normalize(c.title).trim();
     return needle.length >= MIN_TOPIC_LENGTH && haystack.includes(needle);
