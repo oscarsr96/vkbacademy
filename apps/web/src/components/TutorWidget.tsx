@@ -13,6 +13,10 @@ export default function TutorWidget() {
   const location = useLocation();
   const queryClient = useQueryClient();
 
+  // En la página Dudas el mismo hilo ya ocupa la pantalla: la burbuja se
+  // oculta (no se desmonta, para no perder lo que hubiera escrito en ella).
+  const onTutorPage = matchPath('/tutor', location.pathname) !== null;
+
   // Detectar contexto de la página actual
   const courseMatch = matchPath('/courses/:id', location.pathname);
   const lessonMatch = matchPath('/lessons/:id', location.pathname);
@@ -32,7 +36,7 @@ export default function TutorWidget() {
 
   return (
     <>
-      {!isOpen && (
+      {!isOpen && !onTutorPage && (
         <button
           onClick={() => setIsOpen(true)}
           style={styles.fab}
@@ -50,7 +54,10 @@ export default function TutorWidget() {
         `display: none` — el atributo `hidden` no serviría porque el `display:
         flex` inline de abajo lo pisaría.
       */}
-      <div style={{ ...styles.panel, display: isOpen ? 'flex' : 'none' }}>
+      <div
+        className="zone-dark"
+        style={{ ...styles.panel, display: isOpen && !onTutorPage ? 'flex' : 'none' }}
+      >
         <div style={styles.header}>
           <div style={styles.headerLeft}>
             <span style={styles.headerIcon}>🤖</span>
@@ -76,7 +83,9 @@ export default function TutorWidget() {
           </div>
         </div>
 
-        {/* El panel fija la altura; TutorChat la rellena */}
+        {/* El panel fija la altura; TutorChat la rellena. `zone-dark` en el
+            panel: el chat usa tokens semánticos, así que aquí sale oscuro y
+            en la página Dudas, claro, con el mismo componente. */}
         <div style={styles.body}>
           <TutorChat context={context} autoFocus={isOpen} />
         </div>
