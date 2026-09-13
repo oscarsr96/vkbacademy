@@ -71,7 +71,8 @@ Usuarios: alumnos, admins, super_admin. Los padres/tutores no tienen cuenta: reg
 `challenges`, `certificates`, `school-years`, `academies`, `exams`, `ai`,
 `exercises`, `study-plans`, `theory`, `tutor`, `username`, `youtube`. Cada módulo sigue `controller → service → repository (Prisma)`.
 
-> Solo existe `tutor` (singular): el **tutor IA** con chat en streaming (`POST /tutor/chat`).
+> Solo existe `tutor` (singular): el **tutor IA** con chat en streaming (`POST /tutor/chat`),
+> que el alumno usa desde la página **Dudas** (`/tutor`), por texto o con la foto de un ejercicio.
 > No hay ningún módulo `tutors` (plural) ni rol de los padres — el rol TUTOR se eliminó
 > (fase 2, refactor tutores/registro familiar). No confundir el tutor IA con la figura del padre/tutor legal.
 

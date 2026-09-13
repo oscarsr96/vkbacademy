@@ -2,8 +2,8 @@ import TutorChat from '../components/tutor/TutorChat';
 import PageHeader from '../components/ui/PageHeader';
 
 /**
- * Dudas: el tutor IA a pantalla completa. Mismo historial y mismo cupo que la
- * burbuja; aquí además cabe la foto de un ejercicio con comodidad.
+ * Dudas: el tutor IA. Única puerta al tutor desde que se retiró la burbuja
+ * flotante; el alumno pregunta por texto o con la foto de un ejercicio.
  */
 export default function TutorPage() {
   return (

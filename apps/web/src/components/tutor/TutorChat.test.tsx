@@ -130,7 +130,7 @@ describe('TutorChat', () => {
     );
   });
 
-  it('dos instancias bajo la misma caché comparten el hilo (burbuja + página Dudas)', async () => {
+  it('dos instancias bajo la misma caché comparten el hilo', async () => {
     // La caché de React Query es la fuente de verdad: enviar en una instancia
     // debe reflejarse en la otra sin recargar, tanto el mensaje del alumno
     // como la respuesta del tutor.

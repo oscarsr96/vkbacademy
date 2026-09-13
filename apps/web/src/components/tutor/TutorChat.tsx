@@ -69,10 +69,10 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
 
   // ─── Historial ──────────────────────────────────────────────────────────────
 
-  // La caché de React Query es la única fuente de verdad: la burbuja y la
-  // página Dudas montan cada una su propio TutorChat, y sin esto cada
-  // instancia llevaba su copia de `messages` que se desincronizaba de la otra
-  // hasta recargar. Enviar y limpiar escriben aquí, nunca en estado local.
+  // La caché de React Query es la única fuente de verdad del hilo: enviar y
+  // limpiar escriben aquí, nunca en estado local. Así cualquier instancia de
+  // TutorChat montada a la vez ve lo mismo (lo aprendimos cuando convivían la
+  // burbuja flotante y esta página).
   const { data: history } = useTutorHistory();
   const { mutate: clearHistory, isPending: isClearing } = useClearHistory();
   const messages: LocalMessage[] = (history ?? []).map(toLocalMessage);
@@ -141,8 +141,7 @@ export default function TutorChat({ context, autoFocus = false }: TutorChatProps
 
   /**
    * Añade un mensaje a la caché de React Query, la única fuente de verdad del
-   * hilo: así lo ve al instante cualquier otra instancia de TutorChat montada
-   * (burbuja + página Dudas comparten el mismo QueryClient).
+   * hilo: así lo ve al instante cualquier otra instancia de TutorChat montada.
    */
   function appendToHistory(msg: LocalMessage) {
     const dto: TutorMessageDto = {
