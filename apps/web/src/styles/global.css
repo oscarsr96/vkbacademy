@@ -991,18 +991,7 @@ body {
   }
 }
 
-/* ── Tutor Widget ──────────────────────────────────────────────────────────── */
-
-@keyframes tutorSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* ── Tutor (página Dudas) ──────────────────────────────────────────────────── */
 
 @keyframes tutorBlink {
   0%,
@@ -1015,7 +1004,7 @@ body {
 }
 
 /* Respuestas del tutor en Markdown: párrafos y listas compactos dentro de la
-   burbuja, fórmulas KaTeX con scroll si desbordan. */
+   tarjeta, fórmulas KaTeX con scroll si desbordan. */
 .tutor-markdown > :first-child {
   margin-top: 0;
 }

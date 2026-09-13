@@ -4,7 +4,6 @@ import { useAuthStore } from '../store/auth.store';
 import { useLogout } from '../hooks/useAuth';
 import { useAcademyDomain } from '../contexts/AcademyContext';
 import { Role } from '@vkbacademy/shared';
-import TutorWidget from '../components/TutorWidget';
 import Icon from '../components/ui/Icon';
 
 type NavItem = { to: string; label: string; icon: string; end?: boolean; divider?: boolean };
@@ -182,7 +181,6 @@ export default function AppLayout() {
         <Outlet />
       </main>
 
-      {user?.role === Role.STUDENT && <TutorWidget />}
     </div>
   );
 }
