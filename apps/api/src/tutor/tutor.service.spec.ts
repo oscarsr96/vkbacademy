@@ -20,6 +20,8 @@ const mockTutorMessage = {
 const mockUser = { findUnique: jest.fn() };
 const mockStudyPlan = { findMany: jest.fn() };
 const mockExerciseAttempt = { findMany: jest.fn() };
+// Temario del nivel del alumno (#144). Por defecto vacío.
+const mockModule = { findMany: jest.fn() };
 
 const mockTutorImage = { create: jest.fn(), deleteMany: jest.fn() };
 
@@ -27,6 +29,7 @@ const mockPrisma = {
   tutorMessage: mockTutorMessage,
   tutorImage: mockTutorImage,
   user: mockUser,
+  module: mockModule,
   studyPlan: mockStudyPlan,
   exerciseAttempt: mockExerciseAttempt,
 };
@@ -189,7 +192,8 @@ describe('TutorService', () => {
       mockTutorImage.create.mockResolvedValue({});
       mockTutorImage.deleteMany.mockResolvedValue({ count: 0 });
       mockAi.streamChat.mockImplementation(streamOf('Hola', ' mundo'));
-      mockUser.findUnique.mockResolvedValue({ schoolYear: null });
+      mockUser.findUnique.mockResolvedValue({ schoolYearId: null, schoolYear: null });
+      mockModule.findMany.mockResolvedValue([]);
       mockStudyPlan.findMany.mockResolvedValue([]);
       mockExerciseAttempt.findMany.mockResolvedValue([]);
     });
@@ -255,11 +259,18 @@ describe('TutorService', () => {
       expect(input.maxTokens).toBe(1024);
     });
 
-    it('escribe chunks SSE al response durante el streaming', async () => {
+    it('escribe el texto del modelo como eventos SSE durante el streaming', async () => {
+      // Con una respuesta larga, los trozos salen según llegan una vez pasada
+      // la primera línea (el filtro de la etiqueta TEMA solo retiene esa).
+      mockAi.streamChat.mockImplementation(streamOf('Primera línea\n', 'Hola', ' mundo'));
+
       await service.streamChat(userId, dto, mockRes);
 
-      expect(mockRes.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ text: 'Hola' })}\n\n`);
-      expect(mockRes.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ text: ' mundo' })}\n\n`);
+      const texts = (mockRes.write as jest.Mock).mock.calls
+        .map((c) => String(c[0]))
+        .filter((l) => l.includes('"text"'))
+        .map((l) => (JSON.parse(l.slice(6)) as { text: string }).text);
+      expect(texts).toEqual(['Primera línea\n', 'Hola', ' mundo']);
     });
 
     it('guarda la respuesta completa del asistente en BD tras el stream', async () => {
@@ -371,9 +382,104 @@ describe('TutorService', () => {
       });
     });
 
+    describe('el modelo elige el tema del temario (#144)', () => {
+      const temario = [
+        { id: 'm-1', title: 'Números racionales y reales', courseId: 'c-mat', course: { title: 'Matemáticas 3º ESO' } },
+        { id: 'm-2', title: 'Ecuaciones de primer y segundo grado', courseId: 'c-mat', course: { title: 'Matemáticas 3º ESO' } },
+      ];
+
+      beforeEach(() => {
+        mockUser.findUnique.mockResolvedValue({ schoolYearId: 'sy-3', schoolYear: { label: '3º ESO' } });
+        mockModule.findMany.mockResolvedValue(temario);
+      });
+
+      it('el prompt lleva el temario numerado del nivel del alumno, solo cursos publicados', async () => {
+        await service.streamChat(userId, dto, mockRes);
+
+        const { system } = mockAi.streamChat.mock.calls[0][0];
+        expect(system).toContain('1. Matemáticas 3º ESO — Números racionales y reales');
+        expect(system).toContain('2. Matemáticas 3º ESO — Ecuaciones de primer y segundo grado');
+        expect(system).toContain('TEMA: <n>');
+
+        expect(mockModule.findMany.mock.calls[0][0]).toMatchObject({
+          where: { course: { schoolYearId: 'sy-3', published: true } },
+        });
+      });
+
+      it('la etiqueta se quita del stream y del historial, y practice apunta al módulo elegido', async () => {
+        mockAi.streamChat.mockImplementation(streamOf('TEMA: 1\n\n', 'Las fracciones son números racionales…'));
+
+        await service.streamChat(userId, { ...dto, message: 'no entiendo las fracciones' }, mockRes);
+
+        const writes = (mockRes.write as jest.Mock).mock.calls.map((c) => String(c[0]));
+        expect(writes.join('')).not.toContain('TEMA');
+        expect(writes).toContain(`data: ${JSON.stringify({ text: 'Las fracciones son números racionales…' })}\n\n`);
+        expect(writes).toContain(
+          `data: ${JSON.stringify({
+            done: true,
+            practice: {
+              title: 'Números racionales y reales',
+              courseId: 'c-mat',
+              courseTitle: 'Matemáticas 3º ESO',
+              moduleId: 'm-1',
+            },
+          })}\n\n`,
+        );
+
+        const assistantCreate = mockTutorMessage.create.mock.calls.find((c) => c[0].data.role === 'assistant');
+        expect(assistantCreate?.[0].data.content).toBe('Las fracciones son números racionales…');
+      });
+
+      it('TEMA: 0 → sin practice, aunque la pregunta case con un plan', async () => {
+        mockStudyPlan.findMany.mockResolvedValue([
+          { title: 'Plan', courseId: 'c-mat', course: { title: 'Matemáticas' }, topics: [{ title: 'fracciones', moduleId: null }] },
+        ]);
+        mockAi.streamChat.mockImplementation(streamOf('TEMA: 0\n\nEso no es del temario.'));
+
+        await service.streamChat(userId, { ...dto, message: 'fracciones' }, mockRes);
+
+        expect(mockRes.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ done: true })}\n\n`);
+      });
+
+      it('índice fuera de rango → se ignora y cae al cruce por pregunta', async () => {
+        mockStudyPlan.findMany.mockResolvedValue([
+          { title: 'Plan', courseId: 'c-mat', course: { title: 'Matemáticas' }, topics: [{ title: 'Fracciones', moduleId: null }] },
+        ]);
+        mockAi.streamChat.mockImplementation(streamOf('TEMA: 99\n\nHola'));
+
+        await service.streamChat(userId, { ...dto, message: 'no entiendo las fracciones' }, mockRes);
+
+        const done = (mockRes.write as jest.Mock).mock.calls.map((c) => String(c[0])).find((l) => l.includes('"done":true'));
+        expect(done).toContain('"title":"Fracciones"');
+      });
+
+      it('sin etiqueta, el texto llega entero y se usa el cruce por pregunta', async () => {
+        mockStudyPlan.findMany.mockResolvedValue([
+          { title: 'Plan', courseId: 'c-mat', course: { title: 'Matemáticas' }, topics: [{ title: 'Fracciones', moduleId: null }] },
+        ]);
+        mockAi.streamChat.mockImplementation(streamOf('Hola, ', 'las fracciones…'));
+
+        await service.streamChat(userId, { ...dto, message: 'no entiendo las fracciones' }, mockRes);
+
+        const assistantCreate = mockTutorMessage.create.mock.calls.find((c) => c[0].data.role === 'assistant');
+        expect(assistantCreate?.[0].data.content).toBe('Hola, las fracciones…');
+        const done = (mockRes.write as jest.Mock).mock.calls.map((c) => String(c[0])).find((l) => l.includes('"done":true'));
+        expect(done).toContain('"title":"Fracciones"');
+      });
+
+      it('sin curso asignado no hay temario en el prompt', async () => {
+        mockUser.findUnique.mockResolvedValue({ schoolYearId: null, schoolYear: null });
+
+        await service.streamChat(userId, dto, mockRes);
+
+        expect(mockModule.findMany).not.toHaveBeenCalled();
+        expect(mockAi.streamChat.mock.calls[0][0].system).not.toContain('TEMA:');
+      });
+    });
+
     describe('perfil de estudio (#137)', () => {
       it('con datos, el prompt lleva curso, planes y temas flojos leídos de BD', async () => {
-        mockUser.findUnique.mockResolvedValue({ schoolYear: { label: '3º ESO' } });
+        mockUser.findUnique.mockResolvedValue({ schoolYearId: 'sy-3', schoolYear: { label: '3º ESO' } });
         mockStudyPlan.findMany.mockResolvedValue([
           { title: 'Fracciones · Ecuaciones', courseId: 'c-mat', course: { title: 'Matemáticas' }, topics: [] },
         ]);
@@ -391,7 +497,7 @@ describe('TutorService', () => {
       });
 
       it('el curso de BD gana al que manda el cliente', async () => {
-        mockUser.findUnique.mockResolvedValue({ schoolYear: { label: '3º ESO' } });
+        mockUser.findUnique.mockResolvedValue({ schoolYearId: 'sy-3', schoolYear: { label: '3º ESO' } });
 
         await service.streamChat(userId, { ...dto, schoolYear: '1º ESO' }, mockRes);
 
